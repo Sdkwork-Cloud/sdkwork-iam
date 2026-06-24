@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.module",
+  "moduleId": "system",
+  "catalogVersion": "1.0.0",
+  "domain": "system",
+  "owner": "sdkwork-system",
+  "displayName": "system module",
+  "permissions": {
+    "catalog": [
+      {
+        "code": "system.announcements.manage",
+        "name": "Manage announcements",
+        "resource": "system.announcements",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "system.announcements.read",
+        "name": "Read announcements",
+        "resource": "system.announcements",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "system.audit.read",
+        "name": "Read audit records",
+        "resource": "system.audit",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "system.settings.manage",
+        "name": "Manage system settings",
+        "resource": "system.settings",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "system.settings.read",
+        "name": "Read system settings",
+        "resource": "system.settings",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "system.site.manage",
+        "name": "Manage site settings",
+        "resource": "system.site",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "system.site.read",
+        "name": "Read site settings",
+        "resource": "system.site",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      }
+    ],
+    "openapiAuthorities": []
+  },
+  "roles": {
+    "domainStandardRoles": [],
+    "roleGrantExtensions": [
+      {
+        "roleCode": "org_admin",
+        "patterns": [
+          "system.site.read",
+          "system.settings.read",
+          "system.announcements.read"
+        ]
+      },
+      {
+        "roleCode": "org_auditor",
+        "patterns": [
+          "system.audit.read"
+        ]
+      },
+      {
+        "roleCode": "platform_system_admin",
+        "patterns": [
+          "system.*"
+        ]
+      }
+    ],
+    "roleExclusions": []
+  },
+  "directory": {
+    "organizationTemplates": [],
+    "departmentTemplates": [],
+    "positionTemplates": [],
+    "membershipTemplates": []
+  },
+  "policyConditions": {
+    "supportedAttributes": []
+  },
+  "oauthScopeMappings": [],
+  "dependencies": {
+    "requiresModules": [
+      "iam-kernel"
+    ]
+  }
+}

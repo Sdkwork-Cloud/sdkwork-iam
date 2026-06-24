@@ -1,0 +1,31 @@
+[package]
+name = "sdkwork-iam-database-host"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SDKWork Appbase IAM database lifecycle bootstrap."
+
+[lib]
+name = "sdkwork_appbase_database_host"
+path = "src/lib.rs"
+
+[[bin]]
+name = "sdkwork-appbase-db"
+path = "src/bin/sdkwork-appbase-db.rs"
+
+[dependencies]
+anyhow = "1.0"
+async-trait = { workspace = true }
+clap = { version = "4.5", features = ["derive", "env"] }
+sdkwork_database_config = { workspace = true }
+sdkwork_database_drift = { workspace = true }
+dotenvy = "0.15"
+sdkwork_database_lifecycle = { workspace = true }
+sdkwork_database_spi = { workspace = true }
+sdkwork_database_sqlx = { workspace = true }
+sdkwork_iam_web_adapter = { workspace = true }
+sdkwork_iam_module_registry = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+tokio = { workspace = true }
+tracing = "0.1"

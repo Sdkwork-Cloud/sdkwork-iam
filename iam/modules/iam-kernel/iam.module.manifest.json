@@ -1,0 +1,957 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.module",
+  "moduleId": "iam-kernel",
+  "catalogVersion": "1.0.0",
+  "domain": "iam",
+  "owner": "sdkwork-appbase",
+  "displayName": "IAM Kernel Module",
+  "permissions": {
+    "catalog": [
+      {
+        "code": "*",
+        "name": "Global wildcard permission",
+        "resource": "*",
+        "action": "*",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam:self",
+        "name": "Self-service IAM scope",
+        "resource": "iam",
+        "action": "self",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.access_credentials.create",
+        "name": "Create delegated access credentials",
+        "resource": "iam.access_credentials",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.account_binding_policy.read",
+        "name": "Read account binding policy",
+        "resource": "iam.account_binding_policy",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.account_binding_policy.update",
+        "name": "Update account binding policy",
+        "resource": "iam.account_binding_policy",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.api_keys.read",
+        "name": "Read API keys",
+        "resource": "iam.api_keys",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.api_keys.revoke",
+        "name": "Revoke API keys",
+        "resource": "iam.api_keys",
+        "action": "revoke",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.applications.register",
+        "name": "Register applications",
+        "resource": "iam.applications",
+        "action": "register",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.assignments.create",
+        "name": "Create department and position assignments",
+        "resource": "iam.assignments",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.assignments.deactivate",
+        "name": "Deactivate department and position assignments",
+        "resource": "iam.assignments",
+        "action": "deactivate",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.assignments.read",
+        "name": "Read department and position assignments",
+        "resource": "iam.assignments",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.assignments.update",
+        "name": "Update department and position assignments",
+        "resource": "iam.assignments",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.audit_events.read",
+        "name": "Read IAM audit events",
+        "resource": "iam.audit_events",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.departments.create",
+        "name": "Create departments",
+        "resource": "iam.departments",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.departments.delete",
+        "name": "Delete departments",
+        "resource": "iam.departments",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.departments.manage",
+        "name": "Manage departments",
+        "resource": "iam.departments",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.departments.read",
+        "name": "Read departments",
+        "resource": "iam.departments",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.departments.update",
+        "name": "Update departments",
+        "resource": "iam.departments",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.memberships.create",
+        "name": "Create organization memberships",
+        "resource": "iam.memberships",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.memberships.deactivate",
+        "name": "Deactivate organization memberships",
+        "resource": "iam.memberships",
+        "action": "deactivate",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.memberships.read",
+        "name": "Read organization memberships",
+        "resource": "iam.memberships",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.memberships.update",
+        "name": "Update organization memberships",
+        "resource": "iam.memberships",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.oauth.manage",
+        "name": "Manage OAuth administration resources",
+        "resource": "iam.oauth",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.oauth.read",
+        "name": "Read OAuth administration resources",
+        "resource": "iam.oauth",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.organizations.create",
+        "name": "Create organizations",
+        "resource": "iam.organizations",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.organizations.delete",
+        "name": "Delete organizations",
+        "resource": "iam.organizations",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.organizations.read",
+        "name": "Read organizations",
+        "resource": "iam.organizations",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.organizations.update",
+        "name": "Update organizations",
+        "resource": "iam.organizations",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.permissions.create",
+        "name": "Create IAM permissions",
+        "resource": "iam.permissions",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.permissions.delete",
+        "name": "Delete IAM permissions",
+        "resource": "iam.permissions",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.permissions.manage",
+        "name": "Manage IAM permissions",
+        "resource": "iam.permissions",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.permissions.read",
+        "name": "Read IAM permissions",
+        "resource": "iam.permissions",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.permissions.update",
+        "name": "Update IAM permissions",
+        "resource": "iam.permissions",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.policies.create",
+        "name": "Create IAM policies",
+        "resource": "iam.policies",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.policies.delete",
+        "name": "Delete IAM policies",
+        "resource": "iam.policies",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.policies.read",
+        "name": "Read IAM policies",
+        "resource": "iam.policies",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.policies.update",
+        "name": "Update IAM policies",
+        "resource": "iam.policies",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.positions.create",
+        "name": "Create positions",
+        "resource": "iam.positions",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.positions.delete",
+        "name": "Delete positions",
+        "resource": "iam.positions",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.positions.read",
+        "name": "Read positions",
+        "resource": "iam.positions",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.positions.update",
+        "name": "Update positions",
+        "resource": "iam.positions",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.profile.read",
+        "name": "Read own profile",
+        "resource": "iam.profile",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.profile.update",
+        "name": "Update own profile",
+        "resource": "iam.profile",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.role_bindings.create",
+        "name": "Create role bindings",
+        "resource": "iam.role_bindings",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.role_bindings.delete",
+        "name": "Delete role bindings",
+        "resource": "iam.role_bindings",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.role_bindings.manage",
+        "name": "Manage role bindings",
+        "resource": "iam.role_bindings",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.role_bindings.read",
+        "name": "Read role bindings",
+        "resource": "iam.role_bindings",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.role_permissions.create",
+        "name": "Grant role permissions",
+        "resource": "iam.role_permissions",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.role_permissions.delete",
+        "name": "Revoke role permissions",
+        "resource": "iam.role_permissions",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.role_permissions.manage",
+        "name": "Manage role permissions",
+        "resource": "iam.role_permissions",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.role_permissions.read",
+        "name": "Read role permissions",
+        "resource": "iam.role_permissions",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.roles.create",
+        "name": "Create IAM roles",
+        "resource": "iam.roles",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.roles.delete",
+        "name": "Delete IAM roles",
+        "resource": "iam.roles",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.roles.manage",
+        "name": "Manage IAM roles",
+        "resource": "iam.roles",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.roles.read",
+        "name": "Read IAM roles",
+        "resource": "iam.roles",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.roles.update",
+        "name": "Update IAM roles",
+        "resource": "iam.roles",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.security_events.read",
+        "name": "Read IAM security events",
+        "resource": "iam.security_events",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.sessions.read",
+        "name": "Read own sessions",
+        "resource": "iam.sessions",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.sessions.revoke",
+        "name": "Revoke own sessions",
+        "resource": "iam.sessions",
+        "action": "revoke",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.tenant_applications.enable",
+        "name": "Enable tenant applications",
+        "resource": "iam.tenant_applications",
+        "action": "enable",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.tenant_applications.provision",
+        "name": "Provision tenant applications",
+        "resource": "iam.tenant_applications",
+        "action": "provision",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.tenant_applications.update",
+        "name": "Update tenant applications",
+        "resource": "iam.tenant_applications",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.tenant_members.create",
+        "name": "Create tenant members",
+        "resource": "iam.tenant_members",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.tenant_members.delete",
+        "name": "Delete tenant members",
+        "resource": "iam.tenant_members",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.tenant_members.read",
+        "name": "Read tenant members",
+        "resource": "iam.tenant_members",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.tenant_members.update",
+        "name": "Update tenant members",
+        "resource": "iam.tenant_members",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.tenants.create",
+        "name": "Create IAM tenants",
+        "resource": "iam.tenants",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.tenants.delete",
+        "name": "Delete IAM tenants",
+        "resource": "iam.tenants",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.tenants.read",
+        "name": "Read IAM tenants",
+        "resource": "iam.tenants",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.tenants.update",
+        "name": "Update IAM tenants",
+        "resource": "iam.tenants",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.group_members.create",
+        "name": "Add IAM group members",
+        "resource": "iam.group_members",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.group_members.delete",
+        "name": "Remove IAM group members",
+        "resource": "iam.group_members",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.group_members.read",
+        "name": "Read IAM group members",
+        "resource": "iam.group_members",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.groups.create",
+        "name": "Create IAM groups",
+        "resource": "iam.groups",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.groups.delete",
+        "name": "Delete IAM groups",
+        "resource": "iam.groups",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.groups.read",
+        "name": "Read IAM groups",
+        "resource": "iam.groups",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.groups.update",
+        "name": "Update IAM groups",
+        "resource": "iam.groups",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.service_accounts.create",
+        "name": "Create IAM service accounts",
+        "resource": "iam.service_accounts",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.service_accounts.delete",
+        "name": "Delete IAM service accounts",
+        "resource": "iam.service_accounts",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.service_accounts.read",
+        "name": "Read IAM service accounts",
+        "resource": "iam.service_accounts",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.service_accounts.update",
+        "name": "Update IAM service accounts",
+        "resource": "iam.service_accounts",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.users.create",
+        "name": "Create IAM users",
+        "resource": "iam.users",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.users.delete",
+        "name": "Delete IAM users",
+        "resource": "iam.users",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.users.read",
+        "name": "Read IAM users",
+        "resource": "iam.users",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.users.update",
+        "name": "Update IAM users",
+        "resource": "iam.users",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      }
+    ],
+    "openapiAuthorities": []
+  },
+  "roles": {
+    "domainStandardRoles": [],
+    "roleGrantExtensions": [
+      {
+        "roleCode": "app_user",
+        "patterns": [
+          "iam:self",
+          "iam.profile.read",
+          "iam.profile.update",
+          "iam.sessions.read",
+          "apps.app_center.read",
+          "courses.catalog.read",
+          "courses.content.read",
+          "commerce.catalog.read",
+          "commerce.orders.read",
+          "commerce.memberships.read",
+          "drive.spaces.read",
+          "drive.nodes.read",
+          "messaging.requests.read",
+          "ai.agents.read",
+          "ai.skills.read"
+        ]
+      },
+      {
+        "roleCode": "org_admin",
+        "patterns": [
+          "iam.*",
+          "iam.oauth.*",
+          "commerce.*",
+          "courses.*",
+          "ai.*",
+          "messaging.*",
+          "integrations.*",
+          "drive.*",
+          "storage.*",
+          "ops.monitor.read",
+          "system.site.read",
+          "system.settings.read",
+          "system.announcements.read"
+        ]
+      },
+      {
+        "roleCode": "org_assistant",
+        "patterns": [
+          "iam.users.read",
+          "iam.memberships.read",
+          "iam.departments.read",
+          "commerce.catalog.read",
+          "commerce.catalog.manage",
+          "commerce.orders.read",
+          "commerce.orders.manage",
+          "courses.catalog.read",
+          "courses.content.read",
+          "courses.content.update",
+          "messaging.templates.read",
+          "messaging.requests.manage"
+        ]
+      },
+      {
+        "roleCode": "org_auditor",
+        "patterns": [
+          "*.read",
+          "*.approve",
+          "*.reject",
+          "iam.audit_events.read",
+          "iam.security_events.read",
+          "system.audit.read"
+        ]
+      },
+      {
+        "roleCode": "org_finance",
+        "patterns": [
+          "finance.*",
+          "commerce.orders.read",
+          "commerce.payments.*",
+          "commerce.revenue.read",
+          "iam.users.read"
+        ]
+      },
+      {
+        "roleCode": "org_operations",
+        "patterns": [
+          "commerce.*",
+          "courses.*",
+          "apps.app_center.*",
+          "messaging.*",
+          "integrations.*",
+          "ai.*",
+          "ops.monitor.read"
+        ]
+      },
+      {
+        "roleCode": "platform_system_admin",
+        "patterns": [
+          "iam.*",
+          "ops.*",
+          "system.*",
+          "iam.tenant_applications.provision",
+          "iam.tenant_applications.update",
+          "iam.tenant_applications.enable",
+          "iam.access_credentials.create"
+        ]
+      },
+      {
+        "roleCode": "platform_super_admin",
+        "patterns": [
+          "*"
+        ]
+      }
+    ],
+    "roleExclusions": [
+      {
+        "roleCode": "org_finance",
+        "excludesRoleCode": "org_auditor"
+      }
+    ]
+  },
+  "directory": {
+    "organizationTemplates": [
+      {
+        "ref": "root",
+        "code": "root",
+        "name": "Root Organization",
+        "seedId": "0",
+        "organizationKind": "team",
+        "tenantBoundaryKind": "exclusive",
+        "dataBoundaryKind": "tenant",
+        "verificationStatus": "verified",
+        "sortOrder": 0
+      }
+    ],
+    "departmentTemplates": [
+      {
+        "ref": "dept.general",
+        "code": "general",
+        "name": "General",
+        "parentRef": "$orgref:root",
+        "departmentKind": "general",
+        "sortOrder": 10,
+        "defaultPositions": [
+          "pos.member"
+        ]
+      }
+    ],
+    "positionTemplates": [
+      {
+        "ref": "pos.member",
+        "code": "member",
+        "name": "Member",
+        "organizationRef": "$orgref:root",
+        "departmentRef": "dept.general",
+        "positionKind": "member",
+        "defaultRoleBindings": [
+          "app_user"
+        ]
+      }
+    ],
+    "membershipTemplates": [
+      {
+        "ref": "bootstrap-owner",
+        "membershipKind": "owner",
+        "organizationRef": "$orgref:root",
+        "isPrimary": true,
+        "defaultRoleBindings": [
+          "org_admin",
+          "platform_super_admin",
+          "app_user"
+        ]
+      }
+    ]
+  },
+  "policyConditions": {
+    "supportedAttributes": []
+  },
+  "oauthScopeMappings": [],
+  "dependencies": {
+    "requiresModules": []
+  }
+}

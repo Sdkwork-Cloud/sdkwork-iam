@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/appbase-workspace",
+    "displayName": "SDKWork Appbase Workspace",
+    "version": "0.1.0",
+    "type": "multi-surface-workspace",
+    "root": "sdkwork-iam",
+    "domain": "platform",
+    "declaredDomain": null,
+    "capability": "workspace",
+    "status": "standardizing",
+    "languages": [
+      "typescript",
+      "react",
+      "rust"
+    ],
+    "generated": false,
+    "private": true,
+    "manifests": [
+      "Cargo.toml",
+      "package.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "SDKWORK_WORKSPACE_SPEC.md",
+      "path": "../sdkwork-specs/SDKWORK_WORKSPACE_SPEC.md",
+      "purpose": "Repository root directory dictionary and .sdkwork workspace rules."
+    },
+    {
+      "file": "IAM_SPEC.md",
+      "path": "../sdkwork-specs/IAM_SPEC.md",
+      "purpose": "IAM domain boundary, package layering, persistence, and API contracts."
+    },
+    {
+      "file": "WEB_FRAMEWORK_SPEC.md",
+      "path": "../sdkwork-specs/WEB_FRAMEWORK_SPEC.md",
+      "purpose": "Mandatory sdkwork-web-framework integration for HTTP *-api surfaces."
+    },
+    {
+      "file": "WEB_BACKEND_SPEC.md",
+      "path": "../sdkwork-specs/WEB_BACKEND_SPEC.md",
+      "purpose": "HTTP backend handler, service, repository, and route manifest rules."
+    },
+    {
+      "file": "DATABASE_SPEC.md",
+      "path": "../sdkwork-specs/DATABASE_SPEC.md",
+      "purpose": "Portable table contracts and schema evolution."
+    },
+    {
+      "file": "DATABASE_FRAMEWORK_SPEC.md",
+      "path": "../sdkwork-specs/DATABASE_FRAMEWORK_SPEC.md",
+      "purpose": "sdkwork-database lifecycle, migrations, seeds, and drift observation."
+    },
+    {
+      "file": "DRIVE_SPEC.md",
+      "path": "../sdkwork-specs/DRIVE_SPEC.md",
+      "purpose": "Drive-backed file upload ownership; IAM defers until avatar/media upload surfaces are added."
+    },
+    {
+      "file": "DISCOVERY_SPEC.md",
+      "path": "../sdkwork-specs/DISCOVERY_SPEC.md",
+      "purpose": "Service registry and RPC endpoint resolution; deferred until runnable IAM RPC servers ship."
+    },
+    {
+      "file": "RPC_SPEC.md",
+      "path": "../sdkwork-specs/RPC_SPEC.md",
+      "purpose": "gRPC/protobuf contracts owned under apis/rpc/iam/."
+    },
+    {
+      "file": "COMPONENT_SPEC.md",
+      "path": "../sdkwork-specs/COMPONENT_SPEC.md",
+      "purpose": "Local component specs directory and manifest rules."
+    },
+    {
+      "file": "CONFIG_SPEC.md",
+      "path": "../sdkwork-specs/CONFIG_SPEC.md",
+      "purpose": "Runtime configuration, environment, SDK bootstrap, and feature flag rules."
+    },
+    {
+      "file": "DOCUMENTATION_SPEC.md",
+      "path": "../sdkwork-specs/DOCUMENTATION_SPEC.md",
+      "purpose": "Module README, examples, ADR, changelog, and runbook rules."
+    },
+    {
+      "file": "DOMAIN_SPEC.md",
+      "path": "../sdkwork-specs/DOMAIN_SPEC.md",
+      "purpose": "Canonical domain ownership and naming."
+    },
+    {
+      "file": "FRONTEND_SPEC.md",
+      "path": "../sdkwork-specs/FRONTEND_SPEC.md",
+      "purpose": "UI, service, SDK, accessibility, and frontend runtime rules."
+    },
+    {
+      "file": "GOVERNANCE_SPEC.md",
+      "path": "../sdkwork-specs/GOVERNANCE_SPEC.md",
+      "purpose": "Standard ownership, exception, compatibility, and migration rules."
+    },
+    {
+      "file": "I18N_SPEC.md",
+      "path": "../sdkwork-specs/I18N_SPEC.md",
+      "purpose": "User-facing language, locale, message catalog, and fallback rules."
+    },
+    {
+      "file": "MODULE_SPEC.md",
+      "path": "../sdkwork-specs/MODULE_SPEC.md",
+      "purpose": "Reusable package contract and dependency direction."
+    },
+    {
+      "file": "README.md",
+      "path": "../sdkwork-specs/README.md",
+      "purpose": "SDKWork root standards entrypoint."
+    },
+    {
+      "file": "SDK_SPEC.md",
+      "path": "../sdkwork-specs/SDK_SPEC.md",
+      "purpose": "SDK generation and SDK integration rules."
+    },
+    {
+      "file": "TEST_SPEC.md",
+      "path": "../sdkwork-specs/TEST_SPEC.md",
+      "purpose": "Contract, frontend, SDK, security, parity, and documentation verification rules."
+    },
+    {
+      "file": "CODE_STYLE_SPEC.md",
+      "path": "../sdkwork-specs/CODE_STYLE_SPEC.md",
+      "purpose": "Authored source structure and generated code boundaries."
+    },
+    {
+      "file": "NAMING_SPEC.md",
+      "path": "../sdkwork-specs/NAMING_SPEC.md",
+      "purpose": "Canonical SDKWork naming rules."
+    },
+    {
+      "file": "TYPESCRIPT_CODE_SPEC.md",
+      "path": "../sdkwork-specs/TYPESCRIPT_CODE_SPEC.md",
+      "purpose": "TypeScript and Node package rules."
+    },
+    {
+      "file": "FRONTEND_CODE_SPEC.md",
+      "path": "../sdkwork-specs/FRONTEND_CODE_SPEC.md",
+      "purpose": "Frontend authored source structure."
+    },
+    {
+      "file": "UI_ARCHITECTURE_SPEC.md",
+      "path": "../sdkwork-specs/UI_ARCHITECTURE_SPEC.md",
+      "purpose": "UI architecture selection rules."
+    },
+    {
+      "file": "APP_PC_REACT_UI_SPEC.md",
+      "path": "../sdkwork-specs/APP_PC_REACT_UI_SPEC.md",
+      "purpose": "PC React package rules."
+    },
+    {
+      "file": "APP_SDK_INTEGRATION_SPEC.md",
+      "path": "../sdkwork-specs/APP_SDK_INTEGRATION_SPEC.md",
+      "purpose": "Generated SDK integration, TokenManager wiring, and dependency composition rules."
+    },
+    {
+      "file": "IAM_LOGIN_INTEGRATION_SPEC.md",
+      "path": "../sdkwork-specs/IAM_LOGIN_INTEGRATION_SPEC.md",
+      "purpose": "Login, session, AuthGate, and IAM runtime integration rules."
+    },
+    {
+      "file": "SECURITY_SPEC.md",
+      "path": "../sdkwork-specs/SECURITY_SPEC.md",
+      "purpose": "Token model, authn/authz, secrets, and secure logging rules."
+    }
+  ],
+  "contracts": {
+    "publicExports": [],
+    "runtimeEntrypoints": [
+      "package.json#scripts.typecheck",
+      "package.json#scripts.test"
+    ],
+    "sdkClients": [],
+    "events": [],
+    "configKeys": [],
+    "routeManifest": null
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative. Local specs may extend but must not contradict them.",
+    "dependencyPolicy": "Consumers integrate through public package exports, declared runtime entrypoints, generated SDK clients, or documented adapters only.",
+    "sdkPolicy": "Generated SDK clients are injected through service/runtime boundaries; reusable UI must not create raw HTTP clients or manual auth headers.",
+    "languagePolicy": "Language-specific packages follow their native manifest and build tools while preserving the same component contract."
+  },
+  "verification": {
+    "commands": [
+      "pnpm run check:pnpm-scripts",
+      "pnpm run check:workspace",
+      "pnpm run check:structure",
+      "pnpm run check:database",
+      "pnpm run check:iam-application-bootstrap",
+      "pnpm run typecheck",
+      "pnpm run api:materialize",
+      "pnpm run test:governance-node"
+    ]
+  },
+  "exceptions": [
+    {
+      "id": "rpc-discovery-deferred",
+      "spec": "RPC_SPEC.md",
+      "reason": "Appbase owns RPC contracts and Rust service manifests, but defers sdkwork-discovery registration until a consuming application deploys runnable RPC servers.",
+      "scope": "sdkwork-discovery integration for IAM RPC servers",
+      "reviewBy": "2026-12-31",
+      "owner": "sdkwork-iam maintainers"
+    }
+  ],
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-06-18"
+  }
+}

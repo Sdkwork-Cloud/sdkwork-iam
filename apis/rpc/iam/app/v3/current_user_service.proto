@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package sdkwork.iam.app.v3;
+
+import "sdkwork/common/v1/runtime.proto";
+
+option java_package = "com.sdkwork.iam.app.v3";
+option java_multiple_files = true;
+option go_package = "github.com/sdkwork/iam-rpc-go/sdkwork/iam/app/v3;iamappv3";
+
+service CurrentUserService {
+  rpc RetrieveCurrentUser(RetrieveCurrentUserRequest) returns (RetrieveCurrentUserResponse);
+}
+
+message RetrieveCurrentUserRequest {}
+
+message RetrieveCurrentUserResponse {
+  string user_id = 1;
+  string username = 2;
+  string display_name = 3;
+  sdkwork.common.v1.ResponseMetadata metadata = 15;
+}

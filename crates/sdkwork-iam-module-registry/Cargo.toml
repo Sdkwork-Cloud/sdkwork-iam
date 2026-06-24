@@ -1,0 +1,21 @@
+[package]
+name = "sdkwork-iam-module-registry"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "IAM module federation discovery, validation, and catalog materialization for SDKWork."
+
+[lib]
+name = "sdkwork_iam_module_registry"
+path = "src/lib.rs"
+
+[dependencies]
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = "0.10"
+sqlx = { workspace = true }
+sdkwork-iam-context-service = { path = "../sdkwork-iam-context-service" }
+
+[dev-dependencies]
+tokio = { workspace = true }

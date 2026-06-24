@@ -1,0 +1,38 @@
+{
+  "name": "@sdkwork/iam-react",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "React provider and hooks for SDKWork IAM runtime.",
+  "exports": {
+    ".": {
+      "types": "./src/index.tsx",
+      "import": "./src/index.tsx",
+      "default": "./src/index.tsx"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@sdkwork/iam-runtime": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0 <20.0.0",
+    "react-dom": ">=18.2.0 <20.0.0"
+  },
+  "sdkwork": {
+    "architecture": "pc-react",
+    "capability": "iam-react",
+    "domain": "iam",
+    "packageType": "runtime",
+    "status": "standard"
+  }
+}

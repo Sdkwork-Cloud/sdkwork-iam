@@ -1,0 +1,37 @@
+[package]
+name = "sdkwork-iam-web-adapter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "IAM adapters for sdkwork-web-framework request context pipeline."
+
+[lib]
+name = "sdkwork_iam_web_adapter"
+path = "src/lib.rs"
+
+[dependencies]
+aes-gcm = "0.10"
+argon2 = "0.5"
+hmac = "0.12"
+async-trait.workspace = true
+axum.workspace = true
+base64 = "0.22"
+chrono.workspace = true
+sdkwork-iam-bootstrap = { path = "../sdkwork-iam-bootstrap" }
+sdkwork_iam_context_service.workspace = true
+sdkwork_database_sqlx.workspace = true
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde.workspace = true
+serde_json.workspace = true
+password-hash = { version = "0.5", features = ["rand_core"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+sha2 = "0.10"
+sqlx.workspace = true
+uuid = { version = "1", features = ["v7"] }
+sdkwork_utils_rust.workspace = true
+sdkwork-web-axum = { path = "../../../sdkwork-web-framework/crates/sdkwork-web-axum" }
+sdkwork-web-core = { path = "../../../sdkwork-web-framework/crates/sdkwork-web-core" }
+
+[dev-dependencies]
+axum.workspace = true
+tokio.workspace = true

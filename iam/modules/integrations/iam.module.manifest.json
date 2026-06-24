@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.module",
+  "moduleId": "integrations",
+  "catalogVersion": "1.0.0",
+  "domain": "integrations",
+  "owner": "sdkwork-integrations",
+  "displayName": "integrations module",
+  "permissions": {
+    "catalog": [
+      {
+        "code": "integrations.service_providers.manage",
+        "name": "Manage service providers",
+        "resource": "integrations.service_providers",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "integrations.service_providers.read",
+        "name": "Read service providers",
+        "resource": "integrations.service_providers",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      }
+    ],
+    "openapiAuthorities": []
+  },
+  "roles": {
+    "domainStandardRoles": [],
+    "roleGrantExtensions": [
+      {
+        "roleCode": "org_admin",
+        "patterns": [
+          "integrations.*"
+        ]
+      },
+      {
+        "roleCode": "org_operations",
+        "patterns": [
+          "integrations.*"
+        ]
+      }
+    ],
+    "roleExclusions": []
+  },
+  "directory": {
+    "organizationTemplates": [],
+    "departmentTemplates": [],
+    "positionTemplates": [],
+    "membershipTemplates": []
+  },
+  "policyConditions": {
+    "supportedAttributes": []
+  },
+  "oauthScopeMappings": [],
+  "dependencies": {
+    "requiresModules": [
+      "iam-kernel"
+    ]
+  }
+}

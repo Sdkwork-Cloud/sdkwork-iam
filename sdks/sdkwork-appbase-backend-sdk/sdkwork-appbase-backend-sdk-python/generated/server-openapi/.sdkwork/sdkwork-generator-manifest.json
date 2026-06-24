@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-appbase-backend-sdk",
+    "version": "1.0.0",
+    "language": "python",
+    "sdkType": "backend",
+    "packageName": "sdkwork-appbase-backend-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "affb1f1b5400ac492e94e2d01f3104b8dd38b50329e371265d4f0945f2b0763c"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "b383d4f7233b567acd36fa2ff644448730007738901cf1770cb02746f88fbb05"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "6fd65ff5011e48b24018ab691edd8803c4b1fd293d013b75d1adb3bcd26f7cde"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "MANIFEST.in",
+      "sha256": "d12789cf62a62e4257d26519ad236ac93e36b0b46a8e4e384c48cd8ebb17f38d"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "abb53ef36f7346500cbe8699ac0f681d3c36dd46480a70e9129405c666f5cb77"
+    },
+    {
+      "path": "README.md",
+      "sha256": "49c646a5c8ff6282a3fa0e1a1d0f8aca1e5eb5988616909275f5713fc7270c24"
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "5f3072c051f89b9af1b681381406e0b2466895fb150660d583c85c84396001c8"
+    },
+    {
+      "path": "sdkwork_appbase_backend_sdk/__init__.py",
+      "sha256": "0d0a5444bac42f949af4fefdf4510697387b723c65026b3c980afdb3731e46f5"
+    },
+    {
+      "path": "sdkwork_appbase_backend_sdk/api/__init__.py",
+      "sha256": "087a3ffa2449a094a6c96945f500c5d44cd28929a8e2c31e8798e82cb4b11a44"
+    },
+    {
+      "path": "sdkwork_appbase_backend_sdk/api/iam.py",
+      "sha256": "6d434fcdd3c99112aab65eeac243e66a579837a6db2b12f36ea0baca2111b50a"
+    },
+    {
+      "path": "sdkwork_appbase_backend_sdk/client.py",
+      "sha256": "a7d18d4c58ff751ed2551004254f6f4141b1f32699bbe5e90da300d15b99fc06"
+    },
+    {
+      "path": "sdkwork_appbase_backend_sdk/http_client.py",
+      "sha256": "c423af289dbbe0eef7d8be5ee0aec13cedf64df967b3d64ad7306a78ac394a82"
+    },
+    {
+      "path": "sdkwork_appbase_backend_sdk/models/__init__.py",
+      "sha256": "9533e5627c336a140f53c1bb2edb8774a35e52c98fb7049f44b494cf5fab3714"
+    },
+    {
+      "path": "sdkwork_appbase_backend_sdk/models/appbase_api_result.py",
+      "sha256": "f394489fcc63d11d19df62a86ed6d8860ce0513e36b22809cf7bf11ce7f6e806"
+    },
+    {
+      "path": "sdkwork_appbase_backend_sdk/models/field_error.py",
+      "sha256": "55a16fc5837525b2e8488b197409789d86b03b301f09a83ff5642260c83beae2"
+    },
+    {
+      "path": "sdkwork_appbase_backend_sdk/models/problem_detail.py",
+      "sha256": "73139fe4e53a44b27b04ba096d97b1eedebc6e537f9e3777dbc01a7f659848e4"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "6d2f240eac1ad4528e09961f19f2b4b430c9ec429f69b82f2cd1034b82f77ff1"
+    },
+    {
+      "path": "setup.py",
+      "sha256": "843ac26c38a41abae578250bc0f9419194b320a0f67327d941037a4268f6cfe7"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

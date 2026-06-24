@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-appbase-open-sdk",
+    "version": "1.0.0",
+    "language": "java",
+    "sdkType": "custom",
+    "protocol": "http",
+    "packageName": "com.sdkwork:sdkwork-appbase-open-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "33394b9189a458f6b36bf7fd74815ea4b71a435083e0c428a9d3ca4673e28c3e"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "da4bd76701864b29d52b6b260c20f65305bcd4b9eea8696f7751b991f6aba345"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "pom.xml",
+      "sha256": "cee503655da11de3c10a681f738bfca4bfad0e99ff84d32d95807bd7d127ac7d"
+    },
+    {
+      "path": "README.md",
+      "sha256": "71f66f46ed162aac3da5a9a31d14945ca5a3885d0bb5bbc7d2d6eb83ba66fad3"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "792fb8a8e60ebec78354b9db409e6147c8fa8939b2a983dccb82ebda5bc9195a"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/appbase/open/sdk/api/ApiPaths.java",
+      "sha256": "ede1830c463c88373e46ea747b3fbd9e3e97b9d1901b42854ae3aa685eb0428f"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/appbase/open/sdk/api/IamOauthApi.java",
+      "sha256": "8d1c069769818d382164631211bd57ade3a9f2d38e644abe5bc6a0f7981f51a3"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/appbase/open/sdk/api/package-info.java",
+      "sha256": "43225f8e74d52db4e8a290a46ddaac7de670767b519a2ac05decb17ccb4cf33b"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/appbase/open/sdk/http/HttpClient.java",
+      "sha256": "aaa809230f6b8cb9f84c9e7991162ce7a4513ea57c5b66dc8087b6733ab79aae"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/appbase/open/sdk/model/AppbaseApiResult.java",
+      "sha256": "dace60f6e110a84e8e6ed8ddd55edc8dba3d2820d5c8a44c37719d620717f978"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/appbase/open/sdk/model/AppbaseSessionCreateCommand.java",
+      "sha256": "b25ed80f21f1a20642011e60f6dc1dd292de704ae004f399eea8a73d0d64276f"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/appbase/open/sdk/model/FieldError.java",
+      "sha256": "bc50142ba818033c449218abe78a282a9c00aaa9a189f4796a0087e82f286d2e"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/appbase/open/sdk/model/ProblemDetail.java",
+      "sha256": "efcae32398fb9b6934cac09cdf7715c68791a78b09285dc39339e4b7cf537e29"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/appbase/open/sdk/SdkworkCustomClient.java",
+      "sha256": "a700ab8c150ab4a5c10d9e42307ac1e1c9e5c80740d5413e7c8c8dba509b635d"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

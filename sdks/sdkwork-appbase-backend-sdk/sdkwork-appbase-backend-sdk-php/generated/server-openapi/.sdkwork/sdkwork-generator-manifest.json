@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-appbase-backend-sdk",
+    "version": "1.0.0",
+    "language": "php",
+    "sdkType": "backend",
+    "packageName": "sdkwork/appbase-backend-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "affb1f1b5400ac492e94e2d01f3104b8dd38b50329e371265d4f0945f2b0763c"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "edca14015bf24f9bdec4c764706134cb4a803df587d392a0d45a23244573aebc"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "c2df10df8f75dbcbb22896af23ed4d0c2ac6afbc3f220ce731188529ac4eac98"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "composer.json",
+      "sha256": "91b1bad1523b49405c7f25c8a734307c5649361fd22d64b73e252e453b54688a"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "README.md",
+      "sha256": "db5566a5578cc4a2dd9449eb309e53ab967fa6d8bad9ef53adf36cd0638e8d39"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "6c0e69687381114acf472b561ad07f702418cb444eb1c9265ff652150c54ba89"
+    },
+    {
+      "path": "src/Api/BaseApi.php",
+      "sha256": "f225a231328c3fce5729046a884ad71baae05038d457a33ebf3f34eefc7fe878"
+    },
+    {
+      "path": "src/Api/Iam.php",
+      "sha256": "50601cf2a9c1e1cdc11657a291ea24411717ecbb16d45bee993a39c9c79018d1"
+    },
+    {
+      "path": "src/Http/HttpClient.php",
+      "sha256": "e081862d222313f876204fa4ec47d728d1c619f8f209dd9e4344e3b468acd475"
+    },
+    {
+      "path": "src/Models/AppbaseApiResult.php",
+      "sha256": "ed91d04879d2dadb1f12a9d73665ed14451646034ee847599e3070bf60873840"
+    },
+    {
+      "path": "src/Models/FieldError.php",
+      "sha256": "20b154580238dc4efc6bc9fb806b0968477f05aa9245ce3e9d8c9b146ff4967a"
+    },
+    {
+      "path": "src/Models/ProblemDetail.php",
+      "sha256": "63e091f34378c30c3bed24b003cf568f19c22a5bf0333242c8c6efa135171e3b"
+    },
+    {
+      "path": "src/SdkConfig.php",
+      "sha256": "31ac219cc4608696331c734ab03af7e8d4411264488d6319c39db7c8c4c8aab1"
+    },
+    {
+      "path": "src/SdkworkBackendClient.php",
+      "sha256": "9de8d2216818e3606aeef0cfc0ddd68bc15ad7b5e12d1e095d9638acf3d995e1"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

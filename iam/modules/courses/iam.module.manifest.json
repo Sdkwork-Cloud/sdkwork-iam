@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.module",
+  "moduleId": "courses",
+  "catalogVersion": "1.0.0",
+  "domain": "courses",
+  "owner": "sdkwork-courses",
+  "displayName": "courses module",
+  "permissions": {
+    "catalog": [
+      {
+        "code": "courses.catalog.manage",
+        "name": "Manage course catalog",
+        "resource": "courses.catalog",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "courses.catalog.read",
+        "name": "Read course catalog",
+        "resource": "courses.catalog",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "courses.content.approve",
+        "name": "Approve course content",
+        "resource": "courses.content",
+        "action": "approve",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "courses.content.manage",
+        "name": "Manage course content",
+        "resource": "courses.content",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "courses.content.read",
+        "name": "Read course content",
+        "resource": "courses.content",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "courses.content.reject",
+        "name": "Reject course content",
+        "resource": "courses.content",
+        "action": "reject",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      }
+    ],
+    "openapiAuthorities": []
+  },
+  "roles": {
+    "domainStandardRoles": [],
+    "roleGrantExtensions": [
+      {
+        "roleCode": "app_user",
+        "patterns": [
+          "courses.catalog.read",
+          "courses.content.read"
+        ]
+      },
+      {
+        "roleCode": "org_admin",
+        "patterns": [
+          "courses.*"
+        ]
+      },
+      {
+        "roleCode": "org_assistant",
+        "patterns": [
+          "courses.catalog.read",
+          "courses.content.read",
+          "courses.content.update"
+        ]
+      },
+      {
+        "roleCode": "org_operations",
+        "patterns": [
+          "courses.*"
+        ]
+      }
+    ],
+    "roleExclusions": []
+  },
+  "directory": {
+    "organizationTemplates": [],
+    "departmentTemplates": [],
+    "positionTemplates": [],
+    "membershipTemplates": []
+  },
+  "policyConditions": {
+    "supportedAttributes": []
+  },
+  "oauthScopeMappings": [],
+  "dependencies": {
+    "requiresModules": [
+      "iam-kernel"
+    ]
+  }
+}

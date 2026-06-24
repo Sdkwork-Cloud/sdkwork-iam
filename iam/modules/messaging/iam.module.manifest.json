@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.module",
+  "moduleId": "messaging",
+  "catalogVersion": "1.0.0",
+  "domain": "messaging",
+  "owner": "sdkwork-messaging",
+  "displayName": "messaging module",
+  "permissions": {
+    "catalog": [
+      {
+        "code": "messaging.providers.manage",
+        "name": "Manage messaging providers",
+        "resource": "messaging.providers",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "messaging.providers.read",
+        "name": "Read messaging providers",
+        "resource": "messaging.providers",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "messaging.requests.manage",
+        "name": "Manage messaging requests",
+        "resource": "messaging.requests",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "messaging.requests.read",
+        "name": "Read messaging requests",
+        "resource": "messaging.requests",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "messaging.templates.manage",
+        "name": "Manage messaging templates",
+        "resource": "messaging.templates",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "messaging.templates.read",
+        "name": "Read messaging templates",
+        "resource": "messaging.templates",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      }
+    ],
+    "openapiAuthorities": []
+  },
+  "roles": {
+    "domainStandardRoles": [],
+    "roleGrantExtensions": [
+      {
+        "roleCode": "app_user",
+        "patterns": [
+          "messaging.requests.read"
+        ]
+      },
+      {
+        "roleCode": "org_admin",
+        "patterns": [
+          "messaging.*"
+        ]
+      },
+      {
+        "roleCode": "org_assistant",
+        "patterns": [
+          "messaging.templates.read",
+          "messaging.requests.manage"
+        ]
+      },
+      {
+        "roleCode": "org_operations",
+        "patterns": [
+          "messaging.*"
+        ]
+      }
+    ],
+    "roleExclusions": []
+  },
+  "directory": {
+    "organizationTemplates": [],
+    "departmentTemplates": [],
+    "positionTemplates": [],
+    "membershipTemplates": []
+  },
+  "policyConditions": {
+    "supportedAttributes": []
+  },
+  "oauthScopeMappings": [],
+  "dependencies": {
+    "requiresModules": [
+      "iam-kernel"
+    ]
+  }
+}

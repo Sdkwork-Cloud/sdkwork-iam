@@ -1,0 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+namespace SDKWork.Appbase.OpenSdk.Models
+{
+    public class FieldError
+    {
+        public string Field { get; set; }
+        public string Message { get; set; }
+        public string? Code { get; set; }
+    }
+}

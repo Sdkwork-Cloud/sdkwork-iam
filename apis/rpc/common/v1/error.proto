@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package sdkwork.common.v1;
+
+option java_package = "com.sdkwork.common.v1";
+option java_multiple_files = true;
+option go_package = "github.com/sdkwork/rpc-go/sdkwork/common/v1;commonv1";
+
+enum ErrorRetryability {
+  ERROR_RETRYABILITY_UNSPECIFIED = 0;
+  ERROR_RETRYABILITY_RETRYABLE = 1;
+  ERROR_RETRYABILITY_NOT_RETRYABLE = 2;
+}
+
+message FieldViolation {
+  string field = 1;
+  string description = 2;
+  string rule = 3;
+}
+
+message SdkworkError {
+  string code = 1;
+  string message = 2;
+  string trace_id = 3;
+  ErrorRetryability retryability = 4;
+  repeated FieldViolation field_violations = 5;
+  string resource_type = 6;
+  string resource_id = 7;
+}

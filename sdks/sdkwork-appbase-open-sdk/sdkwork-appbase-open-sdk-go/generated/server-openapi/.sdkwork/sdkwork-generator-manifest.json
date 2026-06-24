@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-appbase-open-sdk",
+    "version": "1.0.0",
+    "language": "go",
+    "sdkType": "custom",
+    "protocol": "http",
+    "packageName": "github.com/sdkwork/sdkwork-appbase-open-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "api/base.go",
+      "sha256": "81002b0739f4a28c2a9269496c1b04c134436b99f3cda75c54bea0360b8ae4ac"
+    },
+    {
+      "path": "api/doc.go",
+      "sha256": "707bab78073b0f50cfd5c9ef196b12010bec65d8df82d69be50774ea56f6b2bd"
+    },
+    {
+      "path": "api/iam_oauth.go",
+      "sha256": "97ad57ad9ea95632e6265e5908f45382af166e2507b2817fbcd3e9997c43487a"
+    },
+    {
+      "path": "api/paths.go",
+      "sha256": "c60ef3d848936a31cc8918fa48842110ff76a0e81e004c4ec0bfdb2c7be0317c"
+    },
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "b86912c73f0f0e62915246690fbb006213bcaf7e612729a59403d5893903e003"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "bb05183d134a4057090fcc04e51d2e06d191d43a3e5e133f9451bd7552a961d7"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "doc.go",
+      "sha256": "e4f6eb7b7c3cc0170d234487324eb38fa7a56576527b7e7576be38497155ee37"
+    },
+    {
+      "path": "go.mod",
+      "sha256": "62d63562e463679c563e60a06a230cfb9c019f34457293c5f13a34ad7d27f907"
+    },
+    {
+      "path": "http/client.go",
+      "sha256": "623f6f7a9de45dce8fcb31bc4ab538770437e8e8fff0217e0e8cd40b0e51142b"
+    },
+    {
+      "path": "http/doc.go",
+      "sha256": "0a3e0da2048eafdda61f1c82fda03381a87f8bb83c847b8cf6cc559de61df82e"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "README.md",
+      "sha256": "636f2097dc2e07927efde5618ea36d42233a0dfeffa37faa1dd74483e6f3a016"
+    },
+    {
+      "path": "sdk.go",
+      "sha256": "914eeaf1f18049d2481380d14933528f9f150fac60a271c68846589a7fbb2585"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "1855e808893cf8dbdacbcb670447a2db77dce3a4775a618874cb15a7cda89e87"
+    },
+    {
+      "path": "types/appbase_api_result.go",
+      "sha256": "b8ac02f26f22eb79b96d479742bd3ab29edd5be9f8d6361bf97bf7f6b206f55c"
+    },
+    {
+      "path": "types/appbase_operation_command.go",
+      "sha256": "08b5848c5271547e26dd569bcf32728e5ad51487a363807d0c4d5c64f58c39ae"
+    },
+    {
+      "path": "types/appbase_session_create_command.go",
+      "sha256": "9476cd0a7f41c62d86da49d3acab8b52a1fdca39c3ea5a3bc5ccdae06d52b918"
+    },
+    {
+      "path": "types/common.go",
+      "sha256": "6e7e501a9c98d11b736cae0ee81c729da6273ebdb0fb0f2c15a0b13d6bce47c0"
+    },
+    {
+      "path": "types/doc.go",
+      "sha256": "18b28ff2991172762f0841c767968fef1d8a570383541ff2bac38e0d4d7f0501"
+    },
+    {
+      "path": "types/field_error.go",
+      "sha256": "27378d0617d9dd86431e84cdfcce5c0623e159921cecbf873faf7f438de4510f"
+    },
+    {
+      "path": "types/problem_detail.go",
+      "sha256": "44971e8989526db7de091ae602799043927c96bc40a8f879b76f679a663a96e8"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

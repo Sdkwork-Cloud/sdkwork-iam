@@ -1,0 +1,47 @@
+{
+  "name": "@sdkwork/iam-permission-pc-react",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "IAM roles, permissions, policies, and authorization hint surfaces.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@sdkwork/iam-contracts": "workspace:*",
+    "@sdkwork/iam-service": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0 <20.0.0",
+    "react-dom": ">=18.2.0 <20.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "sdkwork": {
+    "workspace": "sdkwork-appbase",
+    "architecture": "pc-react",
+    "domain": "iam",
+    "capability": "iam-permission",
+    "status": "standard"
+  }
+}

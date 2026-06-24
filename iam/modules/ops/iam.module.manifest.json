@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.module",
+  "moduleId": "ops",
+  "catalogVersion": "1.0.0",
+  "domain": "ops",
+  "owner": "sdkwork-ops",
+  "displayName": "ops module",
+  "permissions": {
+    "catalog": [
+      {
+        "code": "ops.cache.manage",
+        "name": "Manage cache",
+        "resource": "ops.cache",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ops.cache.read",
+        "name": "Read cache",
+        "resource": "ops.cache",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ops.monitor.read",
+        "name": "Read operations monitor",
+        "resource": "ops.monitor",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ops.rate_limits.manage",
+        "name": "Manage rate limits",
+        "resource": "ops.rate_limits",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ops.rate_limits.read",
+        "name": "Read rate limits",
+        "resource": "ops.rate_limits",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ops.runtime_regions.manage",
+        "name": "Manage runtime regions",
+        "resource": "ops.runtime_regions",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ops.runtime_regions.read",
+        "name": "Read runtime regions",
+        "resource": "ops.runtime_regions",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ops.service_nodes.manage",
+        "name": "Manage service nodes",
+        "resource": "ops.service_nodes",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ops.service_nodes.read",
+        "name": "Read service nodes",
+        "resource": "ops.service_nodes",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      }
+    ],
+    "openapiAuthorities": []
+  },
+  "roles": {
+    "domainStandardRoles": [],
+    "roleGrantExtensions": [
+      {
+        "roleCode": "org_admin",
+        "patterns": [
+          "ops.monitor.read"
+        ]
+      },
+      {
+        "roleCode": "org_operations",
+        "patterns": [
+          "ops.monitor.read"
+        ]
+      },
+      {
+        "roleCode": "platform_system_admin",
+        "patterns": [
+          "ops.*"
+        ]
+      }
+    ],
+    "roleExclusions": []
+  },
+  "directory": {
+    "organizationTemplates": [],
+    "departmentTemplates": [],
+    "positionTemplates": [],
+    "membershipTemplates": []
+  },
+  "policyConditions": {
+    "supportedAttributes": []
+  },
+  "oauthScopeMappings": [],
+  "dependencies": {
+    "requiresModules": [
+      "iam-kernel"
+    ]
+  }
+}

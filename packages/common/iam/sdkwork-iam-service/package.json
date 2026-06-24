@@ -1,0 +1,37 @@
+{
+  "name": "@sdkwork/iam-service",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "SDKWork IAM business service facade over injected app and backend SDK clients.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm --dir ../../../.. exec vitest run packages/common/iam/sdkwork-iam-service/tests --config vitest.config.ts --configLoader native --pool vmThreads"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@sdkwork/iam-contracts": "workspace:*",
+    "@sdkwork/iam-sdk-ports": "workspace:*",
+    "@sdkwork/runtime-bootstrap": "workspace:*"
+  },
+  "sdkwork": {
+    "architecture": "common",
+    "capability": "iam-service",
+    "domain": "iam",
+    "packageType": "service",
+    "status": "standard"
+  }
+}

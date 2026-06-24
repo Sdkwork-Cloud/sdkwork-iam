@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.module",
+  "moduleId": "ai",
+  "catalogVersion": "1.0.0",
+  "domain": "ai",
+  "owner": "sdkwork-ai",
+  "displayName": "ai module",
+  "permissions": {
+    "catalog": [
+      {
+        "code": "ai.agents.manage",
+        "name": "Manage AI agents",
+        "resource": "ai.agents",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.agents.read",
+        "name": "Read AI agents",
+        "resource": "ai.agents",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.analytics.read",
+        "name": "Read AI analytics",
+        "resource": "ai.analytics",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.channels.manage",
+        "name": "Manage AI channels",
+        "resource": "ai.channels",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.channels.read",
+        "name": "Read AI channels",
+        "resource": "ai.channels",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.groups.manage",
+        "name": "Manage AI account pools",
+        "resource": "ai.groups",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.groups.read",
+        "name": "Read AI account pools",
+        "resource": "ai.groups",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.mcp.manage",
+        "name": "Manage MCP servers",
+        "resource": "ai.mcp",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.mcp.read",
+        "name": "Read MCP servers",
+        "resource": "ai.mcp",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.models.manage",
+        "name": "Manage AI models",
+        "resource": "ai.models",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.models.read",
+        "name": "Read AI models",
+        "resource": "ai.models",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.prompts.manage",
+        "name": "Manage AI prompts",
+        "resource": "ai.prompts",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.prompts.read",
+        "name": "Read AI prompts",
+        "resource": "ai.prompts",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.records.manage",
+        "name": "Manage AI records",
+        "resource": "ai.records",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.records.read",
+        "name": "Read AI records",
+        "resource": "ai.records",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.resources.manage",
+        "name": "Manage AI resources",
+        "resource": "ai.resources",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.resources.read",
+        "name": "Read AI resources",
+        "resource": "ai.resources",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.routing.manage",
+        "name": "Manage AI routing",
+        "resource": "ai.routing",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.routing.read",
+        "name": "Read AI routing",
+        "resource": "ai.routing",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.skills.manage",
+        "name": "Manage AI skills",
+        "resource": "ai.skills",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.skills.read",
+        "name": "Read AI skills",
+        "resource": "ai.skills",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      }
+    ],
+    "openapiAuthorities": []
+  },
+  "roles": {
+    "domainStandardRoles": [],
+    "roleGrantExtensions": [
+      {
+        "roleCode": "app_user",
+        "patterns": [
+          "ai.agents.read",
+          "ai.skills.read"
+        ]
+      },
+      {
+        "roleCode": "org_admin",
+        "patterns": [
+          "ai.*"
+        ]
+      },
+      {
+        "roleCode": "org_operations",
+        "patterns": [
+          "ai.*"
+        ]
+      }
+    ],
+    "roleExclusions": []
+  },
+  "directory": {
+    "organizationTemplates": [],
+    "departmentTemplates": [],
+    "positionTemplates": [],
+    "membershipTemplates": []
+  },
+  "policyConditions": {
+    "supportedAttributes": []
+  },
+  "oauthScopeMappings": [],
+  "dependencies": {
+    "requiresModules": [
+      "iam-kernel"
+    ]
+  }
+}

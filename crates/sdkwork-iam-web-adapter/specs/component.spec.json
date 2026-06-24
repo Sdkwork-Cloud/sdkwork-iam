@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-iam-web-adapter",
+    "displayName": "SDKWork IAM Web Adapter",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-appbase/crates/sdkwork-iam-web-adapter",
+    "domain": "iam",
+    "capability": "web-adapter",
+    "status": "standardizing",
+    "languages": [
+      "rust"
+    ],
+    "generated": false,
+    "private": false,
+    "manifests": [
+      "Cargo.toml"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "COMPONENT_SPEC.md",
+      "path": "../../../../sdkwork-specs/COMPONENT_SPEC.md",
+      "purpose": "Component-local contract and discovery rules."
+    },
+    {
+      "file": "WEB_FRAMEWORK_SPEC.md",
+      "path": "../../../../sdkwork-specs/WEB_FRAMEWORK_SPEC.md",
+      "purpose": "Mandatory sdkwork-web-framework integration for HTTP surfaces."
+    },
+    {
+      "file": "WEB_BACKEND_SPEC.md",
+      "path": "../../../../sdkwork-specs/WEB_BACKEND_SPEC.md",
+      "purpose": "Web backend handler, service, and request-context boundaries."
+    },
+    {
+      "file": "RUST_CODE_SPEC.md",
+      "path": "../../../../sdkwork-specs/RUST_CODE_SPEC.md",
+      "purpose": "Rust crate and module rules."
+    }
+  ],
+  "contracts": {
+    "publicExports": [
+      ".",
+      "sdkwork_iam_web_adapter::IamDatabaseWebRequestContextResolver",
+      "sdkwork_iam_web_adapter::IamOpenApiWebRequestContextResolver",
+      "sdkwork_iam_web_adapter::IamApiKeyLookupService",
+      "sdkwork_iam_web_adapter::IamOAuthTokenLookupService",
+      "sdkwork_iam_web_adapter::wrap_router_with_iam_app_web_framework",
+      "sdkwork_iam_web_adapter::wrap_router_with_iam_open_api_web_framework",
+      "sdkwork_iam_web_adapter::build_iam_open_api_web_framework_layer"
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "sdkDependencies": [],
+    "dependencyApiExports": [],
+    "dependencyApiSurfaces": [],
+    "events": [],
+    "configKeys": []
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative. This adapter bridges IAM domain context into sdkwork-web-framework.",
+    "dependencyPolicy": "Consumers integrate through public exports and documented web-framework bootstrap helpers only.",
+    "sdkPolicy": "Generated SDK output is not hand-edited.",
+    "languagePolicy": "Rust code follows Cargo workspace dependencies and sdkwork-web-framework integration."
+  },
+    "verification": {
+    "commands": [
+      "cargo test -p sdkwork-iam-web-adapter",
+      "cargo test -p sdkwork-router-iam-backend-api",
+      "cargo test -p sdkwork-router-iam-open-api"
+    ]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-appbase Rust workspace migration",
+    "standardVersion": "2026-06-18"
+  }
+}

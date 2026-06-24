@@ -1,0 +1,54 @@
+name: User Center Upstream Dispatch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/user-center-upstream-dispatch.yml'
+      - 'packages/pc-react/iam/sdkwork-user-center-pc-react/**'
+      - 'packages/pc-react/iam/sdkwork-user-center-validation-pc-react/**'
+      - 'scripts/appbase-governance-node-test-catalog.mjs'
+      - 'tests/static/governance/appbase-governance-node-test-catalog.test.mjs'
+      - 'scripts/run-appbase-governance-node-tests.mjs'
+      - 'tests/static/governance/run-appbase-governance-node-tests.test.mjs'
+      - 'scripts/run-user-center-standard-contracts.mjs'
+      - 'tests/static/governance/run-user-center-standard-contracts.test.mjs'
+      - 'scripts/user-center-upstream-dispatch-target-catalog.mjs'
+      - 'tests/static/governance/user-center-upstream-dispatch-target-catalog.test.mjs'
+      - 'scripts/user-center-upstream-dispatch.mjs'
+      - 'tests/static/governance/user-center-upstream-dispatch.test.mjs'
+      - 'tests/static/governance/user-center-upstream-dispatch-workflow.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  user-center-upstream-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Run appbase governance node tests
+        run: node scripts/run-appbase-governance-node-tests.mjs
+
+      - name: Run canonical user-center contracts
+        run: node scripts/run-user-center-standard-contracts.mjs
+
+      - name: Dispatch downstream user-center sync workflows
+        env:
+          SDKWORK_USER_CENTER_SOURCE_REF: ${{ github.ref }}
+          SDKWORK_USER_CENTER_SOURCE_REPOSITORY: Sdkwork-Cloud/sdkwork-appbase
+          SDKWORK_USER_CENTER_SOURCE_SHA: ${{ github.sha }}
+          SDKWORK_USER_CENTER_UPSTREAM_DISPATCH_TOKEN: ${{ secrets.SDKWORK_USER_CENTER_UPSTREAM_DISPATCH_TOKEN }}
+        run: node scripts/user-center-upstream-dispatch.mjs

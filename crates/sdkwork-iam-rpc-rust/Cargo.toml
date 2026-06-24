@@ -1,0 +1,15 @@
+[package]
+name = "sdkwork-iam-rpc-rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SDKWork IAM RPC service manifest and adapter foundation."
+
+[lib]
+name = "sdkwork_iam_rpc"
+path = "src/lib.rs"
+
+[dependencies]
+sdkwork_rpc_core.workspace = true
+sdkwork_router_iam_app_api.workspace = true
+sdkwork_router_iam_backend_api.workspace = true

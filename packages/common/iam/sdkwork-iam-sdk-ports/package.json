@@ -1,0 +1,35 @@
+{
+  "name": "@sdkwork/iam-sdk-ports",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Generated SDK client port contracts for SDKWork IAM modules.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm --dir ../../../.. exec vitest run packages/common/iam/sdkwork-iam-sdk-ports/tests --config vitest.config.ts --configLoader native --pool vmThreads"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@sdkwork/iam-contracts": "workspace:*"
+  },
+  "sdkwork": {
+    "architecture": "common",
+    "capability": "iam-sdk-ports",
+    "domain": "iam",
+    "packageType": "contracts",
+    "status": "standard"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-iam-module-registry",
+    "displayName": "SDKWork IAM Module Registry",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-appbase/crates/sdkwork-iam-module-registry",
+    "domain": "iam",
+    "capability": "rbac-federation",
+    "status": "standardizing",
+    "languages": ["rust"],
+    "generated": false,
+    "private": false,
+    "manifests": ["Cargo.toml"]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "IAM_RBAC_FEDERATION_SPEC.md",
+      "path": "../../../../sdkwork-specs/IAM_RBAC_FEDERATION_SPEC.md",
+      "purpose": "IMF discovery, validation, and materialization rules."
+    },
+    {
+      "file": "IAM_MODULE_MANIFEST_SPEC.md",
+      "path": "../../../../sdkwork-specs/IAM_MODULE_MANIFEST_SPEC.md",
+      "purpose": "iam.module.manifest.json schema."
+    }
+  ],
+  "contracts": {
+    "publicExports": [
+      "sdkwork_iam_module_registry::discover_modules",
+      "sdkwork_iam_module_registry::validate_catalog",
+      "sdkwork_iam_module_registry::materialize_postgres_catalog"
+    ],
+    "iamModuleManifest": null,
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "events": [],
+    "configKeys": ["iam/registry/iam-registry.config.json"]
+  },
+  "verification": {
+    "commands": [
+      "cargo test -p sdkwork-iam-module-registry",
+      "pnpm run admin:iam-modules:validate"
+    ]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-06-21"
+  }
+}

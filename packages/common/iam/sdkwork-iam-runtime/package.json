@@ -1,0 +1,41 @@
+{
+  "name": "@sdkwork/iam-runtime",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "SDKWork IAM runtime bootstrap for deployment mode, token storage, and context propagation.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm --dir ../../../.. exec vitest run packages/common/iam/sdkwork-iam-runtime/tests --config vitest.config.ts --configLoader native --pool vmThreads"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@sdkwork/appbase-app-sdk": "workspace:*",
+    "@sdkwork/appbase-backend-sdk": "workspace:*",
+    "@sdkwork/iam-contracts": "workspace:*",
+    "@sdkwork/iam-sdk-ports": "workspace:*",
+    "@sdkwork/iam-service": "workspace:*",
+    "@sdkwork/runtime-bootstrap": "workspace:*",
+    "@sdkwork/sdk-common": "^1.0.2"
+  },
+  "sdkwork": {
+    "architecture": "common",
+    "capability": "iam-runtime",
+    "domain": "iam",
+    "packageType": "runtime",
+    "status": "standard"
+  }
+}

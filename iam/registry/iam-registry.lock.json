@@ -1,0 +1,60 @@
+{
+  "kind": "sdkwork.iam.registry.lock",
+  "materializedAt": "2026-06-24T08:34:58.350118+00:00",
+  "modules": [
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "4708ab34368c4e179c4aa34e05f3a7e0cece31b82692bcc831d60334c0ef58d0",
+      "moduleId": "iam-kernel"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "6a3bea3cd1de2f64a85a73d299c94c4fc7c1ffdaa0af3a39c86439eb1495f3b0",
+      "moduleId": "ai"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "996c852d1c5290b8448d966eec182fef9ad16d91dfe9a32e21c9e705debbac6a",
+      "moduleId": "apps"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "54af81978cd6e35c9e337f4d2b4a225214453617385be1a2fa546fd84764b8b8",
+      "moduleId": "courses"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "a5c5a70878abb510d4f67583b45c5392e47953516d26aa74529903d59e49fcfb",
+      "moduleId": "commerce"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "76403762f10d6bc0bcc13f59f6c9be390f527c15228c32223a920b02969f8d1b",
+      "moduleId": "drive"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "a88478a736f39f230796d7de6d7cd04b98cde021b8992d3c61076c1b61e13d59",
+      "moduleId": "messaging"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "2319b15a31d1c79559e181082ef6a3fb379cdeb17765db129124376f40e6ba01",
+      "moduleId": "integrations"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "9f0dd99c9fd7ae6e3084639c703f6b5a0996fe81c2e4436f1f6338f63780babc",
+      "moduleId": "ops"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "cb94ef77a2531967ef42222f4c3a2009d1808a29b277da2292a7174b42cb716e",
+      "moduleId": "system"
+    }
+  ],
+  "permissionCount": 161,
+  "profile": "operational",
+  "roleCount": 8,
+  "schemaVersion": 1
+}

@@ -1,0 +1,12 @@
+[package]
+name = "sdkwork-iam-bootstrap"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Shared IAM default subject and permission catalog bootstrap for SDKWork applications."
+
+[dependencies]
+chrono = { workspace = true }
+sqlx = { workspace = true }
+sdkwork-iam-context-service = { path = "../sdkwork-iam-context-service" }
+sdkwork_iam_module_registry = { workspace = true }

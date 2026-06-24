@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package sdkwork.iam.app.v3;
+
+import "sdkwork/common/v1/runtime.proto";
+
+option java_package = "com.sdkwork.iam.app.v3";
+option java_multiple_files = true;
+option go_package = "github.com/sdkwork/iam-rpc-go/sdkwork/iam/app/v3;iamappv3";
+
+service SessionService {
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+  rpc RetrieveCurrentSession(RetrieveCurrentSessionRequest) returns (RetrieveCurrentSessionResponse);
+  rpc UpdateCurrentSession(UpdateCurrentSessionRequest) returns (UpdateCurrentSessionResponse);
+  rpc DeleteCurrentSession(DeleteCurrentSessionRequest) returns (DeleteCurrentSessionResponse);
+  rpc RefreshSession(RefreshSessionRequest) returns (RefreshSessionResponse);
+}
+
+message CreateSessionRequest {
+  string login_identifier = 1;
+  string credential = 2;
+}
+
+message CreateSessionResponse {
+  string session_id = 1;
+  string access_token = 2;
+  string auth_token = 3;
+  sdkwork.common.v1.ResponseMetadata metadata = 15;
+}
+
+message RetrieveCurrentSessionRequest {}
+
+message RetrieveCurrentSessionResponse {
+  string session_id = 1;
+  string user_id = 2;
+  sdkwork.common.v1.ResponseMetadata metadata = 15;
+}
+
+message UpdateCurrentSessionRequest {
+  string locale = 1;
+  string timezone = 2;
+}
+
+message UpdateCurrentSessionResponse {
+  string session_id = 1;
+  sdkwork.common.v1.ResponseMetadata metadata = 15;
+}
+
+message DeleteCurrentSessionRequest {}
+
+message DeleteCurrentSessionResponse {
+  sdkwork.common.v1.ResponseMetadata metadata = 15;
+}
+
+message RefreshSessionRequest {
+  string refresh_token = 1;
+}
+
+message RefreshSessionResponse {
+  string session_id = 1;
+  string access_token = 2;
+  string auth_token = 3;
+  sdkwork.common.v1.ResponseMetadata metadata = 15;
+}

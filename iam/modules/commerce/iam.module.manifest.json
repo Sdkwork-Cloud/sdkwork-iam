@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.module",
+  "moduleId": "commerce",
+  "catalogVersion": "1.0.0",
+  "domain": "commerce",
+  "owner": "sdkwork-commerce",
+  "displayName": "commerce module",
+  "permissions": {
+    "catalog": [
+      {
+        "code": "commerce.catalog.manage",
+        "name": "Manage product catalog",
+        "resource": "commerce.catalog",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.catalog.read",
+        "name": "Read product catalog",
+        "resource": "commerce.catalog",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.inventory.manage",
+        "name": "Manage inventory",
+        "resource": "commerce.inventory",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.inventory.read",
+        "name": "Read inventory",
+        "resource": "commerce.inventory",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.marketing.manage",
+        "name": "Manage marketing campaigns",
+        "resource": "commerce.marketing",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.marketing.read",
+        "name": "Read marketing campaigns",
+        "resource": "commerce.marketing",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.memberships.manage",
+        "name": "Manage membership products",
+        "resource": "commerce.memberships",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.memberships.read",
+        "name": "Read membership products",
+        "resource": "commerce.memberships",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.orders.approve",
+        "name": "Approve commerce orders",
+        "resource": "commerce.orders",
+        "action": "approve",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.orders.manage",
+        "name": "Manage orders",
+        "resource": "commerce.orders",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.orders.read",
+        "name": "Read orders",
+        "resource": "commerce.orders",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.orders.reject",
+        "name": "Reject commerce orders",
+        "resource": "commerce.orders",
+        "action": "reject",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.payments.manage",
+        "name": "Manage payments",
+        "resource": "commerce.payments",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.payments.read",
+        "name": "Read payments",
+        "resource": "commerce.payments",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "finance.revenue.read",
+        "name": "Read finance revenue",
+        "resource": "finance.revenue",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      }
+    ],
+    "openapiAuthorities": []
+  },
+  "roles": {
+    "domainStandardRoles": [],
+    "roleGrantExtensions": [
+      {
+        "roleCode": "app_user",
+        "patterns": [
+          "commerce.catalog.read",
+          "commerce.orders.read",
+          "commerce.memberships.read"
+        ]
+      },
+      {
+        "roleCode": "org_admin",
+        "patterns": [
+          "commerce.*"
+        ]
+      },
+      {
+        "roleCode": "org_assistant",
+        "patterns": [
+          "commerce.catalog.read",
+          "commerce.catalog.manage",
+          "commerce.orders.read",
+          "commerce.orders.manage"
+        ]
+      },
+      {
+        "roleCode": "org_finance",
+        "patterns": [
+          "finance.*",
+          "commerce.orders.read",
+          "commerce.revenue.read"
+        ]
+      },
+      {
+        "roleCode": "org_operations",
+        "patterns": [
+          "commerce.*"
+        ]
+      }
+    ],
+    "roleExclusions": []
+  },
+  "directory": {
+    "organizationTemplates": [],
+    "departmentTemplates": [
+      {
+        "ref": "dept.commerce",
+        "code": "commerce",
+        "name": "Commerce",
+        "parentRef": "$orgref:root",
+        "departmentKind": "business",
+        "sortOrder": 20,
+        "defaultPositions": []
+      },
+      {
+        "ref": "dept.finance",
+        "code": "finance",
+        "name": "Finance",
+        "parentRef": "$deptref:dept.commerce",
+        "departmentKind": "business",
+        "sortOrder": 21,
+        "defaultPositions": []
+      }
+    ],
+    "positionTemplates": [],
+    "membershipTemplates": []
+  },
+  "policyConditions": {
+    "supportedAttributes": []
+  },
+  "oauthScopeMappings": [],
+  "dependencies": {
+    "requiresModules": [
+      "iam-kernel"
+    ]
+  }
+}

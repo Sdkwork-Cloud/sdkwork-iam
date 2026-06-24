@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-appbase-app-sdk",
+    "version": "1.0.0",
+    "language": "rust",
+    "sdkType": "app",
+    "protocol": "http",
+    "packageName": "sdkwork-appbase-app-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "eb779f44a5ba8879a9d79c708d0ba4bd412221f102e4430b953f0449327827bf"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "ae8a89ddb314afce79fe910de28017951c3c31f24a67d72915c4153711173b23"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "0f7de5e8f28bf2f50578ab22c68c916107833d8e6104903b113579f09e26b692"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "README.md",
+      "sha256": "d52d6e9b80c49cee261f9ec068bff5b4041c3998dcf983e7dcffb0045be3f241"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "bd76bf7a2671b66b11504ce03ab661deec9ae6b7f706ecd0e0ee8200ed48f8ec"
+    },
+    {
+      "path": "src/api/auth.rs",
+      "sha256": "69bcbd1b9d740bdee7b06c62c245b1ce62f388d57211a612c4c6e69532734786"
+    },
+    {
+      "path": "src/api/base.rs",
+      "sha256": "38e5918b1923072e0b336df894cf97420a25cbca9d26f3aef356c1b69b243fc5"
+    },
+    {
+      "path": "src/api/iam.rs",
+      "sha256": "c9bada740d7302c40cc663ac57262a05c530f523a6c1ad3a32d333e50ce5641c"
+    },
+    {
+      "path": "src/api/mod.rs",
+      "sha256": "d8ae5600a77955958a0b1671f62255e2887e035d076a74259274386dfe550ee3"
+    },
+    {
+      "path": "src/api/oauth.rs",
+      "sha256": "1de08e7ed644ea29fb35ff3dfe6f64266ef9eb3e4bed7699f503471dcd3649ef"
+    },
+    {
+      "path": "src/api/paths.rs",
+      "sha256": "6a1767fd9cdbeca0f69fa7dd61b1c4ba2f82bebf1a43b0a2fc8fa1d9f4e423b2"
+    },
+    {
+      "path": "src/api/system.rs",
+      "sha256": "e7f8cb5b402bb5d2794250f64ff51ad0402d6ea75712efdcd8537ec3d3bb7179"
+    },
+    {
+      "path": "src/client.rs",
+      "sha256": "c064958886dbe678dd36fd8dec0dd34916213fdce691d1d0b3c539a47873c5a9"
+    },
+    {
+      "path": "src/http/client.rs",
+      "sha256": "ffd88587750661cd174b1d0bae02a876d24f8537acdccaa67e297a549d0a927e"
+    },
+    {
+      "path": "src/http/mod.rs",
+      "sha256": "fdf16d487ebd9180fb423d5630d4401ff18180721b86636dec085ad83940bb3d"
+    },
+    {
+      "path": "src/lib.rs",
+      "sha256": "66c33eb3d258b9c3c3fc720b89f87c48153a93755bf7ab2d025fc7a806143406"
+    },
+    {
+      "path": "src/models/appbase_access_credential_create_command.rs",
+      "sha256": "736b87b95508719e080be06da76815e39699d2ce58113bfdf00757d5cddf1688"
+    },
+    {
+      "path": "src/models/appbase_api_result.rs",
+      "sha256": "1f1baec7697e3eabf3195a9927ecdd084bc1d6b08a4e077159451fb7076cb1e4"
+    },
+    {
+      "path": "src/models/appbase_application_register_command.rs",
+      "sha256": "a984b7359002104b10cc4b99df041887d336a125e04af01ecb4aaad5921e481f"
+    },
+    {
+      "path": "src/models/appbase_session_create_command.rs",
+      "sha256": "5d3f3f8f27c6270a390200ac06d93547952a36230cf3e625d34d6f290e214e5f"
+    },
+    {
+      "path": "src/models/appbase_tenant_application_enable_command.rs",
+      "sha256": "9197b64d8bd3603b6c67363adfc45114afa7322ff174c5dd649a84c070edc1b8"
+    },
+    {
+      "path": "src/models/appbase_tenant_application_provision_command.rs",
+      "sha256": "961c1c4b58a3b2c98458173fc18166e9a2f6fe11557df7a703a70ea6ec408383"
+    },
+    {
+      "path": "src/models/appbase_tenant_application_update_command.rs",
+      "sha256": "47db72d9a0f2288d5054d7510f8b5376388b1bc2cded1621a7a34f0d9b5a2f72"
+    },
+    {
+      "path": "src/models/common.rs",
+      "sha256": "fce0239d85066b1c42435ab8c96676ea2d5300e5dcb87c52fd3e33d29a603a5e"
+    },
+    {
+      "path": "src/models/field_error.rs",
+      "sha256": "fc7aa3d12832fb2a8321974ab429ec3782cf0f465d8940e9ed73477dc4e1f61c"
+    },
+    {
+      "path": "src/models/mod.rs",
+      "sha256": "b789ab62a47402b582ceb94aabfeb7af07203b6c495cc7a6514e65e5a7b3fb3b"
+    },
+    {
+      "path": "src/models/problem_detail.rs",
+      "sha256": "fccd084df605e1cc18531b6f26436910c62c2ea625aadda2163ed6fbace1d881"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

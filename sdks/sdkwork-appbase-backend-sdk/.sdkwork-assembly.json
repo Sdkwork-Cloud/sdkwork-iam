@@ -1,0 +1,173 @@
+{
+  "workspace": "sdkwork-appbase-backend-sdk",
+  "title": "SDKWork Appbase Backend API SDK",
+  "apiVersion": "1.0.0",
+  "openapiVersion": "3.1.2",
+  "authoritySpec": "openapi/sdkwork-appbase-backend-api.openapi.yaml",
+  "generationInputSpec": "openapi/sdkwork-appbase-backend-api.sdkgen.yaml",
+  "derivedSpecs": {
+    "default": "openapi/sdkwork-appbase-backend-api.sdkgen.yaml",
+    "flutter": "openapi/sdkwork-appbase-backend-api.flutter.sdkgen.yaml"
+  },
+  "sdkOwner": "sdkwork-appbase",
+  "apiAuthority": "sdkwork-appbase-backend-api",
+  "discoverySurface": {
+    "sdkTarget": "backend",
+    "apiPrefix": "/backend/v3/api",
+    "schemaUrl": "/backend/v3/openapi.json",
+    "generatedProtocols": [
+      "http-openapi"
+    ],
+    "manualTransports": []
+  },
+  "languages": [
+    {
+      "language": "typescript",
+      "workspace": "sdkwork-appbase-backend-sdk-typescript",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-typescript/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-typescript/generated/server-openapi/package.json",
+      "name": "@sdkwork/appbase-backend-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned TypeScript transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-typescript/generated/server-openapi"
+    },
+    {
+      "language": "dart",
+      "workspace": "sdkwork-appbase-backend-sdk-dart",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-dart/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-dart/generated/server-openapi/pubspec.yaml",
+      "name": "sdkwork_appbase_backend_sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Dart transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-dart/generated/server-openapi"
+    },
+    {
+      "language": "python",
+      "workspace": "sdkwork-appbase-backend-sdk-python",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-python/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-python/generated/server-openapi/pyproject.toml",
+      "name": "sdkwork-appbase-backend-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Python transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-python/generated/server-openapi"
+    },
+    {
+      "language": "go",
+      "workspace": "sdkwork-appbase-backend-sdk-go",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-go/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-go/generated/server-openapi/go.mod",
+      "name": "github.com/sdkwork/sdkwork-appbase-backend-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Go transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-go/generated/server-openapi"
+    },
+    {
+      "language": "java",
+      "workspace": "sdkwork-appbase-backend-sdk-java",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-java/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-java/generated/server-openapi/pom.xml",
+      "name": "com.sdkwork:sdkwork-appbase-backend-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Java transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-java/generated/server-openapi"
+    },
+    {
+      "language": "kotlin",
+      "workspace": "sdkwork-appbase-backend-sdk-kotlin",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-kotlin/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-kotlin/generated/server-openapi/build.gradle.kts",
+      "name": "com.sdkwork:sdkwork-appbase-backend-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Kotlin transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-kotlin/generated/server-openapi"
+    },
+    {
+      "language": "swift",
+      "workspace": "sdkwork-appbase-backend-sdk-swift",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-swift/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-swift/generated/server-openapi/Package.swift",
+      "name": "sdkwork-appbase-backend-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Swift transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-swift/generated/server-openapi"
+    },
+    {
+      "language": "csharp",
+      "workspace": "sdkwork-appbase-backend-sdk-csharp",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-csharp/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-csharp/generated/server-openapi/SDKWork.Appbase.BackendSdk.csproj",
+      "name": "SDKWork.Appbase.BackendSdk",
+      "version": "1.0.0",
+      "description": "Generator-owned C# transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-csharp/generated/server-openapi"
+    },
+    {
+      "language": "flutter",
+      "workspace": "sdkwork-appbase-backend-sdk-flutter",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-flutter/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-flutter/generated/server-openapi/pubspec.yaml",
+      "name": "sdkwork_appbase_backend_sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Flutter transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-flutter/generated/server-openapi"
+    },
+    {
+      "language": "rust",
+      "workspace": "sdkwork-appbase-backend-sdk-rust",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-rust/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-rust/generated/server-openapi/Cargo.toml",
+      "name": "sdkwork-appbase-backend-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Rust transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-rust/generated/server-openapi"
+    },
+    {
+      "language": "php",
+      "workspace": "sdkwork-appbase-backend-sdk-php",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-php/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-php/generated/server-openapi/composer.json",
+      "name": "sdkwork/appbase-backend-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned PHP transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-php/generated/server-openapi"
+    },
+    {
+      "language": "ruby",
+      "workspace": "sdkwork-appbase-backend-sdk-ruby",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-backend-sdk-ruby/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-backend-sdk-ruby/generated/server-openapi/sdkwork-appbase-backend-sdk.gemspec",
+      "name": "sdkwork-appbase-backend-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Ruby transport SDK for SDKWork Appbase Backend API.",
+      "generatedPath": "sdkwork-appbase-backend-sdk-ruby/generated/server-openapi"
+    }
+  ],
+  "metadata": {
+    "managedBy": "tools/generators/materialize-appbase-v3-openapi-boundaries.mjs",
+    "standardVersion": "2026-06-06"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-iam-database-host",
+    "displayName": "SDKWork Appbase Database Host",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-appbase/crates/sdkwork-iam-database-host",
+    "domain": "iam",
+    "capability": "database-host",
+    "status": "standardizing",
+    "languages": ["rust"],
+    "generated": false,
+    "private": false,
+    "manifests": ["Cargo.toml"]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "DATABASE_FRAMEWORK_SPEC.md",
+      "path": "../../../../sdkwork-specs/DATABASE_FRAMEWORK_SPEC.md",
+      "purpose": "Application database lifecycle and SPI orchestration."
+    },
+    {
+      "file": "RUST_CODE_SPEC.md",
+      "path": "../../../../sdkwork-specs/RUST_CODE_SPEC.md",
+      "purpose": "Rust crate and module rules."
+    }
+  ],
+  "contracts": {
+    "publicExports": [
+      "sdkwork_appbase_database_host::bootstrap_iam_database",
+      "sdkwork_appbase_database_host::IamDatabaseHost"
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "events": [],
+    "configKeys": []
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative.",
+    "dependencyPolicy": "Consumers integrate through documented bootstrap helpers only.",
+    "sdkPolicy": "Generated SDK output is not hand-edited.",
+    "languagePolicy": "Rust code follows Cargo workspace dependencies and sdkwork-database integration."
+  },
+  "verification": {
+    "commands": [
+      "pnpm run check:database",
+      "cargo test -p sdkwork-iam-database-host"
+    ]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-06-21"
+  }
+}

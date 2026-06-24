@@ -1,0 +1,173 @@
+{
+  "workspace": "sdkwork-appbase-open-sdk",
+  "title": "SDKWork Appbase Open API SDK",
+  "apiVersion": "1.0.0",
+  "openapiVersion": "3.1.2",
+  "authoritySpec": "openapi/sdkwork-appbase-open-api.openapi.yaml",
+  "generationInputSpec": "openapi/sdkwork-appbase-open-api.sdkgen.yaml",
+  "derivedSpecs": {
+    "default": "openapi/sdkwork-appbase-open-api.sdkgen.yaml",
+    "flutter": "openapi/sdkwork-appbase-open-api.flutter.sdkgen.yaml"
+  },
+  "sdkOwner": "sdkwork-appbase",
+  "apiAuthority": "sdkwork-appbase-open-api",
+  "discoverySurface": {
+    "sdkTarget": "open",
+    "apiPrefix": "/iam/v3/api",
+    "schemaUrl": "/iam/v3/openapi.json",
+    "generatedProtocols": [
+      "http-openapi"
+    ],
+    "manualTransports": []
+  },
+  "languages": [
+    {
+      "language": "typescript",
+      "workspace": "sdkwork-appbase-open-sdk-typescript",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-typescript/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-typescript/generated/server-openapi/package.json",
+      "name": "@sdkwork/appbase-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned TypeScript transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-typescript/generated/server-openapi"
+    },
+    {
+      "language": "dart",
+      "workspace": "sdkwork-appbase-open-sdk-dart",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-dart/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-dart/generated/server-openapi/pubspec.yaml",
+      "name": "sdkwork_appbase_open_sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Dart transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-dart/generated/server-openapi"
+    },
+    {
+      "language": "python",
+      "workspace": "sdkwork-appbase-open-sdk-python",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-python/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-python/generated/server-openapi/pyproject.toml",
+      "name": "sdkwork-appbase-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Python transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-python/generated/server-openapi"
+    },
+    {
+      "language": "go",
+      "workspace": "sdkwork-appbase-open-sdk-go",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-go/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-go/generated/server-openapi/go.mod",
+      "name": "github.com/sdkwork/sdkwork-appbase-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Go transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-go/generated/server-openapi"
+    },
+    {
+      "language": "java",
+      "workspace": "sdkwork-appbase-open-sdk-java",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-java/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-java/generated/server-openapi/pom.xml",
+      "name": "com.sdkwork:sdkwork-appbase-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Java transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-java/generated/server-openapi"
+    },
+    {
+      "language": "kotlin",
+      "workspace": "sdkwork-appbase-open-sdk-kotlin",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-kotlin/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-kotlin/generated/server-openapi/build.gradle.kts",
+      "name": "com.sdkwork:sdkwork-appbase-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Kotlin transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-kotlin/generated/server-openapi"
+    },
+    {
+      "language": "swift",
+      "workspace": "sdkwork-appbase-open-sdk-swift",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-swift/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-swift/generated/server-openapi/Package.swift",
+      "name": "sdkwork-appbase-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Swift transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-swift/generated/server-openapi"
+    },
+    {
+      "language": "csharp",
+      "workspace": "sdkwork-appbase-open-sdk-csharp",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-csharp/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-csharp/generated/server-openapi/SDKWork.Appbase.OpenSdk.csproj",
+      "name": "SDKWork.Appbase.OpenSdk",
+      "version": "1.0.0",
+      "description": "Generator-owned C# transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-csharp/generated/server-openapi"
+    },
+    {
+      "language": "flutter",
+      "workspace": "sdkwork-appbase-open-sdk-flutter",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-flutter/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-flutter/generated/server-openapi/pubspec.yaml",
+      "name": "sdkwork_appbase_open_sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Flutter transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-flutter/generated/server-openapi"
+    },
+    {
+      "language": "rust",
+      "workspace": "sdkwork-appbase-open-sdk-rust",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-rust/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-rust/generated/server-openapi/Cargo.toml",
+      "name": "sdkwork-appbase-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Rust transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-rust/generated/server-openapi"
+    },
+    {
+      "language": "php",
+      "workspace": "sdkwork-appbase-open-sdk-php",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-php/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-php/generated/server-openapi/composer.json",
+      "name": "sdkwork/appbase-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned PHP transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-php/generated/server-openapi"
+    },
+    {
+      "language": "ruby",
+      "workspace": "sdkwork-appbase-open-sdk-ruby",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-appbase-open-sdk-ruby/generated/server-openapi",
+      "manifestPath": "sdkwork-appbase-open-sdk-ruby/generated/server-openapi/sdkwork-appbase-open-sdk.gemspec",
+      "name": "sdkwork-appbase-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Ruby transport SDK for SDKWork Appbase Open API.",
+      "generatedPath": "sdkwork-appbase-open-sdk-ruby/generated/server-openapi"
+    }
+  ],
+  "metadata": {
+    "managedBy": "tools/generators/materialize-appbase-v3-openapi-boundaries.mjs",
+    "standardVersion": "2026-06-18"
+  }
+}

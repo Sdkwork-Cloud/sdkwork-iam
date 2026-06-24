@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.module",
+  "moduleId": "drive",
+  "catalogVersion": "1.0.0",
+  "domain": "drive",
+  "owner": "sdkwork-drive",
+  "displayName": "drive module",
+  "permissions": {
+    "catalog": [
+      {
+        "code": "drive.nodes.manage",
+        "name": "Manage drive nodes",
+        "resource": "drive.nodes",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "drive.nodes.read",
+        "name": "Read drive nodes",
+        "resource": "drive.nodes",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "drive.permissions.manage",
+        "name": "Manage drive permissions",
+        "resource": "drive.permissions",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "drive.permissions.read",
+        "name": "Read drive permissions",
+        "resource": "drive.permissions",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "drive.spaces.manage",
+        "name": "Manage drive spaces",
+        "resource": "drive.spaces",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "drive.spaces.read",
+        "name": "Read drive spaces",
+        "resource": "drive.spaces",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "storage.providers.manage",
+        "name": "Manage storage providers",
+        "resource": "storage.providers",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "storage.providers.read",
+        "name": "Read storage providers",
+        "resource": "storage.providers",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      }
+    ],
+    "openapiAuthorities": []
+  },
+  "roles": {
+    "domainStandardRoles": [],
+    "roleGrantExtensions": [
+      {
+        "roleCode": "app_user",
+        "patterns": [
+          "drive.spaces.read",
+          "drive.nodes.read"
+        ]
+      },
+      {
+        "roleCode": "org_admin",
+        "patterns": [
+          "drive.*",
+          "storage.*"
+        ]
+      }
+    ],
+    "roleExclusions": []
+  },
+  "directory": {
+    "organizationTemplates": [],
+    "departmentTemplates": [],
+    "positionTemplates": [],
+    "membershipTemplates": []
+  },
+  "policyConditions": {
+    "supportedAttributes": []
+  },
+  "oauthScopeMappings": [],
+  "dependencies": {
+    "requiresModules": [
+      "iam-kernel"
+    ]
+  }
+}

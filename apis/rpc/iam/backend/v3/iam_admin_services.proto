@@ -1,0 +1,165 @@
+syntax = "proto3";
+
+package sdkwork.iam.backend.v3;
+
+import "sdkwork/common/v1/pagination.proto";
+import "sdkwork/common/v1/runtime.proto";
+
+option java_package = "com.sdkwork.iam.backend.v3";
+option java_multiple_files = true;
+option go_package = "github.com/sdkwork/iam-rpc-go/sdkwork/iam/backend/v3;iambackendv3";
+
+service TenantAdminService {
+  rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
+  rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse);
+  rpc RetrieveTenant(RetrieveTenantRequest) returns (RetrieveTenantResponse);
+}
+
+service UserAdminService {
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  rpc RetrieveUser(RetrieveUserRequest) returns (RetrieveUserResponse);
+}
+
+service RoleAdminService {
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+}
+
+service PermissionAdminService {
+  rpc CreatePermission(CreatePermissionRequest) returns (CreatePermissionResponse);
+  rpc ListPermissions(ListPermissionsRequest) returns (ListPermissionsResponse);
+}
+
+service IamAuditService {
+  rpc ListSecurityEvents(ListSecurityEventsRequest) returns (ListSecurityEventsResponse);
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
+}
+
+message Tenant {
+  string tenant_id = 1;
+  string name = 2;
+}
+
+message User {
+  string user_id = 1;
+  string username = 2;
+}
+
+message Role {
+  string role_id = 1;
+  string code = 2;
+}
+
+message Permission {
+  string permission_id = 1;
+  string code = 2;
+}
+
+message AuditEvent {
+  string event_id = 1;
+  string action = 2;
+}
+
+message CreateTenantRequest {
+  string name = 1;
+}
+
+message CreateTenantResponse {
+  Tenant tenant = 1;
+  sdkwork.common.v1.ResponseMetadata metadata = 15;
+}
+
+message ListTenantsRequest {
+  sdkwork.common.v1.PageRequest page = 1;
+}
+
+message ListTenantsResponse {
+  repeated Tenant tenants = 1;
+  sdkwork.common.v1.PageResponse page = 2;
+}
+
+message RetrieveTenantRequest {
+  string tenant_id = 1;
+}
+
+message RetrieveTenantResponse {
+  Tenant tenant = 1;
+}
+
+message CreateUserRequest {
+  string username = 1;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+message ListUsersRequest {
+  sdkwork.common.v1.PageRequest page = 1;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  sdkwork.common.v1.PageResponse page = 2;
+}
+
+message RetrieveUserRequest {
+  string user_id = 1;
+}
+
+message RetrieveUserResponse {
+  User user = 1;
+}
+
+message CreateRoleRequest {
+  string code = 1;
+}
+
+message CreateRoleResponse {
+  Role role = 1;
+}
+
+message ListRolesRequest {
+  sdkwork.common.v1.PageRequest page = 1;
+}
+
+message ListRolesResponse {
+  repeated Role roles = 1;
+  sdkwork.common.v1.PageResponse page = 2;
+}
+
+message CreatePermissionRequest {
+  string code = 1;
+}
+
+message CreatePermissionResponse {
+  Permission permission = 1;
+}
+
+message ListPermissionsRequest {
+  sdkwork.common.v1.PageRequest page = 1;
+}
+
+message ListPermissionsResponse {
+  repeated Permission permissions = 1;
+  sdkwork.common.v1.PageResponse page = 2;
+}
+
+message ListSecurityEventsRequest {
+  sdkwork.common.v1.PageRequest page = 1;
+}
+
+message ListSecurityEventsResponse {
+  repeated AuditEvent events = 1;
+  sdkwork.common.v1.PageResponse page = 2;
+}
+
+message ListAuditEventsRequest {
+  sdkwork.common.v1.PageRequest page = 1;
+}
+
+message ListAuditEventsResponse {
+  repeated AuditEvent events = 1;
+  sdkwork.common.v1.PageResponse page = 2;
+}

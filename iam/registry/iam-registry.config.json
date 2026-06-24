@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.registry.config",
+  "defaultProfile": "operational",
+  "enabledModules": [
+    "iam-kernel",
+    "ai",
+    "apps",
+    "courses",
+    "commerce",
+    "drive",
+    "messaging",
+    "integrations",
+    "ops",
+    "system"
+  ],
+  "optionalModules": [
+    "iot"
+  ]
+}

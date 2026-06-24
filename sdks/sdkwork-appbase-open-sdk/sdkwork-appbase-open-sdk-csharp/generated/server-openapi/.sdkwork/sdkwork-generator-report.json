@@ -1,0 +1,331 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "artifacts": {
+    "stateDir": ".sdkwork",
+    "manifestPath": ".sdkwork/sdkwork-generator-manifest.json",
+    "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
+    "executionReportPath": ".sdkwork/sdkwork-generator-report.json",
+    "manualBackupDir": ".sdkwork/manual-backups"
+  },
+  "status": "ok",
+  "mode": "apply",
+  "hasChanges": true,
+  "hasDestructiveChanges": false,
+  "changeFingerprint": "9b8b0190a27b024f110cd7b5dab1ec300cb2876588e1ca850e1e1b7d6518c1fe",
+  "changeImpact": {
+    "schemaVersion": 1,
+    "areas": [
+      "api-surface",
+      "models",
+      "runtime",
+      "build-metadata",
+      "publish-workflow",
+      "documentation",
+      "custom-scaffold",
+      "unknown"
+    ],
+    "details": [
+      {
+        "area": "api-surface",
+        "paths": [
+          "Api/Api.cs",
+          "Api/ApiPaths.cs",
+          "Api/IamOauthApi.cs",
+          "SdkworkCustomClient.cs"
+        ]
+      },
+      {
+        "area": "models",
+        "paths": [
+          "Models/AppbaseApiResult.cs",
+          "Models/AppbaseSessionCreateCommand.cs",
+          "Models/FieldError.cs",
+          "Models/ProblemDetail.cs"
+        ]
+      },
+      {
+        "area": "runtime",
+        "paths": [
+          "Http/HttpClient.cs"
+        ]
+      },
+      {
+        "area": "build-metadata",
+        "paths": [
+          "sdkwork-sdk.json",
+          "SDKWork.Appbase.OpenSdk.csproj"
+        ]
+      },
+      {
+        "area": "publish-workflow",
+        "paths": [
+          "bin/publish-core.mjs",
+          "bin/publish.ps1",
+          "bin/publish.sh"
+        ]
+      },
+      {
+        "area": "documentation",
+        "paths": [
+          "CHANGELOG.md",
+          "custom/README.md",
+          "README.md"
+        ]
+      },
+      {
+        "area": "custom-scaffold",
+        "paths": [
+          "custom/README.md"
+        ]
+      },
+      {
+        "area": "unknown",
+        "paths": [
+          "LICENSE"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+  },
+  "executionDecision": {
+    "schemaVersion": 1,
+    "riskLevel": "high",
+    "nextAction": "verify",
+    "requiresManualReview": false,
+    "applyRequiresExpectedFingerprint": false,
+    "summary": "Changes have been applied. Run the required verification plan now.",
+    "reasons": [
+      "manual-review-required",
+      "preserved-legacy-files",
+      "unknown-impact",
+      "verification-required"
+    ]
+  },
+  "executionHandoff": {
+    "schemaVersion": 1,
+    "summary": "Run the required verification commands now.",
+    "steps": [
+      {
+        "id": "verify-check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-appbase\\sdks\\sdkwork-appbase-open-sdk\\sdkwork-appbase-open-sdk-csharp\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "csharp",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language csharp --project-dir . --action check"
+      }
+    ]
+  },
+  "verificationPlan": {
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-appbase\\sdks\\sdkwork-appbase-open-sdk\\sdkwork-appbase-open-sdk-csharp\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "csharp",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language csharp --project-dir . --action check"
+      }
+    ]
+  },
+  "sdk": {
+    "name": "sdkwork-appbase-open-sdk",
+    "version": "1.0.0",
+    "language": "csharp",
+    "sdkType": "custom",
+    "protocol": "http",
+    "outputPath": "E:\\sdkwork-space\\sdkwork-appbase\\sdks\\sdkwork-appbase-open-sdk\\sdkwork-appbase-open-sdk-csharp\\generated\\server-openapi",
+    "packageName": "SDKWork.Appbase.OpenSdk"
+  },
+  "versioning": {
+    "resolvedVersion": "1.0.0",
+    "localVersions": []
+  },
+  "stats": {
+    "totalFiles": 18,
+    "models": 4,
+    "apis": 1,
+    "types": 0
+  },
+  "warnings": [],
+  "syncSummary": {
+    "dryRun": false,
+    "controlPlaneEnabled": true,
+    "writtenFiles": 18,
+    "skippedScaffoldFiles": 0,
+    "skippedUnchangedGeneratedFiles": 0,
+    "deletedGeneratedFiles": 0,
+    "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
+    "changeFingerprint": "9b8b0190a27b024f110cd7b5dab1ec300cb2876588e1ca850e1e1b7d6518c1fe",
+    "changes": {
+      "createdGeneratedFiles": [
+        "Api/Api.cs",
+        "Api/ApiPaths.cs",
+        "Api/IamOauthApi.cs",
+        "bin/publish-core.mjs",
+        "bin/publish.ps1",
+        "bin/publish.sh",
+        "CHANGELOG.md",
+        "Http/HttpClient.cs",
+        "LICENSE",
+        "Models/AppbaseApiResult.cs",
+        "Models/AppbaseSessionCreateCommand.cs",
+        "Models/FieldError.cs",
+        "Models/ProblemDetail.cs",
+        "README.md",
+        "sdkwork-sdk.json",
+        "SDKWork.Appbase.OpenSdk.csproj",
+        "SdkworkCustomClient.cs"
+      ],
+      "updatedGeneratedFiles": [],
+      "unchangedGeneratedFiles": [],
+      "deletedGeneratedFiles": [],
+      "scaffoldedFiles": [
+        "custom/README.md"
+      ],
+      "preservedScaffoldFiles": [],
+      "backedUpFiles": []
+    },
+    "impact": {
+      "schemaVersion": 1,
+      "areas": [
+        "api-surface",
+        "models",
+        "runtime",
+        "build-metadata",
+        "publish-workflow",
+        "documentation",
+        "custom-scaffold",
+        "unknown"
+      ],
+      "details": [
+        {
+          "area": "api-surface",
+          "paths": [
+            "Api/Api.cs",
+            "Api/ApiPaths.cs",
+            "Api/IamOauthApi.cs",
+            "SdkworkCustomClient.cs"
+          ]
+        },
+        {
+          "area": "models",
+          "paths": [
+            "Models/AppbaseApiResult.cs",
+            "Models/AppbaseSessionCreateCommand.cs",
+            "Models/FieldError.cs",
+            "Models/ProblemDetail.cs"
+          ]
+        },
+        {
+          "area": "runtime",
+          "paths": [
+            "Http/HttpClient.cs"
+          ]
+        },
+        {
+          "area": "build-metadata",
+          "paths": [
+            "sdkwork-sdk.json",
+            "SDKWork.Appbase.OpenSdk.csproj"
+          ]
+        },
+        {
+          "area": "publish-workflow",
+          "paths": [
+            "bin/publish-core.mjs",
+            "bin/publish.ps1",
+            "bin/publish.sh"
+          ]
+        },
+        {
+          "area": "documentation",
+          "paths": [
+            "CHANGELOG.md",
+            "custom/README.md",
+            "README.md"
+          ]
+        },
+        {
+          "area": "custom-scaffold",
+          "paths": [
+            "custom/README.md"
+          ]
+        },
+        {
+          "area": "unknown",
+          "paths": [
+            "LICENSE"
+          ]
+        }
+      ],
+      "requiresVerification": true,
+      "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+    },
+    "verificationPlan": {
+      "shouldRun": true,
+      "runPhase": "now",
+      "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
+      "steps": [
+        {
+          "id": "check",
+          "title": "Unified package check",
+          "required": true,
+          "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+          "workingDirectory": "E:\\sdkwork-space\\sdkwork-appbase\\sdks\\sdkwork-appbase-open-sdk\\sdkwork-appbase-open-sdk-csharp\\generated\\server-openapi",
+          "command": "node",
+          "args": [
+            "./bin/publish-core.mjs",
+            "--language",
+            "csharp",
+            "--project-dir",
+            ".",
+            "--action",
+            "check"
+          ],
+          "displayCommand": "node ./bin/publish-core.mjs --language csharp --project-dir . --action check"
+        }
+      ]
+    },
+    "executionDecision": {
+      "schemaVersion": 1,
+      "riskLevel": "high",
+      "nextAction": "verify",
+      "requiresManualReview": false,
+      "applyRequiresExpectedFingerprint": false,
+      "summary": "Changes have been applied. Run the required verification plan now.",
+      "reasons": [
+        "manual-review-required",
+        "preserved-legacy-files",
+        "unknown-impact",
+        "verification-required"
+      ]
+    },
+    "backedUpFiles": [],
+    "preservedLegacyFiles": true
+  }
+}

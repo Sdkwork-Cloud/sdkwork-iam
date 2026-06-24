@@ -1,0 +1,50 @@
+{
+  "name": "@sdkwork/iam-core-pc-react",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Canonical IAM service facade, SDK resource contracts, and SaaS/private/local client injection for PC React applications.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@sdkwork/iam-contracts": "workspace:*",
+    "@sdkwork/iam-runtime": "workspace:*",
+    "@sdkwork/iam-sdk-adapter": "workspace:*",
+    "@sdkwork/iam-sdk-ports": "workspace:*",
+    "@sdkwork/iam-service": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0 <20.0.0",
+    "react-dom": ">=18.2.0 <20.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "sdkwork": {
+    "workspace": "sdkwork-appbase",
+    "architecture": "pc-react",
+    "domain": "iam",
+    "capability": "iam-core",
+    "status": "standard"
+  }
+}
