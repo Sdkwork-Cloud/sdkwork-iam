@@ -6,7 +6,7 @@
     "displayName": "SDKWork Iam Rpc Rust",
     "version": "0.1.0",
     "type": "rust-crate",
-    "root": "sdkwork-appbase/crates/sdkwork-iam-rpc-rust",
+    "root": "sdkwork-iam/crates/sdkwork-iam-rpc-rust",
     "domain": "iam",
     "capability": "rpc",
     "status": "standardizing",
@@ -99,7 +99,7 @@
     }
   ],
   "metadata": {
-    "managedBy": "sdkwork-appbase Rust workspace migration",
+    "managedBy": "sdkwork-iam",
     "standardVersion": "2026-06-12"
   }
 }

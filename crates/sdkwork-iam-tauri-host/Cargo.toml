@@ -6,7 +6,7 @@ license.workspace = true
 description = "SDKWork IAM Tauri host adapter contract for local/private deployments."
 
 [lib]
-name = "sdkwork_appbase_tauri_host"
+name = "sdkwork_iam_tauri_host"
 path = "src/lib.rs"
 
 [dependencies]

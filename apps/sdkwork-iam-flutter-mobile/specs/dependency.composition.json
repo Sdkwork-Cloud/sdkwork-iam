@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.dependency.composition",
+  "applicationCode": "iam",
+  "clientArchitecture": "flutter-mobile",
+  "surfaces": [
+    {
+      "surface": "app",
+      "corePackage": "sdkwork_iam_flutter_mobile_core",
+      "sdkClients": [
+        "@sdkwork/iam-app-sdk"
+      ],
+      "reusableModules": [
+        "sdkwork_iam_flutter_mobile_core",
+        "sdkwork_iam_flutter_mobile_auth"
+      ],
+      "hostAdapters": [],
+      "dependencyApiExports": [],
+      "dependencyApiSurfaces": []
+    }
+  ],
+  "buildToolEntries": {
+    "pub": {
+      "workspacePackages": [
+        "sdkwork_iam_flutter_mobile_core",
+        "sdkwork_iam_flutter_mobile_auth"
+      ]
+    }
+  }
+}

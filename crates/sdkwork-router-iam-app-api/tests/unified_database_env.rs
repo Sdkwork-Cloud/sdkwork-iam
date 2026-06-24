@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 /// Load the unified claw-router PostgreSQL profile for integration tests.
 ///
 /// Resolution order:
-/// 1. `sdkwork-appbase/.env.postgres`
+/// 1. `sdkwork-iam/.env.postgres`
 /// 2. `../sdkwork-clawrouter/.env.postgres`
 /// 3. `../sdkwork-claw-router/.env.postgres`
 pub fn apply_unified_claw_postgres_env() {
@@ -29,11 +29,11 @@ fn materialize_iam_database_url_from_unified_profile() {
 
 fn unified_database_env_candidates() -> Vec<PathBuf> {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let appbase_root = manifest_dir.join("../..");
+    let iam_root = manifest_dir.join("../..");
     vec![
-        appbase_root.join(".env.postgres"),
-        appbase_root.join("../sdkwork-clawrouter/.env.postgres"),
-        appbase_root.join("../sdkwork-claw-router/.env.postgres"),
+        iam_root.join(".env.postgres"),
+        iam_root.join("../sdkwork-clawrouter/.env.postgres"),
+        iam_root.join("../sdkwork-claw-router/.env.postgres"),
     ]
 }
 

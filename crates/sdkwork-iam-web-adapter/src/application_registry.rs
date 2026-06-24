@@ -95,6 +95,7 @@ pub struct TenantApplication {
     pub status: String,
     pub primary_domain: Option<String>,
     pub access_permissions: Vec<String>,
+    pub runtime_config: Value,
 }
 
 pub async fn validate_enabled_tenant_runtime_app(
@@ -425,13 +426,27 @@ pub async fn provision_tenant_application(
     };
 
     let now = chrono::Utc::now();
-    let existing =
+    let existing = find_tenant_application_by_organization_template(
+        pg,
+        &command.tenant_id,
+        &command.organization_id,
+        &template.id,
+    )
+    .await?
+    .or(
         find_tenant_application_by_instance_key(pg, &command.tenant_id, &command.instance_key)
-            .await?;
+            .await?,
+    );
     let tenant_application_id = existing
         .as_ref()
         .map(|app| app.id.clone())
-        .unwrap_or_else(|| format!("tapp_{}", uuid::Uuid::now_v7()));
+        .unwrap_or_else(|| {
+            product_tenant_application_row_id(
+                &command.tenant_id,
+                &command.organization_id,
+                &template.id,
+            )
+        });
     let runtime_app_id = existing
         .as_ref()
         .map(|app| app.app_id.clone())
@@ -520,11 +535,13 @@ pub async fn update_tenant_application(
         .unwrap_or(existing.access_permissions.clone());
     let domain_config = command.domain_config.clone().unwrap_or_else(|| json!({}));
     let runtime_config = command.runtime_config.clone().unwrap_or_else(|| json!({}));
+    let merged_runtime_config =
+        merge_runtime_config_patch(&existing.runtime_config, &runtime_config);
     let now = chrono::Utc::now();
 
     sqlx::query(
         "UPDATE iam_tenant_application SET primary_domain = $2, domain_config_json = $3, \
-         access_permissions_json = $4, runtime_config_json = runtime_config_json || $5::jsonb, \
+         access_permissions_json = $4, runtime_config_json = $5::jsonb, \
          updated_at = $6 \
          WHERE id = $1 AND tenant_id = $7",
     )
@@ -532,7 +549,7 @@ pub async fn update_tenant_application(
     .bind(&primary_domain)
     .bind(Json(&domain_config))
     .bind(Json(&access_permissions))
-    .bind(Json(&runtime_config))
+    .bind(Json(&merged_runtime_config))
     .bind(&now)
     .bind(tenant_id)
     .execute(pg)
@@ -542,6 +559,524 @@ pub async fn update_tenant_application(
     resolve_tenant_application(pg, tenant_id, Some(tenant_application_id), None, None)
         .await?
         .ok_or_else(|| "tenant application update completed but lookup failed".to_string())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnsureProductApplicationCommand {
+    pub owner_tenant_id: String,
+    pub app_key: String,
+    pub name: String,
+    pub display_name: String,
+    pub app_type: String,
+    pub version: String,
+    pub channel: String,
+    pub default_access_permissions: Vec<String>,
+    pub tenant_id: String,
+    pub organization_id: String,
+    pub instance_key: String,
+    pub environment: String,
+    pub primary_domain: String,
+    pub runtime_app_id: String,
+}
+
+pub fn product_application_template_id(app_key: &str) -> String {
+    format!("tmpl_{}", app_key.replace('-', "_"))
+}
+
+pub fn product_tenant_application_row_id(
+    tenant_id: &str,
+    organization_id: &str,
+    template_id: &str,
+) -> String {
+    let suffix = template_id
+        .strip_prefix("tmpl_")
+        .unwrap_or(template_id)
+        .replace('-', "_");
+    format!("tapp_{tenant_id}_{organization_id}_{suffix}")
+}
+
+pub fn derive_product_primary_domain_candidate(
+    requested: &str,
+    runtime_app_id: &str,
+    attempt: u32,
+) -> String {
+    let requested = requested.trim();
+    if requested.is_empty() {
+        return String::new();
+    }
+    if attempt == 0 {
+        return requested.to_owned();
+    }
+    if attempt == 1 {
+        return format!("{runtime_app_id}.{requested}");
+    }
+    format!("{runtime_app_id}-{attempt}.{requested}")
+}
+
+async fn find_tenant_application_id_by_primary_domain(
+    pg: &PgPool,
+    tenant_id: &str,
+    primary_domain: &str,
+) -> Result<Option<String>, String> {
+    let row = sqlx::query_scalar::<_, String>(
+        "SELECT id FROM iam_tenant_application \
+         WHERE tenant_id = $1 AND primary_domain = $2 \
+         LIMIT 1",
+    )
+    .bind(tenant_id)
+    .bind(primary_domain)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("load tenant application by primary domain failed: {error}"))?;
+    Ok(row)
+}
+
+async fn resolve_product_tenant_application_primary_domain(
+    pg: &PgPool,
+    tenant_id: &str,
+    tenant_application_id: &str,
+    requested_primary_domain: &str,
+    runtime_app_id: &str,
+) -> Result<String, String> {
+    let requested = requested_primary_domain.trim();
+    if requested.is_empty() {
+        return Err("primaryDomain is required for product application bootstrap".to_string());
+    }
+
+    for attempt in 0..8 {
+        let candidate = derive_product_primary_domain_candidate(requested, runtime_app_id, attempt);
+        let existing_id =
+            find_tenant_application_id_by_primary_domain(pg, tenant_id, &candidate).await?;
+        match existing_id {
+            None => return Ok(candidate),
+            Some(existing_id) if existing_id == tenant_application_id => return Ok(candidate),
+            Some(_) => continue,
+        }
+    }
+
+    Err(format!(
+        "unable to resolve unique primaryDomain for tenant {tenant_id} runtimeAppId {runtime_app_id}"
+    ))
+}
+
+pub async fn dedupe_postgres_tenant_application_org_template_rows(
+    pg: &PgPool,
+) -> Result<u64, String> {
+    reconcile_postgres_tenant_application_org_template_rows(pg).await
+}
+
+pub async fn reconcile_postgres_tenant_application_org_template_rows(
+    pg: &PgPool,
+) -> Result<u64, String> {
+    let mut total_deleted = 0_u64;
+    for _ in 0..8 {
+        let deleted = delete_duplicate_postgres_tenant_application_org_template_rows(pg).await?;
+        if deleted == 0 {
+            break;
+        }
+        total_deleted += deleted;
+    }
+    Ok(total_deleted)
+}
+
+async fn delete_postgres_tenant_application_row(
+    pg: &PgPool,
+    tenant_id: &str,
+    tenant_application_id: &str,
+) -> Result<(), String> {
+    sqlx::query("DELETE FROM iam_tenant_application WHERE tenant_id = $1 AND id = $2")
+        .bind(tenant_id)
+        .bind(tenant_application_id)
+        .execute(pg)
+        .await
+        .map_err(|error| format!("delete tenant application row failed: {error}"))?;
+    Ok(())
+}
+
+async fn delete_duplicate_postgres_tenant_application_org_template_rows(
+    pg: &PgPool,
+) -> Result<u64, String> {
+    let result = sqlx::query(
+        "WITH ranked AS ( \
+            SELECT id, \
+                   ROW_NUMBER() OVER ( \
+                     PARTITION BY tenant_id, organization_id, template_id \
+                     ORDER BY \
+                       CASE \
+                         WHEN id = 'tapp_' || tenant_id || '_' || organization_id || '_' || \
+                              replace(replace(template_id, 'tmpl_', ''), '-', '_') THEN 0 \
+                         WHEN id = 'tapp_' || tenant_id || '_default' \
+                              AND template_id = 'tmpl_sdkwork_platform' THEN 1 \
+                         ELSE 2 \
+                       END, \
+                       CASE status WHEN 'enabled' THEN 0 WHEN 'pending_config' THEN 1 ELSE 2 END, \
+                       updated_at DESC NULLS LAST, \
+                       id ASC \
+                   ) AS row_rank \
+            FROM iam_tenant_application \
+         ) \
+         DELETE FROM iam_tenant_application \
+         WHERE id IN (SELECT id FROM ranked WHERE row_rank > 1)",
+    )
+    .execute(pg)
+    .await
+    .map_err(|error| {
+        format!("delete duplicate tenant application org-template rows failed: {error}")
+    })?;
+
+    Ok(result.rows_affected())
+}
+
+async fn count_postgres_tenant_application_org_template_duplicate_groups(
+    pg: &PgPool,
+) -> Result<i64, String> {
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM ( \
+            SELECT 1 \
+            FROM iam_tenant_application \
+            GROUP BY tenant_id, organization_id, template_id \
+            HAVING COUNT(*) > 1 \
+         ) duplicate_groups",
+    )
+    .fetch_one(pg)
+    .await
+    .map_err(|error| {
+        format!("count tenant application org-template duplicate groups failed: {error}")
+    })
+}
+
+async fn describe_postgres_tenant_application_org_template_duplicate_groups(
+    pg: &PgPool,
+) -> Result<String, String> {
+    let rows = sqlx::query(
+        "SELECT tenant_id, organization_id, template_id, COUNT(*) AS row_count, \
+                string_agg(id || ':' || app_id, ', ' ORDER BY id) AS rows \
+         FROM iam_tenant_application \
+         GROUP BY tenant_id, organization_id, template_id \
+         HAVING COUNT(*) > 1 \
+         ORDER BY tenant_id, organization_id, template_id \
+         LIMIT 3",
+    )
+    .fetch_all(pg)
+    .await
+    .map_err(|error| {
+        format!("describe tenant application org-template duplicate groups failed: {error}")
+    })?;
+
+    if rows.is_empty() {
+        return Ok("no duplicate samples returned".to_owned());
+    }
+
+    Ok(rows
+        .iter()
+        .map(|row| {
+            format!(
+                "tenant={}:org={}:template={}:count={}:rows={}",
+                row.get::<String, _>("tenant_id"),
+                row.get::<String, _>("organization_id"),
+                row.get::<String, _>("template_id"),
+                row.get::<i64, _>("row_count"),
+                row.get::<String, _>("rows"),
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("; "))
+}
+
+async fn postgres_unique_index_is_valid(
+    pg: &PgPool,
+    table_name: &str,
+    index_name: &str,
+) -> Result<bool, String> {
+    sqlx::query_scalar(
+        "SELECT COALESCE(bool_or(i.indisvalid), false) \
+         FROM pg_index i \
+         JOIN pg_class table_class ON table_class.oid = i.indrelid \
+         JOIN pg_class index_class ON index_class.oid = i.indexrelid \
+         JOIN pg_namespace namespace ON namespace.oid = table_class.relnamespace \
+         WHERE namespace.nspname = current_schema() \
+           AND table_class.relname = $1 \
+           AND index_class.relname = $2",
+    )
+    .bind(table_name)
+    .bind(index_name)
+    .fetch_one(pg)
+    .await
+    .map_err(|error| format!("probe tenant application org-template index validity failed: {error}"))
+}
+
+pub async fn ensure_postgres_tenant_application_org_template_unique_index(
+    pg: &PgPool,
+) -> Result<(), String> {
+    reconcile_postgres_tenant_application_org_template_rows(pg).await?;
+
+    if postgres_unique_index_is_valid(
+        pg,
+        "iam_tenant_application",
+        "uk_iam_tenant_application_org_template",
+    )
+    .await?
+        && count_postgres_tenant_application_org_template_duplicate_groups(pg).await? == 0
+    {
+        return Ok(());
+    }
+
+    sqlx::query("DROP INDEX IF EXISTS uk_iam_tenant_application_org_template")
+        .execute(pg)
+        .await
+        .map_err(|error| format!("drop tenant application org-template unique index failed: {error}"))?;
+
+    reconcile_postgres_tenant_application_org_template_rows(pg).await?;
+
+    let duplicate_groups =
+        count_postgres_tenant_application_org_template_duplicate_groups(pg).await?;
+    if duplicate_groups > 0 {
+        let sample = describe_postgres_tenant_application_org_template_duplicate_groups(pg)
+            .await
+            .unwrap_or_else(|error| error);
+        return Err(format!(
+            "tenant application org-template duplicates remain after reconcile (groups={duplicate_groups}; {sample})"
+        ));
+    }
+
+    if let Err(error) = sqlx::query(
+        "CREATE UNIQUE INDEX uk_iam_tenant_application_org_template \
+         ON iam_tenant_application (tenant_id, organization_id, template_id)",
+    )
+    .execute(pg)
+    .await
+    {
+        let sample = describe_postgres_tenant_application_org_template_duplicate_groups(pg)
+            .await
+            .unwrap_or_else(|describe_error| describe_error);
+        return Err(format!(
+            "ensure tenant application org-template unique index failed: {error}; duplicates={sample}"
+        ));
+    }
+    Ok(())
+}
+
+async fn upsert_product_tenant_application_row(
+    pg: &PgPool,
+    command: &EnsureProductApplicationCommand,
+    template_version: &str,
+    template_id: &str,
+) -> Result<String, String> {
+    let tenant_application_id =
+        resolve_product_tenant_application_row_id(pg, command, template_id).await?;
+    let primary_domain = resolve_product_tenant_application_primary_domain(
+        pg,
+        &command.tenant_id,
+        tenant_application_id.as_str(),
+        &command.primary_domain,
+        &command.runtime_app_id,
+    )
+    .await?;
+    let now = chrono::Utc::now();
+
+    sqlx::query(
+        "INSERT INTO iam_tenant_application (id, app_id, tenant_id, organization_id, template_id, \
+         template_version, instance_key, display_name, environment, status, primary_domain, \
+         domain_config_json, access_permissions_json, runtime_config_json, provisioned_at, \
+         last_synced_at, created_at, updated_at) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending_config', $10, '{}'::jsonb, $11, '{}'::jsonb, $12, $13, $14, $15) \
+         ON CONFLICT (id) DO UPDATE SET \
+           app_id = EXCLUDED.app_id, \
+           tenant_id = EXCLUDED.tenant_id, \
+           organization_id = EXCLUDED.organization_id, \
+           template_id = EXCLUDED.template_id, \
+           template_version = EXCLUDED.template_version, \
+           instance_key = EXCLUDED.instance_key, \
+           display_name = EXCLUDED.display_name, \
+           environment = EXCLUDED.environment, \
+           primary_domain = EXCLUDED.primary_domain, \
+           access_permissions_json = EXCLUDED.access_permissions_json, \
+           last_synced_at = EXCLUDED.last_synced_at, \
+           updated_at = EXCLUDED.updated_at",
+    )
+    .bind(&tenant_application_id)
+    .bind(&command.runtime_app_id)
+    .bind(&command.tenant_id)
+    .bind(&command.organization_id)
+    .bind(template_id)
+    .bind(template_version)
+    .bind(&command.instance_key)
+    .bind(&command.display_name)
+    .bind(&command.environment)
+    .bind(&primary_domain)
+    .bind(Json(&command.default_access_permissions))
+    .bind(&now)
+    .bind(&now)
+    .bind(&now)
+    .bind(&now)
+    .execute(pg)
+    .await
+    .map_err(|error| format!("upsert tenant application failed: {error}"))?;
+
+    Ok(tenant_application_id)
+}
+
+async fn resolve_product_tenant_application_row_id(
+    pg: &PgPool,
+    command: &EnsureProductApplicationCommand,
+    template_id: &str,
+) -> Result<String, String> {
+    let canonical_id = product_tenant_application_row_id(
+        &command.tenant_id,
+        &command.organization_id,
+        template_id,
+    );
+
+    if let Some(existing) =
+        find_tenant_application_by_runtime_app_id(pg, &command.tenant_id, &command.runtime_app_id)
+            .await?
+    {
+        return align_product_tenant_application_row(pg, existing.id, command, template_id).await;
+    }
+
+    if let Some(existing) = find_tenant_application_by_organization_template(
+        pg,
+        &command.tenant_id,
+        &command.organization_id,
+        template_id,
+    )
+    .await?
+    {
+        return Ok(existing.id);
+    }
+
+    if let Some(existing) = find_tenant_application_by_instance_key(
+        pg,
+        &command.tenant_id,
+        &command.instance_key,
+    )
+    .await?
+    {
+        return align_product_tenant_application_row(pg, existing.id, command, template_id).await;
+    }
+
+    Ok(canonical_id)
+}
+
+async fn align_product_tenant_application_row(
+    pg: &PgPool,
+    mut tenant_application_id: String,
+    command: &EnsureProductApplicationCommand,
+    template_id: &str,
+) -> Result<String, String> {
+    for _ in 0..8 {
+        if let Some(conflict) = find_tenant_application_by_organization_template(
+            pg,
+            &command.tenant_id,
+            &command.organization_id,
+            template_id,
+        )
+        .await?
+        {
+            if conflict.id != tenant_application_id {
+                delete_postgres_tenant_application_row(
+                    pg,
+                    &command.tenant_id,
+                    tenant_application_id.as_str(),
+                )
+                .await?;
+                tenant_application_id = conflict.id;
+                continue;
+            }
+        }
+
+        let primary_domain = resolve_product_tenant_application_primary_domain(
+            pg,
+            &command.tenant_id,
+            tenant_application_id.as_str(),
+            &command.primary_domain,
+            &command.runtime_app_id,
+        )
+        .await?;
+        let now = chrono::Utc::now();
+        sqlx::query(
+            "UPDATE iam_tenant_application SET app_id = $2, organization_id = $3, template_id = $4, \
+             instance_key = $5, display_name = $6, environment = $7, primary_domain = $8, \
+             access_permissions_json = $9, updated_at = $10 \
+             WHERE id = $1 AND tenant_id = $11",
+        )
+        .bind(&tenant_application_id)
+        .bind(&command.runtime_app_id)
+        .bind(&command.organization_id)
+        .bind(template_id)
+        .bind(&command.instance_key)
+        .bind(&command.display_name)
+        .bind(&command.environment)
+        .bind(&primary_domain)
+        .bind(Json(&command.default_access_permissions))
+        .bind(&now)
+        .bind(&command.tenant_id)
+        .execute(pg)
+        .await
+        .map_err(|error| format!("align tenant application row failed: {error}"))?;
+        return Ok(tenant_application_id);
+    }
+
+    Err("align tenant application row exceeded conflict resolution retries".to_string())
+}
+
+pub async fn ensure_product_application_runtime(
+    pg: &PgPool,
+    command: &EnsureProductApplicationCommand,
+) -> Result<TenantApplication, String> {
+    if command.default_access_permissions.is_empty() {
+        return Err("defaultAccessPermissions is required and must not be empty".to_string());
+    }
+    if crate::is_blank(Some(command.runtime_app_id.as_str())) {
+        return Err("runtime appId is required".to_string());
+    }
+
+    let template_id = product_application_template_id(&command.app_key);
+    let register = ApplicationRegisterCommand {
+        owner_tenant_id: command.owner_tenant_id.clone(),
+        app_key: command.app_key.clone(),
+        name: command.name.clone(),
+        display_name: command.display_name.clone(),
+        app_type: command.app_type.clone(),
+        package_name: None,
+        bundle_id: None,
+        desktop_app_id: None,
+        version: command.version.clone(),
+        channel: command.channel.clone(),
+        default_access_permissions: command.default_access_permissions.clone(),
+        runtime_config: json!({}),
+        artifacts_config: json!({}),
+        packages: Vec::new(),
+        manifest_hash: None,
+    };
+    let template = upsert_application_template_with_id(pg, &template_id, &register).await?;
+    let resolved_template_id = template.id;
+
+    reconcile_postgres_tenant_application_org_template_rows(pg).await?;
+    ensure_postgres_tenant_application_org_template_unique_index(pg).await?;
+    let tenant_application_id = upsert_product_tenant_application_row(
+        pg,
+        command,
+        &template.version,
+        &resolved_template_id,
+    )
+    .await?;
+
+    let enabled = enable_tenant_application(pg, &command.tenant_id, &tenant_application_id).await?;
+    resolve_tenant_application(
+        pg,
+        &command.tenant_id,
+        Some(&tenant_application_id),
+        None,
+        None,
+    )
+    .await?
+    .ok_or_else(|| {
+        format!(
+            "tenant application {tenant_application_id} was not found after bootstrap enable (status={})",
+            enabled.status
+        )
+    })
 }
 
 pub async fn enable_tenant_application(
@@ -596,7 +1131,7 @@ pub async fn resolve_tenant_application(
     let row = if let Some(id) = tenant_application_id.filter(|value| !crate::is_blank(Some(value))) {
         sqlx::query(
             "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
-                    instance_key, display_name, environment, status, primary_domain, access_permissions_json \
+                    instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json \
              FROM iam_tenant_application \
              WHERE tenant_id = $1 AND id = $2 \
              LIMIT 1",
@@ -608,7 +1143,7 @@ pub async fn resolve_tenant_application(
     } else if let Some(app_id) = runtime_app_id.filter(|value| !crate::is_blank(Some(value))) {
         sqlx::query(
             "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
-                    instance_key, display_name, environment, status, primary_domain, access_permissions_json \
+                    instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json \
              FROM iam_tenant_application \
              WHERE tenant_id = $1 AND app_id = $2 \
              LIMIT 1",
@@ -620,7 +1155,7 @@ pub async fn resolve_tenant_application(
     } else if let Some(key) = instance_key.filter(|value| !crate::is_blank(Some(value))) {
         sqlx::query(
             "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
-                    instance_key, display_name, environment, status, primary_domain, access_permissions_json \
+                    instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json \
              FROM iam_tenant_application \
              WHERE tenant_id = $1 AND instance_key = $2 \
              LIMIT 1",
@@ -691,7 +1226,20 @@ pub fn tenant_application_to_json(app: &TenantApplication) -> Value {
         "status": app.status,
         "primaryDomain": app.primary_domain,
         "accessPermissions": app.access_permissions,
+        "runtimeConfig": redact_runtime_config_for_response(&app.runtime_config),
     })
+}
+
+pub fn redact_runtime_config_for_response(runtime_config: &Value) -> Value {
+    let mut redacted = runtime_config.clone();
+    if let Some(relying_party) = redacted.pointer_mut("/oauth/relyingParty") {
+        if let Some(object) = relying_party.as_object_mut() {
+            if object.contains_key("clientSecretHash") {
+                object.insert("clientSecretHash".to_string(), json!("[redacted]"));
+            }
+        }
+    }
+    redacted
 }
 
 async fn resolve_template_reference(
@@ -739,6 +1287,141 @@ async fn find_tenant_application_by_instance_key(
     instance_key: &str,
 ) -> Result<Option<TenantApplication>, String> {
     resolve_tenant_application(pg, tenant_id, None, None, Some(instance_key)).await
+}
+
+async fn find_tenant_application_by_runtime_app_id(
+    pg: &PgPool,
+    tenant_id: &str,
+    runtime_app_id: &str,
+) -> Result<Option<TenantApplication>, String> {
+    let row = sqlx::query(
+        "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
+                instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json \
+         FROM iam_tenant_application \
+         WHERE tenant_id = $1 AND app_id = $2 \
+         ORDER BY updated_at DESC NULLS LAST, id ASC \
+         LIMIT 1",
+    )
+    .bind(tenant_id)
+    .bind(runtime_app_id)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("load tenant application by runtime app id failed: {error}"))?;
+    Ok(row.map(map_tenant_application_row))
+}
+
+async fn find_tenant_application_by_organization_template(
+    pg: &PgPool,
+    tenant_id: &str,
+    organization_id: &str,
+    template_id: &str,
+) -> Result<Option<TenantApplication>, String> {
+    let row = sqlx::query(
+        "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
+                instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json \
+         FROM iam_tenant_application \
+         WHERE tenant_id = $1 AND organization_id = $2 AND template_id = $3 \
+         ORDER BY \
+           CASE \
+             WHEN id = 'tapp_' || $1 || '_' || $2 || '_' || \
+                  replace(replace($3, 'tmpl_', ''), '-', '_') THEN 0 \
+             ELSE 1 \
+           END, \
+           CASE status WHEN 'enabled' THEN 0 WHEN 'pending_config' THEN 1 ELSE 2 END, \
+           updated_at DESC NULLS LAST, \
+           id ASC \
+         LIMIT 1",
+    )
+    .bind(tenant_id)
+    .bind(organization_id)
+    .bind(template_id)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("load tenant application by org-template failed: {error}"))?;
+    Ok(row.map(map_tenant_application_row))
+}
+
+async fn upsert_application_template_with_id(
+    pg: &PgPool,
+    template_id: &str,
+    command: &ApplicationRegisterCommand,
+) -> Result<RegisteredApplicationTemplate, String> {
+    if let Some(package_name) = command.package_name.as_deref() {
+        ensure_unique_template_package_name(pg, package_name, command.app_key.as_str()).await?;
+    }
+
+    let now = chrono::Utc::now();
+    let existing = find_template_by_app_key(pg, &command.app_key).await?;
+    let resolved_template_id = existing
+        .as_ref()
+        .map(|template| template.id.clone())
+        .unwrap_or_else(|| template_id.to_owned());
+
+    if existing.is_some() {
+        sqlx::query(
+            "UPDATE iam_application_template SET owner_tenant_id = $2, app_key = $3, name = $4, \
+             display_name = $5, app_type = $6, package_name = $7, bundle_id = $8, desktop_app_id = $9, \
+             version = $10, channel = $11, runtime_config_json = $12, artifacts_config_json = $13, \
+             default_access_permissions_json = $14, manifest_hash = $15, last_synced_at = $16, \
+             updated_at = $17, status = 'active' \
+             WHERE id = $1",
+        )
+        .bind(&resolved_template_id)
+        .bind(&command.owner_tenant_id)
+        .bind(&command.app_key)
+        .bind(&command.name)
+        .bind(&command.display_name)
+        .bind(&command.app_type)
+        .bind(&command.package_name)
+        .bind(&command.bundle_id)
+        .bind(&command.desktop_app_id)
+        .bind(&command.version)
+        .bind(&command.channel)
+        .bind(Json(&command.runtime_config))
+        .bind(Json(&command.artifacts_config))
+        .bind(Json(&command.default_access_permissions))
+        .bind(&command.manifest_hash)
+        .bind(&now)
+        .bind(&now)
+        .execute(pg)
+        .await
+        .map_err(|error| format!("update application template failed: {error}"))?;
+    } else {
+        sqlx::query(
+            "INSERT INTO iam_application_template (id, owner_tenant_id, app_key, name, display_name, \
+             app_type, package_name, bundle_id, desktop_app_id, version, channel, status, \
+             runtime_config_json, artifacts_config_json, default_access_permissions_json, \
+             manifest_hash, last_synced_at, created_at, updated_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active', $12, $13, $14, $15, $16, $17, $18)",
+        )
+        .bind(&resolved_template_id)
+        .bind(&command.owner_tenant_id)
+        .bind(&command.app_key)
+        .bind(&command.name)
+        .bind(&command.display_name)
+        .bind(&command.app_type)
+        .bind(&command.package_name)
+        .bind(&command.bundle_id)
+        .bind(&command.desktop_app_id)
+        .bind(&command.version)
+        .bind(&command.channel)
+        .bind(Json(&command.runtime_config))
+        .bind(Json(&command.artifacts_config))
+        .bind(Json(&command.default_access_permissions))
+        .bind(&command.manifest_hash)
+        .bind(&now)
+        .bind(&now)
+        .bind(&now)
+        .execute(pg)
+        .await
+        .map_err(|error| format!("insert application template failed: {error}"))?;
+    }
+
+    replace_template_packages(pg, &resolved_template_id, &command.packages, &now).await?;
+
+    find_template_by_app_key(pg, &command.app_key)
+        .await?
+        .ok_or_else(|| "application template bootstrap completed but lookup failed".to_string())
 }
 
 async fn ensure_unique_template_package_name(
@@ -831,7 +1514,14 @@ fn map_tenant_application_row(row: sqlx::postgres::PgRow) -> TenantApplication {
         status: row.get(9),
         primary_domain: row.get(10),
         access_permissions: json_string_vec_from_row(&row, 11),
+        runtime_config: json_value_from_row(&row, 12),
     }
+}
+
+fn json_value_from_row(row: &sqlx::postgres::PgRow, index: usize) -> Value {
+    row.try_get::<Json<Value>, _>(index)
+        .map(|Json(value)| value)
+        .unwrap_or_else(|_| json!({}))
 }
 
 fn json_string_vec_from_row(row: &sqlx::postgres::PgRow, index: usize) -> Vec<String> {
@@ -914,6 +1604,105 @@ fn read_string_array(body: &Value, keys: &[&str]) -> Option<Vec<String>> {
         })
 }
 
+/// Deep-merge runtime config patches so partial updates (e.g. `oauth.relyingParty`) do not
+/// replace sibling keys such as `auth.*` or wipe `clientSecretHash` when omitted.
+pub(crate) fn merge_runtime_config_patch(existing: &Value, patch: &Value) -> Value {
+    if !patch.is_object() {
+        return existing.clone();
+    }
+    if !existing.is_object() {
+        return patch.clone();
+    }
+
+    let mut merged = existing.clone();
+    let Some(merged_obj) = merged.as_object_mut() else {
+        return patch.clone();
+    };
+    let Some(patch_obj) = patch.as_object() else {
+        return merged;
+    };
+
+    for (key, patch_value) in patch_obj {
+        if key == "oauth" {
+            let existing_oauth = merged_obj
+                .get("oauth")
+                .cloned()
+                .unwrap_or_else(|| json!({}));
+            merged_obj.insert(
+                key.clone(),
+                merge_oauth_runtime_config(&existing_oauth, patch_value),
+            );
+            continue;
+        }
+        merged_obj.insert(key.clone(), patch_value.clone());
+    }
+
+    merged
+}
+
+fn merge_oauth_runtime_config(existing_oauth: &Value, patch_oauth: &Value) -> Value {
+    if !patch_oauth.is_object() {
+        return existing_oauth.clone();
+    }
+    if !existing_oauth.is_object() {
+        return patch_oauth.clone();
+    }
+
+    let mut merged = existing_oauth.clone();
+    let Some(merged_obj) = merged.as_object_mut() else {
+        return patch_oauth.clone();
+    };
+    let Some(patch_obj) = patch_oauth.as_object() else {
+        return merged;
+    };
+
+    for (key, patch_value) in patch_obj {
+        if key == "relyingParty" {
+            let existing_rp = merged_obj
+                .get("relyingParty")
+                .cloned()
+                .unwrap_or_else(|| json!({}));
+            merged_obj.insert(
+                key.clone(),
+                merge_relying_party_config(&existing_rp, patch_value),
+            );
+            continue;
+        }
+        merged_obj.insert(key.clone(), patch_value.clone());
+    }
+
+    merged
+}
+
+fn merge_relying_party_config(existing: &Value, patch: &Value) -> Value {
+    if !patch.is_object() {
+        return existing.clone();
+    }
+    if !existing.is_object() {
+        return patch.clone();
+    }
+
+    let mut merged = existing.clone();
+    let Some(merged_obj) = merged.as_object_mut() else {
+        return patch.clone();
+    };
+    let Some(patch_obj) = patch.as_object() else {
+        return merged;
+    };
+
+    for (key, patch_value) in patch_obj {
+        if key == "clientSecretHash" {
+            let patch_text = patch_value.as_str().unwrap_or("").trim();
+            if patch_text.is_empty() {
+                continue;
+            }
+        }
+        merged_obj.insert(key.clone(), patch_value.clone());
+    }
+
+    merged
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -947,6 +1736,22 @@ mod tests {
     }
 
     #[test]
+    fn product_application_template_id_normalizes_app_key() {
+        assert_eq!(
+            "tmpl_sdkwork_clawrouter",
+            product_application_template_id("sdkwork-clawrouter")
+        );
+    }
+
+    #[test]
+    fn product_tenant_application_row_id_is_deterministic() {
+        assert_eq!(
+            "tapp_100001_0_sdkwork_clawrouter",
+            product_tenant_application_row_id("100001", "0", "tmpl_sdkwork_clawrouter")
+        );
+    }
+
+    #[test]
     fn parse_tenant_application_provision_requires_template_reference() {
         let body = json!({
             "tenantId": "100001",
@@ -967,5 +1772,73 @@ mod tests {
         )
         .expect_err("no overlap");
         assert!(error.contains("does not hold"));
+    }
+
+    #[test]
+    fn redact_runtime_config_for_response_masks_relying_party_secret_hash() {
+        let runtime_config = json!({
+            "auth": { "oauthLoginEnabled": true },
+            "oauth": {
+                "relyingParty": {
+                    "clientSecretHash": "hash-keep",
+                    "enabled": true
+                }
+            }
+        });
+        let redacted = redact_runtime_config_for_response(&runtime_config);
+        assert_eq!(redacted["oauth"]["relyingParty"]["clientSecretHash"], json!("[redacted]"));
+        assert_eq!(redacted["oauth"]["relyingParty"]["enabled"], json!(true));
+    }
+
+    #[test]
+    fn merge_runtime_config_patch_preserves_auth_and_oauth_siblings() {
+        let existing = json!({
+            "auth": { "oauthLoginEnabled": true },
+            "oauth": {
+                "relyingParty": {
+                    "enabled": true,
+                    "clientSecretHash": "hash-keep",
+                    "redirectUris": ["https://old.example/callback"]
+                },
+                "legacyFlag": true
+            }
+        });
+        let patch = json!({
+            "oauth": {
+                "relyingParty": {
+                    "enabled": false,
+                    "redirectUris": ["https://new.example/callback"],
+                    "allowedScopes": ["openid"]
+                }
+            }
+        });
+        let merged = merge_runtime_config_patch(&existing, &patch);
+        assert_eq!(merged["auth"]["oauthLoginEnabled"], json!(true));
+        assert_eq!(merged["oauth"]["legacyFlag"], json!(true));
+        assert_eq!(merged["oauth"]["relyingParty"]["enabled"], json!(false));
+        assert_eq!(
+            merged["oauth"]["relyingParty"]["clientSecretHash"],
+            json!("hash-keep")
+        );
+        assert_eq!(
+            merged["oauth"]["relyingParty"]["redirectUris"],
+            json!(["https://new.example/callback"])
+        );
+    }
+
+    #[test]
+    fn derive_product_primary_domain_candidate_avoids_shared_localhost_conflicts() {
+        assert_eq!(
+            derive_product_primary_domain_candidate("localhost", "sdkwork-im-pc", 0),
+            "localhost"
+        );
+        assert_eq!(
+            derive_product_primary_domain_candidate("localhost", "sdkwork-im-pc", 1),
+            "sdkwork-im-pc.localhost"
+        );
+        assert_eq!(
+            derive_product_primary_domain_candidate("localhost", "sdkwork-im-pc", 2),
+            "sdkwork-im-pc-2.localhost"
+        );
     }
 }

@@ -4,12 +4,12 @@ import process from 'node:process';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
-const appbaseRoot = path.resolve(import.meta.dirname, '../../..');
+const iamRoot = path.resolve(import.meta.dirname, '../../..');
 
 async function loadModule() {
   return import(
     pathToFileURL(
-      path.join(appbaseRoot, 'scripts', 'user-center-upstream-dispatch.mjs'),
+      path.join(iamRoot, 'scripts', 'user-center-upstream-dispatch.mjs'),
     ).href,
   );
 }
@@ -42,11 +42,11 @@ test('user-center upstream dispatch builds repository-dispatch plans for every g
       body: JSON.stringify({
         client_payload: {
           source_ref: 'refs/heads/main',
-          source_repository: 'Sdkwork-Cloud/sdkwork-appbase',
+          source_repository: 'Sdkwork-Cloud/sdkwork-iam',
           source_sha: 'abc123',
           workflow: 'user-center-upstream-sync',
         },
-        event_type: 'sdkwork-appbase-user-center-standard-updated',
+        event_type: 'sdkwork-iam-user-center-standard-updated',
       }),
       command: 'gh',
       args: ['api', 'repos/Example-Org/example-console/dispatches', '--method', 'POST', '--input', '-'],
@@ -60,11 +60,11 @@ test('user-center upstream dispatch builds repository-dispatch plans for every g
       body: JSON.stringify({
         client_payload: {
           source_ref: 'refs/heads/main',
-          source_repository: 'Sdkwork-Cloud/sdkwork-appbase',
+          source_repository: 'Sdkwork-Cloud/sdkwork-iam',
           source_sha: 'abc123',
           workflow: 'user-center-upstream-sync',
         },
-        event_type: 'sdkwork-appbase-user-center-standard-updated',
+        event_type: 'sdkwork-iam-user-center-standard-updated',
       }),
       command: 'gh',
       args: ['api', 'repos/Example-Org/example-app/dispatches', '--method', 'POST', '--input', '-'],

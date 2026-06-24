@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-application-bootstrap",
+    "displayName": "SDKWork IAM Application Bootstrap",
+    "version": "0.1.0",
+    "type": "node-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-application-bootstrap",
+    "domain": "iam",
+    "capability": "iam-application-bootstrap",
+    "status": "standard",
+    "languages": ["typescript"],
+    "generated": false,
+    "private": true,
+    "manifests": ["package.json"]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "MODULE_SPEC.md",
+      "path": "../../../../../sdkwork-specs/MODULE_SPEC.md",
+      "purpose": "Reusable module and package boundary rules."
+    },
+    {
+      "file": "IAM_SPEC.md",
+      "path": "../../../../../sdkwork-specs/IAM_SPEC.md",
+      "purpose": "IAM bootstrap and access credential rules."
+    },
+    {
+      "file": "TYPESCRIPT_CODE_SPEC.md",
+      "path": "../../../../../sdkwork-specs/TYPESCRIPT_CODE_SPEC.md",
+      "purpose": "TypeScript package rules."
+    }
+  ],
+  "contracts": {
+    "publicExports": ["."],
+    "runtimeEntrypoints": ["package.json#scripts.test", "package.json#scripts.typecheck"],
+    "sdkClients": [],
+    "events": [],
+    "configKeys": ["package.json#sdkwork"],
+    "routeManifest": null
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative.",
+    "dependencyPolicy": "Consumers inject backend IAM bootstrap clients or fetch transport; no raw auth headers are assembled outside bootstrap auth merge helpers.",
+    "sdkPolicy": "Generated backend SDK clients are adapted through @sdkwork/iam-sdk-adapter response unwrapping.",
+    "languagePolicy": "TypeScript service module with environment-aware bootstrap orchestration."
+  },
+  "verification": {
+    "commands": [
+      "pnpm --filter @sdkwork/iam-application-bootstrap test"
+    ]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-06-21"
+  }
+}

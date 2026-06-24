@@ -6,7 +6,7 @@
     "displayName": "SDKWork IAM Web Adapter",
     "version": "0.1.0",
     "type": "rust-crate",
-    "root": "sdkwork-appbase/crates/sdkwork-iam-web-adapter",
+    "root": "sdkwork-iam/crates/sdkwork-iam-web-adapter",
     "domain": "iam",
     "capability": "web-adapter",
     "status": "standardizing",
@@ -75,7 +75,7 @@
     ]
   },
   "metadata": {
-    "managedBy": "sdkwork-appbase Rust workspace migration",
+    "managedBy": "sdkwork-iam",
     "standardVersion": "2026-06-18"
   }
 }

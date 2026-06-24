@@ -595,6 +595,11 @@ pub fn builtin_default_scopes(provider_code: &str) -> Vec<String> {
         "qq" => vec!["get_user_info".to_string()],
         "weibo" => vec!["email".to_string()],
         "douyin" => vec!["user_info".to_string()],
+        "sdkwork" => vec![
+            "openid".to_string(),
+            "profile".to_string(),
+            "email".to_string(),
+        ],
         _ => Vec::new(),
     }
 }
@@ -606,9 +611,21 @@ pub async fn seed_builtin_oauth_provider_catalog(pg: &PgPool) -> Result<(), Stri
     for entry in builtin_oauth_provider_catalog() {
         let provider_code = entry.provider_code.as_str();
         let catalog_id = format!("catalog:0:{provider_code}");
-        let authorization_endpoint = builtin_authorization_endpoint(provider_code).unwrap_or("");
-        let token_endpoint = builtin_token_endpoint(provider_code).unwrap_or("");
-        let userinfo_endpoint = builtin_userinfo_endpoint(provider_code).unwrap_or("");
+        let (authorization_endpoint, token_endpoint, userinfo_endpoint) =
+            if provider_code == "sdkwork" {
+                let issuer = crate::oauth_authorization_server::oauth_issuer_base_url();
+                (
+                    format!("{issuer}/iam/v3/oauth/authorize"),
+                    format!("{issuer}/iam/v3/oauth/token"),
+                    format!("{issuer}/iam/v3/oauth/userinfo"),
+                )
+            } else {
+                (
+                    builtin_authorization_endpoint(provider_code).unwrap_or("").to_string(),
+                    builtin_token_endpoint(provider_code).unwrap_or("").to_string(),
+                    builtin_userinfo_endpoint(provider_code).unwrap_or("").to_string(),
+                )
+            };
         let default_scopes = serde_json::to_string(&builtin_default_scopes(provider_code))
             .unwrap_or_else(|_| "[]".to_string());
         let supports_userinfo = if userinfo_endpoint.is_empty() { 0 } else { 1 };

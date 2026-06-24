@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const databaseRoot = path.join(root, 'database');
 const manifestPath = path.join(databaseRoot, 'database.manifest.json');
+const IAM_DATABASE_OWNER = 'sdkwork-iam';
+const IAM_DATABASE_SPI_PROVIDER = 'sdkwork-iam';
 const L2_CONTRACT_VERSION = '1.0.0';
 
 function listSqlFiles(directory) {
@@ -89,7 +91,7 @@ const tableRegistry = {
   kind: 'sdkwork.database.table-registry',
   tables: tableNames.map((table_name) => ({
     table_name,
-    owner: 'appbase-platform',
+    owner: IAM_DATABASE_OWNER,
     compliance_level: 'L2',
     lifecycle_status: 'active',
   })),
@@ -98,7 +100,7 @@ const tableRegistry = {
 const prefixRegistry = {
   schemaVersion: 1,
   kind: 'sdkwork.database.prefix-registry',
-  prefixes: [{ prefix: 'iam_', owner: 'appbase-platform', domain: 'iam' }],
+  prefixes: [{ prefix: 'iam_', owner: IAM_DATABASE_OWNER, domain: 'iam' }],
 };
 
 const schemaYaml = [
@@ -106,14 +108,14 @@ const schemaYaml = [
   'kind: sdkwork.database.schema',
   'module_id: iam',
   `contract_version: ${L2_CONTRACT_VERSION}`,
-  'owner_team: appbase-platform',
+  `owner_team: ${IAM_DATABASE_OWNER}`,
   'compliance_level: L2',
   'engines:',
   '  - postgres',
   'table_prefix: iam_',
   'tables:',
   ...tableNames.map(
-    (name) => `  - name: ${name}\n    lifecycle_status: active\n    owner: appbase-platform`,
+    (name) => `  - name: ${name}\n    lifecycle_status: active\n    owner: ${IAM_DATABASE_OWNER}`,
   ),
   '',
 ].join('\n');
@@ -130,7 +132,12 @@ fs.writeFileSync(path.join(databaseRoot, 'contract/schema.yaml'), schemaYaml);
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 manifest.contractVersion = L2_CONTRACT_VERSION;
+manifest.owner = IAM_DATABASE_OWNER;
 manifest.lifecycle.autoMigrate = true;
+manifest.spi = {
+  ...(manifest.spi ?? {}),
+  provider: IAM_DATABASE_SPI_PROVIDER,
+};
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
 process.stdout.write(

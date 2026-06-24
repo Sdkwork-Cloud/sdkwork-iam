@@ -154,15 +154,25 @@ export default defineConfig({
   test: {
     exclude: [
       ...configDefaults.exclude,
-      "packages/pc-react/iam/sdkwork-user-center-validation-pc-react/tests/*NodeContract.test.ts",
+      "apps/sdkwork-iam-pc/packages/sdkwork-user-center-validation-pc-react/tests/*NodeContract.test.ts",
     ],
     environment: "jsdom",
-    include: ["packages/**/*.test.ts", "packages/**/*.test.tsx", "sdks/**/*.test.ts"],
+    include: [
+      "packages/**/*.test.ts",
+      "packages/**/*.test.tsx",
+      "apps/sdkwork-iam-common/packages/**/*.test.ts",
+      "apps/sdkwork-iam-common/packages/**/*.test.tsx",
+      "apps/sdkwork-iam-pc/packages/**/*.test.ts",
+      "apps/sdkwork-iam-pc/packages/**/*.test.tsx",
+      "apps/sdkwork-iam-h5/packages/**/*.test.ts",
+      "apps/sdkwork-iam-h5/packages/**/*.test.tsx",
+      "sdks/**/*.test.ts",
+    ],
     setupFiles: [path.join(workspaceRoot, "vitest.setup.ts")],
   },
   server: {
     fs: {
-      allow: [workspaceRoot],
+      allow: [workspaceRoot, path.resolve(workspaceRoot, "..")],
     },
   },
 });

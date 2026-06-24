@@ -1,10 +1,12 @@
 import { access, readdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   appbaseArchitectureCatalog,
   rootPackageDirectoriesToRemove,
 } from "../catalog/package-catalog.mjs";
+import { reviewPcAdminPackageStructure } from "./review-pc-admin-package-structure.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,12 +54,17 @@ export async function reviewPackageStructure(options = {}) {
   const summary = [];
 
   for (const architecture of appbaseArchitectureCatalog) {
+    const usesAppRoot = Boolean(architecture.appRoot);
     const architecturePath = architecture.packageKind === "rust"
       ? cratesRoot
-      : path.join(packagesRoot, architecture.architecture);
+      : usesAppRoot
+        ? path.join(workspaceRoot, architecture.appRoot, "packages")
+        : path.join(packagesRoot, architecture.architecture);
     const architectureLabel = architecture.packageKind === "rust"
       ? "crates"
-      : `packages/${architecture.architecture}`;
+      : usesAppRoot
+        ? `${architecture.appRoot}/packages`
+        : `packages/${architecture.architecture}`;
 
     if (!(await exists(architecturePath))) {
       issues.push(`Missing architecture directory: ${architectureLabel}`);
@@ -69,12 +76,18 @@ export async function reviewPackageStructure(options = {}) {
     for (const domain of architecture.domains) {
       const domainPath = architecture.packageKind === "rust"
         ? architecturePath
-        : path.join(architecturePath, domain.domain);
+        : architecture.packageLayout === "flat"
+          ? architecturePath
+          : path.join(architecturePath, domain.domain);
 
-      if (architecture.packageKind !== "rust" && !(await exists(domainPath))) {
-          issues.push(`Missing domain directory: packages/${architecture.architecture}/${domain.domain}`);
-          continue;
-        }
+      if (
+        architecture.packageKind !== "rust"
+        && architecture.packageLayout !== "flat"
+        && !(await exists(domainPath))
+      ) {
+        issues.push(`Missing domain directory: packages/${architecture.architecture}/${domain.domain}`);
+        continue;
+      }
 
       if (!architecture.scaffoldPackages) {
         continue;
@@ -99,12 +112,19 @@ export async function reviewPackageStructure(options = {}) {
               path.join(packageRoot, "README.md"),
               path.join(packageRoot, "package.json"),
               path.join(packageRoot, "tsconfig.json"),
-              path.join(packageRoot, "src", architecture.architecture === "pc-react" && pkg.directory === "sdkwork-iam-react" ? "index.tsx" : "index.ts"),
             ];
 
         for (const requiredPath of requiredPaths) {
           if (!(await exists(requiredPath))) {
             issues.push(`Missing required path: ${path.relative(workspaceRoot, requiredPath)}`);
+          }
+        }
+
+        if (architecture.packageKind !== "rust") {
+          const srcRoot = path.join(packageRoot, "src");
+          const hasPublicEntrypoint = ["index.ts", "index.tsx"].some((fileName) => existsSync(path.join(srcRoot, fileName)));
+          if (!hasPublicEntrypoint) {
+            issues.push(`Missing public export entrypoint under src/ for ${path.relative(workspaceRoot, packageRoot)}`);
           }
         }
       }
@@ -130,6 +150,9 @@ export async function reviewPackageStructure(options = {}) {
       issues.push(`Root package directory still present: ${rootPackageDirectory}`);
     }
   }
+
+  const { issues: pcAdminIssues } = await reviewPcAdminPackageStructure({ cwd: workspaceRoot });
+  issues.push(...pcAdminIssues);
 
   if (summaryOnly) {
     for (const item of summary) {

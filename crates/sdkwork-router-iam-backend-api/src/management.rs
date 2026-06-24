@@ -566,7 +566,7 @@ async fn create_role_binding(
     let role_code: String = role_row.get(2);
 
     if effect == "allow" {
-        if let Err(error) = sdkwork_appbase_iam_bootstrap::ensure_role_assignment_allowed(
+        if let Err(error) = sdkwork_iam_bootstrap::ensure_role_assignment_allowed(
             pg,
             &tenant_id,
             &principal_kind,
@@ -588,7 +588,7 @@ async fn create_role_binding(
             Ok(scope) => scope,
             Err(response) => return response,
         };
-        if let Err(error) = sdkwork_appbase_iam_bootstrap::ensure_role_grant_within_assigner_scope(
+        if let Err(error) = sdkwork_iam_bootstrap::ensure_role_grant_within_assigner_scope(
             pg,
             &tenant_id,
             &role_id,

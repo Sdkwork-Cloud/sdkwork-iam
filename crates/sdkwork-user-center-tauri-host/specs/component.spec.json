@@ -6,7 +6,7 @@
     "displayName": "SDKWork User Center Tauri Host",
     "version": "0.1.0",
     "type": "tauri-host",
-    "root": "sdkwork-appbase/crates/sdkwork-user-center-tauri-host",
+    "root": "sdkwork-iam/crates/sdkwork-user-center-tauri-host",
     "domain": "iam",
     "capability": "user-center",
     "surface": "host/native",
@@ -82,7 +82,7 @@
     ]
   },
   "metadata": {
-    "managedBy": "sdkwork-appbase Rust workspace migration",
+    "managedBy": "sdkwork-iam",
     "standardVersion": "2026-06-12"
   }
 }

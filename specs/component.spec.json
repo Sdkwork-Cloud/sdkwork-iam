@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "kind": "sdkwork.component.spec",
   "component": {
-    "name": "@sdkwork/appbase-workspace",
-    "displayName": "SDKWork Appbase Workspace",
+    "name": "@sdkwork/iam-workspace",
+    "displayName": "SDKWork IAM Workspace",
     "version": "0.1.0",
-    "type": "multi-surface-workspace",
+    "type": "domain-workspace",
     "root": "sdkwork-iam",
-    "domain": "platform",
-    "declaredDomain": null,
-    "capability": "workspace",
+    "domain": "iam",
+    "declaredDomain": "iam",
+    "capability": "iam",
     "status": "standardizing",
     "languages": [
       "typescript",
@@ -33,6 +33,11 @@
       "file": "IAM_SPEC.md",
       "path": "../sdkwork-specs/IAM_SPEC.md",
       "purpose": "IAM domain boundary, package layering, persistence, and API contracts."
+    },
+    {
+      "file": "IAM_OAUTH_SPEC.md",
+      "path": "../sdkwork-specs/IAM_OAUTH_SPEC.md",
+      "purpose": "Third-party OAuth consumption and SDKWork OAuth provider authorization-server contracts."
     },
     {
       "file": "WEB_FRAMEWORK_SPEC.md",
@@ -176,7 +181,11 @@
       "package.json#scripts.typecheck",
       "package.json#scripts.test"
     ],
-    "sdkClients": [],
+    "sdkClients": [
+      "sdks/sdkwork-iam-app-sdk",
+      "sdks/sdkwork-iam-backend-sdk",
+      "sdks/sdkwork-iam-open-sdk"
+    ],
     "events": [],
     "configKeys": [],
     "routeManifest": null
@@ -185,12 +194,16 @@
     "authority": "Root SDKWork specs remain authoritative. Local specs may extend but must not contradict them.",
     "dependencyPolicy": "Consumers integrate through public package exports, declared runtime entrypoints, generated SDK clients, or documented adapters only.",
     "sdkPolicy": "Generated SDK clients are injected through service/runtime boundaries; reusable UI must not create raw HTTP clients or manual auth headers.",
-    "languagePolicy": "Language-specific packages follow their native manifest and build tools while preserving the same component contract."
+    "languagePolicy": "Language-specific packages follow their native manifest and build tools while preserving the same component contract.",
+    "webFramework": "IAM HTTP route crates integrate sdkwork-web-framework through sdkwork-web-axum and sdkwork-iam-web-adapter.",
+    "database": "IAM database module uses sdkwork-database lifecycle SPI via sdkwork-iam-database-host and sdkwork-iam-directory-repository-sqlx.",
+    "utils": "Rust IAM crates and PC React IAM packages use sdkwork-utils-rust and @sdkwork/utils for shared text helpers.",
+    "discovery": "Deferred until runnable IAM RPC servers register with sdkwork-discovery.",
+    "drive": "Not required; IAM has no file-upload surfaces. Avatar/media upload must use sdkwork-drive when added."
   },
   "verification": {
     "commands": [
       "pnpm run check:pnpm-scripts",
-      "pnpm run check:workspace",
       "pnpm run check:structure",
       "pnpm run check:database",
       "pnpm run check:iam-application-bootstrap",
@@ -203,7 +216,7 @@
     {
       "id": "rpc-discovery-deferred",
       "spec": "RPC_SPEC.md",
-      "reason": "Appbase owns RPC contracts and Rust service manifests, but defers sdkwork-discovery registration until a consuming application deploys runnable RPC servers.",
+      "reason": "IAM owns RPC contracts and Rust service manifests, but defers sdkwork-discovery registration until runnable IAM RPC servers ship.",
       "scope": "sdkwork-discovery integration for IAM RPC servers",
       "reviewBy": "2026-12-31",
       "owner": "sdkwork-iam maintainers"

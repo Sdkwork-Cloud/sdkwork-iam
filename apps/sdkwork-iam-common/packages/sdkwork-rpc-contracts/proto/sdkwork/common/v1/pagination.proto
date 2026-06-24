@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package sdkwork.common.v1;
+
+option java_package = "com.sdkwork.common.v1";
+option java_multiple_files = true;
+option go_package = "github.com/sdkwork/rpc-go/sdkwork/common/v1;commonv1";
+
+message PageRequest {
+  int32 page_size = 1;
+  string page_cursor = 2;
+  string sort = 3;
+  map<string, string> filters = 4;
+}
+
+message PageResponse {
+  string next_page_cursor = 1;
+  bool has_more = 2;
+  int64 total_count = 3;
+  bool total_count_exact = 4;
+}

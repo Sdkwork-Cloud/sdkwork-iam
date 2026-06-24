@@ -6,7 +6,7 @@
     "displayName": "SDKWork Appbase Database Host",
     "version": "0.1.0",
     "type": "rust-crate",
-    "root": "sdkwork-appbase/crates/sdkwork-iam-database-host",
+    "root": "sdkwork-iam/crates/sdkwork-iam-database-host",
     "domain": "iam",
     "capability": "database-host",
     "status": "standardizing",
@@ -29,8 +29,8 @@
   ],
   "contracts": {
     "publicExports": [
-      "sdkwork_appbase_database_host::bootstrap_iam_database",
-      "sdkwork_appbase_database_host::IamDatabaseHost"
+      "sdkwork_iam_database_host::bootstrap_iam_database",
+      "sdkwork_iam_database_host::IamDatabaseHost"
     ],
     "runtimeEntrypoints": [],
     "routeManifest": null,

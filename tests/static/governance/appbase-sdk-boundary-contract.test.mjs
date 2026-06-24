@@ -27,7 +27,7 @@ function generatedPathPattern(openApiPath) {
 }
 
 function generatedApiFileForTag(tag) {
-  return `sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-typescript/generated/server-openapi/src/api/${tag}.ts`;
+  return `sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-typescript/generated/server-openapi/src/api/${tag}.ts`;
 }
 
 function listStoredCredentialSuppressedOperations(openApi) {
@@ -35,13 +35,16 @@ function listStoredCredentialSuppressedOperations(openApi) {
     Object.entries(pathItem)
       .filter(([, operation]) => {
         const authMode = operation["x-sdkwork-auth-mode"];
-        return authMode === "anonymous" || authMode === "refresh-token";
+        return authMode === "anonymous"
+          || authMode === "refresh-token"
+          || authMode === "credential-entry-bootstrap";
       })
       .map(([method, operation]) => ({
         apiPath,
         method: method.toUpperCase(),
         operationId: operation.operationId,
         tag: operation.tags?.[0],
+        authMode: operation["x-sdkwork-auth-mode"],
       }))
   ));
 }
@@ -68,25 +71,24 @@ test("appbase workspace does not depend on retired generic app or backend SDK pa
     "tsconfig.base.json",
     "pnpm-workspace.yaml",
     "pnpm-lock.yaml",
-    "packages/pc-react/foundation/sdkwork-shell-pc-react/tests/shell.runtime.test.tsx",
   ]) {
     assertNoRetiredGenericSdkDebt(relativePath);
   }
 });
 
 test("appbase app SDK generated auth entry operations suppress stored credentials end to end", () => {
-  const openApi = JSON.parse(read("sdks/sdkwork-appbase-app-sdk/openapi/sdkwork-appbase-app-api.sdkgen.yaml"));
+  const openApi = JSON.parse(read("sdks/sdkwork-iam-app-sdk/openapi/sdkwork-iam-app-api.sdkgen.yaml"));
   const authApi = read(
-    "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-typescript/generated/server-openapi/src/api/auth.ts",
+    "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-typescript/generated/server-openapi/src/api/auth.ts",
   );
   const httpClient = read(
-    "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-typescript/generated/server-openapi/src/http/client.ts",
+    "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-typescript/generated/server-openapi/src/http/client.ts",
   );
 
   const suppressedOperations = listStoredCredentialSuppressedOperations(openApi);
   assert.ok(
     suppressedOperations.some((operation) => operation.operationId === "sessions.create"),
-    "session creation must stay anonymous and suppress stored credentials",
+    "session creation must stay credential-entry-bootstrap and suppress stored credentials",
   );
   assert.ok(
     suppressedOperations.some((operation) => operation.operationId === "sessions.refresh"),
@@ -102,10 +104,13 @@ test("appbase app SDK generated auth entry operations suppress stored credential
   for (const operation of suppressedOperations) {
     assert.ok(operation.tag, `${operation.operationId} must declare a generated API tag`);
     const generatedApi = read(generatedApiFileForTag(operation.tag));
+    const suppressionFlag = operation.authMode === "credential-entry-bootstrap"
+      ? "credentialEntryBootstrap: true"
+      : "skipAuth: true";
     assert.match(
       generatedApi,
       new RegExp(
-        `appApiPath\\(\`${generatedPathPattern(operation.apiPath)}\`\\)[\\s\\S]{0,360}skipAuth: true`,
+        `appApiPath\\(\`${generatedPathPattern(operation.apiPath)}\`\\)[\\s\\S]{0,360}${escapeRegExp(suppressionFlag)}`,
         "u",
       ),
       `${operation.method} ${operation.apiPath} (${operation.operationId}) must suppress stored credentials in generated TypeScript SDK`,
@@ -120,13 +125,18 @@ test("appbase app SDK generated auth entry operations suppress stored credential
 
   assert.match(
     httpClient,
+    /protected buildHeaders\(config: any, skipAuth = false\): Record<string, string> \{[\s\S]*config\?\.credentialEntryBootstrap[\s\S]*'Authorization'[\s\S]*'X-Sdkwork-Tenant-Id'[\s\S]*'X-Sdkwork-Organization-Id'[\s\S]*'X-Sdkwork-User-Id'/u,
+    "generated HTTP client must strip forbidden credential-entry headers while preserving bootstrap Access-Token",
+  );
+  assert.match(
+    httpClient,
     /protected buildHeaders\(config: any, skipAuth = false\): Record<string, string> \{[\s\S]*config\?\.skipAuth[\s\S]*'Authorization'[\s\S]*'Access-Token'[\s\S]*'X-Sdkwork-Tenant-Id'[\s\S]*'X-Sdkwork-Organization-Id'[\s\S]*'X-Sdkwork-User-Id'/u,
     "generated HTTP client must strip stored credential and SDKWork context headers when skipAuth is set",
   );
   assert.match(
     httpClient,
-    /execute\.call\(this, \{[\s\S]*skipAuth,[\s\S]*headers: this\.buildRequestHeaders/u,
-    "generated request transport must pass skipAuth into BaseHttpClient.execute",
+    /execute\.call\(this, \{[\s\S]*skipAuth,[\s\S]*credentialEntryBootstrap,[\s\S]*headers: this\.buildRequestHeaders/u,
+    "generated request transport must pass skipAuth and credentialEntryBootstrap into BaseHttpClient.execute",
   );
   assert.match(
     httpClient,
@@ -136,7 +146,7 @@ test("appbase app SDK generated auth entry operations suppress stored credential
 });
 
 test("appbase app SDK OpenAPI declares real session creation context fields", () => {
-  const openApi = JSON.parse(read("sdks/sdkwork-appbase-app-sdk/openapi/sdkwork-appbase-app-api.sdkgen.yaml"));
+  const openApi = JSON.parse(read("sdks/sdkwork-iam-app-sdk/openapi/sdkwork-iam-app-api.sdkgen.yaml"));
   const sessionCreateOperation = openApi.paths["/app/v3/api/auth/sessions"].post;
   const requestSchema =
     sessionCreateOperation.requestBody.content["application/json"].schema;
@@ -168,8 +178,8 @@ test("appbase app SDK generated credential suppression stays aligned across lang
   const checks = [
     {
       language: "dart",
-      api: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-dart/generated/server-openapi/lib/src/api/auth.dart",
-      http: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-dart/generated/server-openapi/lib/src/http/client.dart",
+      api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-dart/generated/server-openapi/lib/src/api/auth.dart",
+      http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-dart/generated/server-openapi/lib/src/http/client.dart",
       apiPatterns: [
         /ApiPaths\.appPath\('\/auth\/sessions'\)[\s\S]*skipAuth: true/u,
         /ApiPaths\.appPath\('\/auth\/sessions\/refresh'\)[\s\S]*skipAuth: true/u,
@@ -181,8 +191,8 @@ test("appbase app SDK generated credential suppression stays aligned across lang
     },
     {
       language: "flutter",
-      api: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-flutter/generated/server-openapi/lib/src/api/auth.dart",
-      http: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-flutter/generated/server-openapi/lib/src/http/client.dart",
+      api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-flutter/generated/server-openapi/lib/src/api/auth.dart",
+      http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-flutter/generated/server-openapi/lib/src/http/client.dart",
       apiPatterns: [
         /ApiPaths\.appPath\('\/auth\/sessions'\)[\s\S]*skipAuth: true/u,
         /ApiPaths\.appPath\('\/auth\/sessions\/refresh'\)[\s\S]*skipAuth: true/u,
@@ -194,8 +204,8 @@ test("appbase app SDK generated credential suppression stays aligned across lang
     },
     {
       language: "python",
-      api: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-python/generated/server-openapi/sdkwork_appbase_app_sdk/api/auth.py",
-      http: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-python/generated/server-openapi/sdkwork_appbase_app_sdk/http_client.py",
+      api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-python/generated/server-openapi/sdkwork_iam_app_sdk/api/auth.py",
+      http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-python/generated/server-openapi/sdkwork_iam_app_sdk/http_client.py",
       apiPatterns: [
         /\/app\/v3\/api\/auth\/sessions", json=body, skip_auth=True/u,
         /\/app\/v3\/api\/auth\/sessions\/refresh", json=body, skip_auth=True/u,
@@ -207,8 +217,8 @@ test("appbase app SDK generated credential suppression stays aligned across lang
     },
     {
       language: "go",
-      api: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-go/generated/server-openapi/api/auth.go",
-      http: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-go/generated/server-openapi/http/client.go",
+      api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-go/generated/server-openapi/api/auth.go",
+      http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-go/generated/server-openapi/http/client.go",
       apiPatterns: [
         /AppApiPath\("\/auth\/sessions"\)[\s\S]*"application\/json", true\)/u,
         /AppApiPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true\)/u,
@@ -220,8 +230,8 @@ test("appbase app SDK generated credential suppression stays aligned across lang
     },
     {
       language: "java",
-      api: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-java/generated/server-openapi/src/main/java/com/sdkwork/appbase/app/sdk/api/AuthApi.java",
-      http: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-java/generated/server-openapi/src/main/java/com/sdkwork/appbase/app/sdk/http/HttpClient.java",
+      api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-java/generated/server-openapi/src/main/java/com/sdkwork/iam/app/sdk/api/AuthApi.java",
+      http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-java/generated/server-openapi/src/main/java/com/sdkwork/iam/app/sdk/http/HttpClient.java",
       apiPatterns: [
         /ApiPaths\.appPath\("\/auth\/sessions"\)[\s\S]*"application\/json", true\)/u,
         /ApiPaths\.appPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true\)/u,
@@ -233,8 +243,8 @@ test("appbase app SDK generated credential suppression stays aligned across lang
     },
     {
       language: "kotlin",
-      api: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-kotlin/generated/server-openapi/src/main/kotlin/com/sdkwork/appbase/app/sdk/api/AuthApi.kt",
-      http: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-kotlin/generated/server-openapi/src/main/kotlin/com/sdkwork/appbase/app/sdk/http/HttpClient.kt",
+      api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-kotlin/generated/server-openapi/src/main/kotlin/com/sdkwork/iam/app/sdk/api/AuthApi.kt",
+      http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-kotlin/generated/server-openapi/src/main/kotlin/com/sdkwork/iam/app/sdk/http/HttpClient.kt",
       apiPatterns: [
         /ApiPaths\.appPath\("\/auth\/sessions"\)[\s\S]*"application\/json", true\)/u,
         /ApiPaths\.appPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true\)/u,
@@ -246,8 +256,8 @@ test("appbase app SDK generated credential suppression stays aligned across lang
     },
     {
       language: "csharp",
-      api: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-csharp/generated/server-openapi/Api/AuthApi.cs",
-      http: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-csharp/generated/server-openapi/Http/HttpClient.cs",
+      api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-csharp/generated/server-openapi/Api/AuthApi.cs",
+      http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-csharp/generated/server-openapi/Http/HttpClient.cs",
       apiPatterns: [
         /ApiPaths\.AppPath\("\/auth\/sessions"\)[\s\S]*"application\/json", true\)/u,
         /ApiPaths\.AppPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true\)/u,
@@ -259,8 +269,8 @@ test("appbase app SDK generated credential suppression stays aligned across lang
     },
     {
       language: "swift",
-      api: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-swift/generated/server-openapi/Sources/API/AuthApi.swift",
-      http: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-swift/generated/server-openapi/Sources/HTTP/HttpClient.swift",
+      api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-swift/generated/server-openapi/Sources/API/AuthApi.swift",
+      http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-swift/generated/server-openapi/Sources/HTTP/HttpClient.swift",
       apiPatterns: [
         /ApiPaths\.appPath\("\/auth\/sessions"\)[\s\S]*skipAuth: true/u,
         /ApiPaths\.appPath\("\/auth\/sessions\/refresh"\)[\s\S]*skipAuth: true/u,
@@ -272,8 +282,8 @@ test("appbase app SDK generated credential suppression stays aligned across lang
     },
     {
       language: "rust",
-      api: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-rust/generated/server-openapi/src/api/auth.rs",
-      http: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-rust/generated/server-openapi/src/http/client.rs",
+      api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-rust/generated/server-openapi/src/api/auth.rs",
+      http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-rust/generated/server-openapi/src/http/client.rs",
       apiPatterns: [
         /app_path\(&"\/auth\/sessions"\.to_string\(\)\)[\s\S]*Some\("application\/json"\), true\)\.await/u,
         /app_path\(&"\/auth\/sessions\/refresh"\.to_string\(\)\)[\s\S]*Some\("application\/json"\), true\)\.await/u,
@@ -285,8 +295,8 @@ test("appbase app SDK generated credential suppression stays aligned across lang
     },
     {
       language: "php",
-      api: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-php/generated/server-openapi/src/Api/Auth.php",
-      http: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-php/generated/server-openapi/src/Http/HttpClient.php",
+      api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-php/generated/server-openapi/src/Api/Auth.php",
+      http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-php/generated/server-openapi/src/Http/HttpClient.php",
       apiPatterns: [
         /\/auth\/sessions'[\s\S]*'skipAuth' => true/u,
         /\/auth\/sessions\/refresh'[\s\S]*'skipAuth' => true/u,
@@ -298,8 +308,8 @@ test("appbase app SDK generated credential suppression stays aligned across lang
     },
     {
       language: "ruby",
-      api: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-ruby/generated/server-openapi/lib/sdkwork/app_sdk/api/auth.rb",
-      http: "sdks/sdkwork-appbase-app-sdk/sdkwork-appbase-app-sdk-ruby/generated/server-openapi/lib/sdkwork/app_sdk/http/client.rb",
+      api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-ruby/generated/server-openapi/lib/sdkwork/app_sdk/api/auth.rb",
+      http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-ruby/generated/server-openapi/lib/sdkwork/app_sdk/http/client.rb",
       apiPatterns: [
         /\/auth\/sessions'[\s\S]*options\[:skip_auth\] = true/u,
         /\/auth\/sessions\/refresh'[\s\S]*options\[:skip_auth\] = true/u,
@@ -324,9 +334,9 @@ test("appbase app SDK generated credential suppression stays aligned across lang
 });
 
 test("open-api generated ingress operations stay anonymous and suppress stored credentials", () => {
-  const openApi = JSON.parse(read("sdks/sdkwork-appbase-open-sdk/openapi/sdkwork-appbase-open-api.sdkgen.yaml"));
+  const openApi = JSON.parse(read("sdks/sdkwork-iam-open-sdk/openapi/sdkwork-iam-open-api.sdkgen.yaml"));
   const oauthApi = read(
-    "sdks/sdkwork-appbase-open-sdk/sdkwork-appbase-open-sdk-typescript/generated/server-openapi/src/api/iam-oauth.ts",
+    "sdks/sdkwork-iam-open-sdk/sdkwork-iam-open-sdk-typescript/generated/server-openapi/src/api/iam-oauth.ts",
   );
 
   const anonymousOperations = Object.entries(openApi.paths).flatMap(([apiPath, pathItem]) => (
@@ -339,10 +349,36 @@ test("open-api generated ingress operations stay anonymous and suppress stored c
       }))
   ));
 
-  assert.equal(anonymousOperations.length, 2, "open-api must expose two anonymous OAuth provider callback operations");
+  const providerCallbackOperations = anonymousOperations.filter((operation) => (
+    operation.apiPath.includes("/oauth/provider_callbacks/")
+  ));
+  const authorizationServerOperations = anonymousOperations.filter((operation) => (
+    !operation.apiPath.includes("/oauth/provider_callbacks/")
+  ));
+
+  assert.equal(providerCallbackOperations.length, 2, "open-api must expose two anonymous OAuth provider callback operations");
+  assert.equal(
+    authorizationServerOperations.length,
+    10,
+    "open-api must expose ten anonymous SDKWork OAuth authorization-server operations including well-known discovery routes",
+  );
   assert.ok(
-    anonymousOperations.every((operation) => operation.apiPath.includes("/oauth/provider_callbacks/")),
-    "anonymous open-api operations must remain OAuth provider callback ingress only",
+    authorizationServerOperations.some((operation) => operation.apiPath.startsWith("/.well-known/")),
+    "anonymous authorization-server operations must include well-known discovery routes",
+  );
+  assert.ok(
+    authorizationServerOperations.every((operation) => (
+      operation.apiPath.startsWith("/iam/v3/api/")
+      || operation.apiPath.startsWith("/.well-known/")
+    )),
+    "anonymous authorization-server operations must stay under IAM open-api or well-known discovery routes",
+  );
+  assert.ok(
+    anonymousOperations.every((operation) => (
+      operation.apiPath.startsWith("/iam/v3/api/")
+      || operation.apiPath.startsWith("/.well-known/")
+    )),
+    "anonymous open-api operations must stay under the IAM open-api prefix or well-known discovery routes",
   );
   assert.match(
     oauthApi,
@@ -353,5 +389,15 @@ test("open-api generated ingress operations stay anonymous and suppress stored c
     oauthApi,
     /async handlePost\([\s\S]*skipAuth:\s*true/u,
     "open-api POST provider callback must suppress stored credentials",
+  );
+  assert.match(
+    oauthApi,
+    /customApiPath\(`\/oauth\/token`\)[\s\S]*skipAuth:\s*true/u,
+    "open-api token endpoint must suppress stored credentials",
+  );
+  assert.match(
+    oauthApi,
+    /customApiPath\(`\/system\/oauth\/openid_configuration`\)[\s\S]*skipAuth:\s*true/u,
+    "open-api OIDC discovery endpoint must suppress stored credentials",
   );
 });

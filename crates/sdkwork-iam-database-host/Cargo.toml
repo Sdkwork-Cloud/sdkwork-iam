@@ -3,15 +3,15 @@ name = "sdkwork-iam-database-host"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "SDKWork Appbase IAM database lifecycle bootstrap."
+description = "SDKWork IAM database lifecycle bootstrap."
 
 [lib]
-name = "sdkwork_appbase_database_host"
+name = "sdkwork_iam_database_host"
 path = "src/lib.rs"
 
 [[bin]]
-name = "sdkwork-appbase-db"
-path = "src/bin/sdkwork-appbase-db.rs"
+name = "sdkwork-iam-db"
+path = "src/bin/sdkwork-iam-db.rs"
 
 [dependencies]
 anyhow = "1.0"

@@ -12,43 +12,31 @@ import {
 } from "./run-workspace-vitest.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const sdkworkAppbaseRoot = path.resolve(__dirname, "..");
+const sdkworkIamRoot = path.resolve(__dirname, "..");
+
+function iamPcPackageTestsDir(cwd, packageName) {
+  return path.join(cwd, "apps", "sdkwork-iam-pc", "packages", packageName, "tests");
+}
 
 export function createUserCenterStandardContractsPlan({
-  cwd = sdkworkAppbaseRoot,
+  cwd = sdkworkIamRoot,
   resolvePackageJsonPath,
 } = {}) {
-  const userCenterCoreTestsDir = path.join(
+  const userCenterCoreTestsDir = iamPcPackageTestsDir(
     cwd,
-    "packages",
-    "pc-react",
-    "iam",
     "sdkwork-user-center-core-pc-react",
-    "tests",
   );
-  const authRuntimeTestsDir = path.join(
+  const authRuntimeTestsDir = iamPcPackageTestsDir(
     cwd,
-    "packages",
-    "pc-react",
-    "iam",
     "sdkwork-auth-runtime-pc-react",
-    "tests",
   );
-  const userCenterTestsDir = path.join(
+  const userCenterTestsDir = iamPcPackageTestsDir(
     cwd,
-    "packages",
-    "pc-react",
-    "iam",
     "sdkwork-user-center-pc-react",
-    "tests",
   );
-  const validationTestsDir = path.join(
+  const validationTestsDir = iamPcPackageTestsDir(
     cwd,
-    "packages",
-    "pc-react",
-    "iam",
     "sdkwork-user-center-validation-pc-react",
-    "tests",
   );
   const vitestPlan = createWorkspaceVitestPlan({ cwd, resolvePackageJsonPath });
 
@@ -90,7 +78,7 @@ export function createUserCenterStandardContractsPlan({
 }
 
 export function runUserCenterStandardContracts({
-  cwd = sdkworkAppbaseRoot,
+  cwd = sdkworkIamRoot,
   env = process.env,
   logger = console,
   probeVitestRuntime = probeWorkspaceVitestRuntime,

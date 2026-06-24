@@ -10,9 +10,9 @@ SDKWork IAM SQL table catalog and baseline DDL binding for Rust local/private de
 
 ## Public API
 
-- `IamTables` â€” canonical IAM table name constants
-- `iam_database_tables()` â€” ordered table catalog
-- `iam_database_baseline_sql()` â€” application-root baseline DDL from `database/ddl/baseline/postgres/`
+- `IamTables` â€?canonical IAM table name constants
+- `iam_database_tables()` â€?ordered table catalog
+- `iam_database_baseline_sql()` â€?application-root baseline DDL from `database/ddl/baseline/postgres/`
 
 Schema lifecycle assets live in application-root `database/`. This crate does not own competing migration SQL.
 
@@ -26,7 +26,7 @@ Configuration keys, runtime entrypoints, and integration contracts are declared 
 
 ## SaaS/Private/Local Behavior
 
-This crate is a base dependency of `sdkwork-appbase`. It is not an independent application root and does not own `sdkwork.app.config.json`.
+This crate is a base dependency of `sdkwork-iam`. It is not an independent application root and does not own `sdkwork.app.config.json`.
 
 ## Security
 

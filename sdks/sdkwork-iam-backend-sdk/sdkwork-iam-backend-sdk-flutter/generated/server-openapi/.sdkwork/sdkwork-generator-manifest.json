@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-iam-backend-sdk",
+    "version": "1.0.0",
+    "language": "flutter",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "sdkwork_iam_backend_sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "d33098ab9fb4a03ff09c5ae72fdde57d21f0e1ffa17a6c02155ce0600f3c7c9a"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "fffdc9107c6db283c0b4ffc651ce55c3b266242edb0ac980d7fff6eee9ec31ca"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "lib/backend_client.dart",
+      "sha256": "1e37fd2799c0ccc2fbfc5f11c93e6e280c995521b2a19282aef1943d9f602d78"
+    },
+    {
+      "path": "lib/sdkwork_iam_backend_sdk.dart",
+      "sha256": "17a8dfb2a8c7999aa7d600fae4c2a486282c957cdb168b34a7b0628260a07c56"
+    },
+    {
+      "path": "lib/src/api/api.dart",
+      "sha256": "8702753a783708e000607e78396d9b3555475ea79517b8fdc3a222502eeaf173"
+    },
+    {
+      "path": "lib/src/api/iam_oauth.dart",
+      "sha256": "8e9aad2ca8c752dfdd8020ba9143546fa011593de9b1bcadceda6a94fca22d1c"
+    },
+    {
+      "path": "lib/src/api/iam.dart",
+      "sha256": "69d8e5d27d344a4b351564dbfac0a8d3e172021dc7153ecb7a2013efd6c3d1fe"
+    },
+    {
+      "path": "lib/src/api/paths.dart",
+      "sha256": "218de8a1eb38353e21003db2e1eb53e0b30a40d51a9e2ddb65fe7169592d9860"
+    },
+    {
+      "path": "lib/src/api/response_helpers.dart",
+      "sha256": "8295b6cc4e67bb9d54a1b0a98c4282dcf8ea0cb126835a32797dd4d2c91a4214"
+    },
+    {
+      "path": "lib/src/http/client.dart",
+      "sha256": "c28278decf2c7456a2332dd12d708c8fc4f2bcf2b5843631d983d0dca581fcf9"
+    },
+    {
+      "path": "lib/src/models.dart",
+      "sha256": "4e5ff95162a32d26ab701c631218ac8d4f505069de01df19ff246c4c0fd8104c"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "pubspec_overrides.yaml",
+      "sha256": "5ccf90e0ffa0922f263b9e4e0c0ea7c3cc75574f10fc7ee037306bddd769e342"
+    },
+    {
+      "path": "pubspec.yaml",
+      "sha256": "78b213b3eee196b62a91ba17dc0546acc91b33074b38e16d15e5a08c0991dc33"
+    },
+    {
+      "path": "README.md",
+      "sha256": "09b202abe72d7b9906b56a0cd655e5be74e2b599192b159f738948095611fec3"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "9a0b59d682b8a4bd883a41ca40fe64a414ee376f5a777c15d01b6ff2f9291b6c"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

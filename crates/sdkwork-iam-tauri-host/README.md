@@ -3,7 +3,7 @@
 Domain: iam
 Capability: tauri-host
 Package type: tauri-host
-Rust crate import: `sdkwork_appbase_tauri_host`
+Rust crate import: `sdkwork_iam_tauri_host`
 Status: standardizing
 
 SDKWork IAM Tauri host adapter contract for local/private deployments.
@@ -14,7 +14,8 @@ SDKWork IAM Tauri host adapter contract for local/private deployments.
 
 ## Runtime Entrypoints
 
-- `sdkwork_appbase_tauri_host::AppbaseTauriHostManifest`
+- `sdkwork_iam_tauri_host::iam_tauri_adapter_manifest`
+- `sdkwork_iam_tauri_host::IamTauriAdapterManifest`
 
 ## Required SDK Surface
 
@@ -26,7 +27,7 @@ Configuration keys, runtime entrypoints, and integration contracts are declared 
 
 ## SaaS/Private/Local Behavior
 
-This crate is a base dependency of `sdkwork-appbase`. It is not an independent application root and does not own `sdkwork.app.config.json`.
+This crate is a base dependency of `sdkwork-iam`. It is not an independent application root and does not own `sdkwork.app.config.json`.
 
 ## Security
 

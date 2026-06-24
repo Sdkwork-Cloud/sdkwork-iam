@@ -72,7 +72,8 @@ pub fn standard_role_permission_id(tenant_id: &str, role_id: &str, permission_id
 
 pub fn resolve_app_root(app_root: Option<&Path>) -> std::path::PathBuf {
     app_root.map(Path::to_path_buf).unwrap_or_else(|| {
-        std::env::var("SDKWORK_APPBASE_APP_ROOT")
+        std::env::var("SDKWORK_IAM_APP_ROOT")
+            .or_else(|_| std::env::var("SDKWORK_APPBASE_APP_ROOT"))
             .map(std::path::PathBuf::from)
             .unwrap_or_else(|_| {
                 std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))

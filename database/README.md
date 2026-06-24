@@ -1,6 +1,6 @@
 # IAM Database Module
 
-Canonical lifecycle assets for `sdkwork-appbase` per `DATABASE_FRAMEWORK_SPEC.md`.
+Canonical lifecycle assets for `sdkwork-iam` per `DATABASE_FRAMEWORK_SPEC.md`.
 
 - moduleId: `iam`
 - serviceCode: `IAM`
@@ -19,9 +19,56 @@ pnpm run db:migrate
 pnpm run db:seed
 pnpm run db:status
 pnpm run db:drift:check
+pnpm run db:bootstrap
 ```
 
 `check:database` and `db:validate` both run the L2 framework check plus the 57-table IAM contract alignment gate.
+
+## Initialization operations
+
+All IAM table DDL and seed data are owned by `sdkwork-iam/database/` and executed through `sdkwork-iam-database-host`. `sdkwork-appbase` must not ship `database/` assets or IAM seed SQL.
+
+### Governance and contract checks
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm run check:database` | L2 framework validation + 57-table IAM contract alignment |
+| `pnpm run db:validate` | Same as `check:database` |
+| `pnpm run db:materialize:contract` | Regenerate `contract/*` from baseline + migrations |
+
+### Lifecycle CLI (`sdkwork-iam-db`)
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm run db:plan` | Show pending migrations, seed plan, and drift summary |
+| `pnpm run db:init` | Create empty schema state, then apply pending migrations |
+| `pnpm run db:migrate` | Apply versioned postgres migrations (`0006`–`0010`) |
+| `pnpm run db:seed --` | Apply seed profile scripts for locale/profile |
+| `pnpm run db:bootstrap --` | `init` + `migrate` + seed profile in one pass |
+| `pnpm run db:status` | Report module/engine status and pending migrations |
+| `pnpm run db:drift` | Emit drift analysis JSON |
+| `pnpm run db:drift:check` | Fail on error-level drift |
+
+Default seed profile: `operational` / locale `zh-CN` (`database.manifest.json`).
+
+### Seed layers (`database/seeds/`)
+
+| Asset | Profile | Purpose |
+| --- | --- | --- |
+| `common/001_bootstrap.sql` | none | Placeholder only |
+| `common/002_default_iam_subject.sql` | `standard`, `operational` | Seed canonical tenant `100001` and root organization `0` |
+| `common/003_iam_application_bootstrap_seed.sql` | `operational` | Seed platform application template and default tenant application |
+| `locales/zh-CN/001_iam_locale_display.sql` | `operational` | Locale display overlays after catalog materialization |
+
+### Runtime bootstrap hooks (`bootstrap_iam_database_from_env`)
+
+After lifecycle `init` + optional `migrate`, the database host also runs:
+
+1. OAuth provider catalog seed (`sdkwork-iam-web-adapter`)
+2. IMF module catalog materialization (`sdkwork-iam-module-registry`, profile `operational`)
+3. Locale seed overlays declared in `seeds/seed.manifest.json`
+
+Integrated callers (for example composed product installers) should prefer delegating IAM schema/seed work to `../sdkwork-iam` lifecycle commands or `sdkwork-iam-bootstrap` helpers instead of embedding IAM DDL locally.
 
 ## Contract alignment
 

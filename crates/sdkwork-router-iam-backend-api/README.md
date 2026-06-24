@@ -11,12 +11,12 @@ SDKWork IAM backend-api route metadata and fail-closed router for Rust local/pri
 ## Public API
 
 - `sdkwork_router_iam_backend_api::backend_routes`
-- `sdkwork_router_iam_backend_api::sdkwork_appbase_backend_api_routes`
-- `sdkwork_router_iam_backend_api::build_sdkwork_appbase_backend_api_router`
+- `sdkwork_router_iam_backend_api::sdkwork_iam_backend_api_routes`
+- `sdkwork_router_iam_backend_api::build_sdkwork_iam_backend_api_router`
 
 ## Runtime Entrypoints
 
-- `sdkwork_router_iam_backend_api::build_sdkwork_appbase_backend_api_router`
+- `sdkwork_router_iam_backend_api::build_sdkwork_iam_backend_api_router`
 
 ## Required SDK Surface
 
@@ -28,7 +28,7 @@ Configuration keys, runtime entrypoints, and integration contracts are declared 
 
 ## SaaS/Private/Local Behavior
 
-This crate is a base dependency of `sdkwork-appbase`. It is not an independent application root and does not own `sdkwork.app.config.json`.
+This crate is a base dependency of `sdkwork-iam`. It is not an independent application root and does not own `sdkwork.app.config.json`.
 
 ## Security
 

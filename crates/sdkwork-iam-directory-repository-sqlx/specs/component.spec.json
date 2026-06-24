@@ -6,7 +6,7 @@
     "displayName": "SDKWork Iam Directory Repository Sqlx",
     "version": "0.1.0",
     "type": "rust-crate",
-    "root": "sdkwork-appbase/crates/sdkwork-iam-directory-repository-sqlx",
+    "root": "sdkwork-iam/crates/sdkwork-iam-directory-repository-sqlx",
     "domain": "iam",
     "capability": "directory",
     "status": "standardizing",
@@ -82,7 +82,7 @@
     ]
   },
   "metadata": {
-    "managedBy": "sdkwork-appbase Rust workspace migration",
+    "managedBy": "sdkwork-iam",
     "standardVersion": "2026-06-12"
   }
 }

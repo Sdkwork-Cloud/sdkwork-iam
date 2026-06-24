@@ -4,7 +4,9 @@ import test from "node:test";
 
 import { WORKSPACE_VITEST_RUNTIME_BLOCKED_EXIT_CODE } from "../../../scripts/run-workspace-vitest.mjs";
 import {
+  createAppApiRustTestCommands,
   createIamStandardContractsPlan,
+  iamPostgresProfileAvailable,
   runIamStandardContracts,
 } from "../../../scripts/run-iam-standard-contracts.mjs";
 
@@ -36,19 +38,23 @@ test("IAM standard contracts plan uses the governed Vitest CLI path and Rust pac
   assert.equal(plan[2]?.args[1], "run");
   assert.equal(
     plan[2]?.args[2],
-    path.join(appbaseRoot, "packages/common/iam/sdkwork-iam-contracts/tests/iam-contracts.standard.test.ts"),
+    path.join(appbaseRoot, "apps/sdkwork-iam-common/packages/sdkwork-iam-contracts/tests/iam-contracts.standard.test.ts"),
   );
   assert.equal(
     plan[2]?.args[3],
-    path.join(appbaseRoot, "packages/common/iam/sdkwork-iam-sdk-ports/tests/iam-sdk-ports.standard.test.ts"),
+    path.join(appbaseRoot, "apps/sdkwork-iam-common/packages/sdkwork-iam-contracts/tests/auth-runtime-metadata.standard.test.ts"),
   );
   assert.equal(
     plan[2]?.args[4],
-    path.join(appbaseRoot, "packages/common/iam/sdkwork-iam-service/tests/iam-service.standard.test.ts"),
+    path.join(appbaseRoot, "apps/sdkwork-iam-common/packages/sdkwork-iam-sdk-ports/tests/iam-sdk-ports.standard.test.ts"),
   );
   assert.equal(
     plan[2]?.args[5],
-    path.join(appbaseRoot, "packages/common/iam/sdkwork-iam-runtime/tests/iam-runtime.standard.test.ts"),
+    path.join(appbaseRoot, "apps/sdkwork-iam-common/packages/sdkwork-iam-service/tests/iam-service.standard.test.ts"),
+  );
+  assert.equal(
+    plan[2]?.args[6],
+    path.join(appbaseRoot, "apps/sdkwork-iam-common/packages/sdkwork-iam-runtime/tests/iam-runtime.standard.test.ts"),
   );
   assert.equal(plan[2]?.args.at(-6), "--config");
   assert.equal(plan[2]?.args.at(-5), path.join(appbaseRoot, "vitest.config.ts"));
@@ -56,18 +62,19 @@ test("IAM standard contracts plan uses the governed Vitest CLI path and Rust pac
     plan.slice(3).map((command) => command.args),
     [
       ["test", "-p", "sdkwork-iam-context-service"],
-      ["test", "-j", "1", "-p", "sdkwork-router-iam-app-api", "--", "--test-threads", "1"],
+      ...createAppApiRustTestCommands(appbaseRoot).map((command) => command.args),
       ["test", "-p", "sdkwork-router-iam-backend-api"],
       ["test", "-p", "sdkwork-router-iam-open-api"],
       ["test", "-p", "sdkwork-iam-directory-repository-sqlx"],
       ["test", "-p", "sdkwork-iam-web-adapter"],
       ["test", "-p", "sdkwork-iam-bootstrap"],
       ["test", "-p", "sdkwork-iam-tauri-host"],
+      ["test"],
     ],
   );
 });
 
-test("IAM standard contracts plan serializes shared-database app router integration tests", () => {
+test("IAM standard contracts plan runs governed app-api HTTP and OAuth AS integration tests", () => {
   const plan = createIamStandardContractsPlan({
     cwd: appbaseRoot,
     resolvePackageJsonPath() {
@@ -75,8 +82,14 @@ test("IAM standard contracts plan serializes shared-database app router integrat
     },
   });
 
-  const appRouterPlan = plan.find((command) => command.args?.includes("sdkwork-router-iam-app-api"));
-  assert.deepEqual(appRouterPlan?.args, ["test", "-j", "1", "-p", "sdkwork-router-iam-app-api", "--", "--test-threads", "1"]);
+  const appRouterPlans = plan.filter((command) => command.args?.includes("sdkwork-router-iam-app-api"));
+  assert.deepEqual(appRouterPlans, createAppApiRustTestCommands(appbaseRoot));
+  assert.ok(appRouterPlans.some((command) => command.args.includes("iam_http_standard")));
+  if (iamPostgresProfileAvailable(appbaseRoot)) {
+    assert.ok(appRouterPlans.some((command) => command.args.includes("oauth_authorization_server_integration")));
+  } else {
+    assert.equal(appRouterPlans.length, 1);
+  }
 });
 
 test("IAM standard contracts runner refuses an unreadable Vitest runtime before executing commands", () => {

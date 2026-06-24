@@ -1,5 +1,5 @@
 -- Default IAM tenant and root organization for standard seed profile.
--- Canonical runtime import: sdkwork-appbase-iam-bootstrap::{import_postgres_default_iam_seed, import_sqlite_default_iam_seed}
+-- Canonical runtime import: sdkwork-iam-bootstrap::{import_postgres_default_iam_seed, import_sqlite_default_iam_seed}
 
 INSERT INTO iam_tenant
     (id, code, name, status, created_at, updated_at)

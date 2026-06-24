@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-iam-backend-sdk",
+    "version": "1.0.0",
+    "language": "java",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "com.sdkwork:sdkwork-iam-backend-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "33394b9189a458f6b36bf7fd74815ea4b71a435083e0c428a9d3ca4673e28c3e"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "da4bd76701864b29d52b6b260c20f65305bcd4b9eea8696f7751b991f6aba345"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "pom.xml",
+      "sha256": "62a50296d138d469e7e106d43d5f4464e2ca460520d738acdaf1fcbb9608bbc0"
+    },
+    {
+      "path": "README.md",
+      "sha256": "f23fc53f6a6ddff21bfb1abf67861972e2bd043866941296b26a4721bae7a471"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "83bfd63472f264d91ec5bbd0276bb75db60617f21357a97a8a076aaa2e34a3d6"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/api/ApiPaths.java",
+      "sha256": "719227981f6503c9bb409d71efc0144088912135ea229b1d31e82cf0764a15fa"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/api/IamApi.java",
+      "sha256": "e26e2cfe540b1b277a865202992307ba2d1efde33cf3ebb8ad3423acb8bcd567"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/api/IamOauthApi.java",
+      "sha256": "37da757c47a82c1c6f41e7aa3aa7de762028a7af1aa845640a28a9186986bcec"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/api/package-info.java",
+      "sha256": "ab4901a5d1246ad38257450c8b62bc00b88bf6e9f150478001f8f73b279416d0"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/http/HttpClient.java",
+      "sha256": "9672b87d53fc29bd36c29c650fc8c8ef7ee3906dfae24f4eb1dca069aaee08e6"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseAccessCredentialCreateCommand.java",
+      "sha256": "77cd55e16bf28752a4d057cfee9d64f6c41d2463cdaf1dbbff2957d95002cde2"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseApiResult.java",
+      "sha256": "fa1f84621bc9e8e725bcc8c73dc703a68d99780375fe6ca5e0a600cfc5753b3d"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseApplicationRegisterCommand.java",
+      "sha256": "8aa7025d680a381e701edcf606fabeed6057589205a9abf005e9f56d35f4b5d6"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseSessionCreateCommand.java",
+      "sha256": "07d6eaaf50438639ff22f3cf031f389d1b9c6eb2db188ac2c01677e79b7da696"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseTenantApplicationEnableCommand.java",
+      "sha256": "befd070250ef470add45536677f81529b8fd316dc66bf1f8912d9954d89f9e4a"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseTenantApplicationProvisionCommand.java",
+      "sha256": "ead3654e433c340a30218f2e088c8dfb4c7e7237c00c95697a0df641f14a9759"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseTenantApplicationUpdateCommand.java",
+      "sha256": "f7a63d45a81e8be49a82c6d75fc9ab9411291ebf80d12678d02685eb13b4ce5a"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/model/FieldError.java",
+      "sha256": "2b5b96d10398d7b41bbd33bc384a1b77b3cb1344de834ff133baf5a17744bec2"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/model/ProblemDetail.java",
+      "sha256": "bc7e2b9402a8d54782901f11287a7d43dbdddf651f0e9dae49892ef0746cc655"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/backend/sdk/SdkworkBackendClient.java",
+      "sha256": "5e4b4b189a43ece3c3ff97c6bed44389d1293187f4c884ef9878e3fc3dcb3951"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

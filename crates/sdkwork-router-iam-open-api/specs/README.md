@@ -8,7 +8,7 @@ This directory is the local standards index for `sdkwork-router-iam-open-api`. R
 | --- | --- |
 | Name | `sdkwork-router-iam-open-api` |
 | Type | `rust-route-crate` |
-| Root | `sdkwork-appbase/crates/sdkwork-router-iam-open-api` |
+| Root | `sdkwork-iam/crates/sdkwork-router-iam-open-api` |
 | Domain | `iam` |
 | Capability | `iam` |
 | Languages | `rust` |
@@ -37,9 +37,9 @@ This directory is the local standards index for `sdkwork-router-iam-open-api`. R
 ## Public Exports
 
 - `sdkwork_router_iam_open_api::open_routes`
-- `sdkwork_router_iam_open_api::sdkwork_appbase_open_api_routes`
-- `sdkwork_router_iam_open_api::build_sdkwork_appbase_open_api_router`
-- `sdkwork_router_iam_open_api::build_sdkwork_appbase_open_api_router_from_env`
+- `sdkwork_router_iam_open_api::sdkwork_iam_open_api_routes`
+- `sdkwork_router_iam_open_api::build_sdkwork_iam_open_api_router`
+- `sdkwork_router_iam_open_api::build_sdkwork_iam_open_api_router_from_env`
 
 ## SDK Clients
 

@@ -11,14 +11,14 @@ SDKWork canonical IAM HTTP route contracts for Rust local/private deployments.
 ## Public API
 
 - `sdkwork_router_iam_app_api::app_routes`
-- `sdkwork_router_iam_app_api::sdkwork_appbase_app_api_routes`
-- `sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router`
-- `sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router_with_local_directory`
+- `sdkwork_router_iam_app_api::sdkwork_iam_app_api_routes`
+- `sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router`
+- `sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router_with_local_directory`
 - `sdkwork_router_iam_app_api::build_local_app_api_router`
 
 ## Runtime Entrypoints
 
-- `sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router`
+- `sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router`
 
 ## Required SDK Surface
 
@@ -30,7 +30,7 @@ Configuration keys, runtime entrypoints, and integration contracts are declared 
 
 ## SaaS/Private/Local Behavior
 
-This crate is a base dependency of `sdkwork-appbase`. It is not an independent application root and does not own `sdkwork.app.config.json`.
+This crate is a base dependency of `sdkwork-iam`. It is not an independent application root and does not own `sdkwork.app.config.json`.
 
 ## Security
 
@@ -42,9 +42,20 @@ Extension points are limited to public exports, runtime entrypoints, SDK clients
 
 ## Verification
 
+Component verification (structure checks, CI without PostgreSQL):
+
 ```bash
-cargo test -p sdkwork-router-iam-app-api
+cargo test -j 1 -p sdkwork-router-iam-app-api --test iam_http_standard -- --test-threads 1
 ```
+
+PostgreSQL integration (requires `.env.postgres` or `../sdkwork-clawrouter/.env.postgres`, always use `--test-threads 1`):
+
+```bash
+cargo test -j 1 -p sdkwork-router-iam-app-api --test oauth_authorization_server_integration -- --test-threads 1
+cargo test -j 1 -p sdkwork-router-iam-app-api --test iam_local_app_router_test -- --test-threads 1
+```
+
+Included in `pnpm run test:iam-standard-contracts` (HTTP standard always; OAuth PKCE E2E when PostgreSQL profile is available).
 
 ## Owner And Status
 

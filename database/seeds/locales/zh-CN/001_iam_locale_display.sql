@@ -1,5 +1,5 @@
 -- zh-CN display labels for IMF-materialized IAM directory and platform roles.
--- Idempotent updates. Re-applied after catalog materialization in AppbaseIamDatabaseModule::after_seed.
+-- Idempotent updates. Re-applied after catalog materialization in IamDatabaseModule::after_seed.
 
 UPDATE iam_tenant
 SET name = 'SDKWork 默认租户', updated_at = CURRENT_TIMESTAMP

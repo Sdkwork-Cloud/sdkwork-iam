@@ -5,8 +5,12 @@ edition.workspace = true
 license.workspace = true
 description = "Shared IAM default subject and permission catalog bootstrap for SDKWork applications."
 
+[lib]
+name = "sdkwork_iam_bootstrap"
+path = "src/lib.rs"
+
 [dependencies]
 chrono = { workspace = true }
 sqlx = { workspace = true }
-sdkwork-iam-context-service = { path = "../sdkwork-iam-context-service" }
+sdkwork_iam_context_service.workspace = true
 sdkwork_iam_module_registry = { workspace = true }

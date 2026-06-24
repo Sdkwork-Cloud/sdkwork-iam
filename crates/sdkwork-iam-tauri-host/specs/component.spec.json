@@ -3,10 +3,10 @@
   "kind": "sdkwork.component.spec",
   "component": {
     "name": "sdkwork-iam-tauri-host",
-    "displayName": "SDKWork Appbase Tauri Host",
+    "displayName": "SDKWork IAM Tauri Host",
     "version": "0.1.0",
     "type": "tauri-host",
-    "root": "sdkwork-appbase/crates/sdkwork-iam-tauri-host",
+    "root": "sdkwork-iam/crates/sdkwork-iam-tauri-host",
     "domain": "iam",
     "capability": "tauri-host",
     "surface": "host/native",
@@ -62,7 +62,7 @@
       "."
     ],
     "runtimeEntrypoints": [
-      "sdkwork_appbase_tauri_host::AppbaseTauriHostManifest"
+      "sdkwork_iam_tauri_host::iam_tauri_adapter_manifest"
     ],
     "routeManifest": null,
     "sdkClients": [],
@@ -84,7 +84,7 @@
     ]
   },
   "metadata": {
-    "managedBy": "sdkwork-appbase Rust workspace migration",
+    "managedBy": "sdkwork-iam",
     "standardVersion": "2026-06-12"
   }
 }

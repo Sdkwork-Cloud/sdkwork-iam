@@ -32,7 +32,7 @@ const DOMAIN_SEED_FIXTURES = [
     patterns: [/100001, 0,/],
   },
   {
-    repo: "sdkwork-appbase",
+    repo: "sdkwork-iam",
     file: "database/seeds/common/002_default_iam_subject.sql",
     patterns: [/'100001', 'SDKWORK'/, /'0',\s*\n\s*'100001'/],
   },
@@ -140,7 +140,7 @@ test("iam bootstrap constants stay aligned across rust registry, sql seed, and t
   const constantsTs = await readFile(
     path.join(
       appRoot,
-      "packages/common/iam/sdkwork-iam-application-bootstrap/src/constants.ts",
+      "apps/sdkwork-iam-common/packages/sdkwork-iam-application-bootstrap/src/constants.ts",
     ),
     "utf8",
   );

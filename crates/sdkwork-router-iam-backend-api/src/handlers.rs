@@ -1,13 +1,14 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, patch, post},
     Json, Router,
 };
-use sdkwork_appbase_database_host;
+use sdkwork_iam_database_host;
 use sdkwork_iam_web_adapter::{
     account_binding_policy_to_json, enable_tenant_application, ensure_actor_tenant_scope,
     ensure_bootstrap_permission, issue_delegated_access_credential,
@@ -16,8 +17,8 @@ use sdkwork_iam_web_adapter::{
     parse_application_register_command, parse_tenant_application_provision_command,
     parse_tenant_application_update_command, provision_tenant_application,
     register_application_template, registered_application_template_to_json,
-    resolve_bootstrap_actor, save_account_binding_policy, tenant_application_to_json,
-    update_tenant_application, AccountBindingPolicyDocument,
+    resolve_bootstrap_actor, resolve_tenant_application, save_account_binding_policy,
+    tenant_application_to_json, update_tenant_application, AccountBindingPolicyDocument,
     IAM_ACCESS_CREDENTIALS_CREATE_PERMISSION, IAM_APPLICATIONS_REGISTER_PERMISSION,
     IAM_TENANT_APPLICATIONS_ENABLE_PERMISSION, IAM_TENANT_APPLICATIONS_PROVISION_PERMISSION,
     IAM_TENANT_APPLICATIONS_UPDATE_PERMISSION,
@@ -65,16 +66,16 @@ async fn enforce_backend_rate_limit(pg: &PgPool, bucket: &str) -> Option<Respons
     }
 }
 
-/// Builds a fail-closed local/private `sdkwork-appbase-backend-api` router.
+/// Builds a fail-closed local/private `sdkwork-iam-backend-api` router.
 ///
 /// Backend API routes require an admin/operator IAM service implementation.
-pub fn build_sdkwork_appbase_backend_api_router() -> Router {
+pub fn build_sdkwork_iam_backend_api_router() -> Router {
     wrap_router_with_web_framework(Router::new().with_state(BackendIamState { pool: None }))
 }
 
 /// Builds the backend IAM router with an IAM database pool from environment when configured.
-pub async fn build_sdkwork_appbase_backend_api_router_from_env() -> Router {
-    let pool = match sdkwork_appbase_database_host::bootstrap_iam_database_from_env().await {
+pub async fn build_sdkwork_iam_backend_api_router_from_env() -> Router {
+    let pool = match sdkwork_iam_database_host::bootstrap_iam_database_from_env().await {
         Ok(host) => host.postgres_pool().ok().map(|pool| Arc::new(pool.clone())),
         Err(error) => {
             tracing::warn!(error = %error, "IAM database bootstrap unavailable for backend API");
@@ -102,7 +103,8 @@ pub async fn build_sdkwork_appbase_backend_api_router_from_env() -> Router {
             )
             .route(
                 "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}",
-                patch(update_tenant_application_handler),
+                get(retrieve_tenant_application_handler)
+                    .patch(update_tenant_application_handler),
             )
             .route(
                 "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}/enable",
@@ -502,6 +504,56 @@ async fn update_tenant_application_handler(
         Err(message) => appbase_error(
             StatusCode::SERVICE_UNAVAILABLE,
             "iam_tenant_application_update_failed",
+            &message,
+        ),
+    }
+}
+
+async fn retrieve_tenant_application_handler(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(tenant_application_id): Path<String>,
+    Query(query): Query<HashMap<String, String>>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    if let Some(response) =
+        enforce_backend_rate_limit(pg, "backend:tenant_applications:retrieve").await
+    {
+        return response;
+    }
+
+    let Ok(context_tenant_id) = tenant_id_from_context(&ctx) else {
+        return tenant_id_from_context(&ctx).err().expect("error response");
+    };
+    let tenant_id = query
+        .get("tenantId")
+        .or_else(|| query.get("tenant_id"))
+        .cloned()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or(context_tenant_id.clone());
+    if tenant_id != context_tenant_id {
+        return appbase_error(
+            StatusCode::FORBIDDEN,
+            "iam_tenant_application_retrieve_forbidden",
+            "tenant application retrieve is limited to the authenticated tenant scope",
+        );
+    }
+
+    match resolve_tenant_application(pg, &tenant_id, Some(&tenant_application_id), None, None).await
+    {
+        Ok(Some(application)) => appbase_ok(tenant_application_to_json(&application)),
+        Ok(None) => appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_tenant_application_not_found",
+            "tenant application was not found",
+        ),
+        Err(message) => appbase_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "iam_tenant_application_retrieve_failed",
             &message,
         ),
     }

@@ -4,7 +4,7 @@
   "moduleId": "iam-kernel",
   "catalogVersion": "1.0.0",
   "domain": "iam",
-  "owner": "sdkwork-appbase",
+  "owner": "sdkwork-iam",
   "displayName": "IAM Kernel Module",
   "permissions": {
     "catalog": [

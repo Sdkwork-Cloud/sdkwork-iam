@@ -18,7 +18,10 @@
       }
     },
     "operational": {
-      "common": ["002_default_iam_subject.sql"],
+      "common": [
+        "002_default_iam_subject.sql",
+        "003_iam_application_bootstrap_seed.sql"
+      ],
       "locales": {
         "zh-CN": ["001_iam_locale_display.sql"]
       }

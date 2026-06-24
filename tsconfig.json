@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "vite-env.d.ts",
+    "vitest.config.ts",
+    "vitest.setup.ts",
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "apps/sdkwork-iam-common/packages/**/*.ts",
+    "apps/sdkwork-iam-common/packages/**/*.tsx",
+    "apps/sdkwork-iam-pc/packages/**/*.ts",
+    "apps/sdkwork-iam-pc/packages/**/*.tsx",
+    "apps/sdkwork-iam-h5/packages/**/*.ts",
+    "apps/sdkwork-iam-h5/packages/**/*.tsx",
+    "sdks/**/*.ts",
+    "scripts/**/*.mjs",
+    "tools/**/*.mjs",
+    "tests/**/*.mjs"
+  ]
+}

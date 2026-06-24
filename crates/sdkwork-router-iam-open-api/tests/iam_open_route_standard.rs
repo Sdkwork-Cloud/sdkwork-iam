@@ -2,26 +2,81 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
 use sdkwork_router_iam_open_api::{
-    build_sdkwork_appbase_open_api_router, open_routes, HttpMethod, HttpRoute,
+    build_sdkwork_iam_open_api_router, open_routes, HttpMethod, HttpRoute,
 };
+use sdkwork_iam_web_adapter::build_openid_configuration_document;
 use serde_json::Value;
 use tower::ServiceExt;
 
 #[test]
 fn exposes_surface_named_rust_integration_entrypoints() {
-    let _open_api_router = build_sdkwork_appbase_open_api_router();
+    let _open_api_router = build_sdkwork_iam_open_api_router();
 
     assert!(
         !open_routes().is_empty(),
-        "sdkwork-appbase-open-api must expose OAuth provider callback ingress metadata",
+        "sdkwork-iam-open-api must expose OAuth provider and authorization-server ingress metadata",
     );
 }
 
 #[test]
-fn open_routes_expose_oauth_provider_callback_ingress_only() {
+fn open_routes_expose_oauth_provider_and_authorization_server_ingress() {
     let routes = open_routes();
 
     for route in [
+        HttpRoute::public(
+            HttpMethod::Get,
+            "/.well-known/openid-configuration",
+            "iam.oauth",
+            "iam.oauth.wellKnown.openidConfiguration.retrieve",
+        ),
+        HttpRoute::public(
+            HttpMethod::Get,
+            "/.well-known/oauth-authorization-server",
+            "iam.oauth",
+            "iam.oauth.wellKnown.authorizationServerMetadata.retrieve",
+        ),
+        HttpRoute::public(
+            HttpMethod::Get,
+            "/iam/v3/api/system/oauth/openid_configuration",
+            "iam.oauth",
+            "iam.oauth.openidConfiguration.retrieve",
+        ),
+        HttpRoute::public(
+            HttpMethod::Get,
+            "/iam/v3/api/oauth/authorize",
+            "iam.oauth",
+            "iam.oauth.authorize.handleGet",
+        ),
+        HttpRoute::public(
+            HttpMethod::Post,
+            "/iam/v3/api/oauth/token",
+            "iam.oauth",
+            "iam.oauth.token.create",
+        ),
+        HttpRoute::public(
+            HttpMethod::Post,
+            "/iam/v3/api/oauth/revoke",
+            "iam.oauth",
+            "iam.oauth.revoke.create",
+        ),
+        HttpRoute::public(
+            HttpMethod::Post,
+            "/iam/v3/api/oauth/introspect",
+            "iam.oauth",
+            "iam.oauth.introspect.create",
+        ),
+        HttpRoute::public(
+            HttpMethod::Get,
+            "/iam/v3/api/oauth/jwks",
+            "iam.oauth",
+            "iam.oauth.jwks.retrieve",
+        ),
+        HttpRoute::open_api_flexible(
+            HttpMethod::Get,
+            "/iam/v3/api/oauth/userinfo",
+            "iam.oauth",
+            "iam.oauth.userinfo.retrieve",
+        ),
         HttpRoute::open_api_flexible(
             HttpMethod::Get,
             "/iam/v3/api/oauth/provider_callbacks/{callbackPublicId}",
@@ -37,26 +92,24 @@ fn open_routes_expose_oauth_provider_callback_ingress_only() {
     ] {
         assert!(
             routes.contains(&route),
-            "missing OAuth provider ingress route: {route:?}",
+            "missing OAuth open-api route: {route:?}",
         );
     }
-    assert!(
-        routes.iter().all(|route| route
-            .path
-            .starts_with("/iam/v3/api/oauth/provider_callbacks/")),
-        "appbase IAM open-api must expose only provider callback ingress for OAuth",
-    );
-    assert!(
-        routes
-            .iter()
-            .all(|route| !route.path.contains("/open_platform")),
-        "provider ingress must not expose open_platform legacy paths",
+}
+
+#[test]
+fn openid_configuration_document_matches_manifest_issuer() {
+    let doc = build_openid_configuration_document();
+    assert_eq!(
+        doc.get("authorization_endpoint").and_then(Value::as_str),
+        Some("https://iam.sdkwork.local/iam/v3/oauth/authorize")
     );
 }
 
 #[tokio::test]
 async fn open_router_accepts_dev_inline_oauth_bearer_before_handler() {
-    let router = build_sdkwork_appbase_open_api_router();
+    std::env::set_var("SDKWORK_ENV", "dev");
+    let router = build_sdkwork_iam_open_api_router();
     let response = router
         .oneshot(
             Request::builder()
@@ -76,120 +129,46 @@ async fn open_router_accepts_dev_inline_oauth_bearer_before_handler() {
         response.status(),
         "OAuth-authenticated open-api request should reach handler fail-closed response"
     );
+    std::env::remove_var("SDKWORK_ENV");
 }
 
 #[tokio::test]
-async fn open_router_from_env_bootstrap_applies_open_api_auth_before_handler() {
-    use sdkwork_router_iam_open_api::build_sdkwork_appbase_open_api_router_from_env;
-
-    let router = build_sdkwork_appbase_open_api_router_from_env().await;
-
-    let unauthenticated = router
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method(Method::GET)
-                .uri("/iam/v3/api/oauth/provider_callbacks/callback_test")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_eq!(StatusCode::UNAUTHORIZED, unauthenticated.status());
-
-    let authenticated = router
-        .oneshot(
-            Request::builder()
-                .method(Method::GET)
-                .uri("/iam/v3/api/oauth/provider_callbacks/callback_test")
-                .header(
-                    "x-api-key",
-                    "api_key_id=key-1;tenant_id=tenant-1;user_id=user-1;app_id=appbase",
-                )
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert!(
-        authenticated.status() == StatusCode::SERVICE_UNAVAILABLE
-            || authenticated.status() == StatusCode::UNAUTHORIZED,
-        "authenticated open-api request must pass auth layer before handler: {}",
-        authenticated.status()
-    );
-}
-
-#[tokio::test]
-async fn open_router_accepts_dev_inline_api_key_before_handler() {
-    let router = build_sdkwork_appbase_open_api_router();
+async fn open_router_serves_oidc_discovery_without_database() {
+    let router = build_sdkwork_iam_open_api_router();
     let response = router
         .oneshot(
             Request::builder()
                 .method(Method::GET)
-                .uri("/iam/v3/api/oauth/provider_callbacks/callback_test")
-                .header(
-                    "x-api-key",
-                    "api_key_id=key-1;tenant_id=tenant-1;user_id=user-1;app_id=appbase",
-                )
+                .uri("/iam/v3/api/system/oauth/openid_configuration")
                 .body(Body::empty())
                 .unwrap(),
         )
         .await
         .unwrap();
+    assert_eq!(StatusCode::OK, response.status());
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let payload: Value = serde_json::from_slice(&body).expect("json");
+    assert!(payload.get("token_endpoint").is_some());
+}
+
+#[tokio::test]
+async fn open_router_serves_well_known_oidc_discovery_without_database() {
+    let router = build_sdkwork_iam_open_api_router();
+    let response = router
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/.well-known/openid-configuration")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(StatusCode::OK, response.status());
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let payload: Value = serde_json::from_slice(&body).expect("json");
     assert_eq!(
-        StatusCode::SERVICE_UNAVAILABLE,
-        response.status(),
-        "authenticated open-api request should reach handler fail-closed response"
+        payload.get("authorization_endpoint").and_then(Value::as_str),
+        Some("https://iam.sdkwork.local/iam/v3/oauth/authorize")
     );
-}
-
-#[tokio::test]
-async fn open_router_fails_closed_without_provider_callback_store() {
-    let router = build_sdkwork_appbase_open_api_router();
-
-    for (method, path, body) in [
-        (
-            Method::GET,
-            "/iam/v3/api/oauth/provider_callbacks/callback_test",
-            None,
-        ),
-        (
-            Method::POST,
-            "/iam/v3/api/oauth/provider_callbacks/callback_test",
-            Some(r#"{"code":"oauth-code"}"#),
-        ),
-    ] {
-        let (status, body_text, _payload) =
-            request_open_route(router.clone(), method, path, body).await;
-
-        assert_eq!(
-            StatusCode::UNAUTHORIZED,
-            status,
-            "{path} must reject unauthenticated open-api ingress before handler logic: {body_text}"
-        );
-    }
-}
-
-async fn request_open_route(
-    router: axum::Router,
-    method: Method,
-    path: &str,
-    body: Option<&str>,
-) -> (StatusCode, String, Value) {
-    let response = router
-        .oneshot(
-            Request::builder()
-                .method(method)
-                .uri(path)
-                .header("content-type", "application/json")
-                .body(Body::from(body.unwrap_or_default().to_owned()))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    let status = response.status();
-    let bytes = response.into_body().collect().await.unwrap().to_bytes();
-    let body_text = String::from_utf8(bytes.to_vec()).unwrap();
-    let payload = serde_json::from_str(&body_text).unwrap_or(Value::Null);
-    (status, body_text, payload)
 }

@@ -13,14 +13,14 @@ Routes declare `open-api-flexible` auth mode and resolve credentials through `sd
 ## Public API
 
 - `sdkwork_router_iam_open_api::open_routes`
-- `sdkwork_router_iam_open_api::sdkwork_appbase_open_api_routes`
-- `sdkwork_router_iam_open_api::build_sdkwork_appbase_open_api_router`
-- `sdkwork_router_iam_open_api::build_sdkwork_appbase_open_api_router_from_env`
+- `sdkwork_router_iam_open_api::sdkwork_iam_open_api_routes`
+- `sdkwork_router_iam_open_api::build_sdkwork_iam_open_api_router`
+- `sdkwork_router_iam_open_api::build_sdkwork_iam_open_api_router_from_env`
 
 ## Runtime Entrypoints
 
-- `sdkwork_router_iam_open_api::build_sdkwork_appbase_open_api_router`
-- `sdkwork_router_iam_open_api::build_sdkwork_appbase_open_api_router_from_env`
+- `sdkwork_router_iam_open_api::build_sdkwork_iam_open_api_router`
+- `sdkwork_router_iam_open_api::build_sdkwork_iam_open_api_router_from_env`
 
 ## Required SDK Surface
 
@@ -32,11 +32,11 @@ Configuration keys, runtime entrypoints, and integration contracts are declared 
 
 ## SaaS/Private/Local Behavior
 
-This crate is a base dependency of `sdkwork-appbase`. It is not an independent application root and does not own `sdkwork.app.config.json`.
+This crate is a base dependency of `sdkwork-iam`. It is not an independent application root and does not own `sdkwork.app.config.json`.
 
 ## Framework Integration
 
-This crate wires `sdkwork-web-framework` through `wrap_router_with_iam_open_api_web_framework` and `open_route_manifest()`. Production deployments should use `build_sdkwork_appbase_open_api_router_from_env()` so API key and OAuth bearer credentials resolve through database-backed IAM lookup services.
+This crate wires `sdkwork-web-framework` through `wrap_router_with_iam_open_api_web_framework` and `open_route_manifest()`. Production deployments should use `build_sdkwork_iam_open_api_router_from_env()` so API key and OAuth bearer credentials resolve through database-backed IAM lookup services.
 
 ## Security
 

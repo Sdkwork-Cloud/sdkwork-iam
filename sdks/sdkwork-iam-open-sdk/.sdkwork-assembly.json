@@ -1,0 +1,173 @@
+{
+  "workspace": "sdkwork-iam-open-sdk",
+  "title": "SDKWork IAM Open API SDK",
+  "apiVersion": "1.0.0",
+  "openapiVersion": "3.1.2",
+  "authoritySpec": "openapi/sdkwork-iam-open-api.openapi.yaml",
+  "generationInputSpec": "openapi/sdkwork-iam-open-api.sdkgen.yaml",
+  "derivedSpecs": {
+    "default": "openapi/sdkwork-iam-open-api.sdkgen.yaml",
+    "flutter": "openapi/sdkwork-iam-open-api.flutter.sdkgen.yaml"
+  },
+  "sdkOwner": "sdkwork-iam",
+  "apiAuthority": "sdkwork-iam-open-api",
+  "discoverySurface": {
+    "sdkTarget": "open",
+    "apiPrefix": "/iam/v3/api",
+    "schemaUrl": "/iam/v3/openapi.json",
+    "generatedProtocols": [
+      "http-openapi"
+    ],
+    "manualTransports": []
+  },
+  "languages": [
+    {
+      "language": "typescript",
+      "workspace": "sdkwork-iam-open-sdk-typescript",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-typescript/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-typescript/generated/server-openapi/package.json",
+      "name": "@sdkwork/iam-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned TypeScript transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-typescript/generated/server-openapi"
+    },
+    {
+      "language": "dart",
+      "workspace": "sdkwork-iam-open-sdk-dart",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-dart/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-dart/generated/server-openapi/pubspec.yaml",
+      "name": "sdkwork_iam_open_sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Dart transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-dart/generated/server-openapi"
+    },
+    {
+      "language": "python",
+      "workspace": "sdkwork-iam-open-sdk-python",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-python/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-python/generated/server-openapi/pyproject.toml",
+      "name": "sdkwork-iam-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Python transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-python/generated/server-openapi"
+    },
+    {
+      "language": "go",
+      "workspace": "sdkwork-iam-open-sdk-go",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-go/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-go/generated/server-openapi/go.mod",
+      "name": "github.com/sdkwork/sdkwork-iam-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Go transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-go/generated/server-openapi"
+    },
+    {
+      "language": "java",
+      "workspace": "sdkwork-iam-open-sdk-java",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-java/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-java/generated/server-openapi/pom.xml",
+      "name": "com.sdkwork:sdkwork-iam-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Java transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-java/generated/server-openapi"
+    },
+    {
+      "language": "kotlin",
+      "workspace": "sdkwork-iam-open-sdk-kotlin",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-kotlin/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-kotlin/generated/server-openapi/build.gradle.kts",
+      "name": "com.sdkwork:sdkwork-iam-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Kotlin transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-kotlin/generated/server-openapi"
+    },
+    {
+      "language": "swift",
+      "workspace": "sdkwork-iam-open-sdk-swift",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-swift/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-swift/generated/server-openapi/Package.swift",
+      "name": "sdkwork-iam-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Swift transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-swift/generated/server-openapi"
+    },
+    {
+      "language": "csharp",
+      "workspace": "sdkwork-iam-open-sdk-csharp",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-csharp/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-csharp/generated/server-openapi/SDKWork.Iam.OpenSdk.csproj",
+      "name": "SDKWork.Iam.OpenSdk",
+      "version": "1.0.0",
+      "description": "Generator-owned C# transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-csharp/generated/server-openapi"
+    },
+    {
+      "language": "flutter",
+      "workspace": "sdkwork-iam-open-sdk-flutter",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-flutter/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-flutter/generated/server-openapi/pubspec.yaml",
+      "name": "sdkwork_iam_open_sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Flutter transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-flutter/generated/server-openapi"
+    },
+    {
+      "language": "rust",
+      "workspace": "sdkwork-iam-open-sdk-rust",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-rust/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-rust/generated/server-openapi/Cargo.toml",
+      "name": "sdkwork-iam-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Rust transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-rust/generated/server-openapi"
+    },
+    {
+      "language": "php",
+      "workspace": "sdkwork-iam-open-sdk-php",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-php/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-php/generated/server-openapi/composer.json",
+      "name": "sdkwork/iam-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned PHP transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-php/generated/server-openapi"
+    },
+    {
+      "language": "ruby",
+      "workspace": "sdkwork-iam-open-sdk-ruby",
+      "generationState": "materialized",
+      "releaseState": "not_published",
+      "packagePath": "sdkwork-iam-open-sdk-ruby/generated/server-openapi",
+      "manifestPath": "sdkwork-iam-open-sdk-ruby/generated/server-openapi/sdkwork-iam-open-sdk.gemspec",
+      "name": "sdkwork-iam-open-sdk",
+      "version": "1.0.0",
+      "description": "Generator-owned Ruby transport SDK for SDKWork IAM Open API.",
+      "generatedPath": "sdkwork-iam-open-sdk-ruby/generated/server-openapi"
+    }
+  ],
+  "metadata": {
+    "managedBy": "tools/generators/materialize-iam-v3-openapi-boundaries.mjs",
+    "standardVersion": "2026-06-18"
+  }
+}

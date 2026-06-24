@@ -1,6 +1,6 @@
 # sdkwork-iam-database-host
 
-SDKWork Appbase IAM database lifecycle bootstrap. Registers the application-root
+SDKWork IAM database lifecycle bootstrap. Registers the application-root
 `database/` manifest through `sdkwork-database` lifecycle SPI and exposes a shared
 PostgreSQL pool for IAM route crates and repositories.
 

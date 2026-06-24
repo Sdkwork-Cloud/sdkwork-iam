@@ -15,12 +15,12 @@ use sdkwork_database_spi::{
 use sdkwork_database_sqlx::create_pool_from_env;
 
 #[derive(Debug, Clone)]
-pub struct AppbaseIamDatabaseModule {
+pub struct IamDatabaseModule {
     inner: Arc<DefaultDatabaseModule>,
     app_root: PathBuf,
 }
 
-impl AppbaseIamDatabaseModule {
+impl IamDatabaseModule {
     pub fn from_app_root(app_root: impl AsRef<Path>) -> Result<Self, SpiError> {
         let app_root = app_root.as_ref().to_path_buf();
         let inner = Arc::new(DefaultDatabaseModule::from_app_root(&app_root)?);
@@ -44,14 +44,14 @@ impl AppbaseIamDatabaseModule {
     }
 }
 
-impl DatabaseModuleDescriptorProvider for AppbaseIamDatabaseModule {
+impl DatabaseModuleDescriptorProvider for IamDatabaseModule {
     fn descriptor(&self) -> DatabaseModuleDescriptor {
         self.inner.descriptor()
     }
 }
 
 #[async_trait]
-impl DatabaseAssetProvider for AppbaseIamDatabaseModule {
+impl DatabaseAssetProvider for IamDatabaseModule {
     fn module_root(&self) -> &Path {
         self.inner.module_root()
     }
@@ -78,14 +78,14 @@ impl DatabaseAssetProvider for AppbaseIamDatabaseModule {
 }
 
 #[async_trait]
-impl DatabaseContractProvider for AppbaseIamDatabaseModule {
+impl DatabaseContractProvider for IamDatabaseModule {
     async fn contract_version(&self) -> Result<String, SpiError> {
         self.inner.contract_version().await
     }
 }
 
 #[async_trait]
-impl MigrationProvider for AppbaseIamDatabaseModule {
+impl MigrationProvider for IamDatabaseModule {
     async fn list_migrations(
         &self,
         engine: DatabaseEngine,
@@ -103,7 +103,7 @@ impl MigrationProvider for AppbaseIamDatabaseModule {
 }
 
 #[async_trait]
-impl SeedProvider for AppbaseIamDatabaseModule {
+impl SeedProvider for IamDatabaseModule {
     async fn resolve_seed_plan(
         &self,
         locale: &LocaleTag,
@@ -206,14 +206,14 @@ async fn apply_locale_seed_overlays(
 }
 
 #[async_trait]
-impl DriftPolicyProvider for AppbaseIamDatabaseModule {
+impl DriftPolicyProvider for IamDatabaseModule {
     async fn load_policy(&self) -> Result<DriftPolicy, SpiError> {
         self.inner.load_policy().await
     }
 }
 
 #[async_trait]
-impl DatabaseModule for AppbaseIamDatabaseModule {}
+impl DatabaseModule for IamDatabaseModule {}
 
 fn split_sql_statements(script: &str) -> Vec<String> {
     let without_line_comments = script

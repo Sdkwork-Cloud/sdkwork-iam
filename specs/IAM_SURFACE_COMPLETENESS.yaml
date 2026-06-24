@@ -1,0 +1,133 @@
+schemaVersion: 1
+kind: sdkwork.iam.surface.completeness
+standardVersion: 2026-06-24
+purpose: >
+  Living completeness matrix for sdkwork-iam across database, API, SDK, and client
+  surfaces. Status values: complete, partial, scaffold, missing.
+
+ratingScale:
+  complete: End-to-end wired with operator/user UI where applicable and tests
+  partial: Backend or controller exists; UI or cross-surface parity incomplete
+  scaffold: Composition/contracts only; no capability UI
+  missing: Not started or intentionally out of scope for the surface
+
+database:
+  status: complete
+  tables: 57
+  baseline: database/ddl/baseline/postgres/0001_iam_baseline.sql
+  migrations: database/migrations/postgres/
+
+api:
+  backend-api:
+    status: complete
+    authority: apis/backend-api/iam/sdkwork-iam-backend-api.openapi.yaml
+    router: crates/sdkwork-router-iam-backend-api/
+  app-api:
+    status: complete
+    authority: apis/app-api/iam/sdkwork-iam-app-api.openapi.yaml
+    router: crates/sdkwork-router-iam-app-api/
+  open-api:
+    status: complete
+    scope: oauth-authorization-server
+    authority: apis/open-api/iam/sdkwork-iam-open-api.openapi.yaml
+
+sdks:
+  typescript:
+    app: complete
+    backend: complete
+    open: complete
+  otherLanguages:
+    status: missing
+    note: Spec declares multi-language; only TypeScript artifacts materialized in repo
+
+capabilities:
+  - id: auth-session
+    database: complete
+    backend-api: missing-by-design
+    app-api: complete
+    open-api: partial
+    pc-app: complete
+    pc-admin: n/a
+    pc-console: missing
+    h5-app: partial
+    flutter-app: partial
+
+  - id: tenant
+    database: complete
+    backend-api: complete
+    app-api: missing-by-design
+    pc-app: partial
+    pc-admin: complete
+    pc-console: missing
+    h5-app: missing
+    flutter-app: missing
+
+  - id: organization
+    database: complete
+    backend-api: complete
+    app-api: partial
+    pc-app: partial
+    pc-admin: complete
+    pc-console: missing
+    h5-app: missing
+    flutter-app: missing
+
+  - id: permission
+    database: complete
+    backend-api: complete
+    app-api: partial
+    pc-app: missing
+    pc-admin: complete
+    pc-console: missing
+    h5-app: missing
+    flutter-app: missing
+
+  - id: oauth
+    database: complete
+    backend-api: complete
+    app-api: complete
+    open-api: complete
+    pc-app: partial
+    pc-admin: complete
+    pc-console: missing
+    h5-app: missing
+    flutter-app: missing
+
+  - id: account-binding
+    database: partial
+    backend-api: complete
+    app-api: complete
+    pc-app: partial
+    pc-admin: complete
+    pc-console: missing
+    h5-app: missing
+    flutter-app: missing
+
+  - id: user-center
+    database: complete
+    backend-api: complete
+    app-api: partial
+    pc-app: complete
+    pc-admin: missing-by-design
+    pc-console: missing
+    h5-app: partial
+    flutter-app: partial
+
+priorityBacklog:
+  p0:
+    - Backend-api PostgreSQL integration test suite
+    - PC admin user management package (@sdkwork/iam-pc-admin-user)
+    - H5 account-binding capability package
+    - Flutter account-binding parity
+  p1:
+    - PC console surface (sdkwork-iam-pc-console-*)
+    - Expand H5/Flutter user-center UI (password, bindings, preferences)
+    - PC app-side naming migration (sdkwork-iam-pc-*)
+  p2:
+    - Multi-language SDK materialization
+    - Dedicated iam_account_binding tables vs iam_policy composition
+
+verification:
+  - pnpm run verify
+  - pnpm run test:iam-standard-contracts
+  - cargo test --workspace

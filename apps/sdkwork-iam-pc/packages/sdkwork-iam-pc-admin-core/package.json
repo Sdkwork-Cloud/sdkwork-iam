@@ -1,0 +1,43 @@
+{
+  "name": "@sdkwork/iam-pc-admin-core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "IAM PC backend-admin runtime: backend SDK inventory, admin module registry, and composition entry.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./composition": {
+      "types": "./src/composition/index.ts",
+      "import": "./src/composition/index.ts",
+      "default": "./src/composition/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sdkwork/iam-contracts": "workspace:*",
+    "@sdkwork/iam-sdk-adapter": "workspace:*",
+    "@sdkwork/iam-sdk-ports": "workspace:*",
+    "@sdkwork/iam-service": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "sdkwork": {
+    "architecture": "pc-admin",
+    "surface": "backend-admin",
+    "capability": "iam-pc-admin-core",
+    "domain": "iam",
+    "packageType": "runtime",
+    "status": "standard"
+  }
+}

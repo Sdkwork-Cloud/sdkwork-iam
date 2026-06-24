@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-iam-open-sdk",
+    "version": "1.0.0",
+    "language": "python",
+    "sdkType": "custom",
+    "protocol": "http",
+    "packageName": "sdkwork-iam-open-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "b383d4f7233b567acd36fa2ff644448730007738901cf1770cb02746f88fbb05"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "6fd65ff5011e48b24018ab691edd8803c4b1fd293d013b75d1adb3bcd26f7cde"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "MANIFEST.in",
+      "sha256": "949fbcc248747451aacffde5253f3d29216e7a1a5df71f4bf5443f00cad1797c"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "710fa0d98bf7700d31afc8e8fed5e1e312d477cec9f08af86e7dfde4e0e7231a"
+    },
+    {
+      "path": "README.md",
+      "sha256": "8da61d45141c3b18bec9f4f8e37882dfa49d0db2169308133b921ebf341b2cb7"
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "5f3072c051f89b9af1b681381406e0b2466895fb150660d583c85c84396001c8"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/__init__.py",
+      "sha256": "8a30e686fc5598efd95dc5884ec00d3fd73ffce4a29394ce340fa6b1cd0c1933"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/api/__init__.py",
+      "sha256": "82993e1b6418ce515cb0b12ee411ce4e161cce0ce1a9311fab18aaf9a21c4e0d"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/api/iam_oauth.py",
+      "sha256": "c83d53e5907189261d78518f2207ab65889a9076d27d4bb457d099a3a73318db"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/client.py",
+      "sha256": "cb3ba8e20badee8e01504357348785119126d37535e83e39bce8ca36e37a2fe7"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/http_client.py",
+      "sha256": "07779594e33195d0d2f17b0cd8539f32edd95c7a3a9bb8fd6aaa87745dd30cab"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/models/__init__.py",
+      "sha256": "506cea44c13d74eea09d231945ee85ea62686fc9a4b4eb44dd005c9bcc9a1185"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/models/appbase_access_credential_create_command.py",
+      "sha256": "5203488f27ddde0d379908a0ca3adae6ec666a12abeb3edad7e25eeaad8b0d16"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/models/appbase_api_result.py",
+      "sha256": "f394489fcc63d11d19df62a86ed6d8860ce0513e36b22809cf7bf11ce7f6e806"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/models/appbase_application_register_command.py",
+      "sha256": "7d5afca9321685587d62d991d218df911c6b629227b6235f1f825a522518e0e8"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/models/appbase_session_create_command.py",
+      "sha256": "9c5caacc0324fbea1f3576dd22a97fab8f4c1d8e62964edf932c212e6a8102ba"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/models/appbase_tenant_application_enable_command.py",
+      "sha256": "b0805b88891a523d00319d45a748be08c9c35403fbc8bf440b22336ef678422b"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/models/appbase_tenant_application_provision_command.py",
+      "sha256": "f20f1c45f2ccf55c38059b9d8aba0e514fcb1db9cc7db122f491da257425d85d"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/models/appbase_tenant_application_update_command.py",
+      "sha256": "3749c323ce091b7947dbad82255a79c35f4b72f6b3bddfbea4e6d7c7bf37eaab"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/models/field_error.py",
+      "sha256": "55a16fc5837525b2e8488b197409789d86b03b301f09a83ff5642260c83beae2"
+    },
+    {
+      "path": "sdkwork_iam_open_sdk/models/problem_detail.py",
+      "sha256": "73139fe4e53a44b27b04ba096d97b1eedebc6e537f9e3777dbc01a7f659848e4"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "793c3f47c7b0664cc3d94ae5f4a8073d9321806ca8a41467ca70b4ac0b7db651"
+    },
+    {
+      "path": "setup.py",
+      "sha256": "843ac26c38a41abae578250bc0f9419194b320a0f67327d941037a4268f6cfe7"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

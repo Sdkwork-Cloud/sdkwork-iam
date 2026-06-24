@@ -6,7 +6,7 @@
     "displayName": "SDKWork Iam Context Service",
     "version": "0.1.0",
     "type": "rust-crate",
-    "root": "sdkwork-appbase/crates/sdkwork-iam-context-service",
+    "root": "sdkwork-iam/crates/sdkwork-iam-context-service",
     "domain": "iam",
     "capability": "context",
     "status": "standardizing",
@@ -76,7 +76,7 @@
     ]
   },
   "metadata": {
-    "managedBy": "sdkwork-appbase Rust workspace migration",
+    "managedBy": "sdkwork-iam",
     "standardVersion": "2026-06-12"
   }
 }

@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-iam-open-sdk",
+    "version": "1.0.0",
+    "language": "kotlin",
+    "sdkType": "custom",
+    "protocol": "http",
+    "packageName": "com.sdkwork:sdkwork-iam-open-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "03ef495eada118c1ba5af194b39b5618aba38913a152c9f5f3e034a9b802f311"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "a48e2bb6b62fcea3b0c9915aa9c07bcb2de33f96c8b973bfa3b859b8c01e3c81"
+    },
+    {
+      "path": "build.gradle.kts",
+      "sha256": "2535cdd6757cb6ed4591fd8f5b200754bb455576cb2e28ce4deb251d01308dac"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "README.md",
+      "sha256": "97126e5e5947792fb00409be32c6cf3ffc15ea9ab834c9c8c2fbf3cf2cbf2849"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "433a43876cd163108972964aaeec59c043798e44cb81b33e01f5235fa52b400f"
+    },
+    {
+      "path": "settings.gradle.kts",
+      "sha256": "c8652ee32649378ad740d399d4113d05df69f01f1427f4d65e681952ac1dd52f"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/api/Api.kt",
+      "sha256": "3c90a1aef703c2df57e2474b19621e321c0a9c19c49e0a29f810b46f45e3a75f"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/api/ApiPaths.kt",
+      "sha256": "28cfc7e9868fc6956379527090b6f514198e549506b950c54c973ffcb445ac16"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/api/IamOauthApi.kt",
+      "sha256": "08a43203e80b5935318ddf92739390ad33aa021b043ad1b91505c7266dbd9472"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/AppbaseAccessCredentialCreateCommand.kt",
+      "sha256": "778579a948b4932e334ccb7b472cdd60dee1e3d1bd9b3564a8befe6eababcacc"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/AppbaseApiResult.kt",
+      "sha256": "d261fd4ef0c5dca66992b0eeab26c5f71ad9eebfe52407fc31e017269e3a2daa"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/AppbaseApplicationRegisterCommand.kt",
+      "sha256": "d00b439ceee0ec99795105d1677689a07cd0e5c0ab99a3dbcdf0c42419a439c6"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/AppbaseSessionCreateCommand.kt",
+      "sha256": "bcccf919ba5a37a6ae8cbedb3e92d1fac4ada3cb40eb7256e74a5df0ae77e4ca"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/AppbaseTenantApplicationEnableCommand.kt",
+      "sha256": "7421208dbb08b32a4fa49ff5c2daa9034d6961a22c3351759856cc70235a1a16"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/AppbaseTenantApplicationProvisionCommand.kt",
+      "sha256": "54addfb9671f385231ec02fc096a594f0c66c10b389f1f7c75f058ac279d8247"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/AppbaseTenantApplicationUpdateCommand.kt",
+      "sha256": "6edb1bbe11e7cf1b3566cc0df3907eaeead1a8ac3c387334136f2d938552e61c"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/FieldError.kt",
+      "sha256": "9b0b7eba0cf1d491544a615ef8d8bbc1e2de9c428f7a929b2c1567da2afdadd3"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/http/HttpClient.kt",
+      "sha256": "e229c95170b4e3b8838843f57ca060cc7f4ec91c25ff5fc06d59c4946a4434a0"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/ProblemDetail.kt",
+      "sha256": "2dfa58788d0b082acfe0294b965b5700d88f0ecf3c7ac1eb508a77ddfcc3baa3"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/open/sdk/SdkworkCustomClient.kt",
+      "sha256": "84df2cfe38dea36c1ea2a8fce4fafb8b8d3c7048b145a78ec298e423f49affde"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

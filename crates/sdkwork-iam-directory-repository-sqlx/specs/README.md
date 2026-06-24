@@ -8,7 +8,7 @@ This directory is the local standards index for `sdkwork-iam-directory-repositor
 | --- | --- |
 | Name | `sdkwork-iam-directory-repository-sqlx` |
 | Type | `rust-crate` |
-| Root | `sdkwork-appbase/crates/sdkwork-iam-directory-repository-sqlx` |
+| Root | `sdkwork-iam/crates/sdkwork-iam-directory-repository-sqlx` |
 | Domain | `iam` |
 | Capability | `directory` |
 | Languages | `rust` |

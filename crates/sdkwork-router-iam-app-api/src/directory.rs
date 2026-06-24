@@ -4,7 +4,7 @@ use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 
 use crate::{state::*, utils::*};
-use sdkwork_appbase_iam_bootstrap::{
+use sdkwork_iam_bootstrap::{
     DEFAULT_IAM_ORGANIZATION_CODE, DEFAULT_IAM_ORGANIZATION_ID, DEFAULT_IAM_ORGANIZATION_NAME,
     DEFAULT_IAM_ORGANIZATION_PATH, DEFAULT_IAM_TENANT_CODE, DEFAULT_IAM_TENANT_ID,
     DEFAULT_IAM_TENANT_NAME,
@@ -165,7 +165,7 @@ pub(crate) async fn resolve_open_registration_tenant_id(pg: &PgPool) -> Result<S
 }
 
 async fn provision_initial_tenant(pg: &PgPool) -> Result<String, String> {
-    sdkwork_appbase_iam_bootstrap::upsert_postgres_default_subject(pg)
+    sdkwork_iam_bootstrap::upsert_postgres_default_subject(pg)
         .await
         .map_err(|error| format!("provision initial tenant failed: {error}"))?;
     Ok(DEFAULT_IAM_TENANT_ID.to_string())
@@ -188,7 +188,7 @@ async fn primary_organization_for_tenant(
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SdkworkAppbaseLocalIamUserProfile {
+pub struct SdkworkIamLocalIamUserProfile {
     pub tenant_id: String,
     pub user_id: String,
     pub username: String,
@@ -199,20 +199,20 @@ pub struct SdkworkAppbaseLocalIamUserProfile {
 }
 
 #[derive(Clone)]
-pub struct SdkworkAppbaseLocalIamDirectory {
+pub struct SdkworkIamLocalIamDirectory {
     pub(crate) state: LocalIamState,
 }
 
-impl SdkworkAppbaseLocalIamDirectory {
+impl SdkworkIamLocalIamDirectory {
     pub async fn get_user_profile(
         &self,
         tenant_id: &str,
         user_id: &str,
-    ) -> Option<SdkworkAppbaseLocalIamUserProfile> {
+    ) -> Option<SdkworkIamLocalIamUserProfile> {
         let pg = self.state.pool.as_postgres()?;
         let row = sqlx::query("SELECT id, username, display_name, email, phone, status FROM iam_user WHERE id = $1 AND tenant_id = $2 AND is_deleted = 0 LIMIT 1")
             .bind(user_id).bind(tenant_id).fetch_optional(pg).await.ok()??;
-        Some(SdkworkAppbaseLocalIamUserProfile {
+        Some(SdkworkIamLocalIamUserProfile {
             tenant_id: tenant_id.to_string(),
             user_id: row.get(0),
             username: row.get(1),
@@ -226,7 +226,7 @@ impl SdkworkAppbaseLocalIamDirectory {
         &self,
         tenant_id: &str,
         keyword: &str,
-    ) -> Vec<SdkworkAppbaseLocalIamUserProfile> {
+    ) -> Vec<SdkworkIamLocalIamUserProfile> {
         let pg = match self.state.pool.as_postgres() {
             Some(p) => p,
             None => return Vec::new(),
@@ -235,7 +235,7 @@ impl SdkworkAppbaseLocalIamDirectory {
         let rows = sqlx::query("SELECT id, username, display_name, email, phone, status FROM iam_user WHERE tenant_id = $1 AND (LOWER(username) LIKE $2 OR LOWER(display_name) LIKE $2 OR LOWER(email) LIKE $2) AND is_deleted = 0 AND status = 'active' ORDER BY display_name, id")
             .bind(tenant_id).bind(&pattern).fetch_all(pg).await.unwrap_or_default();
         rows.into_iter()
-            .map(|r| SdkworkAppbaseLocalIamUserProfile {
+            .map(|r| SdkworkIamLocalIamUserProfile {
                 tenant_id: tenant_id.to_string(),
                 user_id: r.get(0),
                 username: r.get(1),
@@ -408,7 +408,7 @@ pub(crate) async fn ensure_user_directory_db(
         )
         .await?;
     } else {
-        sdkwork_appbase_iam_bootstrap::upsert_postgres_standard_roles(pg, &seed.tenant_id)
+        sdkwork_iam_bootstrap::upsert_postgres_standard_roles(pg, &seed.tenant_id)
             .await
             .map_err(|error| format!("upsert standard roles: {error}"))?;
         ensure_tenant_user_role_binding_db(pg, &seed.tenant_id, &user.id, APP_USER_ROLE_CODE, &now)
@@ -516,7 +516,7 @@ async fn ensure_bootstrap_admin_role_bindings_db(
     user_id: &str,
     now: &chrono::DateTime<chrono::Utc>,
 ) -> Result<(), String> {
-    sdkwork_appbase_iam_bootstrap::upsert_postgres_standard_roles(pg, tenant_id)
+    sdkwork_iam_bootstrap::upsert_postgres_standard_roles(pg, tenant_id)
         .await
         .map_err(|error| format!("upsert standard roles: {error}"))?;
 
@@ -568,7 +568,7 @@ async fn ensure_organization_role_binding_db(
     role_code: &str,
     now: &chrono::DateTime<chrono::Utc>,
 ) -> Result<(), String> {
-    sdkwork_appbase_iam_bootstrap::ensure_role_assignment_allowed(
+    sdkwork_iam_bootstrap::ensure_role_assignment_allowed(
         pg,
         tenant_id,
         "organization_membership",
@@ -579,7 +579,7 @@ async fn ensure_organization_role_binding_db(
     )
     .await?;
 
-    let role_id = sdkwork_appbase_iam_bootstrap::standard_role_id(tenant_id, role_code);
+    let role_id = sdkwork_iam_bootstrap::standard_role_id(tenant_id, role_code);
     let binding_id =
         local_role_binding_id(membership_id, "organization", organization_id, role_code);
     sqlx::query(
@@ -610,7 +610,7 @@ async fn ensure_tenant_user_role_binding_db(
     role_code: &str,
     now: &chrono::DateTime<chrono::Utc>,
 ) -> Result<(), String> {
-    let role_id = sdkwork_appbase_iam_bootstrap::standard_role_id(tenant_id, role_code);
+    let role_id = sdkwork_iam_bootstrap::standard_role_id(tenant_id, role_code);
     let binding_id = local_role_binding_id(user_id, "tenant", tenant_id, role_code);
     sqlx::query(
         "INSERT INTO iam_role_binding (id, tenant_id, organization_id, role_id, principal_kind, \

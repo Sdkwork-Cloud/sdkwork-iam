@@ -1,0 +1,40 @@
+{
+  "name": "@sdkwork/iam-h5-core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "IAM H5 dependency composition entry with auth runtime re-exports from @sdkwork/iam-contracts.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./composition": {
+      "types": "./src/composition/index.ts",
+      "import": "./src/composition/index.ts",
+      "default": "./src/composition/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sdkwork/iam-contracts": "workspace:*",
+    "@sdkwork/iam-runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "sdkwork": {
+    "architecture": "h5",
+    "capability": "iam-h5-core",
+    "domain": "iam",
+    "packageType": "runtime",
+    "status": "standardizing"
+  }
+}

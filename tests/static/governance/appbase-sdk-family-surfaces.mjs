@@ -1,25 +1,25 @@
 export const APPBASE_SDK_FAMILY_ROOTS = [
-  'sdks/sdkwork-appbase-app-sdk',
-  'sdks/sdkwork-appbase-backend-sdk',
-  'sdks/sdkwork-appbase-open-sdk',
+  'sdks/sdkwork-iam-app-sdk',
+  'sdks/sdkwork-iam-backend-sdk',
+  'sdks/sdkwork-iam-open-sdk',
 ];
 
 const sdkFamilySurfaces = [
   {
-    directory: 'sdks/sdkwork-appbase-app-sdk',
-    authority: 'sdkwork-appbase-app-api',
+    directory: 'sdks/sdkwork-iam-app-sdk',
+    authority: 'sdkwork-iam-app-api',
     apisSurface: 'app-api',
     routeCrate: 'sdkwork-router-iam-app-api',
   },
   {
-    directory: 'sdks/sdkwork-appbase-backend-sdk',
-    authority: 'sdkwork-appbase-backend-api',
+    directory: 'sdks/sdkwork-iam-backend-sdk',
+    authority: 'sdkwork-iam-backend-api',
     apisSurface: 'backend-api',
     routeCrate: 'sdkwork-router-iam-backend-api',
   },
   {
-    directory: 'sdks/sdkwork-appbase-open-sdk',
-    authority: 'sdkwork-appbase-open-api',
+    directory: 'sdks/sdkwork-iam-open-sdk',
+    authority: 'sdkwork-iam-open-api',
     apisSurface: 'open-api',
     routeCrate: 'sdkwork-router-iam-open-api',
   },

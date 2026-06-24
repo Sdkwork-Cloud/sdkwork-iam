@@ -1,5 +1,7 @@
+import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { createDatabaseContractCheckPlan } from "./run-database-contract-check.mjs";
@@ -15,23 +17,70 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const sdkworkAppbaseRoot = path.resolve(__dirname, "..");
 
+export function iamPostgresProfileAvailable(cwd = sdkworkAppbaseRoot) {
+  const candidates = [
+    path.join(cwd, ".env.postgres"),
+    path.join(cwd, "../sdkwork-clawrouter/.env.postgres"),
+    path.join(cwd, "../sdkwork-claw-router/.env.postgres"),
+  ];
+  return candidates.some((candidate) => fs.existsSync(candidate));
+}
+
+export function createAppApiRustTestCommands(cwd = sdkworkAppbaseRoot) {
+  const threadArgs = ["--", "--test-threads", "1"];
+  const httpStandard = {
+    command: "cargo",
+    args: ["test", "-j", "1", "-p", "sdkwork-router-iam-app-api", "--test", "iam_http_standard", ...threadArgs],
+  };
+
+  if (!iamPostgresProfileAvailable(cwd)) {
+    return [httpStandard];
+  }
+
+  return [
+    httpStandard,
+    {
+      command: "cargo",
+      args: [
+        "test",
+        "-j",
+        "1",
+        "-p",
+        "sdkwork-router-iam-app-api",
+        "--test",
+        "oauth_authorization_server_integration",
+        ...threadArgs,
+      ],
+    },
+  ];
+}
+
 export function createIamStandardContractsPlan({
   cwd = sdkworkAppbaseRoot,
   resolvePackageJsonPath,
 } = {}) {
   const vitestPlan = createWorkspaceVitestPlan({ cwd, resolvePackageJsonPath });
-
-  return [
+  const commands = [
     ...createDatabaseContractCheckPlan({ cwd }),
     {
       args: [
         vitestPlan.args[0],
         "run",
-        path.join(cwd, "packages/common/iam/sdkwork-iam-contracts/tests/iam-contracts.standard.test.ts"),
-        path.join(cwd, "packages/common/iam/sdkwork-iam-sdk-ports/tests/iam-sdk-ports.standard.test.ts"),
-        path.join(cwd, "packages/common/iam/sdkwork-iam-service/tests/iam-service.standard.test.ts"),
-        path.join(cwd, "packages/common/iam/sdkwork-iam-runtime/tests/iam-runtime.standard.test.ts"),
-        path.join(cwd, "packages/common/iam/sdkwork-iam-application-bootstrap/tests/iam-application-bootstrap.standard.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-common/packages/sdkwork-iam-contracts/tests/iam-contracts.standard.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-common/packages/sdkwork-iam-contracts/tests/auth-runtime-metadata.standard.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-common/packages/sdkwork-iam-sdk-ports/tests/iam-sdk-ports.standard.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-common/packages/sdkwork-iam-service/tests/iam-service.standard.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-common/packages/sdkwork-iam-runtime/tests/iam-runtime.standard.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-common/packages/sdkwork-iam-application-bootstrap/tests/iam-application-bootstrap.standard.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-common/packages/sdkwork-iam-sdk-adapter/tests/iam-sdk-adapter.standard.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-oauth/tests/iam-oauth.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-tenant/tests/iam-tenant.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-organization/tests/iam-organization.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-permission/tests/iam-permission.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-permission/tests/iam-permission.guards.test.tsx"),
+        path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-account-binding/tests/iam-account-binding.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-h5/packages/sdkwork-iam-h5-auth/tests/auth-h5.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-h5/packages/sdkwork-iam-h5-user/tests/user-h5.controller.test.ts"),
         "--config",
         path.join(cwd, "vitest.config.ts"),
         "--configLoader",
@@ -49,10 +98,7 @@ export function createIamStandardContractsPlan({
         "sdkwork-iam-context-service",
       ],
     },
-    {
-      command: "cargo",
-      args: ["test", "-j", "1", "-p", "sdkwork-router-iam-app-api", "--", "--test-threads", "1"],
-    },
+    ...createAppApiRustTestCommands(cwd),
     {
       command: "cargo",
       args: [
@@ -102,6 +148,39 @@ export function createIamStandardContractsPlan({
       ],
     },
   ];
+
+  if (commandExists("dart")) {
+    commands.push({
+      command: "dart",
+      args: ["test"],
+      cwd: path.join(cwd, "apps/sdkwork-iam-flutter-mobile/packages/sdkwork_iam_flutter_mobile_core"),
+    });
+    commands.push({
+      command: "dart",
+      args: ["test"],
+      cwd: path.join(cwd, "apps/sdkwork-iam-flutter-mobile/packages/sdkwork_iam_flutter_mobile_auth"),
+    });
+    commands.push({
+      command: "dart",
+      args: ["test"],
+      cwd: path.join(cwd, "apps/sdkwork-iam-flutter-mobile/packages/sdkwork_iam_flutter_mobile_user"),
+    });
+  }
+
+  return commands;
+}
+
+function commandExists(command) {
+  try {
+    const result = spawnSync(command, ["--version"], {
+      encoding: "utf8",
+      shell: process.platform === "win32",
+      windowsHide: true,
+    });
+    return result.status === 0;
+  } catch {
+    return false;
+  }
 }
 
 export function runIamStandardContracts({

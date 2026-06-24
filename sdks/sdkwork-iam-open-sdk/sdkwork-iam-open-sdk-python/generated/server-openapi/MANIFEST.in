@@ -1,0 +1,2 @@
+include README.md
+recursive-include sdkwork_iam_open_sdk *.py

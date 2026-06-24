@@ -61,9 +61,9 @@ test('authored markdown does not reference the retired apps/sdkwork-appbase work
 test('sdk family README verification sections stay cross-platform', () => {
   const errors = [];
   const families = [
-    'sdks/sdkwork-appbase-app-sdk/README.md',
-    'sdks/sdkwork-appbase-backend-sdk/README.md',
-    'sdks/sdkwork-appbase-open-sdk/README.md',
+    'sdks/sdkwork-iam-app-sdk/README.md',
+    'sdks/sdkwork-iam-backend-sdk/README.md',
+    'sdks/sdkwork-iam-open-sdk/README.md',
   ];
 
   for (const relativePath of families) {

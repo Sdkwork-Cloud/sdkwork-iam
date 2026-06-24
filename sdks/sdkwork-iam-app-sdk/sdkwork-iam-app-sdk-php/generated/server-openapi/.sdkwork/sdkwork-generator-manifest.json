@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-iam-app-sdk",
+    "version": "1.0.0",
+    "language": "php",
+    "sdkType": "app",
+    "protocol": "http",
+    "packageName": "sdkwork/iam-app-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "edca14015bf24f9bdec4c764706134cb4a803df587d392a0d45a23244573aebc"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "c2df10df8f75dbcbb22896af23ed4d0c2ac6afbc3f220ce731188529ac4eac98"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "composer.json",
+      "sha256": "c7627f79ce390d77ee70fc8be8279b0197470bf265708f6d301f052edeffc8f0"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "README.md",
+      "sha256": "567d718ecf7482842efa4a0761c8c04e555d200c8c8761aaf045a5f87bf0ebcb"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "8ecbb6517635cbc7be7c5b8829f2be2520d30c2892076b2b73df0e3d659196ea"
+    },
+    {
+      "path": "src/Api/Auth.php",
+      "sha256": "c6d291780ff5872cc07e7d85d670f3f91238280e1c665452ea70c68b46e234dc"
+    },
+    {
+      "path": "src/Api/BaseApi.php",
+      "sha256": "0faa526ca55f9bb311ce799cd2f791dbb4d5fc1a10fe230e0c6c0f7974fe4c36"
+    },
+    {
+      "path": "src/Api/Iam.php",
+      "sha256": "1f9fcb475ffda221396cd61bdc8d325865109fb4bf254eb2e76b61437bc3fccd"
+    },
+    {
+      "path": "src/Api/Oauth.php",
+      "sha256": "c1d5bf962ed0f8e36466415eb5b96cc713074150ae3a76ca18e91c26e725d79e"
+    },
+    {
+      "path": "src/Api/System.php",
+      "sha256": "1ca7a63b87cf58c79e951826c03dc524b65b8e414ad728afb0af286840a32ea3"
+    },
+    {
+      "path": "src/Http/HttpClient.php",
+      "sha256": "efde4a02eab72fd961531115e8f482474916478c4478938110d99136d22806d2"
+    },
+    {
+      "path": "src/Models/AppbaseAccessCredentialCreateCommand.php",
+      "sha256": "652b40120fd5ca3b62aaa0ecbc5611ba9748d05ce2d5d75209798281cbce8e36"
+    },
+    {
+      "path": "src/Models/AppbaseApiResult.php",
+      "sha256": "b96da49a554835932f7ac752031c79f344faedaa1ae57773a813fc8ba92987f0"
+    },
+    {
+      "path": "src/Models/AppbaseApplicationRegisterCommand.php",
+      "sha256": "c7cfd0a1e6db4548902ab202662b00d766201753ce3a437c5b28760de34f098f"
+    },
+    {
+      "path": "src/Models/AppbaseSessionCreateCommand.php",
+      "sha256": "7185844d07584250d99d058f06dac9afdb1911e5aa22830862b1e3008ca8fa5f"
+    },
+    {
+      "path": "src/Models/AppbaseTenantApplicationEnableCommand.php",
+      "sha256": "c70f388bbb15ab5575ff7ec27bff0162a3aed47e8a4f2ecbe2e8f250d92b5ded"
+    },
+    {
+      "path": "src/Models/AppbaseTenantApplicationProvisionCommand.php",
+      "sha256": "b5ad39b2add3e00ef702cc29b2a464a2c6fac26fbf5d7dc2e7ec4aaa8e4005a3"
+    },
+    {
+      "path": "src/Models/AppbaseTenantApplicationUpdateCommand.php",
+      "sha256": "2122fa525634562752e8943f315afcc5df2f10c19ace626001f2886fb8182613"
+    },
+    {
+      "path": "src/Models/FieldError.php",
+      "sha256": "6bdf6fd0f73c8d459ef0909cac49c91deb57ca3d2f8ede897bcc95c89d9c12ef"
+    },
+    {
+      "path": "src/Models/ProblemDetail.php",
+      "sha256": "0669bebbe4cc2efff3eb2540e7e747528d1bb31377b7728bef23da298b6e629e"
+    },
+    {
+      "path": "src/SdkConfig.php",
+      "sha256": "a51486c9d56ffd90bece97e67ddb8c96d9fe619cf725136590dbff5328eb0c8b"
+    },
+    {
+      "path": "src/SdkworkAppClient.php",
+      "sha256": "e3434c988066a4982d6cd130497d5b364640a0d02df8715ac17958d3d913b311"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

@@ -1,10 +1,10 @@
 schemaVersion: 1
-kind: sdkwork.appbase.capability.catalog
-standardVersion: 2026-05-21
+kind: sdkwork.iam.capability.catalog
+standardVersion: 2026-06-24
 purpose: >
-  Canonical SDKWork Appbase capability catalog. Capabilities declared here are
-  reusable building blocks that concrete applications assemble through generated
-  SDK ports, runtime adapters, storage providers, and UI packages.
+  Canonical SDKWork IAM capability catalog. IAM domain code, IMF registry,
+  database module, HTTP/RPC authorities, and generated SDK families live in
+  sdkwork-iam.
 
 capabilities:
   - id: iam
@@ -13,7 +13,7 @@ capabilities:
     maturity: L3
     targetMaturity: L3
     priority: P0
-    owner: sdkwork-appbase
+    owner: sdkwork-iam
     scope:
       - auth
       - session
@@ -27,19 +27,19 @@ capabilities:
       - token-store
     requiredLayers:
       - kind: contracts
-        path: packages/common/iam/sdkwork-iam-contracts
+        path: apps/sdkwork-iam-common/packages/sdkwork-iam-contracts
         manifest: package.json
       - kind: sdk_ports
-        path: packages/common/iam/sdkwork-iam-sdk-ports
+        path: apps/sdkwork-iam-common/packages/sdkwork-iam-sdk-ports
         manifest: package.json
       - kind: service
-        path: packages/common/iam/sdkwork-iam-service
+        path: apps/sdkwork-iam-common/packages/sdkwork-iam-service
         manifest: package.json
       - kind: service
-        path: packages/common/iam/sdkwork-iam-application-bootstrap
+        path: apps/sdkwork-iam-common/packages/sdkwork-iam-application-bootstrap
         manifest: package.json
       - kind: runtime
-        path: packages/common/iam/sdkwork-iam-runtime
+        path: apps/sdkwork-iam-common/packages/sdkwork-iam-runtime
         manifest: package.json
       - kind: native_rust_core
         path: crates/sdkwork-iam-context-service
@@ -60,22 +60,22 @@ capabilities:
         path: crates/sdkwork-iam-rpc-rust
         manifest: Cargo.toml
       - kind: rpc_contracts
-        path: packages/common/iam/sdkwork-iam-rpc-contracts
+        path: apps/sdkwork-iam-common/packages/sdkwork-iam-rpc-contracts
         manifest: package.json
       - kind: sdk_app
-        path: sdks/sdkwork-appbase-app-sdk
+        path: sdks/sdkwork-iam-app-sdk
         manifest: specs/component.spec.json
       - kind: sdk_backend
-        path: sdks/sdkwork-appbase-backend-sdk
+        path: sdks/sdkwork-iam-backend-sdk
         manifest: specs/component.spec.json
       - kind: sdk_open
-        path: sdks/sdkwork-appbase-open-sdk
+        path: sdks/sdkwork-iam-open-sdk
         manifest: specs/component.spec.json
       - kind: native_rust_storage_sqlx
         path: crates/sdkwork-iam-directory-repository-sqlx
         manifest: Cargo.toml
       - kind: pc_react
-        path: packages/pc-react/iam/sdkwork-iam-react
+        path: apps/sdkwork-iam-pc/packages/sdkwork-iam-react
         manifest: package.json
     qualityGates:
       - category: contract
@@ -100,56 +100,13 @@ capabilities:
         session, token, tenant, organization, permission, or subject context
         runtime.
 
-  - id: foundation
-    domain: foundation
-    status: standardizing
-    maturity: L2
-    targetMaturity: L3
-    priority: P0
-    owner: sdkwork-appbase
-    scope:
-      - runtime-bootstrap
-      - sdk-client-injection
-      - request-context-headers
-      - cache-namespace
-      - feature-flag
-      - settings
-      - audit
-      - config
-    requiredLayers:
-      - kind: contracts
-        path: packages/common/foundation/sdkwork-runtime-bootstrap
-        manifest: package.json
-      - kind: runtime
-        path: packages/common/foundation/sdkwork-runtime-bootstrap
-        manifest: package.json
-      - kind: service
-        path: packages/common/foundation/sdkwork-cache-core
-        manifest: package.json
-      - kind: pc_react
-        path: packages/pc-react/foundation/sdkwork-appbase-pc-react
-        manifest: package.json
-    qualityGates:
-      - category: contract
-        command: pnpm --filter @sdkwork/runtime-bootstrap test
-      - category: runtime
-        command: pnpm --filter @sdkwork/cache-core test
-      - category: frontend
-        command: pnpm --filter @sdkwork/appbase-pc-react typecheck
-    integration:
-      domainForksForbidden: true
-      sdkBoundary: generated-sdk-through-ports
-      appResponsibility: >
-        Applications provide deployment metadata and concrete cache/settings
-        adapters; they must not create application-local SDK bootstrap clients.
-
   - id: iam-application-registry
     domain: iam
     status: standardizing
     maturity: L2
     targetMaturity: L3
     priority: P0
-    owner: sdkwork-appbase
+    owner: sdkwork-iam
     scope:
       - registered-applications
       - tenant_applications
@@ -174,316 +131,5 @@ capabilities:
       sdkBoundary: generated-sdk-through-ports
       appResponsibility: >
         Applications provide sdkwork.app.config.json and tenant-specific domain
-        and access-permission configuration. Appbase IAM owns registered applications,
-        tenant applications, and delegated access credential issuance.
-
-  - id: notification
-    domain: notification
-    status: planned-standard
-    maturity: L1
-    targetMaturity: L3
-    priority: P0
-    owner: sdkwork-appbase
-    scope:
-      - inbox
-      - recipient
-      - read-state
-      - preference
-      - toast
-      - badge
-    requiredLayers:
-      - kind: pc_react
-        path: packages/pc-react/notification/sdkwork-notification-pc-react
-        manifest: package.json
-    qualityGates:
-      - category: frontend
-        command: pnpm --filter @sdkwork/notification-pc-react typecheck
-    integration:
-      domainForksForbidden: true
-      sdkBoundary: generated-sdk-through-ports
-      appResponsibility: >
-        Applications publish domain events and user-facing notification content.
-        Appbase must own inbox, recipient, read-state, and preference contracts
-        before this capability can become L3. App push, SMS/email outbound
-        delivery, and verification-code delivery belong to the messaging
-        capability.
-
-  - id: messaging
-    domain: messaging
-    status: externalized
-    maturity: L3
-    targetMaturity: L3
-    priority: P0
-    owner: sdkwork-messaging
-    externalRepository: ../sdkwork-messaging
-    scope:
-      - app-notifications
-      - announcements
-      - app-push
-      - sms
-      - email
-      - outbound-messages
-      - delivery-events
-      - verification-code-delivery
-    externalLayers:
-      - kind: contracts
-        package: "@sdkwork/messaging-contracts"
-        path: ../sdkwork-messaging/packages/common/messaging/sdkwork-messaging-contracts
-      - kind: sdk_ports
-        package: "@sdkwork/messaging-sdk-ports"
-        path: ../sdkwork-messaging/packages/common/messaging/sdkwork-messaging-sdk-ports
-      - kind: service
-        package: "@sdkwork/messaging-service"
-        path: ../sdkwork-messaging/packages/common/messaging/sdkwork-messaging-service
-      - kind: runtime
-        package: "@sdkwork/messaging-runtime"
-        path: ../sdkwork-messaging/packages/common/messaging/sdkwork-messaging-runtime
-      - kind: native_rust_service
-        crate: sdkwork_messaging_delivery_service
-        path: ../sdkwork-messaging/crates/sdkwork-messaging-delivery-service
-      - kind: native_rust_repository_sqlx
-        crate: sdkwork_messaging_delivery_repository_sqlx
-        path: ../sdkwork-messaging/crates/sdkwork-messaging-delivery-repository-sqlx
-    qualityGates:
-      - category: contract
-        command: pnpm --dir ../sdkwork-messaging --filter @sdkwork/messaging-contracts test
-      - category: runtime
-        command: pnpm --dir ../sdkwork-messaging --filter @sdkwork/messaging-runtime test
-      - category: storage
-        command: cargo test -p sdkwork-messaging-delivery-repository-sqlx --manifest-path ../sdkwork-messaging/Cargo.toml
-    integration:
-      domainForksForbidden: true
-      sdkBoundary: generated-sdk-through-ports
-      appResponsibility: >
-        Applications inject generated messaging SDK clients through ports.
-        Messaging ownership is externalized to sdkwork-messaging; appbase
-        records this as an external boundary only and must not keep local
-        messaging implementations, persistence, SDK generation inputs,
-        IM/conversation forks, contacts/social/channel packages, workspace
-        wiring, or direct package dependencies on messaging implementation
-        packages.
-  - id: device
-    domain: device
-    status: externalized
-    maturity: L3
-    targetMaturity: L3
-    priority: P0
-    owner: sdkwork-aiot
-    externalRepository: ../sdkwork-aiot
-    scope:
-      - device-catalog
-      - device-capability
-      - iot-fleet
-      - iot-gateway
-      - iot-alert
-      - iot-endpoint
-    externalLayers:
-      - kind: app_sdk
-        package: "@sdkwork/aiot-app-sdk"
-        path: ../sdkwork-aiot/sdks/sdkwork-aiot-app-sdk
-      - kind: pc_react
-        package: "@sdkwork/aiot-pc-console-device"
-        path: ../sdkwork-aiot/apps/sdkwork-aiot-pc/packages/sdkwork-aiot-pc-console-device
-      - kind: pc_react
-        package: "@sdkwork/aiot-pc-console-iot"
-        path: ../sdkwork-aiot/apps/sdkwork-aiot-pc/packages/sdkwork-aiot-pc-console-iot
-    qualityGates:
-      - category: contract
-        command: pnpm --dir ../sdkwork-aiot test:governance
-    integration:
-      domainForksForbidden: true
-      sdkBoundary: generated-sdk-through-ports
-      appResponsibility: >
-        Device and IoT console UI, fleet orchestration, and hardware catalog
-        integration are owned by sdkwork-aiot. Appbase may expose monorepo
-        path aliases for local development but must not register device or IoT
-        packages in the appbase capability catalog or keep local device UI
-        implementations.
-
-  - id: intelligence-runtime
-    domain: intelligence
-    status: externalized
-    maturity: L3
-    targetMaturity: L3
-    priority: P1
-    owner: sdkwork-kernel
-    externalRepository: ../sdkwork-kernel
-    scope:
-      - chat
-      - agent
-      - run
-      - step
-      - tool-call
-      - mcp-binding
-      - memory
-      - artifact
-      - metering
-    requiredLayers:
-      - kind: contracts
-        path: packages/common/intelligence/sdkwork-agent-contracts
-        manifest: package.json
-    externalLayers:
-      - kind: app_sdk
-        package: "@sdkwork/agent-app-sdk"
-        path: ../sdkwork-kernel/sdks/sdkwork-agent-app-sdk
-      - kind: pc_react
-        package: "@sdkwork/kernel-ui-core"
-        path: ../sdkwork-kernel/sdkwork-kernel-ui/packages/sdkwork-kernel-ui-core
-    qualityGates:
-      - category: contract
-        command: pnpm --filter @sdkwork/agent-contracts test
-    integration:
-      domainForksForbidden: true
-      sdkBoundary: generated-sdk-through-ports
-      appResponsibility: >
-        AI product UI, execution engines, and provider routing are owned by
-        sdkwork-kernel, magic-studio, sdkwork-llm, and related application
-        repositories. Appbase keeps only shared agent contracts and must not
-        register intelligence pc-react packages in the capability catalog or
-        keep local chat, agent, workflow, or model UI implementations.
-
-  - id: ecosystem
-    domain: ecosystem
-    status: externalized
-    maturity: L3
-    targetMaturity: L3
-    priority: P1
-    owner: sdkwork-appstore
-    externalRepository: ../sdkwork-appstore
-    scope:
-      - app-market
-      - plugin-market
-      - skill-market
-      - category
-      - tag
-      - rating
-      - favorite
-      - publish-workflow
-    externalLayers:
-      - kind: pc_react
-        package: "@sdkwork/appstore-pc-catalog"
-        path: ../sdkwork-appstore/apps/sdkwork-appstore-pc/packages/sdkwork-appstore-pc-catalog
-      - kind: pc_react
-        package: "@sdkwork/appstore-pc-listing"
-        path: ../sdkwork-appstore/apps/sdkwork-appstore-pc/packages/sdkwork-appstore-pc-listing
-    qualityGates:
-      - category: frontend
-        command: pnpm --dir ../sdkwork-appstore typecheck
-    integration:
-      domainForksForbidden: true
-      sdkBoundary: generated-sdk-through-ports
-      appResponsibility: >
-        Marketplace catalog, plugin discovery, and publishing workflows are
-        owned by sdkwork-appstore. Appbase must not keep local market or plugin
-        pc-react packages. Comment engagement remains externalized to
-        sdkwork-comments.
-
-  - id: portal
-    domain: portal
-    status: externalized
-    maturity: L3
-    targetMaturity: L3
-    priority: P1
-    owner: sdkwork-cloud-portal
-    externalRepository: ../sdkwork-cloud-portal
-    scope:
-      - home
-      - apps
-      - docs
-      - support
-      - about
-      - portal-navigation
-      - portal-shell
-    externalLayers:
-      - kind: pc_react
-        package: sdkwork-pc-portal-core
-        path: ../sdkwork-cloud-portal/packages/sdkwork-pc-portal-core
-      - kind: pc_react
-        package: sdkwork-pc-portal-common
-        path: ../sdkwork-cloud-portal/packages/sdkwork-pc-portal-common
-      - kind: pc_react
-        package: sdkwork-pc-portal-ui
-        path: ../sdkwork-cloud-portal/packages/sdkwork-pc-portal-ui
-      - kind: pc_react
-        package: sdkwork-pc-portal-home
-        path: ../sdkwork-cloud-portal/packages/sdkwork-pc-portal-home
-      - kind: pc_react
-        package: sdkwork-pc-portal-apps
-        path: ../sdkwork-cloud-portal/packages/sdkwork-pc-portal-apps
-      - kind: pc_react
-        package: sdkwork-pc-portal-docs
-        path: ../sdkwork-cloud-portal/packages/sdkwork-pc-portal-docs
-      - kind: pc_react
-        package: sdkwork-pc-portal-support
-        path: ../sdkwork-cloud-portal/packages/sdkwork-pc-portal-support
-      - kind: pc_react
-        package: sdkwork-pc-portal-about
-        path: ../sdkwork-cloud-portal/packages/sdkwork-pc-portal-about
-    qualityGates:
-      - category: frontend
-        command: pnpm --dir ../sdkwork-cloud-portal typecheck
-    integration:
-      domainForksForbidden: true
-      sdkBoundary: generated-sdk-through-ports
-      appResponsibility: >
-        Portal home, dashboard, apps, docs, support, and about UI are owned by
-        sdkwork-cloud-portal. Appbase keeps only cross-application settings and
-        permission packages in the system domain and must not register portal
-        shell packages in the capability catalog or keep local portal UI
-        implementations.
-
-  - id: comments
-    domain: comments
-    status: externalized
-    maturity: L3
-    targetMaturity: L3
-    priority: P0
-    owner: sdkwork-comments
-    externalRepository: ../sdkwork-comments
-    scope:
-      - thread
-      - comment
-      - reply
-      - reaction
-      - like
-      - favorite
-      - bookmark
-      - visit-history
-      - engagement
-      - moderation
-      - projection
-      - summary
-    externalLayers:
-      - kind: contracts
-        package: "@sdkwork/comments-contracts"
-        path: ../sdkwork-comments/packages/common/comments/sdkwork-comments-contracts
-      - kind: service
-        package: "@sdkwork/comments-service"
-        path: ../sdkwork-comments/packages/common/comments/sdkwork-comments-service
-      - kind: native_rust_repository_sqlx
-        crate: sdkwork_comments_engagement_repository_sqlx
-        path: ../sdkwork-comments/crates/sdkwork-comments-engagement-repository-sqlx
-      - kind: app_sdk
-        package: "@sdkwork/comments-app-sdk"
-        path: ../sdkwork-comments/sdks/sdkwork-comments-app-sdk
-      - kind: backend_sdk
-        package: "@sdkwork/comments-backend-sdk"
-        path: ../sdkwork-comments/sdks/sdkwork-comments-backend-sdk
-    qualityGates:
-      - category: contract
-        command: pnpm --dir ../sdkwork-comments --filter @sdkwork/comments-contracts test
-      - category: service
-        command: pnpm --dir ../sdkwork-comments --filter @sdkwork/comments-service test
-      - category: storage
-        command: cargo test -p sdkwork-comments-engagement-repository-sqlx --manifest-path ../sdkwork-comments/Cargo.toml
-      - category: sdk
-        command: pnpm --dir ../sdkwork-comments test:governance
-    integration:
-      domainForksForbidden: true
-      sdkBoundary: generated-sdk-through-ports
-      appResponsibility: >
-        Applications provide owner records and UI composition. Comments
-        ownership is externalized to sdkwork-comments; appbase may consume the
-        packages but must not keep local comments implementations, persistence,
-        moderation rules, reaction rules, favorite/bookmark rules, visit
-        history storage, engagement SDK generation inputs, or API routes.
+        configuration. sdkwork-iam owns registered applications, tenant
+        applications, and delegated access credential issuance.

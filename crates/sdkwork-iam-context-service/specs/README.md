@@ -8,7 +8,7 @@ This directory is the local standards index for `sdkwork-iam-context-service`. R
 | --- | --- |
 | Name | `sdkwork-iam-context-service` |
 | Type | `rust-crate` |
-| Root | `sdkwork-appbase/crates/sdkwork-iam-context-service` |
+| Root | `sdkwork-iam/crates/sdkwork-iam-context-service` |
 | Domain | `iam` |
 | Capability | `context` |
 | Languages | `rust` |

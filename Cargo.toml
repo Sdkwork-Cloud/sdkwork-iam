@@ -59,8 +59,3 @@ sdkwork_database_drift = { package = "sdkwork-database-drift", path = "../sdkwor
 sdkwork_database_spi = { package = "sdkwork-database-spi", path = "../sdkwork-database/crates/sdkwork-database-spi" }
 sdkwork_database_sqlx = { package = "sdkwork-database-sqlx", path = "../sdkwork-database/crates/sdkwork-database-sqlx" }
 sdkwork_utils_rust = { package = "sdkwork-utils-rust", path = "../sdkwork-utils/packages/sdkwork-utils-rust" }
-
-# Backward-compatible aliases during migration
-sdkwork_appbase_tauri_host = { package = "sdkwork-iam-tauri-host", path = "crates/sdkwork-iam-tauri-host" }
-sdkwork_appbase_database_host = { package = "sdkwork-iam-database-host", path = "crates/sdkwork-iam-database-host" }
-sdkwork-iam-bootstrap = { package = "sdkwork-iam-bootstrap", path = "crates/sdkwork-iam-bootstrap" }

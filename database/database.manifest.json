@@ -4,7 +4,7 @@
   "moduleId": "iam",
   "serviceCode": "IAM",
   "displayName": "IAM Database",
-  "owner": "appbase-platform",
+  "owner": "sdkwork-iam",
   "engines": [
     "postgres"
   ],
@@ -39,7 +39,7 @@
     "driftPolicy": "drift/policy.yaml"
   },
   "spi": {
-    "provider": "appbase-iam",
+    "provider": "sdkwork-iam",
     "hooks": [
       "iam.rbac.materialize"
     ]

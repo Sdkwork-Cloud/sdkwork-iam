@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-pc-admin-core",
+    "displayName": "SDKWork IAM PC Admin Core",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-core",
+    "domain": "iam",
+    "declaredDomain": "iam",
+    "capability": "iam-pc-admin-core",
+    "surface": "backend-admin",
+    "status": "standard",
+    "languages": [
+      "typescript"
+    ],
+    "generated": false,
+    "private": true,
+    "manifests": [
+      "package.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "APP_PC_ARCHITECTURE_SPEC.md",
+      "path": "../../../../../sdkwork-specs/APP_PC_ARCHITECTURE_SPEC.md",
+      "purpose": "PC application root layout and backend-admin package naming."
+    },
+    {
+      "file": "BACKEND_UI_SPEC.md",
+      "path": "../../../../../sdkwork-specs/BACKEND_UI_SPEC.md",
+      "purpose": "Backend-admin runtime composition and backend SDK inventory."
+    }
+  ],
+  "contracts": {
+    "publicExports": [
+      "."
+    ],
+    "runtimeEntrypoints": [
+      "package.json#scripts.typecheck"
+    ],
+    "sdkClients": [
+      "@sdkwork/iam-backend-sdk"
+    ],
+    "events": [],
+    "configKeys": [
+      "package.json#sdkwork"
+    ],
+    "routeManifest": null
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative. Local specs may extend but must not contradict them.",
+    "dependencyPolicy": "Admin capability packages register through this core module registry.",
+    "sdkPolicy": "Backend SDK clients are injected through admin-core composition boundaries.",
+    "languagePolicy": "TypeScript packages follow workspace manifests while preserving the component contract."
+  },
+  "verification": {
+    "commands": [
+      "pnpm --filter @sdkwork/iam-pc-admin-core typecheck"
+    ]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-06-24"
+  }
+}

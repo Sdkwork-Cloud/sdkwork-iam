@@ -1,0 +1,49 @@
+{
+  "name": "@sdkwork/iam-pc-admin-tenant",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Tenant selection, tenant context, and tenant member administration surfaces.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@sdkwork/iam-pc-admin-core": "workspace:*",
+    "@sdkwork/iam-service": "workspace:*",
+    "@sdkwork/ui-pc-react": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0 <20.0.0",
+    "react-dom": ">=18.2.0 <20.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "sdkwork": {
+    "workspace": "sdkwork-iam",
+    "architecture": "pc-admin",
+    "surface": "backend-admin",
+    "domain": "iam",
+    "capability": "tenant",
+    "status": "standard"
+  }
+}

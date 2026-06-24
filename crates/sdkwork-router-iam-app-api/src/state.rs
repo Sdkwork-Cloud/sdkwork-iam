@@ -228,14 +228,14 @@ impl LocalIamState {
 
     pub async fn from_env() -> Result<Self, String> {
         let config = LocalIamConfig::from_env();
-        let host = sdkwork_appbase_database_host::bootstrap_iam_database_from_env().await?;
+        let host = sdkwork_iam_database_host::bootstrap_iam_database_from_env().await?;
         backfill_tenant_members(host.pool()).await?;
         Ok(Self::new(host.pool().clone(), config, None))
     }
 
     pub async fn from_pool(pool: DatabasePool) -> Result<Self, String> {
         let config = LocalIamConfig::from_env();
-        let host = sdkwork_appbase_database_host::bootstrap_iam_database(pool).await?;
+        let host = sdkwork_iam_database_host::bootstrap_iam_database(pool).await?;
         backfill_tenant_members(host.pool()).await?;
         Ok(Self::new(host.pool().clone(), config, None))
     }

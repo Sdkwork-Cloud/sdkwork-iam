@@ -7,20 +7,20 @@ const root = process.cwd();
 
 const SDK_FAMILIES = [
   {
-    directory: 'sdks/sdkwork-appbase-app-sdk',
-    apiAuthority: 'sdkwork-appbase-app-api',
+    directory: 'sdks/sdkwork-iam-app-sdk',
+    apiAuthority: 'sdkwork-iam-app-api',
     sdkType: 'app',
     routeCrate: 'sdkwork-router-iam-app-api',
   },
   {
-    directory: 'sdks/sdkwork-appbase-backend-sdk',
-    apiAuthority: 'sdkwork-appbase-backend-api',
+    directory: 'sdks/sdkwork-iam-backend-sdk',
+    apiAuthority: 'sdkwork-iam-backend-api',
     sdkType: 'backend',
     routeCrate: 'sdkwork-router-iam-backend-api',
   },
   {
-    directory: 'sdks/sdkwork-appbase-open-sdk',
-    apiAuthority: 'sdkwork-appbase-open-api',
+    directory: 'sdks/sdkwork-iam-open-sdk',
+    apiAuthority: 'sdkwork-iam-open-api',
     sdkType: 'open',
     routeCrate: 'sdkwork-router-iam-open-api',
   },
@@ -81,8 +81,8 @@ test('sdk family component specs declare standard metadata and canonical spec li
       errors.push(`${specPath} verification.commands must be cross-platform (no powershell)`);
     }
 
-    if (spec.metadata?.managedBy !== 'sdkwork-appbase') {
-      errors.push(`${specPath} metadata.managedBy must be sdkwork-appbase`);
+    if (spec.metadata?.managedBy !== 'sdkwork-iam') {
+      errors.push(`${specPath} metadata.managedBy must be sdkwork-iam`);
     }
 
     if (!spec.metadata?.standardVersion) {
@@ -107,7 +107,7 @@ test('sdk family component specs declare materialize and generate verification c
     const specPath = `${family.directory}/specs/component.spec.json`;
     const commands = readJson(specPath).verification?.commands ?? [];
 
-    if (!commands.some((command) => command.includes('materialize-appbase-v3-openapi-boundaries.mjs'))) {
+    if (!commands.some((command) => command.includes('materialize-iam-v3-openapi-boundaries.mjs'))) {
       errors.push(`${specPath} must verify OpenAPI materialization`);
     }
 

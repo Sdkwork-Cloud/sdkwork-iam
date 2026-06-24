@@ -14,8 +14,8 @@ const __dirname = path.dirname(__filename);
 const appbaseRoot = path.resolve(__dirname, "..");
 
 export const USER_CENTER_UPSTREAM_DISPATCH_EVENT_TYPE =
-  "sdkwork-appbase-user-center-standard-updated";
-export const USER_CENTER_UPSTREAM_SOURCE_REPOSITORY = "Sdkwork-Cloud/sdkwork-appbase";
+  "sdkwork-iam-user-center-standard-updated";
+export const USER_CENTER_UPSTREAM_SOURCE_REPOSITORY = "Sdkwork-Cloud/sdkwork-iam";
 export const USER_CENTER_UPSTREAM_DISPATCH_TOKEN_ENV_KEY =
   "SDKWORK_USER_CENTER_UPSTREAM_DISPATCH_TOKEN";
 

@@ -22,17 +22,17 @@ use crate::{
     responses::*, state::*, tokens::*, utils::*, web_bootstrap::*,
 };
 
-/// Builds the executable local/private `sdkwork-appbase-app-api` router.
+/// Builds the executable local/private `sdkwork-iam-app-api` router.
 ///
-/// This router is owned by `sdkwork-appbase` so product runtimes can compose
+/// This router is owned by `sdkwork-iam` so product runtimes can compose
 /// appbase IAM in embedded mode without copying appbase routes.
-pub(crate) async fn build_sdkwork_appbase_app_api_router() -> Result<Router, String> {
+pub(crate) async fn build_sdkwork_iam_app_api_router() -> Result<Router, String> {
     LocalIamState::from_env()
         .await
-        .map(build_sdkwork_appbase_app_api_router_with_state)
+        .map(build_sdkwork_iam_app_api_router_with_state)
 }
 
-pub(crate) async fn build_sdkwork_appbase_app_api_router_with_web_resolver<R>(
+pub(crate) async fn build_sdkwork_iam_app_api_router_with_web_resolver<R>(
     resolver: R,
 ) -> Result<Router, String>
 where
@@ -40,27 +40,27 @@ where
 {
     LocalIamState::from_env()
         .await
-        .map(|state| build_sdkwork_appbase_app_api_router_with_state_and_resolver(state, resolver))
+        .map(|state| build_sdkwork_iam_app_api_router_with_state_and_resolver(state, resolver))
 }
 
-pub(crate) async fn build_sdkwork_appbase_app_api_router_with_local_directory(
-) -> Result<(Router, SdkworkAppbaseLocalIamDirectory), String> {
+pub(crate) async fn build_sdkwork_iam_app_api_router_with_local_directory(
+) -> Result<(Router, SdkworkIamLocalIamDirectory), String> {
     let state = LocalIamState::from_env().await?;
-    let directory = SdkworkAppbaseLocalIamDirectory {
+    let directory = SdkworkIamLocalIamDirectory {
         state: state.clone(),
     };
     Ok((
-        build_sdkwork_appbase_app_api_router_with_state(state),
+        build_sdkwork_iam_app_api_router_with_state(state),
         directory,
     ))
 }
 
-pub(crate) async fn build_sdkwork_appbase_app_api_router_with_pool(
+pub(crate) async fn build_sdkwork_iam_app_api_router_with_pool(
     pool: sdkwork_database_sqlx::DatabasePool,
 ) -> Result<Router, String> {
     LocalIamState::from_pool(pool)
         .await
-        .map(build_sdkwork_appbase_app_api_router_with_state)
+        .map(build_sdkwork_iam_app_api_router_with_state)
 }
 
 /// OAuth device-authorization (QR login) routes owned by appbase IAM.
@@ -88,14 +88,14 @@ pub fn oauth_device_authorization_routes() -> Router<LocalIamState> {
         )
 }
 
-fn build_sdkwork_appbase_app_api_router_with_state(state: LocalIamState) -> Router {
+fn build_sdkwork_iam_app_api_router_with_state(state: LocalIamState) -> Router {
     wrap_router_with_web_framework(
         &state,
-        build_sdkwork_appbase_app_api_core_router(state.clone()),
+        build_sdkwork_iam_app_api_core_router(state.clone()),
     )
 }
 
-fn build_sdkwork_appbase_app_api_router_with_state_and_resolver<R>(
+fn build_sdkwork_iam_app_api_router_with_state_and_resolver<R>(
     state: LocalIamState,
     resolver: R,
 ) -> Router
@@ -103,12 +103,12 @@ where
     R: sdkwork_web_core::WebRequestContextResolver + Clone + Send + Sync + 'static,
 {
     wrap_router_with_web_framework_resolver(
-        build_sdkwork_appbase_app_api_core_router(state),
+        build_sdkwork_iam_app_api_core_router(state),
         resolver,
     )
 }
 
-fn build_sdkwork_appbase_app_api_core_router(state: LocalIamState) -> Router {
+fn build_sdkwork_iam_app_api_core_router(state: LocalIamState) -> Router {
     Router::new()
         .route("/app/v3/api/auth/sessions", post(create_session))
         .route(
@@ -162,6 +162,10 @@ fn build_sdkwork_appbase_app_api_core_router(state: LocalIamState) -> Router {
         .route(
             "/app/v3/api/oauth/grants/{grant_id}",
             delete(delete_oauth_grant),
+        )
+        .route(
+            "/app/v3/api/oauth/authorizations/{authorization_state_id}/completions",
+            post(complete_oauth_authorization),
         )
         .route(
             "/app/v3/api/iam/users/current",
@@ -1586,6 +1590,15 @@ async fn create_oauth_session(
             .expect("error response");
     };
 
+    let policy = effective_public_account_binding_policy(&state, pg).await;
+    if !oauth_login_allowed(&policy, Some(provider.as_str())) {
+        return appbase_error(
+            StatusCode::FORBIDDEN,
+            "iam_oauth_login_disabled",
+            "OAuth login is disabled for this provider",
+        );
+    }
+
     let Some(oauth_state) = optional_string(body.get("state")) else {
         return appbase_error(
             StatusCode::BAD_REQUEST,
@@ -1643,15 +1656,6 @@ async fn create_oauth_session(
             StatusCode::UNAUTHORIZED,
             "iam_runtime_app_id_invalid",
             &error,
-        );
-    }
-
-    let policy = effective_public_account_binding_policy(&state, pg).await;
-    if !oauth_login_allowed(&policy, Some(provider.as_str())) {
-        return appbase_error(
-            StatusCode::FORBIDDEN,
-            "iam_oauth_login_disabled",
-            "OAuth login is disabled for this provider",
         );
     }
 
@@ -2303,13 +2307,107 @@ async fn delete_current_user_contact_binding(
     }
 }
 
-async fn retrieve_runtime(State(state): State<LocalIamState>) -> Response {
-    appbase_ok(json!({
-        "deploymentMode": "saas",
-        "environment": state.config.environment,
-        "mode": "private",
-        "runtime": "embedded",
-    }))
+async fn complete_oauth_authorization(
+    State(state): State<LocalIamState>,
+    headers: HeaderMap,
+    Path(authorization_state_id): Path<String>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Some(session) = resolve_session_from_headers(pg, &headers).await else {
+        return iam_session_required_error();
+    };
+
+    match sdkwork_iam_web_adapter::complete_authorization_state(
+        pg,
+        &authorization_state_id,
+        &session.context,
+    )
+    .await
+    {
+        Ok(completion) => appbase_ok(json!({
+            "authorizationCode": completion.authorization_code,
+            "redirectUrl": completion.redirect_url,
+        })),
+        Err(error) => appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_oauth_authorization_completion_failed",
+            &error,
+        ),
+    }
+}
+
+async fn retrieve_runtime(State(state): State<LocalIamState>, ctx: WebRequestContext) -> Response {
+    let defaults = sdkwork_iam_web_adapter::RuntimeAuthMetadataInput {
+        environment: state.config.environment.clone(),
+        deployment_mode: "saas".to_string(),
+        supports_local_credentials: true,
+        supports_session_exchange: true,
+        sdkwork_oauth_provider_enabled: true,
+    };
+
+    let payload = match postgres_pool_or_error(&state) {
+        Ok(pg) => {
+            let open_registration_tenant_id =
+                crate::directory::resolve_open_registration_tenant_id(pg)
+                    .await
+                    .ok();
+            let resolved_tenant_id = ctx
+                .tenant_id()
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+                .or(open_registration_tenant_id);
+
+            let input = if let (Some(tenant_id), Some(app_id)) = (
+                resolved_tenant_id.as_deref(),
+                ctx.app_id().filter(|value| !value.is_empty()),
+            ) {
+                sdkwork_iam_web_adapter::load_runtime_auth_metadata_input(
+                    pg,
+                    tenant_id,
+                    app_id,
+                    &defaults,
+                )
+                .await
+                .unwrap_or(defaults)
+            } else {
+                defaults
+            };
+
+            let policy = effective_public_account_binding_policy(&state, pg).await;
+            let oauth_tenant_id = resolved_tenant_id
+                .as_deref()
+                .filter(|value| !value.is_empty())
+                .unwrap_or(LOCAL_EPHEMERAL_SCOPE);
+            let oauth_providers = crate::oauth_login::list_login_enabled_providers(
+                Some(pg),
+                oauth_tenant_id,
+                &policy,
+                &crate::oauth_login::OAuthLoginContext::new(),
+            )
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .map(|provider| {
+                json!({
+                    "providerCode": provider.get("providerCode").cloned().unwrap_or(Value::Null),
+                    "regionGroup": provider.get("regionGroup").cloned().unwrap_or(Value::Null),
+                })
+            })
+            .collect::<Vec<_>>();
+            sdkwork_iam_web_adapter::build_runtime_auth_metadata_json(
+                &policy,
+                &oauth_providers,
+                &input,
+            )
+        }
+        Err(_) => sdkwork_iam_web_adapter::default_runtime_auth_metadata_json(&defaults),
+    };
+
+    appbase_ok(payload)
 }
 
 async fn retrieve_verification_policy(State(state): State<LocalIamState>) -> Response {

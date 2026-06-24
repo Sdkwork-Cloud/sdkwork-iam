@@ -6,7 +6,7 @@
     "displayName": "SDKWork Router Iam Open Api",
     "version": "0.1.0",
     "type": "rust-route-crate",
-    "root": "sdkwork-appbase/crates/sdkwork-router-iam-open-api",
+    "root": "sdkwork-iam/crates/sdkwork-router-iam-open-api",
     "domain": "iam",
     "capability": "iam",
     "surface": "open-api",
@@ -80,13 +80,13 @@
   "contracts": {
     "publicExports": [
       "sdkwork_router_iam_open_api::open_routes",
-      "sdkwork_router_iam_open_api::sdkwork_appbase_open_api_routes",
-      "sdkwork_router_iam_open_api::build_sdkwork_appbase_open_api_router",
-      "sdkwork_router_iam_open_api::build_sdkwork_appbase_open_api_router_from_env"
+      "sdkwork_router_iam_open_api::sdkwork_iam_open_api_routes",
+      "sdkwork_router_iam_open_api::build_sdkwork_iam_open_api_router",
+      "sdkwork_router_iam_open_api::build_sdkwork_iam_open_api_router_from_env"
     ],
     "runtimeEntrypoints": [
-      "sdkwork_router_iam_open_api::build_sdkwork_appbase_open_api_router",
-      "sdkwork_router_iam_open_api::build_sdkwork_appbase_open_api_router_from_env"
+      "sdkwork_router_iam_open_api::build_sdkwork_iam_open_api_router",
+      "sdkwork_router_iam_open_api::build_sdkwork_iam_open_api_router_from_env"
     ],
     "routeManifest": "sdkwork_router_iam_open_api::open_routes",
     "sdkClients": [],
@@ -108,7 +108,7 @@
     ]
   },
   "metadata": {
-    "managedBy": "sdkwork-appbase Rust workspace migration",
+    "managedBy": "sdkwork-iam",
     "standardVersion": "2026-06-12"
   }
 }

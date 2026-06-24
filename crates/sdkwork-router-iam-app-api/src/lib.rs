@@ -26,21 +26,21 @@ mod web_bootstrap;
 
 pub(crate) use sdkwork_utils_rust::is_blank;
 
-pub use directory::{SdkworkAppbaseLocalIamDirectory, SdkworkAppbaseLocalIamUserProfile};
+pub use directory::{SdkworkIamLocalIamDirectory, SdkworkIamLocalIamUserProfile};
 pub use manifest::{
-    app_routes, iam_app_api_route_manifest, sdkwork_appbase_app_api_routes,
+    app_routes, iam_app_api_route_manifest, sdkwork_iam_app_api_routes,
     IAM_ANONYMOUS_BOOTSTRAP_OPERATION_IDS, IAM_CREDENTIAL_ENTRY_OPERATION_IDS,
     IAM_HANDLER_SESSION_OPERATION_IDS,
 };
 pub use password_session_bridge::{PasswordSessionBridge, PasswordSessionBridgeResult};
 pub use paths::APP_API_PREFIX;
 pub use routes::{
-    build_sdkwork_appbase_app_api_router,
-    build_sdkwork_appbase_app_api_router_with_local_directory,
-    build_sdkwork_appbase_app_api_router_with_pool,
-    build_sdkwork_appbase_app_api_router_with_web_resolver,
-    build_sdkwork_appbase_oauth_device_authorization_router_with_pool,
-    build_sdkwork_appbase_oauth_device_authorization_router_with_pool_and_password_session_bridge,
+    build_sdkwork_iam_app_api_router,
+    build_sdkwork_iam_app_api_router_with_local_directory,
+    build_sdkwork_iam_app_api_router_with_pool,
+    build_sdkwork_iam_app_api_router_with_web_resolver,
+    build_sdkwork_iam_oauth_device_authorization_router_with_pool,
+    build_sdkwork_iam_oauth_device_authorization_router_with_pool_and_password_session_bridge,
 };
 pub use sdkwork_iam_web_adapter::{
     web_request_principal_from_iam, IamDatabaseWebRequestContextResolver,

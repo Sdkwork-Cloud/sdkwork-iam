@@ -6,7 +6,7 @@
     "displayName": "SDKWork Appbase IAM Bootstrap",
     "version": "0.1.0",
     "type": "rust-crate",
-    "root": "sdkwork-appbase/crates/sdkwork-iam-bootstrap",
+    "root": "sdkwork-iam/crates/sdkwork-iam-bootstrap",
     "domain": "iam",
     "capability": "bootstrap",
     "status": "standardizing",
@@ -29,9 +29,9 @@
   ],
   "contracts": {
     "publicExports": [
-      "sdkwork_appbase_iam_bootstrap::upsert_sqlite_default_subject",
-      "sdkwork_appbase_iam_bootstrap::upsert_postgres_default_subject",
-      "sdkwork_appbase_iam_bootstrap::IAM_STANDARD_PERMISSION_SEEDS"
+      "sdkwork_iam_bootstrap::upsert_sqlite_default_subject",
+      "sdkwork_iam_bootstrap::upsert_postgres_default_subject",
+      "sdkwork_iam_bootstrap::IAM_STANDARD_PERMISSION_SEEDS"
     ],
     "runtimeEntrypoints": [],
     "routeManifest": null,

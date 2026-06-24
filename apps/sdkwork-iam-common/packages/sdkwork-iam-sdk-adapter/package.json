@@ -1,0 +1,35 @@
+{
+  "name": "@sdkwork/iam-sdk-adapter",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "SDKWork IAM adapter boundary from generated app/backend SDK clients to standard IAM ports.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm --dir ../../../.. exec vitest run apps/sdkwork-iam-common/packages/sdkwork-iam-sdk-adapter/tests --config vitest.config.ts --configLoader native --pool vmThreads"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@sdkwork/iam-sdk-ports": "workspace:*"
+  },
+  "sdkwork": {
+    "architecture": "common",
+    "capability": "iam-sdk-adapter",
+    "domain": "iam",
+    "packageType": "adapter",
+    "status": "standard"
+  }
+}

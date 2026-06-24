@@ -1051,7 +1051,7 @@ pub(crate) fn sign_local_session_token(
         "environment": environment_to_string(&context.environment),
         "exp": expires_at,
         "iat": issued_at,
-        "iss": "sdkwork-appbase-local",
+        "iss": "sdkwork-iam-local",
         "login_scope": login_scope_to_string(&context.login_scope),
         "organization_id": organization_id,
         "permission_scope": context.permission_scope,
@@ -1172,7 +1172,7 @@ pub(crate) fn verify_local_session_token(
         return None;
     }
     let iss = payload.get("iss").and_then(Value::as_str)?;
-    if iss != "sdkwork-appbase-local" {
+    if iss != "sdkwork-iam-local" {
         return None;
     }
     let aud = payload.get("aud").and_then(Value::as_str)?;

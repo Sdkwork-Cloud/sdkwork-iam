@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-iam-backend-sdk",
+    "version": "1.0.0",
+    "language": "java",
+    "sdkType": "backend",
+    "protocol": "http",
+    "packageName": "com.sdkwork:sdkwork-iam-backend-sdk"
+  },
+  "changeFingerprint": "0c9e0977058d0fa6a05a0b1459385ad220788967d24f2675bd8d3bed3679fb4d",
+  "changes": {
+    "createdGeneratedFiles": [
+      "bin/publish-core.mjs",
+      "bin/publish.ps1",
+      "bin/publish.sh",
+      "CHANGELOG.md",
+      "LICENSE",
+      "pom.xml",
+      "README.md",
+      "sdkwork-sdk.json",
+      "src/main/java/com/sdkwork/iam/backend/sdk/api/ApiPaths.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/api/IamApi.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/api/IamOauthApi.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/api/package-info.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/http/HttpClient.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseAccessCredentialCreateCommand.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseApiResult.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseApplicationRegisterCommand.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseSessionCreateCommand.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseTenantApplicationEnableCommand.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseTenantApplicationProvisionCommand.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseTenantApplicationUpdateCommand.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/model/FieldError.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/model/ProblemDetail.java",
+      "src/main/java/com/sdkwork/iam/backend/sdk/SdkworkBackendClient.java"
+    ],
+    "updatedGeneratedFiles": [],
+    "unchangedGeneratedFiles": [],
+    "deletedGeneratedFiles": [],
+    "scaffoldedFiles": [
+      "custom/README.md"
+    ],
+    "preservedScaffoldFiles": [],
+    "backedUpFiles": []
+  },
+  "impact": {
+    "schemaVersion": 1,
+    "areas": [
+      "api-surface",
+      "models",
+      "runtime",
+      "build-metadata",
+      "publish-workflow",
+      "documentation",
+      "custom-scaffold",
+      "unknown"
+    ],
+    "details": [
+      {
+        "area": "api-surface",
+        "paths": [
+          "src/main/java/com/sdkwork/iam/backend/sdk/api/ApiPaths.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/api/IamApi.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/api/IamOauthApi.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/api/package-info.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/SdkworkBackendClient.java"
+        ]
+      },
+      {
+        "area": "models",
+        "paths": [
+          "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseAccessCredentialCreateCommand.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseApiResult.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseApplicationRegisterCommand.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseSessionCreateCommand.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseTenantApplicationEnableCommand.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseTenantApplicationProvisionCommand.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/model/AppbaseTenantApplicationUpdateCommand.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/model/FieldError.java",
+          "src/main/java/com/sdkwork/iam/backend/sdk/model/ProblemDetail.java"
+        ]
+      },
+      {
+        "area": "runtime",
+        "paths": [
+          "src/main/java/com/sdkwork/iam/backend/sdk/http/HttpClient.java"
+        ]
+      },
+      {
+        "area": "build-metadata",
+        "paths": [
+          "pom.xml",
+          "sdkwork-sdk.json"
+        ]
+      },
+      {
+        "area": "publish-workflow",
+        "paths": [
+          "bin/publish-core.mjs",
+          "bin/publish.ps1",
+          "bin/publish.sh"
+        ]
+      },
+      {
+        "area": "documentation",
+        "paths": [
+          "CHANGELOG.md",
+          "custom/README.md",
+          "README.md"
+        ]
+      },
+      {
+        "area": "custom-scaffold",
+        "paths": [
+          "custom/README.md"
+        ]
+      },
+      {
+        "area": "unknown",
+        "paths": [
+          "LICENSE"
+        ]
+      }
+    ],
+    "requiresVerification": true,
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+  },
+  "verificationPlan": {
+    "shouldRun": true,
+    "runPhase": "now",
+    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
+    "steps": [
+      {
+        "id": "check",
+        "title": "Unified package check",
+        "required": true,
+        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
+        "workingDirectory": "E:\\sdkwork-space\\sdkwork-iam\\sdks\\sdkwork-iam-backend-sdk\\sdkwork-iam-backend-sdk-java\\generated\\server-openapi",
+        "command": "node",
+        "args": [
+          "./bin/publish-core.mjs",
+          "--language",
+          "java",
+          "--project-dir",
+          ".",
+          "--action",
+          "check"
+        ],
+        "displayCommand": "node ./bin/publish-core.mjs --language java --project-dir . --action check"
+      }
+    ]
+  },
+  "executionDecision": {
+    "schemaVersion": 1,
+    "riskLevel": "high",
+    "nextAction": "verify",
+    "requiresManualReview": false,
+    "applyRequiresExpectedFingerprint": false,
+    "summary": "Changes have been applied. Run the required verification plan now.",
+    "reasons": [
+      "manual-review-required",
+      "preserved-legacy-files",
+      "unknown-impact",
+      "verification-required"
+    ]
+  },
+  "preservedLegacyFiles": true
+}

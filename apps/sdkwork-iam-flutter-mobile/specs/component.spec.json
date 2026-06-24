@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-flutter-mobile",
+    "displayName": "SDKWork IAM Flutter Mobile",
+    "version": "0.1.0",
+    "type": "flutter-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-flutter-mobile",
+    "domain": "iam",
+    "capability": "iam-flutter-mobile",
+    "languages": [
+      "dart",
+      "flutter"
+    ],
+    "generated": false,
+    "private": true,
+    "status": "standardizing",
+    "manifests": []
+  },
+  "canonicalSpecs": [
+    {
+      "file": "FLUTTER_APP_MOBILE_ARCHITECTURE_SPEC.md",
+      "path": "../../../sdkwork-specs/FLUTTER_APP_MOBILE_ARCHITECTURE_SPEC.md",
+      "purpose": "Flutter mobile application root architecture."
+    },
+    {
+      "file": "APP_FLUTTER_UI_SPEC.md",
+      "path": "../../../sdkwork-specs/APP_FLUTTER_UI_SPEC.md",
+      "purpose": "Flutter UI package rules."
+    },
+    {
+      "file": "IAM_OAUTH_SPEC.md",
+      "path": "../../../sdkwork-specs/IAM_OAUTH_SPEC.md",
+      "purpose": "OAuth runtime discovery and auth metadata rules."
+    }
+  ],
+  "contracts": {
+    "dependencyComposition": "specs/dependency.composition.json"
+  }
+}

@@ -2,7 +2,7 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
 use sdkwork_router_iam_app_api::{
-    app_routes, build_sdkwork_appbase_app_api_router, required_dual_token_headers, HttpMethod,
+    app_routes, build_sdkwork_iam_app_api_router, required_dual_token_headers, HttpMethod,
     HttpRoute, APP_API_PREFIX, IAM_ANONYMOUS_BOOTSTRAP_OPERATION_IDS,
     IAM_CREDENTIAL_ENTRY_OPERATION_IDS, IAM_HANDLER_SESSION_OPERATION_IDS,
 };
@@ -322,7 +322,7 @@ fn exposes_standard_app_prefix() {
 async fn exposes_surface_named_rust_integration_entrypoints() {
     let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
-    let _app_api_router = build_sdkwork_appbase_app_api_router()
+    let _app_api_router = build_sdkwork_iam_app_api_router()
         .await
         .expect("router should build");
 
@@ -488,6 +488,12 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
             "oauth",
             "oauth.authorizationUrls.create",
         ),
+        HttpRoute::dual_token(
+            HttpMethod::Post,
+            "/app/v3/api/oauth/authorizations/{authorizationStateId}/completions",
+            "oauth",
+            "oauth.authorizations.completions.create",
+        ),
         HttpRoute::credential_entry_public(
             HttpMethod::Post,
             "/app/v3/api/oauth/device_authorizations",
@@ -600,6 +606,7 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
             "oauth.accountLinks.delete",
             "oauth.accountLinks.list",
             "oauth.authorizationUrls.create",
+            "oauth.authorizations.completions.create",
             "oauth.callbacks.handleGet",
             "oauth.callbacks.handlePost",
             "oauth.deviceAuthorizations.create",
@@ -717,11 +724,11 @@ fn app_router_source_does_not_emit_duplicate_login_session_fields() {
 #[test]
 fn pc_auth_source_does_not_expose_synthetic_session_construction() {
     let auth_service_source =
-        include_str!("../../../packages/pc-react/iam/sdkwork-auth-pc-react/src/auth-service.ts");
+        include_str!("../../../apps/sdkwork-iam-pc/packages/sdkwork-auth-pc-react/src/auth-service.ts");
     let auth_authority_source =
-        include_str!("../../../packages/pc-react/iam/sdkwork-auth-pc-react/src/auth-authority.ts");
+        include_str!("../../../apps/sdkwork-iam-pc/packages/sdkwork-auth-pc-react/src/auth-authority.ts");
     let auth_local_service_source = include_str!(
-        "../../../packages/pc-react/iam/sdkwork-auth-pc-react/src/auth-local-service.ts"
+        "../../../apps/sdkwork-iam-pc/packages/sdkwork-auth-pc-react/src/auth-local-service.ts"
     );
 
     for (source_name, source) in [
@@ -812,7 +819,7 @@ async fn anonymous_login_route_does_not_require_framework_credentials() {
     let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
     ensure_credential_entry_bootstrap_runtime_app().await;
-    let router = build_sdkwork_appbase_app_api_router()
+    let router = build_sdkwork_iam_app_api_router()
         .await
         .expect("router should build");
     let bootstrap_access_token = test_bootstrap_access_token();
@@ -841,7 +848,7 @@ async fn parameterized_public_oauth_device_routes_skip_framework_auth() {
     let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
     ensure_credential_entry_bootstrap_runtime_app().await;
-    let router = build_sdkwork_appbase_app_api_router()
+    let router = build_sdkwork_iam_app_api_router()
         .await
         .expect("router should build");
     let bootstrap_access_token = test_bootstrap_access_token();
@@ -890,7 +897,7 @@ async fn parameterized_public_oauth_device_routes_skip_framework_auth() {
 async fn app_router_does_not_seed_default_local_credentials() {
     let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
-    let router = build_sdkwork_appbase_app_api_router()
+    let router = build_sdkwork_iam_app_api_router()
         .await
         .expect("router should build");
     let (status, body_text, payload) = request_app_route(
@@ -962,7 +969,7 @@ async fn anonymous_auth_entry_routes_reject_inbound_credential_headers() {
     ];
 
     for (method, path, body) in cases {
-        let router = build_sdkwork_appbase_app_api_router()
+        let router = build_sdkwork_iam_app_api_router()
             .await
             .expect("router should build");
         let bootstrap_access_token = test_bootstrap_access_token();
@@ -1014,7 +1021,7 @@ fn assert_credential_entry_header_rejection(path: &str, payload: &Value, body_te
 async fn app_directory_routes_require_real_session_context() {
     let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
-    let router = build_sdkwork_appbase_app_api_router()
+    let router = build_sdkwork_iam_app_api_router()
         .await
         .expect("router should build");
 
@@ -1055,7 +1062,7 @@ async fn authenticated_app_directory_routes_read_registered_local_store() {
         return;
     };
     reset_iam_tenants_for_open_registration().await;
-    let router = build_sdkwork_appbase_app_api_router()
+    let router = build_sdkwork_iam_app_api_router()
         .await
         .expect("router should build");
     let unique = format!(
@@ -1406,7 +1413,7 @@ async fn reset_iam_tenants_for_open_registration() {
     .bind(OPEN_REGISTRATION_TENANT_ID)
     .execute(&pg)
     .await;
-    sdkwork_appbase_iam_bootstrap::upsert_postgres_default_subject(&pg)
+    sdkwork_iam_bootstrap::upsert_postgres_default_subject(&pg)
         .await
         .expect("default IAM subject should be available for open registration tests");
     ensure_platform_tenant_application(&pg, OPEN_REGISTRATION_TENANT_ID)

@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS uk_iam_tenant_application_org_template;

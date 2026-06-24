@@ -6,12 +6,15 @@ mod authorization_policy;
 mod dev_runtime;
 mod ephemeral_rate_limit;
 mod iam_session;
+mod oauth_authorization_server;
 mod oauth_integration_exchange;
 mod oauth_login_local;
+mod oauth_provider_callback;
 mod oauth_provider_catalog;
 mod oauth_redirect;
 mod oauth_token_lookup;
 mod resolver;
+mod runtime_auth_metadata;
 mod signing_secrets;
 mod super_admin_auth;
 
@@ -45,8 +48,14 @@ pub use application_registry::{
     provision_tenant_application, register_application_template,
     registered_application_template_to_json, resolve_tenant_application,
     tenant_application_to_json, update_tenant_application, validate_enabled_tenant_runtime_app,
-    ApplicationPackageSyncCommand, ApplicationRegisterCommand, RegisteredApplicationTemplate,
-    TenantApplication, TenantApplicationProvisionCommand, TenantApplicationUpdateCommand,
+    ensure_postgres_tenant_application_org_template_unique_index,
+    dedupe_postgres_tenant_application_org_template_rows,
+    reconcile_postgres_tenant_application_org_template_rows,
+    ensure_product_application_runtime, product_application_template_id,
+    product_tenant_application_row_id, ApplicationPackageSyncCommand,
+    derive_product_primary_domain_candidate,
+    ApplicationRegisterCommand, EnsureProductApplicationCommand,
+    RegisteredApplicationTemplate, TenantApplication, TenantApplicationProvisionCommand, TenantApplicationUpdateCommand,
     IAM_APPLICATIONS_REGISTER_PERMISSION, IAM_TENANT_APPLICATIONS_ENABLE_PERMISSION,
     IAM_TENANT_APPLICATIONS_PROVISION_PERMISSION, IAM_TENANT_APPLICATIONS_UPDATE_PERMISSION,
     PLATFORM_APPLICATION_KEY, PLATFORM_APPLICATION_TEMPLATE_ID,
@@ -57,6 +66,18 @@ pub use ephemeral_rate_limit::{check_rate_limit, check_rate_limit_sqlite};
 pub use iam_session::{
     resolve_iam_app_context_from_access_token, resolve_iam_app_context_from_auth_token,
     resolve_iam_app_context_from_dual_tokens, resolve_iam_app_context_from_oauth_bearer,
+};
+pub use oauth_authorization_server::{
+    build_oauth_jwks_document, build_openid_configuration_document, build_userinfo_claims,
+    complete_authorization_state, create_pending_authorization_state, exchange_authorization_code,
+    exchange_refresh_token, introspect_oauth_token, load_oauth_bearer_scopes, oauth_issuer_base_url,
+    oauth_login_base_url, parse_relying_party_config, resolve_relying_party_client,
+    revoke_oauth_token, validate_authorize_request, AuthorizeRequest, AuthorizationCompletion,
+    RelyingPartyConfig, ResolvedRelyingParty,
+};
+pub use oauth_provider_callback::{
+    handle_provider_callback_get, handle_provider_callback_post, ProviderCallbackHttpResponse,
+    ProviderCallbackRequestMeta,
 };
 pub use oauth_integration_exchange::{
     builtin_authorization_endpoint, builtin_default_scopes, builtin_token_endpoint,
@@ -78,6 +99,12 @@ pub use oauth_token_lookup::IamOAuthTokenLookupService;
 pub use resolver::{
     web_request_principal_from_iam, IamDatabaseWebRequestContextResolver,
     IamOpenApiWebRequestContextResolver,
+};
+pub use runtime_auth_metadata::{
+    build_runtime_auth_metadata_json, default_runtime_auth_metadata_json,
+    load_runtime_auth_metadata_input, load_tenant_application_runtime_config,
+    merge_runtime_auth_metadata_input, parse_runtime_auth_policy, ParsedRuntimeAuthPolicy,
+    RuntimeAuthMetadataInput,
 };
 pub use signing_secrets::{
     decode_signing_secret_ref, encode_signing_secret_ref, prime_signing_master_secret,

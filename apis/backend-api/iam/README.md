@@ -1,28 +1,28 @@
 # IAM Backend API Contracts
 
-Authoritative OpenAPI 3.1.2 contracts for the `sdkwork-appbase` backend-api surface.
+Authoritative OpenAPI 3.1.2 contracts for the `sdkwork-iam` backend-api surface.
 
 ## Authority
 
 | File | Purpose |
 | --- | --- |
-| `sdkwork-appbase-backend-api.openapi.yaml` | Materialized OpenAPI authority from `sdkwork-router-iam-backend-api` route manifests |
+| `sdkwork-iam-backend-api.openapi.yaml` | Materialized OpenAPI authority from `sdkwork-router-iam-backend-api` route manifests |
 
 ## Materialization
 
 Regenerate from route crates:
 
 ```bash
-node tools/generators/materialize-appbase-v3-openapi-boundaries.mjs
+node tools/generators/materialize-iam-v3-openapi-boundaries.mjs
 ```
 
 Thin compatibility wrapper:
 
 ```bash
-node sdks/materialize-appbase-v3-openapi-boundaries.mjs
+node sdks/materialize-iam-v3-openapi-boundaries.mjs
 ```
 
-Generated SDK transport output remains under `sdks/sdkwork-appbase-backend-sdk/`.
+Generated SDK transport output remains under `sdks/sdkwork-iam-backend-sdk/`.
 
 ## Related Specs
 

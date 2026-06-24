@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-iam-app-sdk",
+    "version": "1.0.0",
+    "language": "ruby",
+    "sdkType": "app",
+    "protocol": "http",
+    "packageName": "sdkwork-iam-app-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "633c3a3896091b29d11746ca41197352fec55bf0fee2fd41b7297925ce4f062b"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "f3f936dfb17da5dd3cfa1bda99716fcdb2642a6ba03541398857ad78c4392873"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "Gemfile",
+      "sha256": "c754e36f9b0fd0003a7b979b4a45a51150c6069191c2c6e341b3cea5dbe83513"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk.rb",
+      "sha256": "0eb02488b465493bec99ef7b559503aaac4bd40298ffb6d35be9280890db5039"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/api/auth.rb",
+      "sha256": "fdec15f87d925f9d1f4098ea5943e48b0d3e1989c607d034ea553b8b449ab6d4"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/api/base_api.rb",
+      "sha256": "869166567ddabba54bfb6eadbbe9dc8f6cac539862ad555f75764cf7e7e4cfcf"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/api/iam.rb",
+      "sha256": "c059db71ef5c216899f9e50be0a7e872583e3e4915766e2fbaa77a748e41c01c"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/api/oauth.rb",
+      "sha256": "c986fb0c948379448ac56bc10e35a61feb2d555fd7f739ec2ed161a2be538ae3"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/api/system.rb",
+      "sha256": "d77423521c2118b92154613c5da5c1b53d206d52381bf0d367be840ab8a9d869"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/client.rb",
+      "sha256": "819818faefd3cfb2b57cea1104b437fd0b21c010daab82b490960c262e874f09"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/http/client.rb",
+      "sha256": "dc502016d641b5aca6d6d74e66ea577c324ab287392d981ffaa0f0b163702229"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/models/appbase_access_credential_create_command.rb",
+      "sha256": "4792ec66d7932408b18ed141970235d14257695cc73572c25a1d3490d6850a53"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/models/appbase_api_result.rb",
+      "sha256": "d223b3bea4658aceb9465324c5de1a445bc7d3db51bf016476692208503bcf10"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/models/appbase_application_register_command.rb",
+      "sha256": "a134f0b0b5f8bfa16ddf07c7655aad05b5cb29bd502c1c84c91f243cea3e313e"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/models/appbase_session_create_command.rb",
+      "sha256": "cea9011915fea14fa5a6609d277e11ea4f153109c9feae34959e4b50d6b1b4f3"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/models/appbase_tenant_application_enable_command.rb",
+      "sha256": "7a544d9fbb101bc535e86bb5035820e2b3ae1f45c4e45df0e2fdf66be117ba4d"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/models/appbase_tenant_application_provision_command.rb",
+      "sha256": "040ce305738574f1e506c81e8f6c7afe8a55c33948046e3c807b47fb9735f620"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/models/appbase_tenant_application_update_command.rb",
+      "sha256": "637cdb8f117aed9bdbe15757344d95ddceaec12656fed80086df5ec41525a0d1"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/models/field_error.rb",
+      "sha256": "c933b5c22c12102ee496476d98c833e1daf2e25e433f324cd970cd701854d02a"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/models/problem_detail.rb",
+      "sha256": "65f0dd7970519bdc05662ee538bd317e9e3847563fd390b41a9ef90c695144ec"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/sdk_config.rb",
+      "sha256": "40b90d53719fc54f2d5d67177e2a909a1061d70b24133edf21e1693ba35ce15f"
+    },
+    {
+      "path": "lib/sdkwork/app_sdk/version.rb",
+      "sha256": "7df2b86ac44810981f96505c1e88231e7d2cd0fc6879909b018fcdb65027bcd7"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "README.md",
+      "sha256": "8a6ef45dd81fa14fdb12ed7bc6ebfb7a89aa468401e4cae9d258d233bb881fc3"
+    },
+    {
+      "path": "sdkwork-iam-app-sdk.gemspec",
+      "sha256": "dfcb78e8ac2aa724d64027e7cdd30e5eb756089a7bd6f51293fdc3e01dce6dd5"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "008534acbc663a118abd7dfa708512b8f522187e3a5e11561a08c9b814d55a69"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

@@ -1,10 +1,10 @@
 {
   "kind": "sdkwork.iam.registry.lock",
-  "materializedAt": "2026-06-24T08:34:58.350118+00:00",
+  "materializedAt": "2026-06-24T18:47:55.942622+00:00",
   "modules": [
     {
       "catalogVersion": "1.0.0",
-      "manifestSha256": "4708ab34368c4e179c4aa34e05f3a7e0cece31b82692bcc831d60334c0ef58d0",
+      "manifestSha256": "08694e1d3f0f28c38828497402820f4bc0b2778c91afd35c1582a170da684268",
       "moduleId": "iam-kernel"
     },
     {

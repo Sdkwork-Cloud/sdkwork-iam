@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.dependency.composition",
+  "applicationCode": "iam",
+  "clientArchitecture": "pc",
+  "surfaces": [
+    {
+      "surface": "app",
+      "corePackage": "@sdkwork/iam-pc-core",
+      "sdkClients": [
+        "@sdkwork/iam-app-sdk"
+      ],
+      "reusableModules": [
+        "@sdkwork/iam-contracts",
+        "@sdkwork/iam-sdk-ports",
+        "@sdkwork/iam-sdk-adapter",
+        "@sdkwork/iam-service",
+        "@sdkwork/iam-runtime",
+        "@sdkwork/iam-application-bootstrap",
+        "@sdkwork/iam-react",
+        "@sdkwork/iam-core-pc-react",
+        "@sdkwork/auth-pc-react",
+        "@sdkwork/auth-runtime-pc-react",
+        "@sdkwork/user-pc-react",
+        "@sdkwork/user-center-pc-react",
+        "@sdkwork/user-center-core-pc-react",
+        "@sdkwork/user-center-validation-pc-react"
+      ],
+      "hostAdapters": [],
+      "dependencyApiExports": [],
+      "dependencyApiSurfaces": []
+    },
+    {
+      "surface": "admin",
+      "corePackage": "@sdkwork/iam-pc-admin-core",
+      "shellPackage": "@sdkwork/iam-pc-admin-shell",
+      "sdkClients": [
+        "@sdkwork/iam-backend-sdk"
+      ],
+      "reusableModules": [
+        "@sdkwork/iam-contracts",
+        "@sdkwork/iam-sdk-ports",
+        "@sdkwork/iam-sdk-adapter",
+        "@sdkwork/iam-service",
+        "@sdkwork/iam-pc-admin-core",
+        "@sdkwork/iam-pc-admin-shell",
+        "@sdkwork/iam-pc-admin-oauth",
+        "@sdkwork/iam-pc-admin-tenant",
+        "@sdkwork/iam-pc-admin-organization",
+        "@sdkwork/iam-pc-admin-permission",
+        "@sdkwork/iam-pc-admin-account-binding"
+      ],
+      "hostAdapters": [],
+      "dependencyApiExports": [],
+      "dependencyApiSurfaces": []
+    }
+  ],
+  "buildToolEntries": {
+    "pnpm": {
+      "workspacePackages": [
+        "@sdkwork/iam-pc-core",
+        "@sdkwork/iam-pc-admin-core",
+        "@sdkwork/iam-pc-admin-shell",
+        "@sdkwork/iam-contracts",
+        "@sdkwork/iam-sdk-ports",
+        "@sdkwork/iam-sdk-adapter",
+        "@sdkwork/iam-service",
+        "@sdkwork/iam-runtime",
+        "@sdkwork/iam-application-bootstrap",
+        "@sdkwork/iam-rpc-contracts",
+        "@sdkwork/iam-react",
+        "@sdkwork/iam-core-pc-react",
+        "@sdkwork/auth-pc-react",
+        "@sdkwork/auth-runtime-pc-react",
+        "@sdkwork/iam-pc-admin-oauth",
+        "@sdkwork/iam-pc-admin-tenant",
+        "@sdkwork/iam-pc-admin-organization",
+        "@sdkwork/iam-pc-admin-permission",
+        "@sdkwork/iam-pc-admin-account-binding",
+        "@sdkwork/user-pc-react",
+        "@sdkwork/user-center-pc-react",
+        "@sdkwork/user-center-core-pc-react",
+        "@sdkwork/user-center-validation-pc-react"
+      ]
+    }
+  }
+}

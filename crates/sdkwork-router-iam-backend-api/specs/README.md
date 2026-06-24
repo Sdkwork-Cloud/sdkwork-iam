@@ -8,7 +8,7 @@ This directory is the local standards index for `sdkwork-router-iam-backend-api`
 | --- | --- |
 | Name | `sdkwork-router-iam-backend-api` |
 | Type | `rust-route-crate` |
-| Root | `sdkwork-appbase/crates/sdkwork-router-iam-backend-api` |
+| Root | `sdkwork-iam/crates/sdkwork-router-iam-backend-api` |
 | Domain | `iam` |
 | Capability | `iam` |
 | Languages | `rust` |
@@ -36,8 +36,8 @@ This directory is the local standards index for `sdkwork-router-iam-backend-api`
 ## Public Exports
 
 - `sdkwork_router_iam_backend_api::backend_routes`
-- `sdkwork_router_iam_backend_api::sdkwork_appbase_backend_api_routes`
-- `sdkwork_router_iam_backend_api::build_sdkwork_appbase_backend_api_router`
+- `sdkwork_router_iam_backend_api::sdkwork_iam_backend_api_routes`
+- `sdkwork_router_iam_backend_api::build_sdkwork_iam_backend_api_router`
 
 ## SDK Clients
 

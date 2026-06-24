@@ -17,7 +17,7 @@ async-trait.workspace = true
 axum.workspace = true
 base64 = "0.22"
 chrono.workspace = true
-sdkwork-iam-bootstrap = { path = "../sdkwork-iam-bootstrap" }
+sdkwork_iam_bootstrap.workspace = true
 sdkwork_iam_context_service.workspace = true
 sdkwork_database_sqlx.workspace = true
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
@@ -26,11 +26,13 @@ serde_json.workspace = true
 password-hash = { version = "0.5", features = ["rand_core"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 sha2 = "0.10"
+sha1 = "0.10"
 sqlx.workspace = true
 uuid = { version = "1", features = ["v7"] }
 sdkwork_utils_rust.workspace = true
-sdkwork-web-axum = { path = "../../../sdkwork-web-framework/crates/sdkwork-web-axum" }
-sdkwork-web-core = { path = "../../../sdkwork-web-framework/crates/sdkwork-web-core" }
+sdkwork-web-axum.workspace = true
+sdkwork-web-core.workspace = true
+urlencoding = "2"
 
 [dev-dependencies]
 axum.workspace = true

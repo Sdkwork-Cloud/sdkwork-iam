@@ -1,6 +1,6 @@
 # SDKWork Skills
 
-This directory stores checked-in repository skills for `sdkwork-appbase`.
+This directory stores checked-in repository skills for `sdkwork-iam`.
 
 Skills must follow `../sdkwork-specs/SDKWORK_WORKSPACE_SPEC.md` and cite the
 task-specific standards from `../sdkwork-specs/README.md` instead of copying

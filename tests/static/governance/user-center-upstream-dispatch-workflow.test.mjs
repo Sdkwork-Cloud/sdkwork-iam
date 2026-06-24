@@ -10,7 +10,7 @@ function readWorkflow() {
   return readFileSync(workflowPath, 'utf8');
 }
 
-test('sdkwork-appbase exposes a governed user-center upstream dispatch workflow', () => {
+test('sdkwork-iam exposes a governed user-center upstream dispatch workflow', () => {
   assert.equal(existsSync(workflowPath), true, 'missing .github/workflows/user-center-upstream-dispatch.yml');
 
   const workflow = readWorkflow();

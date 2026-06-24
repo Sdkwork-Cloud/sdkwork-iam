@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-h5-core",
+    "displayName": "SDKWork IAM H5 Core",
+    "version": "0.1.0",
+    "type": "node-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-h5/packages/sdkwork-iam-h5-core",
+    "domain": "iam",
+    "capability": "iam-h5-core",
+    "languages": [
+      "typescript"
+    ],
+    "generated": false,
+    "private": true,
+    "status": "standardizing",
+    "manifests": [
+      "package.json"
+    ]
+  },
+  "contracts": {
+    "dependencyComposition": "../../../specs/dependency.composition.json"
+  }
+}

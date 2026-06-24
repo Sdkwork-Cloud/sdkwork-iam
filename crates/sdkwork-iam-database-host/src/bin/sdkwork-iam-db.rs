@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
-use sdkwork_appbase_database_host::unified_postgres_env::apply_unified_claw_postgres_env;
-use sdkwork_appbase_database_host::AppbaseIamDatabaseModule;
+use sdkwork_iam_database_host::unified_postgres_env::apply_unified_claw_postgres_env;
+use sdkwork_iam_database_host::IamDatabaseModule;
 use sdkwork_database_drift::DriftEngine;
 use sdkwork_database_lifecycle::LifecycleOrchestrator;
 use sdkwork_database_spi::{traits::SeedProvider, validate_module_layout, LocaleTag, SeedProfile};
@@ -11,8 +11,8 @@ use sdkwork_database_sqlx::{create_pool_from_env, DatabasePool};
 
 #[derive(Parser)]
 #[command(
-    name = "sdkwork-appbase-db",
-    about = "SDKWork Appbase IAM database lifecycle CLI with IMF seed hooks"
+    name = "sdkwork-iam-db",
+    about = "SDKWork IAM database lifecycle CLI with IMF seed hooks"
 )]
 struct Cli {
     #[arg(long, default_value = ".")]
@@ -54,7 +54,7 @@ enum Commands {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let module = Arc::new(AppbaseIamDatabaseModule::from_app_root(&cli.app_root)?);
+    let module = Arc::new(IamDatabaseModule::from_app_root(&cli.app_root)?);
 
     match cli.command {
         Commands::Validate => {

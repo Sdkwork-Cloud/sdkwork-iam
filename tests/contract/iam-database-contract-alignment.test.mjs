@@ -26,7 +26,7 @@ function readRustCatalogTableNames() {
 function readIamContractsFoundationTableNames() {
   const contractsPath = path.join(
     root,
-    'packages/common/iam/sdkwork-iam-contracts/src/index.ts',
+    'apps/sdkwork-iam-common/packages/sdkwork-iam-contracts/src/index.ts',
   );
   const source = fs.readFileSync(contractsPath, 'utf8');
   const tablesBlock = source.match(/export const SDKWORK_IAM_TABLES = \{([\s\S]*?)\} as const;/);

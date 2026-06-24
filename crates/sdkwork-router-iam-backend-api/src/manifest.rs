@@ -472,6 +472,12 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
         "iam",
         "tenantApplications.provision",
     ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}",
+        "iam",
+        "tenantApplications.retrieve",
+    ),
     HttpRoute::public(
         HttpMethod::Patch,
         "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}",
@@ -942,6 +948,6 @@ pub fn iam_backend_api_route_manifest() -> HttpRouteManifest {
     HttpRouteManifest::new(enriched_backend_routes())
 }
 
-pub fn sdkwork_appbase_backend_api_routes() -> Vec<HttpRoute> {
+pub fn sdkwork_iam_backend_api_routes() -> Vec<HttpRoute> {
     iam_backend_enriched_routes().to_vec()
 }

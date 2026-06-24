@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-pc-core",
+    "displayName": "SDKWork IAM PC Core",
+    "version": "0.1.0",
+    "type": "node-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-core",
+    "domain": "iam",
+    "capability": "iam-pc-core",
+    "languages": [
+      "typescript"
+    ],
+    "generated": false,
+    "private": true,
+    "manifests": [
+      "package.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "APP_DEPENDENCY_COMPOSITION_SPEC.md",
+      "path": "../../../../../../sdkwork-specs/APP_DEPENDENCY_COMPOSITION_SPEC.md",
+      "purpose": "Semantic dependency manifest and core composition entry."
+    },
+    {
+      "file": "IAM_SPEC.md",
+      "path": "../../../../../../sdkwork-specs/IAM_SPEC.md",
+      "purpose": "IAM domain boundary and package layering."
+    }
+  ],
+  "contracts": {
+    "dependencyComposition": "../../../specs/dependency.composition.json"
+  }
+}

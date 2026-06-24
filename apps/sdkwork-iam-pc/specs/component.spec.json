@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-pc",
+    "displayName": "SDKWork IAM PC",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-pc",
+    "domain": "iam",
+    "capability": "iam-pc",
+    "languages": [
+      "typescript",
+      "react"
+    ],
+    "generated": false,
+    "private": true,
+    "manifests": [
+      "packages/sdkwork-iam-pc-core/package.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "APP_PC_ARCHITECTURE_SPEC.md",
+      "path": "../../../sdkwork-specs/APP_PC_ARCHITECTURE_SPEC.md",
+      "purpose": "PC application root architecture and package taxonomy."
+    },
+    {
+      "file": "APP_PC_REACT_UI_SPEC.md",
+      "path": "../../../sdkwork-specs/APP_PC_REACT_UI_SPEC.md",
+      "purpose": "PC React package UI and SDK integration rules."
+    },
+    {
+      "file": "APP_DEPENDENCY_COMPOSITION_SPEC.md",
+      "path": "../../../sdkwork-specs/APP_DEPENDENCY_COMPOSITION_SPEC.md",
+      "purpose": "Semantic dependency manifest and core composition entry."
+    },
+    {
+      "file": "IAM_SPEC.md",
+      "path": "../../../sdkwork-specs/IAM_SPEC.md",
+      "purpose": "IAM domain boundary and package layering."
+    },
+    {
+      "file": "IAM_LOGIN_INTEGRATION_SPEC.md",
+      "path": "../../../sdkwork-specs/IAM_LOGIN_INTEGRATION_SPEC.md",
+      "purpose": "Login, session, and IAM runtime integration rules."
+    }
+  ],
+  "contracts": {
+    "dependencyComposition": "specs/dependency.composition.json",
+    "publicExports": [],
+    "sdkClients": [
+      "@sdkwork/iam-app-sdk",
+      "@sdkwork/iam-backend-sdk"
+    ]
+  }
+}

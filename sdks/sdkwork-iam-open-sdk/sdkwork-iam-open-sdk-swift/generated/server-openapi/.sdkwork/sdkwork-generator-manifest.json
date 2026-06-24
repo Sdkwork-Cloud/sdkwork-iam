@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-iam-open-sdk",
+    "version": "1.0.0",
+    "language": "swift",
+    "sdkType": "custom",
+    "protocol": "http",
+    "packageName": "sdkwork-iam-open-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "65eb75fb276e53c0cc7cca96fd8d630515c132fc6a4cba6ae3a6e1f77fa9c471"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "1b078b9002190ca5d9f2c89b8de3e47cecf730f5a570992c383dad9f76362f40"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "Package.swift",
+      "sha256": "1faf6b8d657d4de7b42da3d8ff04a6a81d1479982dbae1274039ab81587fb8d8"
+    },
+    {
+      "path": "README.md",
+      "sha256": "b9e103986feec0e88dcae0723238260d76724af2c838301e6f80ec6f253a0bc9"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "0cf8214c0478857954311ebb5b7e1f917450bb8ab44d843403b83dd81ff6a1ed"
+    },
+    {
+      "path": "Sources/API/API.swift",
+      "sha256": "ebaaec469816276ca06fc2f320fdd584f2086a45a2461af0d44b349dd11e63d7"
+    },
+    {
+      "path": "Sources/API/ApiPaths.swift",
+      "sha256": "11b19e101f468fe293859daf54747b0b1b3906ee28f47e4a1a5daa9510b05fbd"
+    },
+    {
+      "path": "Sources/API/IamOauthApi.swift",
+      "sha256": "558b03402eb725e7c62c5ea4e13073641ba3a6642c900d1c2b7217287e36c921"
+    },
+    {
+      "path": "Sources/HTTP/HttpClient.swift",
+      "sha256": "30d4ea4afdefbebb7323d2ecc50b1c63307eaf3122196bcfc52130f1e0e5d744"
+    },
+    {
+      "path": "Sources/Models.swift",
+      "sha256": "164938181e93eade255ebca7626920b70926524bf26dbe47f27f06fdc2934468"
+    },
+    {
+      "path": "Sources/SdkworkCustomClient.swift",
+      "sha256": "289bc47366bd9116ce595e48bde9e975ab55d0cbc248a642b19b5c3f9615456a"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

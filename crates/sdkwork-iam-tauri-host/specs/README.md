@@ -8,7 +8,7 @@ This directory is the local standards index for `sdkwork-iam-tauri-host`. Root S
 | --- | --- |
 | Name | `sdkwork-iam-tauri-host` |
 | Type | `tauri-host` |
-| Root | `sdkwork-appbase/crates/sdkwork-iam-tauri-host` |
+| Root | `sdkwork-iam/crates/sdkwork-iam-tauri-host` |
 | Domain | `iam` |
 | Capability | `tauri-host` |
 | Languages | `rust` |

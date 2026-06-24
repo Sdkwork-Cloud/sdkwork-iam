@@ -6,7 +6,7 @@
     "displayName": "SDKWork Router Iam App Api",
     "version": "0.1.0",
     "type": "rust-route-crate",
-    "root": "sdkwork-appbase/crates/sdkwork-router-iam-app-api",
+    "root": "sdkwork-iam/crates/sdkwork-router-iam-app-api",
     "domain": "iam",
     "capability": "iam",
     "surface": "app-api",
@@ -75,13 +75,13 @@
   "contracts": {
     "publicExports": [
       "sdkwork_router_iam_app_api::app_routes",
-      "sdkwork_router_iam_app_api::sdkwork_appbase_app_api_routes",
-      "sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router",
-      "sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router_with_local_directory",
+      "sdkwork_router_iam_app_api::sdkwork_iam_app_api_routes",
+      "sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router",
+      "sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router_with_local_directory",
       "sdkwork_router_iam_app_api::build_local_app_api_router"
     ],
     "runtimeEntrypoints": [
-      "sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router"
+      "sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router"
     ],
     "routeManifest": "sdkwork_router_iam_app_api::app_routes",
     "sdkClients": [],
@@ -99,11 +99,11 @@
   },
   "verification": {
     "commands": [
-      "cargo test -p sdkwork-router-iam-app-api"
+      "cargo test -j 1 -p sdkwork-router-iam-app-api --test iam_http_standard -- --test-threads 1"
     ]
   },
   "metadata": {
-    "managedBy": "sdkwork-appbase Rust workspace migration",
+    "managedBy": "sdkwork-iam",
     "standardVersion": "2026-06-12"
   }
 }

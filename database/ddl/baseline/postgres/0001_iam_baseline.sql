@@ -1368,6 +1368,9 @@ CREATE INDEX IF NOT EXISTS idx_iam_tenant_application_tenant_status
 CREATE INDEX IF NOT EXISTS idx_iam_tenant_application_template
   ON iam_tenant_application (template_id, tenant_id, status, id);
 
+CREATE UNIQUE INDEX IF NOT EXISTS uk_iam_tenant_application_org_template
+  ON iam_tenant_application (tenant_id, organization_id, template_id);
+
 -- source: database/migrations/postgres/0008_iam_rbac_federation.up.sql
 -- IAM RBAC federation metadata: permission/role governance columns, directory trace columns, registry tables.
 

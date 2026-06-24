@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-h5",
+    "displayName": "SDKWork IAM H5",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-h5",
+    "domain": "iam",
+    "capability": "iam-h5",
+    "languages": [
+      "typescript",
+      "react"
+    ],
+    "generated": false,
+    "private": true,
+    "status": "standardizing",
+    "manifests": [
+      "packages/sdkwork-iam-h5-core/package.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "APP_H5_ARCHITECTURE_SPEC.md",
+      "path": "../../../sdkwork-specs/APP_H5_ARCHITECTURE_SPEC.md",
+      "purpose": "H5 application root architecture and package taxonomy."
+    },
+    {
+      "file": "APP_MOBILE_REACT_UI_SPEC.md",
+      "path": "../../../sdkwork-specs/APP_MOBILE_REACT_UI_SPEC.md",
+      "purpose": "H5/mobile React package UI rules."
+    },
+    {
+      "file": "IAM_OAUTH_SPEC.md",
+      "path": "../../../sdkwork-specs/IAM_OAUTH_SPEC.md",
+      "purpose": "OAuth runtime discovery and auth metadata rules."
+    }
+  ],
+  "contracts": {
+    "dependencyComposition": "specs/dependency.composition.json"
+  }
+}

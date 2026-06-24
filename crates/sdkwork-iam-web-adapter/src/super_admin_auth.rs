@@ -371,7 +371,7 @@ async fn user_has_permission_code(
     user_id: &str,
     permission_code: &str,
 ) -> Result<bool, String> {
-    sdkwork_appbase_iam_bootstrap::user_has_permission_code(pg, tenant_id, user_id, permission_code)
+    sdkwork_iam_bootstrap::user_has_permission_code(pg, tenant_id, user_id, permission_code)
         .await
 }
 

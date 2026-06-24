@@ -1,0 +1,37 @@
+{
+  "name": "@sdkwork/iam-credential-entry",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "SDKWork IAM credential-entry bootstrap transport for login, registration, and QR flows.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm --dir ../../../.. exec vitest run apps/sdkwork-iam-common/packages/sdkwork-iam-credential-entry/tests --config vitest.config.ts --configLoader native --pool vmThreads"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@sdkwork/iam-app-sdk": "workspace:*",
+    "@sdkwork/runtime-bootstrap": "workspace:*",
+    "@sdkwork/sdk-common": "^1.0.2"
+  },
+  "sdkwork": {
+    "architecture": "common",
+    "capability": "iam-credential-entry",
+    "domain": "iam",
+    "packageType": "runtime",
+    "status": "standard"
+  }
+}

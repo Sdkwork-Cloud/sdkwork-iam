@@ -30,6 +30,7 @@ fn backend_context(login_scope: WebLoginScope, organization_id: Option<&str>) ->
         locale: None,
         client_kind: None,
         operation: None,
+        trace_id: None,
     }
 }
 
@@ -58,6 +59,7 @@ fn app_context(login_scope: WebLoginScope, organization_id: Option<&str>) -> Web
         locale: None,
         client_kind: None,
         operation: None,
+        trace_id: None,
     }
 }
 

@@ -152,6 +152,12 @@ const IAM_APP_API_ROUTES: &[HttpRoute] = &[
         "oauth",
         "oauth.grants.delete",
     ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/app/v3/api/oauth/authorizations/{authorizationStateId}/completions",
+        "oauth",
+        "oauth.authorizations.completions.create",
+    ),
     HttpRoute::public(
         HttpMethod::Get,
         "/app/v3/api/system/iam/runtime",
@@ -323,6 +329,6 @@ pub fn iam_app_api_route_manifest() -> HttpRouteManifest {
     HttpRouteManifest::new(IAM_APP_API_ROUTES)
 }
 
-pub fn sdkwork_appbase_app_api_routes() -> Vec<HttpRoute> {
+pub fn sdkwork_iam_app_api_routes() -> Vec<HttpRoute> {
     app_routes()
 }

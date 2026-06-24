@@ -33,13 +33,11 @@ const requiredRouteCrates = [
 ];
 
 const activeRustCatalogFiles = [
-  "specs/appbase-capabilities.yaml",
+  "specs/iam-capabilities.yaml",
   "tools/catalog/package-catalog.mjs",
   "scripts/run-iam-standard-contracts.mjs",
-  "tools/generators/materialize-appbase-v3-openapi-boundaries.mjs",
-  "sdks/materialize-appbase-v3-openapi-boundaries.mjs",
-  "tools/generators/materialize-appbase-rpc-proto-boundaries.mjs",
-  "sdks/materialize-appbase-rpc-proto-boundaries.mjs",
+  "tools/generators/materialize-iam-v3-openapi-boundaries.mjs",
+  "tools/generators/materialize-iam-rpc-proto-boundaries.mjs",
   ...APPBASE_APIS_OPENAPI_AUTHORITY_FILES,
   ...APPBASE_OPENAPI_MATERIALIZED_FILES,
 ];
@@ -51,6 +49,14 @@ const appbaseOwnedLegacyRustPathTokens = [
   "resolve(appbaseRoot, 'packages/native-rust/",
   'resolve(appbaseRoot, "packages/native-rust/',
 ];
+
+function includesForbiddenRustName(text, forbiddenName) {
+  if (forbiddenName === "sdkwork_iam_tauri") {
+    return /sdkwork_iam_tauri(?!_host)/u.test(text);
+  }
+
+  return text.includes(forbiddenName);
+}
 
 function readText(filePath) {
   return fs.readFileSync(filePath, "utf8");
@@ -164,7 +170,7 @@ test("rust workspace uses standard crates layout and canonical crate names", () 
   }
 
   for (const forbiddenName of forbiddenNames) {
-    if (rootCargoToml.includes(forbiddenName)) {
+    if (includesForbiddenRustName(rootCargoToml, forbiddenName)) {
       errors.push(`Root Cargo.toml still references forbidden Rust name: ${forbiddenName}`);
     }
   }
@@ -193,7 +199,7 @@ test("rust workspace uses standard crates layout and canonical crate names", () 
         errors.push(`${relativePath} package name must use kebab-case: ${packageName}`);
       }
       for (const forbiddenName of forbiddenNames) {
-        if (packageName === forbiddenName || cargoToml.includes(forbiddenName)) {
+        if (packageName === forbiddenName || includesForbiddenRustName(cargoToml, forbiddenName)) {
           errors.push(`${relativePath} still references forbidden Rust name: ${forbiddenName}`);
         }
       }
@@ -218,7 +224,7 @@ test("rust workspace uses standard crates layout and canonical crate names", () 
       if (fs.existsSync(componentSpecPath)) {
         const componentSpec = JSON.parse(readText(componentSpecPath));
         const component = componentSpec.component ?? {};
-        const expectedRoot = `sdkwork-appbase/${crateRelativeRoot}`;
+        const expectedRoot = `sdkwork-iam/${crateRelativeRoot}`;
 
         if (component.name !== packageName) {
           errors.push(
@@ -230,8 +236,23 @@ test("rust workspace uses standard crates layout and canonical crate names", () 
             `${crateRelativeRoot}/specs/component.spec.json component.root must be ${expectedRoot}`,
           );
         }
-        if (!Array.isArray(componentSpec.verification?.commands)
-          || !componentSpec.verification.commands.includes(`cargo test -p ${packageName}`)) {
+        if (!Array.isArray(componentSpec.verification?.commands)) {
+          errors.push(
+            `${crateRelativeRoot}/specs/component.spec.json verification.commands must be declared`,
+          );
+        } else if (component.name === "sdkwork-router-iam-app-api") {
+          const commands = componentSpec.verification.commands;
+          const hasGovernedHttpTests = commands.some(
+            (command) => typeof command === "string"
+              && command.includes(`-p ${packageName}`)
+              && command.includes("--test iam_http_standard"),
+          );
+          if (!hasGovernedHttpTests) {
+            errors.push(
+              `${crateRelativeRoot}/specs/component.spec.json verification.commands must include governed iam_http_standard tests for ${packageName}`,
+            );
+          }
+        } else if (!componentSpec.verification.commands.includes(`cargo test -p ${packageName}`)) {
           errors.push(
             `${crateRelativeRoot}/specs/component.spec.json verification.commands must include cargo test -p ${packageName}`,
           );
@@ -243,9 +264,9 @@ test("rust workspace uses standard crates layout and canonical crate names", () 
             }
           }
           const legacyAggregateFiles = [
-            "src/sdkwork_appbase_app_api.rs",
-            "src/sdkwork_appbase_backend_api.rs",
-            "src/sdkwork_appbase_open_api.rs",
+            "src/sdkwork_iam_app_api.rs",
+            "src/sdkwork_iam_backend_api.rs",
+            "src/sdkwork_iam_open_api.rs",
           ];
           for (const legacyFile of legacyAggregateFiles) {
             if (fs.existsSync(path.join(crateRoot, legacyFile))) {
@@ -281,7 +302,7 @@ test("rust workspace uses standard crates layout and canonical crate names", () 
     }
 
     for (const forbiddenName of forbiddenNames) {
-      if (text.includes(forbiddenName)) {
+      if (includesForbiddenRustName(text, forbiddenName)) {
         errors.push(`${relativePath} still references forbidden Rust name: ${forbiddenName}`);
       }
     }
@@ -296,7 +317,7 @@ test("rust workspace uses standard crates layout and canonical crate names", () 
     }
 
     for (const forbiddenName of forbiddenNames) {
-      if (text.includes(forbiddenName)) {
+      if (includesForbiddenRustName(text, forbiddenName)) {
         errors.push(`${activeFile} still references forbidden Rust name: ${forbiddenName}`);
       }
     }

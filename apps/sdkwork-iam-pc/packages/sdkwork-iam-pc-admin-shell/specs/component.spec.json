@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-pc-admin-shell",
+    "displayName": "SDKWork IAM PC Admin Shell",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-shell",
+    "domain": "iam",
+    "declaredDomain": "iam",
+    "capability": "iam-pc-admin-shell",
+    "surface": "backend-admin",
+    "status": "standard",
+    "languages": [
+      "typescript"
+    ],
+    "generated": false,
+    "private": true,
+    "manifests": [
+      "package.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "APP_PC_ARCHITECTURE_SPEC.md",
+      "path": "../../../../../sdkwork-specs/APP_PC_ARCHITECTURE_SPEC.md",
+      "purpose": "PC application root layout and backend-admin shell composition."
+    },
+    {
+      "file": "BACKEND_UI_SPEC.md",
+      "path": "../../../../../sdkwork-specs/BACKEND_UI_SPEC.md",
+      "purpose": "Backend-admin menu and route metadata rules."
+    }
+  ],
+  "contracts": {
+    "publicExports": [
+      "."
+    ],
+    "runtimeEntrypoints": [
+      "package.json#scripts.typecheck"
+    ],
+    "sdkClients": [],
+    "events": [],
+    "configKeys": [
+      "package.json#sdkwork"
+    ],
+    "routeManifest": null
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative. Local specs may extend but must not contradict them.",
+    "dependencyPolicy": "Shell consumes admin-core module registry for menu and route metadata.",
+    "sdkPolicy": "Shell does not create SDK clients directly.",
+    "languagePolicy": "TypeScript packages follow workspace manifests while preserving the component contract."
+  },
+  "verification": {
+    "commands": [
+      "pnpm --filter @sdkwork/iam-pc-admin-shell typecheck"
+    ]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-06-24"
+  }
+}

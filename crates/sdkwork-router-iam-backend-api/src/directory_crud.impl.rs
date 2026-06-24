@@ -564,7 +564,7 @@ async fn create_role_permission(
         Ok(scope) => scope,
         Err(response) => return response,
     };
-    if let Err(error) = sdkwork_appbase_iam_bootstrap::ensure_permission_grant_within_assigner_scope(
+    if let Err(error) = sdkwork_iam_bootstrap::ensure_permission_grant_within_assigner_scope(
         &assigner_scope,
         &permission_code,
     ) {

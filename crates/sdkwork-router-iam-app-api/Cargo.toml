@@ -25,10 +25,10 @@ time.workspace = true
 tokio.workspace = true
 tracing = "0.1"
 uuid = { version = "1", features = ["v7"] }
-sdkwork-iam-bootstrap = { path = "../sdkwork-iam-bootstrap" }
+sdkwork_iam_bootstrap.workspace = true
 sdkwork_database_config.workspace = true
 sdkwork_database_sqlx.workspace = true
-sdkwork_appbase_database_host.workspace = true
+sdkwork_iam_database_host.workspace = true
 sdkwork_iam_context_service.workspace = true
 async-trait.workspace = true
 sdkwork_iam_web_adapter.workspace = true
@@ -39,6 +39,7 @@ sdkwork_utils_rust.workspace = true
 
 [dev-dependencies]
 http-body-util = "0.1"
+sdkwork-router-iam-open-api = { path = "../sdkwork-router-iam-open-api" }
 sqlx = { workspace = true, features = ["sqlite"] }
 tokio.workspace = true
 tower.workspace = true

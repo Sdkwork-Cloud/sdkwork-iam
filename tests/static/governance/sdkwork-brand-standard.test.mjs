@@ -14,18 +14,15 @@ const textFileExtensions = new Set([
   ".ts",
   ".tsx",
 ]);
-const scanRoots = [
-  "README.md",
-  "sdks/README.md",
-  "tools/catalog/package-catalog.mjs",
-  "packages",
-];
+const   scanRoots = [
+    "README.md",
+    "sdks/README.md",
+    "tools/catalog/package-catalog.mjs",
+    "apps",
+  ];
 const packageCatalogPath = path.join(appbaseRoot, "tools/catalog/package-catalog.mjs");
 const tsconfigBasePath = path.join(appbaseRoot, "tsconfig.base.json");
-const mobileAppbaseCatalogPath = path.join(
-  appbaseRoot,
-  "packages/mobile-react/foundation/sdkwork-appbase-mobile-react/src/catalog.ts",
-);
+const mobileAppbaseCatalogPath = null;
 
 function isTextFile(filePath) {
   return textFileExtensions.has(path.extname(filePath));
@@ -66,13 +63,13 @@ function findForbiddenBrandMentions() {
   });
 }
 
-test("appbase public packages use Sdkwork branding instead of legacy product names", () => {
+test("iam public packages use Sdkwork branding instead of legacy product names", () => {
   const violations = findForbiddenBrandMentions();
 
   assert.deepEqual(violations, []);
 });
 
-test("appbase package catalog does not retain vip or membership commerce package ownership", () => {
+test("iam package catalog does not retain vip or membership commerce package ownership", () => {
   const content = fs.readFileSync(packageCatalogPath, "utf8");
 
   assert.ok(!content.includes("sdkwork-vip-pc-react"));
@@ -84,7 +81,7 @@ test("appbase package catalog does not retain vip or membership commerce package
   assert.ok(!content.includes("sdkwork-membership-admin-pc-react"));
 });
 
-test("appbase TypeScript paths do not retain vip or membership commerce aliases", () => {
+test("iam TypeScript paths do not retain vip or membership commerce aliases", () => {
   const content = fs.readFileSync(tsconfigBasePath, "utf8");
 
   assert.ok(!content.includes("@sdkwork/vip-pc-react"));
@@ -93,12 +90,4 @@ test("appbase TypeScript paths do not retain vip or membership commerce aliases"
   assert.ok(!content.includes("@sdkwork/membership-pc-react"));
   assert.ok(!content.includes("@sdkwork/membership-purchase-pc-react"));
   assert.ok(!content.includes("@sdkwork/membership-admin-pc-react"));
-});
-
-test("mobile appbase catalog does not register a vip commerce package placeholder", () => {
-  const content = fs.readFileSync(mobileAppbaseCatalogPath, "utf8");
-
-  assert.ok(!content.includes('@sdkwork/vip-mobile-react'));
-  assert.ok(!content.includes('capability: "vip"'));
-  assert.ok(!content.includes('title: "VIP"'));
 });

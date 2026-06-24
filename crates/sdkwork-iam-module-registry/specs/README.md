@@ -8,7 +8,7 @@ Local standards index for `sdkwork-iam-module-registry`.
 | --- | --- |
 | Name | `sdkwork-iam-module-registry` |
 | Type | `rust-crate` |
-| Root | `sdkwork-appbase/crates/sdkwork-iam-module-registry` |
+| Root | `sdkwork-iam/crates/sdkwork-iam-module-registry` |
 | Domain | `iam` |
 | Capability | `rbac-federation` |
 | Languages | `rust` |

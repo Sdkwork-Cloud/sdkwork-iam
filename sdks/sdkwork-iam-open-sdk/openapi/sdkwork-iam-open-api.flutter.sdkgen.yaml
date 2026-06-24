@@ -1,0 +1,1632 @@
+{
+  "openapi": "3.1.2",
+  "info": {
+    "title": "SDKWork IAM Open API",
+    "version": "1.0.0",
+    "description": "Public OAuth authorization-server ingress and provider callback contract for sdkwork-iam.",
+    "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+    "x-sdkwork-sdk-family": "sdkwork-iam-open-sdk",
+    "x-sdkwork-audience": "Public OAuth authorization-server clients, provider callbacks, and open ingress integrations"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local sdkwork-iam runtime"
+    }
+  ],
+  "tags": [
+    {
+      "name": "iamOauth",
+      "description": "Iam Oauth API resources.",
+      "x-sdk-nested-resource-surface": true
+    }
+  ],
+  "security": [],
+  "paths": {
+    "/.well-known/oauth-authorization-server": {
+      "get": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth well Known authorization Server Metadata retrieve.",
+        "operationId": "iam.oauth.wellKnown.authorizationServerMetadata.retrieve",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.wellKnown.authorizationServerMetadata",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.read"
+      }
+    },
+    "/.well-known/openid-configuration": {
+      "get": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth well Known openid Configuration retrieve.",
+        "operationId": "iam.oauth.wellKnown.openidConfiguration.retrieve",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.wellKnown.openidConfiguration",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.read"
+      }
+    },
+    "/iam/v3/api/oauth/authorize": {
+      "get": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth authorize handle Get.",
+        "operationId": "iam.oauth.authorize.handleGet",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.authorize",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.manage"
+      }
+    },
+    "/iam/v3/api/oauth/introspect": {
+      "post": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth introspect create.",
+        "operationId": "iam.oauth.introspect.create",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.introspect",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.manage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppbaseOperationCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/iam/v3/api/oauth/jwks": {
+      "get": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth jwks retrieve.",
+        "operationId": "iam.oauth.jwks.retrieve",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.jwks",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.read"
+      }
+    },
+    "/iam/v3/api/oauth/provider_callbacks/{callbackPublicId}": {
+      "get": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth provider Callbacks handle Get.",
+        "operationId": "iam.oauth.providerCallbacks.handleGet",
+        "parameters": [
+          {
+            "name": "callbackPublicId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.providerCallbacks",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.manage"
+      },
+      "post": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth provider Callbacks handle Post.",
+        "operationId": "iam.oauth.providerCallbacks.handlePost",
+        "parameters": [
+          {
+            "name": "callbackPublicId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.providerCallbacks",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.manage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppbaseOperationCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/iam/v3/api/oauth/revoke": {
+      "post": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth revoke create.",
+        "operationId": "iam.oauth.revoke.create",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.revoke",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.manage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppbaseOperationCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/iam/v3/api/oauth/token": {
+      "post": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth token create.",
+        "operationId": "iam.oauth.token.create",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.token",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.manage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppbaseOperationCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/iam/v3/api/oauth/userinfo": {
+      "get": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth userinfo retrieve.",
+        "operationId": "iam.oauth.userinfo.retrieve",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.userinfo",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.read"
+      }
+    },
+    "/iam/v3/api/system/oauth/authorization_server_metadata": {
+      "get": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth authorization Server Metadata retrieve.",
+        "operationId": "iam.oauth.authorizationServerMetadata.retrieve",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.authorizationServerMetadata",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.read"
+      }
+    },
+    "/iam/v3/api/system/oauth/openid_configuration": {
+      "get": {
+        "tags": [
+          "iamOauth"
+        ],
+        "summary": "Iam oauth openid Configuration retrieve.",
+        "operationId": "iam.oauth.openidConfiguration.retrieve",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppbaseApiResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-owner": "sdkwork-iam",
+        "x-sdkwork-api-authority": "sdkwork-iam-open-api",
+        "x-sdkwork-domain": "iam",
+        "x-sdkwork-resource": "iam.oauth.openidConfiguration",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-server-request-id": true,
+        "x-sdkwork-permission": "iam.oauth.read"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "SDKWork open-api API key for protected ingress operations."
+      },
+      "OAuthBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "OAuth bearer credential for protected open-api operations."
+      }
+    },
+    "schemas": {
+      "AppbaseApiResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "requestId",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Server-owned request correlation id."
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "AppbaseOperationCommand": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Operation-specific command payload defined by the owning IAM Rust module."
+      },
+      "AppbaseSessionCreateCommand": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Session creation command for credential login and external user-center session exchange.",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email credential used by standard password login."
+          },
+          "username": {
+            "type": "string",
+            "description": "Username credential used by standard password login."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Phone credential used by standard password login."
+          },
+          "password": {
+            "type": "string",
+            "description": "Write-only password credential used by standard password login.",
+            "format": "password"
+          },
+          "externalToken": {
+            "type": "string",
+            "description": "Opaque upstream credential used only by an external user-center session exchange."
+          },
+          "providerKey": {
+            "type": "string",
+            "description": "External authority provider key used to select the configured bridge."
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "Verified tenant id supplied by an external user-center session exchange after upstream identity validation."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Verified organization id supplied by an external user-center session exchange when the upstream identity resolved an organization scope."
+          }
+        }
+      },
+      "AppbaseApplicationRegisterCommand": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Super-admin registered application command for startup bootstrap.",
+        "required": [
+          "appKey",
+          "name",
+          "appType",
+          "version",
+          "defaultAccessPermissions"
+        ],
+        "properties": {
+          "authToken": {
+            "type": "string",
+            "description": "Super-admin auth token used for bootstrap body authentication."
+          },
+          "username": {
+            "type": "string",
+            "description": "Super-admin username credential for bootstrap body authentication."
+          },
+          "email": {
+            "type": "string",
+            "description": "Super-admin email credential for bootstrap body authentication."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Super-admin phone credential for bootstrap body authentication."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "Super-admin password credential for bootstrap body authentication."
+          },
+          "ownerTenantId": {
+            "type": "string"
+          },
+          "appKey": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "appType": {
+            "type": "string"
+          },
+          "packageName": {
+            "type": "string"
+          },
+          "bundleId": {
+            "type": "string"
+          },
+          "desktopAppId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "manifestHash": {
+            "type": "string"
+          },
+          "defaultAccessPermissions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "packages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "AppbaseTenantApplicationProvisionCommand": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Provision a tenant application from a registered application template.",
+        "required": [
+          "tenantId",
+          "organizationId",
+          "instanceKey",
+          "displayName",
+          "environment"
+        ],
+        "properties": {
+          "authToken": {
+            "type": "string",
+            "description": "Super-admin auth token used for bootstrap body authentication."
+          },
+          "username": {
+            "type": "string",
+            "description": "Super-admin username credential for bootstrap body authentication."
+          },
+          "email": {
+            "type": "string",
+            "description": "Super-admin email credential for bootstrap body authentication."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Super-admin phone credential for bootstrap body authentication."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "Super-admin password credential for bootstrap body authentication."
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "templateId": {
+            "type": "string"
+          },
+          "appKey": {
+            "type": "string"
+          },
+          "instanceKey": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "environment": {
+            "type": "string"
+          },
+          "primaryDomain": {
+            "type": "string"
+          },
+          "accessPermissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "runtimeConfig": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "AppbaseTenantApplicationUpdateCommand": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Update tenant application access and runtime configuration.",
+        "properties": {
+          "authToken": {
+            "type": "string",
+            "description": "Super-admin auth token used for bootstrap body authentication."
+          },
+          "username": {
+            "type": "string",
+            "description": "Super-admin username credential for bootstrap body authentication."
+          },
+          "email": {
+            "type": "string",
+            "description": "Super-admin email credential for bootstrap body authentication."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Super-admin phone credential for bootstrap body authentication."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "Super-admin password credential for bootstrap body authentication."
+          },
+          "primaryDomain": {
+            "type": "string"
+          },
+          "domainConfig": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "accessPermissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "runtimeConfig": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "AppbaseTenantApplicationEnableCommand": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Enable a provisioned tenant application before access credential issuance.",
+        "properties": {
+          "authToken": {
+            "type": "string",
+            "description": "Super-admin auth token used for bootstrap body authentication."
+          },
+          "username": {
+            "type": "string",
+            "description": "Super-admin username credential for bootstrap body authentication."
+          },
+          "email": {
+            "type": "string",
+            "description": "Super-admin email credential for bootstrap body authentication."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Super-admin phone credential for bootstrap body authentication."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "Super-admin password credential for bootstrap body authentication."
+          }
+        }
+      },
+      "AppbaseAccessCredentialCreateCommand": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Issue a delegated access credential for an enabled tenant application.",
+        "required": [
+          "tenantId",
+          "organizationId"
+        ],
+        "properties": {
+          "authToken": {
+            "type": "string",
+            "description": "Super-admin auth token used for bootstrap body authentication."
+          },
+          "username": {
+            "type": "string",
+            "description": "Super-admin username credential for bootstrap body authentication."
+          },
+          "email": {
+            "type": "string",
+            "description": "Super-admin email credential for bootstrap body authentication."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Super-admin phone credential for bootstrap body authentication."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "Super-admin password credential for bootstrap body authentication."
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "tenantApplicationId": {
+            "type": "string"
+          },
+          "appId": {
+            "type": "string"
+          },
+          "instanceKey": {
+            "type": "string"
+          }
+        }
+      },
+      "ProblemDetail": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 599
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "traceId": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Server-owned request correlation id."
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            }
+          }
+        }
+      },
+      "FieldError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "field",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "x-sdkwork-materialized-from": [
+    {
+      "owner": "iam",
+      "routeCrate": "sdkwork-router-iam-open-api",
+      "path": "<sdkwork-iam>/crates/sdkwork-router-iam-open-api/src/manifest.rs"
+    }
+  ],
+  "x-sdkwork-request-context": {
+    "contextObject": "WebRequestContext",
+    "serverRequestId": "server-owned",
+    "clientRequestIdHeader": "forbidden",
+    "tenantSource": "ApiKey or OAuthBearer",
+    "organizationSource": "ApiKey or OAuthBearer",
+    "userSource": "ApiKey or OAuthBearer"
+  }
+}

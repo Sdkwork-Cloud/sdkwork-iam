@@ -189,17 +189,88 @@ async fn find_iam_context_from_oauth_jwt(pg: &PgPool, token: &str) -> Option<Iam
     let kid = jwt_header_kid(token)?;
     let signing_key = load_signing_key_by_kid(pg, &kid).await?;
     let now_unix = (current_millis() / 1000) as i64;
-    let claims = verify_local_session_token_flexible(
-        &signing_key,
-        token,
-        &["oauth", "oauth_access", "bearer", "access"],
-        now_unix,
-    )?;
+    let claims = verify_oauth_access_token_claims(&signing_key, token, now_unix)?;
     let context = iam_context_from_token_claims(&claims)?;
     if !oauth_jwt_session_is_active(pg, &context).await {
         return None;
     }
+    if !oauth_access_token_grant_is_active(pg, &hash_token(token)).await {
+        return None;
+    }
     Some(context)
+}
+
+async fn oauth_access_token_grant_is_active(pg: &PgPool, access_token_hash: &str) -> bool {
+    sqlx::query_scalar::<_, i32>(
+        "SELECT 1 FROM iam_oauth_grant \
+         WHERE access_token_hash = $1 AND status = 'active' \
+           AND token_expires_at::timestamptz > $2::timestamptz \
+         LIMIT 1",
+    )
+    .bind(access_token_hash)
+    .bind(current_timestamp_utc())
+    .fetch_optional(pg)
+    .await
+    .ok()
+    .flatten()
+    .is_some()
+}
+
+fn oauth_issuer_base_url() -> String {
+    std::env::var("SDKWORK_IAM_OAUTH_ISSUER")
+        .ok()
+        .map(|value| value.trim().trim_end_matches('/').to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "https://iam.sdkwork.local".to_string())
+}
+
+fn verify_oauth_access_token_claims(
+    signing_key: &TenantSigningKey,
+    token: &str,
+    now_unix: i64,
+) -> Option<Value> {
+    let parts: Vec<&str> = token.split('.').collect();
+    if parts.len() != 3 {
+        return None;
+    }
+    let header = decode_jwt_json(parts[0])?;
+    let payload = decode_jwt_json(parts[1])?;
+    let kid = header.get("kid").and_then(Value::as_str)?;
+    if kid != signing_key.kid {
+        return None;
+    }
+    let signing_input = format!("{}.{}", parts[0], parts[1]);
+    let mut mac = HmacSha256::new_from_slice(signing_key.secret.as_slice()).ok()?;
+    mac.update(signing_input.as_bytes());
+    let expected_signature = URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes());
+    if expected_signature != parts[2] {
+        return None;
+    }
+    let token_type = payload.get("token_type").and_then(Value::as_str)?;
+    if !token_type.eq_ignore_ascii_case("oauth") {
+        return None;
+    }
+    let exp = payload.get("exp").and_then(Value::as_i64)?;
+    if exp < now_unix {
+        return None;
+    }
+    let iss = payload.get("iss").and_then(Value::as_str)?;
+    if iss != oauth_issuer_base_url() {
+        return None;
+    }
+    if claim_string_value(&payload, &["app_id"]).is_none() {
+        return None;
+    }
+    if !claims_login_scope_organization_consistent(&payload) {
+        return None;
+    }
+    if validate_token_version_json(&payload, &TokenVersionPolicy::standard()).is_err() {
+        return None;
+    }
+    if !signing_key_matches_claims(signing_key, &payload) {
+        return None;
+    }
+    Some(payload)
 }
 
 async fn oauth_jwt_session_is_active(pg: &PgPool, context: &IamAppContext) -> bool {
@@ -347,7 +418,7 @@ fn verify_local_session_token_flexible(
         return None;
     }
     let iss = payload.get("iss").and_then(Value::as_str)?;
-    if iss != "sdkwork-appbase-local" {
+    if iss != "sdkwork-iam-local" {
         return None;
     }
     let aud = payload.get("aud").and_then(Value::as_str)?;
@@ -521,7 +592,7 @@ fn verify_local_session_token(
         return None;
     }
     let iss = payload.get("iss").and_then(Value::as_str)?;
-    if iss != "sdkwork-appbase-local" {
+    if iss != "sdkwork-iam-local" {
         return None;
     }
     let aud = payload.get("aud").and_then(Value::as_str)?;

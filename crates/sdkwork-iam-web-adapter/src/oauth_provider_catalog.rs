@@ -63,6 +63,7 @@ pub fn normalize_oauth_provider_code(provider: &str) -> Option<String> {
         "snapchat" => "snapchat",
         "paypal" => "paypal",
         "stripe" => "stripe",
+        "sdkwork" | "sdkworkiam" | "sdkworkoauth" => "sdkwork",
         _ => normalized.as_str(),
     };
 
@@ -78,6 +79,17 @@ pub fn normalize_oauth_provider_code(provider: &str) -> Option<String> {
 
 pub fn builtin_oauth_provider_catalog() -> Vec<OauthProviderCatalogEntry> {
     vec![
+        entry(
+            "sdkwork",
+            "SDKWork",
+            "SDKWork",
+            OauthProviderRegionGroup::Global,
+            "oidc",
+            true,
+            true,
+            false,
+            5,
+        ),
         entry(
             "wechat",
             "WeChat",
@@ -375,6 +387,17 @@ pub fn builtin_oauth_provider_catalog() -> Vec<OauthProviderCatalogEntry> {
             false,
             270,
         ),
+        entry(
+            "sdkwork",
+            "SDKWork",
+            "SDKWork",
+            OauthProviderRegionGroup::Global,
+            "sdkwork_oidc",
+            true,
+            true,
+            false,
+            5,
+        ),
     ]
 }
 
@@ -466,6 +489,16 @@ mod tests {
         assert_eq!(
             normalize_oauth_provider_code("azure-ad"),
             Some("microsoft".to_string())
+        );
+        assert_eq!(
+            normalize_oauth_provider_code("sdkwork-oauth"),
+            Some("sdkwork".to_string())
+        );
+        assert!(
+            builtin_oauth_provider_catalog()
+                .iter()
+                .any(|entry| entry.provider_code == "sdkwork"),
+            "sdkwork provider must be present in built-in catalog",
         );
     }
 }

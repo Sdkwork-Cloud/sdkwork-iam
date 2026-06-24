@@ -1,7 +1,7 @@
 # SDKWork Workspace
 
 This `.sdkwork/` directory is source-controlled workspace metadata for
-`sdkwork-appbase`.
+`sdkwork-iam`.
 
 It is governed by `../sdkwork-specs/SDKWORK_WORKSPACE_SPEC.md` and follows the
 standards entrypoint at `../sdkwork-specs/README.md`.

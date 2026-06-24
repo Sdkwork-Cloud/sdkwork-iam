@@ -3,7 +3,7 @@
 Purpose: static governance, extraction boundary, runner contract, and workspace
 standard tests executed by `scripts/run-appbase-governance-node-tests.mjs`.
 
-Owner: `sdkwork-appbase` maintainers.
+Owner: `sdkwork-iam` maintainers.
 
 ## Catalog
 

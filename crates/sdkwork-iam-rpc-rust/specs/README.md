@@ -8,7 +8,7 @@ This directory is the local standards index for `sdkwork-iam-rpc-rust`. Root SDK
 | --- | --- |
 | Name | `sdkwork-iam-rpc-rust` |
 | Type | `rust-crate` |
-| Root | `sdkwork-appbase/crates/sdkwork-iam-rpc-rust` |
+| Root | `sdkwork-iam/crates/sdkwork-iam-rpc-rust` |
 | Domain | `iam` |
 | Capability | `rpc` |
 | Languages | `rust` |

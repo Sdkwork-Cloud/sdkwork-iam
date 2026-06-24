@@ -8,7 +8,7 @@ Local standards index for `sdkwork-iam-bootstrap`.
 | --- | --- |
 | Name | `sdkwork-iam-bootstrap` |
 | Type | `rust-crate` |
-| Root | `sdkwork-appbase/crates/sdkwork-iam-bootstrap` |
+| Root | `sdkwork-iam/crates/sdkwork-iam-bootstrap` |
 | Domain | `iam` |
 | Capability | `bootstrap` |
 | Languages | `rust` |

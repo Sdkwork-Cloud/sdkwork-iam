@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use sqlx::{types::Json, PgPool, Row};
 
-use sdkwork_appbase_iam_bootstrap::resolve_session_scopes as bootstrap_resolve_session_scopes;
+use sdkwork_iam_bootstrap::resolve_session_scopes as bootstrap_resolve_session_scopes;
 
 pub const IAM_ACCESS_CREDENTIALS_CREATE_PERMISSION: &str = "iam.access_credentials.create";
 
@@ -352,7 +352,7 @@ fn sign_local_session_token(
         "environment": environment_to_string(&context.environment),
         "exp": expires_at,
         "iat": issued_at,
-        "iss": "sdkwork-appbase-local",
+        "iss": "sdkwork-iam-local",
         "login_scope": login_scope_to_string(&context.login_scope),
         "organization_id": organization_id,
         "permission_scope": context.permission_scope,

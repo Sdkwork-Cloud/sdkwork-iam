@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-iam-open-sdk",
+    "version": "1.0.0",
+    "language": "java",
+    "sdkType": "custom",
+    "protocol": "http",
+    "packageName": "com.sdkwork:sdkwork-iam-open-sdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "33394b9189a458f6b36bf7fd74815ea4b71a435083e0c428a9d3ca4673e28c3e"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "da4bd76701864b29d52b6b260c20f65305bcd4b9eea8696f7751b991f6aba345"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "pom.xml",
+      "sha256": "6c1ae8bc79dcadf1754110df0400aa95d1ae57faaf12d9f9299ce46b4166bbc4"
+    },
+    {
+      "path": "README.md",
+      "sha256": "626e669cd097ebd3296ef70a71cab1185ac3e74cf786b5df49c3247a47e5d7ae"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "fe1f3aaca99bf570048fd1cdaa7fabe8f2900fb51785ecf2284cd95d8c1e06de"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/api/ApiPaths.java",
+      "sha256": "505fb67228c3be6a3b8c19522103f8cd0fcb5661be0e577574c75d665a22ca54"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/api/IamOauthApi.java",
+      "sha256": "7339febc8af63858410951561c4454fd2b64ac3339b9cfff4df83f1a17407e04"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/api/package-info.java",
+      "sha256": "4e2b4efa6d650c9e7e97660923a486712de211b232d0025152092c85a27454b3"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/http/HttpClient.java",
+      "sha256": "c24cff0bfda88004426a724c76c69227321b09bd3b25e198e1fe2850486245b0"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/model/AppbaseAccessCredentialCreateCommand.java",
+      "sha256": "807eecad6741fc413db31f0628a51559ecfbeb63c06979982f4ac99db38b89d3"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/model/AppbaseApiResult.java",
+      "sha256": "8ec52b5dabbcf584006d66e563fc8c1b66b87db6709891be035c586e99cf0c9c"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/model/AppbaseApplicationRegisterCommand.java",
+      "sha256": "1ae314e6a11f8e7449bc4119c96f01283a7cf1eb30716f2ced30b0bf813dd417"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/model/AppbaseSessionCreateCommand.java",
+      "sha256": "9dead721d0fb4248547f1b2b196f6ed993e60a8f118c5f2037aab50f5b997df9"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/model/AppbaseTenantApplicationEnableCommand.java",
+      "sha256": "9050eb7dd23d83fb0b37a46be7a24eca0008381dff75cd566b89a976cbb26322"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/model/AppbaseTenantApplicationProvisionCommand.java",
+      "sha256": "e931f73827fc3b9fe4e20dcc1b376451b268c14170f4761250dced1f91fca814"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/model/AppbaseTenantApplicationUpdateCommand.java",
+      "sha256": "75357582e6f050a1f0d26970e63e92ab1f5fc53132185c315da73159ce08a544"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/model/FieldError.java",
+      "sha256": "f1bf3f838323319cc7a91b2f14fa2eb67da3e691be18ecaa31505ae73bd88220"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/model/ProblemDetail.java",
+      "sha256": "2e0ba293e8339fb831940aeb548ae95d7dedc3ec8901f8d3160e0e81aa7e016e"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/open/sdk/SdkworkCustomClient.java",
+      "sha256": "3d24df5d422f0acd2588a2abfdc2a95e9b1cbf461003c4299f3cfad6baaa87af"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

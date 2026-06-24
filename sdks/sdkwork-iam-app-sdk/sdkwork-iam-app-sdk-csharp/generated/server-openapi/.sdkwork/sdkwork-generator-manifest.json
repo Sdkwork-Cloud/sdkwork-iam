@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "generator": "@sdkwork/sdk-generator",
+  "sdk": {
+    "name": "sdkwork-iam-app-sdk",
+    "version": "1.0.0",
+    "language": "csharp",
+    "sdkType": "app",
+    "protocol": "http",
+    "packageName": "SDKWork.Iam.AppSdk"
+  },
+  "generatedFiles": [
+    {
+      "path": "Api/Api.cs",
+      "sha256": "a0a7065551429ec6c7a6f295cc4ae3b9435cb571d95d020c106b0d9d1ec79cdc"
+    },
+    {
+      "path": "Api/ApiPaths.cs",
+      "sha256": "ea675e7a8363b25809418999c2abc4ff2633945b4aebc4184794ab269e38fc9d"
+    },
+    {
+      "path": "Api/AuthApi.cs",
+      "sha256": "acede69f5f048cc9fbabdfa6c01955149785e189e4ce147bc50e92900f5e32e9"
+    },
+    {
+      "path": "Api/IamApi.cs",
+      "sha256": "38462d7d5c9bf5580a67a916b8ae1d52677b427d296210ffb70afdda636faa2c"
+    },
+    {
+      "path": "Api/OauthApi.cs",
+      "sha256": "d4f3275aa45201d127ff8fbda47a9fa236ac972442c540edf291ee9e6ec31e66"
+    },
+    {
+      "path": "Api/SystemApi.cs",
+      "sha256": "ac884569d2e2c23dc84142f709d8ef6fa6c7aedef41899236f57424c37772e91"
+    },
+    {
+      "path": "bin/publish-core.mjs",
+      "sha256": "98ad0918a78bfbe22bf8f12fec709b0bed545b9e01edd40f5e4abf31a23378a5"
+    },
+    {
+      "path": "bin/publish.ps1",
+      "sha256": "64a1727613d4b6b088129400427b90dd4b37047f48beacade665a76418398740"
+    },
+    {
+      "path": "bin/publish.sh",
+      "sha256": "9f2030a8a491d26598cbd3a1b858d55e4f8e7bb70c9bf4b6024cd8c425a84e0b"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ecb55fcda2ed37d190a142ed7f8fe40ecc076276324fd22efd4fd15ab8610ee5"
+    },
+    {
+      "path": "Http/HttpClient.cs",
+      "sha256": "9c7e51ef4a12af80f6ebe10f58c2f1e9eb25b7d98b4cf4864cb649c7af09b1f3"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "7840cc7d2b36ff364ac16c2fc5ec15b861bfe96854eecf81fb59b00edb8b1447"
+    },
+    {
+      "path": "Models/AppbaseAccessCredentialCreateCommand.cs",
+      "sha256": "63a886d8235875872988da2493f0edf896b515d9a1b4768341ac282601c02870"
+    },
+    {
+      "path": "Models/AppbaseApiResult.cs",
+      "sha256": "3e832b438a3d255fcad26895d2b53b26d174bf03058705a3b9b332624b4cbe04"
+    },
+    {
+      "path": "Models/AppbaseApplicationRegisterCommand.cs",
+      "sha256": "96663ade4d9e3e4b51c68fb496ef411421042e4c91c799a3c556453bda11ce57"
+    },
+    {
+      "path": "Models/AppbaseSessionCreateCommand.cs",
+      "sha256": "5819a3ca67fa645e875d515191707e4e0288c2d3eeb51fa6cafa07f216d2dc2e"
+    },
+    {
+      "path": "Models/AppbaseTenantApplicationEnableCommand.cs",
+      "sha256": "3c4b14a88efdbed9c43e87f2a279688658001b9839b295a6185ca7d2e43c35f7"
+    },
+    {
+      "path": "Models/AppbaseTenantApplicationProvisionCommand.cs",
+      "sha256": "aca478ba587512c82c79660d8a4196b8cf4756e4b028ccc54febb4da1fe0f1c3"
+    },
+    {
+      "path": "Models/AppbaseTenantApplicationUpdateCommand.cs",
+      "sha256": "07b3fedee1915b28e5d0b362e7bca0bf8ee558279b507e467ed74bc1df2b49f5"
+    },
+    {
+      "path": "Models/FieldError.cs",
+      "sha256": "90cdb89ce246786cfbac6282bc54a509f4b9b5f2e15901ebb9ee81267e8df3e8"
+    },
+    {
+      "path": "Models/ProblemDetail.cs",
+      "sha256": "483958518459130cb0793de21b2dc3fbbf58ed519b6ed7a19960581ea68d4f71"
+    },
+    {
+      "path": "README.md",
+      "sha256": "e66634fd24aa87002cb8a0832057d7fc1e3111ab92b5d98e2bc36fd8573c1ac3"
+    },
+    {
+      "path": "sdkwork-sdk.json",
+      "sha256": "a6b7a14fcf6d1fc7186f33352cc8d512de83ffbeb043df1795a2c2302dc1ad0e"
+    },
+    {
+      "path": "SDKWork.Iam.AppSdk.csproj",
+      "sha256": "725c0e9823e36243568924d6ead540de40421b9ff0965042e47a9b8f4460bc0f"
+    },
+    {
+      "path": "SdkworkAppClient.cs",
+      "sha256": "e24f9e96ab86eb3d3f07e4340fbc26db099989851f8b6b81ea7aef9764805f09"
+    }
+  ],
+  "scaffoldFiles": [
+    "custom/README.md"
+  ],
+  "customRoots": [
+    "custom/"
+  ]
+}

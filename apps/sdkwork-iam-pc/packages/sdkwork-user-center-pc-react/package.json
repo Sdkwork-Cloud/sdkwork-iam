@@ -1,0 +1,53 @@
+{
+  "name": "@sdkwork/user-center-pc-react",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Shared UI surface assembly for auth and user-center pages with governed appearance presets, theme tokens, and router-aware page wrappers.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@sdkwork/core-pc-react": "workspace:*",
+    "@sdkwork/ui-pc-react": "workspace:*",
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@sdkwork/auth-pc-react": "workspace:*",
+    "@sdkwork/user-pc-react": "workspace:*",
+    "@sdkwork/utils": "workspace:*"
+  },
+  "peerDependencies": {
+    "@sdkwork/core-pc-react": "*",
+    "@sdkwork/ui-pc-react": "*",
+    "react": ">=18.2.0 <20.0.0",
+    "react-dom": ">=18.2.0 <20.0.0",
+    "react-router-dom": ">=7.0.0 <8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@sdkwork/core-pc-react": {
+      "optional": true
+    },
+    "@sdkwork/ui-pc-react": {
+      "optional": true
+    }
+  },
+  "sdkwork": {
+    "workspace": "sdkwork-iam",
+    "architecture": "pc-react",
+    "domain": "iam",
+    "capability": "user-center",
+    "status": "ready"
+  }
+}

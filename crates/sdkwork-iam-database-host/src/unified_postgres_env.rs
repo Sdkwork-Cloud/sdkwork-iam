@@ -23,6 +23,10 @@ fn materialize_iam_database_url_from_unified_profile() {
         .unwrap_or_else(|error| {
             panic!("resolve IAM database URL from unified postgres profile failed: {error}")
         });
+    let url = sdkwork_database_config::claw_database::postgres_url_with_search_path(
+        url.as_str(),
+        "SDKWORK_IAM",
+    );
     // SAFETY: database CLI and bootstrap entrypoints run sequentially on the main thread.
     unsafe { std::env::set_var("SDKWORK_IAM_DATABASE_URL", url) };
 }

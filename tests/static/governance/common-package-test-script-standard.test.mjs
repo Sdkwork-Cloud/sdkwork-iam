@@ -4,26 +4,19 @@ import path from "node:path";
 import test from "node:test";
 
 const appbaseRoot = path.resolve(import.meta.dirname, '../../..');
-const commonRoot = path.join(appbaseRoot, "packages", "common");
+const commonPackagesRoot = path.join(appbaseRoot, "apps", "sdkwork-iam-common", "packages");
 
 function listCommonPackageJsonFiles() {
   const files = [];
 
-  for (const domainEntry of fs.readdirSync(commonRoot, { withFileTypes: true })) {
-    if (!domainEntry.isDirectory()) {
+  for (const packageEntry of fs.readdirSync(commonPackagesRoot, { withFileTypes: true })) {
+    if (!packageEntry.isDirectory()) {
       continue;
     }
 
-    const domainPath = path.join(commonRoot, domainEntry.name);
-    for (const packageEntry of fs.readdirSync(domainPath, { withFileTypes: true })) {
-      if (!packageEntry.isDirectory()) {
-        continue;
-      }
-
-      const packageJsonPath = path.join(domainPath, packageEntry.name, "package.json");
-      if (fs.existsSync(packageJsonPath)) {
-        files.push(packageJsonPath);
-      }
+    const packageJsonPath = path.join(commonPackagesRoot, packageEntry.name, "package.json");
+    if (fs.existsSync(packageJsonPath)) {
+      files.push(packageJsonPath);
     }
   }
 

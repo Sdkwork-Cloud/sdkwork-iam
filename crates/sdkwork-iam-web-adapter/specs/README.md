@@ -8,7 +8,7 @@ This directory is the local standards index for `sdkwork-iam-web-adapter`. Root 
 | --- | --- |
 | Name | `sdkwork-iam-web-adapter` |
 | Type | `rust-crate` |
-| Root | `sdkwork-appbase/crates/sdkwork-iam-web-adapter` |
+| Root | `sdkwork-iam/crates/sdkwork-iam-web-adapter` |
 | Domain | `iam` |
 | Capability | `web-adapter` |
 | Languages | `rust` |

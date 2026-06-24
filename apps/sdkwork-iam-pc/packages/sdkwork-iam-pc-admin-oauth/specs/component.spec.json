@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-pc-admin-oauth",
+    "displayName": "SDKWork IAM PC Admin OAuth",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-oauth",
+    "domain": "iam",
+    "declaredDomain": "iam",
+    "capability": "oauth",
+    "surface": "backend-admin",
+    "status": "standard",
+    "languages": [
+      "typescript",
+      "react"
+    ],
+    "generated": false,
+    "private": true,
+    "manifests": [
+      "package.json"
+    ]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "APP_PC_ARCHITECTURE_SPEC.md",
+      "path": "../../../../../sdkwork-specs/APP_PC_ARCHITECTURE_SPEC.md",
+      "purpose": "PC application root layout, app vs backend-admin package split, and sdkwork-iam-pc-admin-* naming."
+    },
+    {
+      "file": "BACKEND_UI_SPEC.md",
+      "path": "../../../../../sdkwork-specs/BACKEND_UI_SPEC.md",
+      "purpose": "Backend-admin surface rules, backend SDK boundary, and admin module composition."
+    },
+    {
+      "file": "APP_PC_REACT_UI_SPEC.md",
+      "path": "../../../../../sdkwork-specs/APP_PC_REACT_UI_SPEC.md",
+      "purpose": "App PC React package split, app SDK boundary, and desktop interaction rules."
+    },
+    {
+      "file": "IAM_OAUTH_SPEC.md",
+      "path": "../../../../../sdkwork-specs/IAM_OAUTH_SPEC.md",
+      "purpose": "OAuth provider, integration, authorization-server, and runtime discovery rules."
+    },
+    {
+      "file": "IAM_SPEC.md",
+      "path": "../../../../../sdkwork-specs/IAM_SPEC.md",
+      "purpose": "Auth, user, tenant, organization, role, and permission rules."
+    },
+    {
+      "file": "SECURITY_SPEC.md",
+      "path": "../../../../../sdkwork-specs/SECURITY_SPEC.md",
+      "purpose": "Secure auth, token, secrets, CORS, validation, and logging rules."
+    },
+    {
+      "file": "TEST_SPEC.md",
+      "path": "../../../../../sdkwork-specs/TEST_SPEC.md",
+      "purpose": "Contract, frontend, SDK, security, parity, and documentation verification rules."
+    }
+  ],
+  "contracts": {
+    "publicExports": [
+      "."
+    ],
+    "runtimeEntrypoints": [
+      "package.json#scripts.typecheck"
+    ],
+    "sdkClients": [
+      "@sdkwork/iam-backend-sdk"
+    ],
+    "events": [],
+    "configKeys": [
+      "package.json#sdkwork"
+    ],
+    "routeManifest": null
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative. Local specs may extend but must not contradict them.",
+    "dependencyPolicy": "Consumers integrate through public package exports, declared runtime entrypoints, generated SDK clients, or documented adapters only.",
+    "sdkPolicy": "Generated SDK clients are injected through service/runtime boundaries; reusable UI must not create raw HTTP clients or manual auth headers.",
+    "languagePolicy": "Language-specific packages follow their native manifest and build tools while preserving the same component contract."
+  },
+  "verification": {
+    "commands": [
+      "pnpm --filter @sdkwork/iam-pc-admin-oauth typecheck",
+      "pnpm exec vitest run apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-oauth/tests --config vitest.config.ts --configLoader native --pool vmThreads"
+    ]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-06-18"
+  }
+}

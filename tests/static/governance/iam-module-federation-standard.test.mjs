@@ -146,11 +146,11 @@ test("app api directory provisioning uses canonical bootstrap subject", async ()
 test("iam application bootstrap env resolver defaults to canonical tenant scope", async () => {
   const authPath = path.join(
     appRoot,
-    "packages/common/iam/sdkwork-iam-application-bootstrap/src/auth.ts",
+    "apps/sdkwork-iam-common/packages/sdkwork-iam-application-bootstrap/src/auth.ts",
   );
   const constantsPath = path.join(
     appRoot,
-    "packages/common/iam/sdkwork-iam-application-bootstrap/src/constants.ts",
+    "apps/sdkwork-iam-common/packages/sdkwork-iam-application-bootstrap/src/constants.ts",
   );
   const auth = await readFile(authPath, "utf8");
   const constants = await readFile(constantsPath, "utf8");

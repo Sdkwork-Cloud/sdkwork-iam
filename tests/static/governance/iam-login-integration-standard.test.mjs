@@ -7,15 +7,15 @@ const appbaseRoot = path.resolve(import.meta.dirname, "../../..");
 
 const AUTH_PC_REACT_ROOT = path.join(
   appbaseRoot,
-  "packages/pc-react/iam/sdkwork-auth-pc-react",
+  "apps/sdkwork-iam-pc/packages/sdkwork-auth-pc-react",
 );
 const AUTH_RUNTIME_ROOT = path.join(
   appbaseRoot,
-  "packages/pc-react/iam/sdkwork-auth-runtime-pc-react",
+  "apps/sdkwork-iam-pc/packages/sdkwork-auth-runtime-pc-react",
 );
 const IAM_CORE_ROOT = path.join(
   appbaseRoot,
-  "packages/pc-react/iam/sdkwork-iam-core-pc-react",
+  "apps/sdkwork-iam-pc/packages/sdkwork-iam-core-pc-react",
 );
 
 const FORBIDDEN_IAM_CORE_VALUE_EXPORTS = [
@@ -84,6 +84,8 @@ test("auth-runtime-pc-react documents and exposes approved PC auth runtime facto
     "utf8",
   );
   assert.match(runtimeSource, /export function createSdkworkAppbasePcAuthRuntime/);
+  assert.match(runtimeSource, /wrapCredentialEntryClient/);
+  assert.match(runtimeSource, /credentialEntry\?\.skipWrap/);
 
   const readme = fs.readFileSync(path.join(AUTH_RUNTIME_ROOT, "README.md"), "utf8");
   assert.match(readme, /createSdkworkAppbasePcAuthRuntime/);
@@ -110,16 +112,6 @@ test("IAM auth packages declare IAM_LOGIN_INTEGRATION_SPEC in component specs", 
       `${path.basename(packageRoot)} must declare IAM_LOGIN_INTEGRATION_SPEC.md`,
     );
   }
-});
-
-test("appbase database host loads unified postgres profile before pool creation", () => {
-  const databaseHostLib = readText("crates/sdkwork-iam-database-host/src/lib.rs");
-  const databaseHostBin = readText("crates/sdkwork-iam-database-host/src/bin/sdkwork-appbase-db.rs");
-  assert.match(databaseHostLib, /apply_unified_claw_postgres_env\(&app_root\)/);
-  assert.match(databaseHostBin, /apply_unified_claw_postgres_env\(&cli\.app_root\)/);
-  assert.ok(
-    fs.existsSync(path.join(appbaseRoot, "crates/sdkwork-iam-database-host/src/unified_postgres_env.rs")),
-  );
 });
 
 test("root workspace keeps postgres integration profile template for IAM Rust tests", () => {

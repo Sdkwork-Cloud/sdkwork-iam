@@ -8,7 +8,7 @@ Local standards index for `sdkwork-iam-database-host`.
 | --- | --- |
 | Name | `sdkwork-iam-database-host` |
 | Type | `rust-crate` |
-| Root | `sdkwork-appbase/crates/sdkwork-iam-database-host` |
+| Root | `sdkwork-iam/crates/sdkwork-iam-database-host` |
 | Domain | `iam` |
 | Capability | `database-host` |
 | Languages | `rust` |

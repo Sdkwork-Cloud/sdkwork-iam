@@ -183,7 +183,7 @@ async fn build_router_with_env_internal(
         }
     }
 
-    sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router()
+    sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router()
         .await
         .expect("router should build")
 }
@@ -198,7 +198,7 @@ async fn build_router_with_configured_owner(extra_organizations: &[(&str, &str)]
     set_optional_env(VERIFY_CODE_ENV, None);
     seed_configured_owner_account_with_extra_organizations(extra_organizations).await;
 
-    sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router()
+    sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router()
         .await
         .expect("router should build")
 }
@@ -234,7 +234,7 @@ async fn build_router_with_credentials_without_bootstrap_scope() -> axum::Router
 
 async fn build_router_and_directory_without_bootstrap() -> (
     axum::Router,
-    sdkwork_router_iam_app_api::SdkworkAppbaseLocalIamDirectory,
+    sdkwork_router_iam_app_api::SdkworkIamLocalIamDirectory,
 ) {
     let _guard = lock_local_iam_env();
     cleanup_configured_tenant_integration_fixtures().await;
@@ -244,7 +244,7 @@ async fn build_router_and_directory_without_bootstrap() -> (
     configure_real_local_runtime_env();
     set_optional_env(VERIFY_CODE_ENV, None);
 
-    sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router_with_local_directory()
+    sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router_with_local_directory()
         .await
         .expect("router and directory should build")
 }
@@ -319,6 +319,13 @@ fn test_open_registration_bootstrap_access_token() -> String {
     bootstrap_access_token_jwt(
         "100001",
         platform_runtime_app_id_for_tenant("100001").as_str(),
+    )
+}
+
+fn test_bootstrap_access_token_for_tenant(tenant_id: &str) -> String {
+    bootstrap_access_token_jwt(
+        tenant_id,
+        platform_runtime_app_id_for_tenant(tenant_id).as_str(),
     )
 }
 
@@ -557,7 +564,7 @@ async fn local_app_router_issues_tokens_from_persisted_user_without_env_runtime_
 
     let app = build_router_with_credentials_without_bootstrap_scope().await;
 
-    let response = request_json(
+    let response = request_json_with_auth(
         &app,
         Method::POST,
         "/app/v3/api/auth/sessions",
@@ -569,6 +576,8 @@ async fn local_app_router_issues_tokens_from_persisted_user_without_env_runtime_
             })
             .to_string(),
         ),
+        None,
+        Some(test_bootstrap_access_token_for_tenant(seeded_tenant_id).as_str()),
     )
     .await;
 
@@ -1262,7 +1271,7 @@ async fn local_app_router_rotates_signing_keys_with_overlapping_validation_windo
 
     configure_real_local_runtime_env();
     seed_configured_owner_account().await;
-    let app = sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router()
+    let app = sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router()
         .await
         .expect("router should build");
     let login_data = create_bootstrap_login_session(&app).await;
@@ -1280,7 +1289,7 @@ async fn local_app_router_rotates_signing_keys_with_overlapping_validation_windo
         .to_string();
 
     set_optional_env(SIGNING_KEY_ROTATE_ENV, Some("true"));
-    let rotated_app = sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router()
+    let rotated_app = sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router()
         .await
         .expect("router should rotate signing key");
     set_optional_env(SIGNING_KEY_ROTATE_ENV, None);
@@ -2745,13 +2754,13 @@ async fn local_app_router_locks_account_after_repeated_failed_logins() {
     set_optional_env("SDKWORK_IAM_LOGIN_MAX_ATTEMPTS", Some("3"));
     set_optional_env("SDKWORK_IAM_LOGIN_LOCKOUT_MINUTES", Some("15"));
 
-    let app = sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router()
+    let app = sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router()
         .await
         .expect("router should build");
 
     let username = unique_registration_username("lockout-user");
     let password = "LockoutTest#2026";
-    let registration_response = request_json(
+    let registration_response = request_open_registration_json(
         &app,
         Method::POST,
         "/app/v3/api/auth/registrations",
@@ -2774,7 +2783,7 @@ async fn local_app_router_locks_account_after_repeated_failed_logins() {
     );
 
     for _ in 0..3 {
-        let response = request_json(
+        let response = request_open_registration_json(
             &app,
             Method::POST,
             "/app/v3/api/auth/sessions",
@@ -2791,7 +2800,7 @@ async fn local_app_router_locks_account_after_repeated_failed_logins() {
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 
-    let locked_response = request_json(
+    let locked_response = request_open_registration_json(
         &app,
         Method::POST,
         "/app/v3/api/auth/sessions",
@@ -2927,7 +2936,7 @@ async fn prepare_open_registration_database() {
     .bind(DEFAULT_OPEN_REGISTRATION_TENANT_ID)
     .execute(&pg)
     .await;
-    sdkwork_appbase_iam_bootstrap::upsert_postgres_default_subject(&pg)
+    sdkwork_iam_bootstrap::upsert_postgres_default_subject(&pg)
         .await
         .expect("default IAM subject should be available for open registration tests");
     ensure_platform_tenant_application(&pg, DEFAULT_OPEN_REGISTRATION_TENANT_ID)
@@ -3361,6 +3370,10 @@ async fn seed_cross_tenant_login_account(email: &str, password: &str) {
         .await
         .expect("insert cross-tenant login tenant");
 
+        ensure_platform_tenant_application(&pg, tenant_id)
+            .await
+            .expect("platform tenant application should be available for cross-tenant login tests");
+
         sqlx::query(
             "INSERT INTO iam_user (id, tenant_id, username, display_name, email, phone, \
                     email_verified, phone_verified, status, created_at, updated_at) \
@@ -3412,7 +3425,9 @@ async fn local_app_router_open_registration_defaults_to_canonical_tenant_with_mu
     let _guard = lock_local_iam_env();
     prepare_open_registration_database().await;
     unified_database_env::apply_unified_claw_postgres_env();
-    let app = sdkwork_router_iam_app_api::build_sdkwork_appbase_app_api_router()
+    let _snapshot = EnvSnapshot::capture(RUNTIME_ENV_KEYS);
+    configure_real_local_runtime_env();
+    let app = sdkwork_router_iam_app_api::build_sdkwork_iam_app_api_router()
         .await
         .expect("router should build");
     let pg = postgres_pool_for_tests().await;

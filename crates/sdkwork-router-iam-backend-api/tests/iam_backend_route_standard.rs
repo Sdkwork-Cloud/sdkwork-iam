@@ -2,7 +2,7 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
 use sdkwork_router_iam_backend_api::{
-    backend_routes, build_sdkwork_appbase_backend_api_router, HttpMethod, HttpRoute,
+    backend_routes, build_sdkwork_iam_backend_api_router, HttpMethod, HttpRoute,
     BACKEND_API_PREFIX,
 };
 use serde_json::Value;
@@ -15,7 +15,7 @@ fn exposes_standard_backend_prefix() {
 
 #[test]
 fn exposes_surface_named_rust_integration_entrypoints() {
-    let _backend_api_router = build_sdkwork_appbase_backend_api_router();
+    let _backend_api_router = build_sdkwork_iam_backend_api_router();
 
     assert!(!backend_routes().is_empty());
 }
@@ -346,6 +346,7 @@ fn backend_route_manifest_matches_the_standard_management_operation_surface() {
             "serviceAccounts.update",
             "tenantApplications.enable",
             "tenantApplications.provision",
+            "tenantApplications.retrieve",
             "tenantApplications.update",
             "tenants.create",
             "tenants.delete",
@@ -417,7 +418,7 @@ fn backend_router_source_does_not_embed_demo_iam_data() {
 
 #[tokio::test]
 async fn backend_router_does_not_serve_demo_management_data_without_real_backend() {
-    let router = build_sdkwork_appbase_backend_api_router();
+    let router = build_sdkwork_iam_backend_api_router();
 
     for (method, path, body) in [
         (Method::GET, "/backend/v3/api/iam/organizations/tree", None),

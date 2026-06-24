@@ -11,10 +11,13 @@ path = "src/lib.rs"
 
 [dependencies]
 axum.workspace = true
+base64 = "0.22"
 serde_json.workspace = true
 sdkwork-web-contract.workspace = true
 sdkwork-web-core.workspace = true
+sdkwork_database_sqlx.workspace = true
 sdkwork_iam_web_adapter.workspace = true
+sqlx.workspace = true
 
 [dev-dependencies]
 http-body-util = "0.1"

@@ -1,6 +1,6 @@
 use sqlx::{PgPool, Row};
 
-use sdkwork_appbase_iam_bootstrap::{
+use sdkwork_iam_bootstrap::{
     resolve_session_scopes as bootstrap_resolve_session_scopes,
     resolve_standard_role_codes as bootstrap_resolve_standard_role_codes,
 };

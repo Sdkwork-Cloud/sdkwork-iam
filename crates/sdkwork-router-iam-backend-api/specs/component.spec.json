@@ -6,7 +6,7 @@
     "displayName": "SDKWork Router Iam Backend Api",
     "version": "0.1.0",
     "type": "rust-route-crate",
-    "root": "sdkwork-appbase/crates/sdkwork-router-iam-backend-api",
+    "root": "sdkwork-iam/crates/sdkwork-router-iam-backend-api",
     "domain": "iam",
     "capability": "iam",
     "surface": "backend-api",
@@ -75,11 +75,11 @@
   "contracts": {
     "publicExports": [
       "sdkwork_router_iam_backend_api::backend_routes",
-      "sdkwork_router_iam_backend_api::sdkwork_appbase_backend_api_routes",
-      "sdkwork_router_iam_backend_api::build_sdkwork_appbase_backend_api_router"
+      "sdkwork_router_iam_backend_api::sdkwork_iam_backend_api_routes",
+      "sdkwork_router_iam_backend_api::build_sdkwork_iam_backend_api_router"
     ],
     "runtimeEntrypoints": [
-      "sdkwork_router_iam_backend_api::build_sdkwork_appbase_backend_api_router"
+      "sdkwork_router_iam_backend_api::build_sdkwork_iam_backend_api_router"
     ],
     "routeManifest": "sdkwork_router_iam_backend_api::backend_routes",
     "sdkClients": [],
@@ -101,7 +101,7 @@
     ]
   },
   "metadata": {
-    "managedBy": "sdkwork-appbase Rust workspace migration",
+    "managedBy": "sdkwork-iam",
     "standardVersion": "2026-06-12"
   }
 }
