@@ -7,6 +7,7 @@ import {
   rootPackageDirectoriesToRemove,
 } from "../catalog/package-catalog.mjs";
 import { reviewPcAdminPackageStructure } from "./review-pc-admin-package-structure.mjs";
+import { reviewPcConsolePackageStructure } from "./review-pc-console-package-structure.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -153,6 +154,9 @@ export async function reviewPackageStructure(options = {}) {
 
   const { issues: pcAdminIssues } = await reviewPcAdminPackageStructure({ cwd: workspaceRoot });
   issues.push(...pcAdminIssues);
+
+  const { issues: pcConsoleIssues } = await reviewPcConsolePackageStructure({ cwd: workspaceRoot });
+  issues.push(...pcConsoleIssues);
 
   if (summaryOnly) {
     for (const item of summary) {

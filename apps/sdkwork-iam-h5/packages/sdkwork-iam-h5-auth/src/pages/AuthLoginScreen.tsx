@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { SdkworkIamH5AuthLoginScreenProps } from "../types/auth-h5-types";
+import { SdkworkIamH5AuthLoginContextSelectionScreen } from "./AuthLoginContextSelectionScreen";
 
 export function SdkworkIamH5AuthLoginScreen({
   controller,
@@ -11,6 +12,26 @@ export function SdkworkIamH5AuthLoginScreen({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+  const [challenge, setChallenge] = useState(controller.getState().challenge);
+
+  if (challenge) {
+    return (
+      <SdkworkIamH5AuthLoginContextSelectionScreen
+        challenge={challenge}
+        controller={controller}
+        errorMessage={error}
+        onAuthenticated={(session) => {
+          setChallenge(undefined);
+          onAuthenticated?.(session);
+        }}
+        onCancel={() => {
+          setChallenge(undefined);
+          setError(undefined);
+        }}
+        title="Choose login context"
+      />
+    );
+  }
 
   return (
     <section className="mx-auto flex w-full max-w-md flex-col gap-4 p-4">
@@ -42,7 +63,14 @@ export function SdkworkIamH5AuthLoginScreen({
           setBusy(true);
           setError(undefined);
           void controller.login({ password, username })
-            .then((session) => onAuthenticated?.(session))
+            .then((result) => {
+              if (result.kind === "loginContextSelectionRequired") {
+                setChallenge(result.challenge);
+                return;
+              }
+
+              onAuthenticated?.(result.session);
+            })
             .catch((loginError) => {
               setError(loginError instanceof Error ? loginError.message : "Login failed");
             })

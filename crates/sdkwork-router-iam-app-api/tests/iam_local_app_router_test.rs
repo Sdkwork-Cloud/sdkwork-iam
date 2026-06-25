@@ -405,7 +405,8 @@ async fn complete_auth_session_data_with_access_token(
             let selection_body_value = if login_scope.eq_ignore_ascii_case("TENANT") {
                 json!({
                     "continuationToken": continuation_token,
-                    "loginScope": "TENANT"
+                    "loginScope": "TENANT",
+                    "organizationId": "0"
                 })
             } else {
                 let organization_id = organization_id
@@ -1109,12 +1110,98 @@ async fn local_app_router_personal_login_via_login_context_selection() {
     let selection_body = read_json(selection_response).await;
     assert_eq!(selection_body["code"], "2000");
     assert_eq!(selection_body["data"]["context"]["loginScope"], "TENANT");
-    assert!(
-        selection_body["data"]["context"]["organizationId"].is_null()
-            || selection_body["data"]["context"]["organizationId"] == "0"
-            || selection_body["data"]["context"]["organizationId"] == ""
+    assert_eq!(
+        selection_body["data"]["context"]["organizationId"],
+        "0"
     );
     assert!(selection_body["data"]["authToken"].as_str().is_some());
+}
+
+#[tokio::test]
+async fn local_app_router_direct_tenant_login_when_only_platform_organization_membership() {
+    let app = build_router_for_open_registration().await;
+    let username = unique_registration_username("platform-login");
+    let email = format!("{username}@sdkwork-iam.local");
+    let registration = request_open_registration_json(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/registrations",
+        Body::from(
+            json!({
+                "channel": "EMAIL",
+                "confirmPassword": "dev123456",
+                "email": email,
+                "password": "dev123456",
+                "username": username
+            })
+            .to_string(),
+        ),
+    )
+    .await;
+    assert_eq!(registration.status(), StatusCode::OK);
+
+    let login_response = request_open_registration_json(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(
+            json!({
+                "grantType": "password",
+                "username": username,
+                "password": "dev123456"
+            })
+            .to_string(),
+        ),
+    )
+    .await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+    let login_body = read_json(login_response).await;
+    assert_eq!(login_body["code"], "2000");
+    assert!(login_body["data"]["authToken"].as_str().is_some());
+    assert!(login_body["data"]["accessToken"].as_str().is_some());
+    assert_eq!(login_body["data"]["context"]["loginScope"], "TENANT");
+    assert_eq!(login_body["data"]["context"]["organizationId"], "0");
+}
+
+#[tokio::test]
+async fn local_app_router_rejects_organization_selection_for_platform_organization_id() {
+    let app = build_router_with_bootstrap().await;
+    let login_response = request_json(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(
+            json!({
+                "grantType": "password",
+                "username": CONFIGURED_BOOTSTRAP_USERNAME,
+                "password": CONFIGURED_BOOTSTRAP_PASSWORD
+            })
+            .to_string(),
+        ),
+    )
+    .await;
+    assert_eq!(login_response.status(), StatusCode::OK);
+    let login_body = read_json(login_response).await;
+    let continuation_token = login_body["data"]["continuationToken"]
+        .as_str()
+        .expect("login context challenge should return a continuation token");
+
+    let selection_response = request_json(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions/login_context_selection",
+        Body::from(
+            json!({
+                "continuationToken": continuation_token,
+                "loginScope": "ORGANIZATION",
+                "organizationId": "0"
+            })
+            .to_string(),
+        ),
+    )
+    .await;
+
+    assert_eq!(selection_response.status(), StatusCode::BAD_REQUEST);
 }
 
 #[tokio::test]
@@ -1876,11 +1963,7 @@ async fn local_app_router_current_session_switches_to_personal_login_scope() {
     );
     assert_eq!(update_body["code"], "2000");
     assert_eq!(update_body["data"]["context"]["loginScope"], "TENANT");
-    assert!(
-        update_body["data"]["context"]["organizationId"].is_null()
-            || update_body["data"]["context"]["organizationId"] == "0"
-            || update_body["data"]["context"]["organizationId"] == ""
-    );
+    assert_eq!(update_body["data"]["context"]["organizationId"], "0");
     let updated_auth_token = update_body["data"]["authToken"]
         .as_str()
         .expect("personal context switch should rotate auth token");

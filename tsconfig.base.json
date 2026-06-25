@@ -85,8 +85,35 @@
             "@sdkwork/iam-h5-user": [
                 "apps/sdkwork-iam-h5/packages/sdkwork-iam-h5-user/src/index.ts"
             ],
+            "@sdkwork/iam-h5-account-binding": [
+                "apps/sdkwork-iam-h5/packages/sdkwork-iam-h5-account-binding/src/index.ts"
+            ],
             "@sdkwork/iam-pc-admin-account-binding": [
                 "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-account-binding/src/index.tsx"
+            ],
+            "@sdkwork/iam-pc-admin-user": [
+                "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-user/src/index.ts"
+            ],
+            "@sdkwork/iam-pc-core": [
+                "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-core/src/index.ts"
+            ],
+            "@sdkwork/iam-pc-console-core": [
+                "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-core/src/index.ts"
+            ],
+            "@sdkwork/iam-pc-console-shell": [
+                "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-shell/src/index.ts"
+            ],
+            "@sdkwork/iam-pc-console-tenant": [
+                "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-tenant/src/index.ts"
+            ],
+            "@sdkwork/iam-pc-console-organization": [
+                "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-organization/src/index.ts"
+            ],
+            "@sdkwork/iam-pc-console-account-binding": [
+                "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-account-binding/src/index.ts"
+            ],
+            "@sdkwork/iam-pc-console-user": [
+                "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-user/src/index.ts"
             ],
             "@sdkwork/iam-pc-admin-core": [
                 "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-core/src/index.ts"

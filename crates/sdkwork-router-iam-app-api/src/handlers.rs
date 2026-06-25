@@ -5,7 +5,7 @@ use axum::{
     routing::{delete, get, post},
     Json, Router,
 };
-use sdkwork_iam_context_service::LoginScope;
+use sdkwork_iam_context_service::{is_platform_organization_id, LoginScope, PLATFORM_ORGANIZATION_ID};
 use sdkwork_iam_web_adapter::{
     account_binding_policy_to_json, contact_binding_allowed, default_account_binding_policy,
     load_account_binding_policy, merge_account_binding_policy, oauth_binding_allowed,
@@ -446,6 +446,13 @@ async fn create_session_organization_selection(
             "organization id is required",
         );
     };
+    if is_platform_organization_id(&organization_id) {
+        return appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_organization_invalid",
+            "organization id 0 is reserved for platform login; use login context selection with TENANT scope",
+        );
+    };
     let Ok(pg) = postgres_pool_or_error(&state) else {
         return postgres_pool_or_error(&state)
             .err()
@@ -593,6 +600,13 @@ async fn create_session_login_context_selection(
                     "organization id is required for organization login",
                 );
             };
+            if is_platform_organization_id(&organization_id) {
+                return appbase_error(
+                    StatusCode::BAD_REQUEST,
+                    "iam_organization_invalid",
+                    "organization id 0 is reserved for platform login; use login context selection with TENANT scope",
+                );
+            };
             if !continuation
                 .organization_ids
                 .iter()
@@ -692,6 +706,16 @@ async fn take_login_continuation_for_context_selection(
                 StatusCode::BAD_REQUEST,
                 "iam_organization_required",
                 "organization id is required for organization login",
+            ));
+        }
+        if organization_id
+            .as_deref()
+            .is_some_and(is_platform_organization_id)
+        {
+            return Err(appbase_error(
+                StatusCode::BAD_REQUEST,
+                "iam_organization_invalid",
+                "organization id 0 is reserved for platform login; use login context selection with TENANT scope",
             ));
         }
     }
@@ -810,7 +834,12 @@ async fn update_current_session(
         return appbase_ok(session_to_json(&session));
     }
 
-    if login_scope.as_deref() == Some("TENANT") {
+    let wants_personal_login = login_scope.as_deref() == Some("TENANT")
+        || organization_id
+            .as_deref()
+            .is_some_and(is_platform_organization_id);
+
+    if wants_personal_login {
         if session.context.login_scope == LoginScope::Tenant {
             return appbase_ok(session_to_json(&session));
         }
@@ -3174,7 +3203,8 @@ async fn create_authenticated_session_or_challenge(
         );
     };
     let memberships = active_organization_memberships_for_user(pg, &user.tenant_id, user).await;
-    match memberships.len() {
+    let eligible_memberships = login_eligible_organization_memberships(memberships);
+    match eligible_memberships.len() {
         0 => match create_session_record(pg, &state.config, user, None, runtime_app_id).await {
             Ok(session) => AuthenticatedSessionOutcome::Session(session),
             Err(error) => AuthenticatedSessionOutcome::Error(appbase_error(
@@ -3186,7 +3216,7 @@ async fn create_authenticated_session_or_challenge(
         _ => match login_context_selection_challenge_json(
             state,
             user,
-            memberships,
+            eligible_memberships,
             qr_session_key,
             runtime_app_id,
         )
@@ -3200,6 +3230,15 @@ async fn create_authenticated_session_or_challenge(
             )),
         },
     }
+}
+
+fn login_eligible_organization_memberships(
+    memberships: Vec<LocalOrganizationMembership>,
+) -> Vec<LocalOrganizationMembership> {
+    memberships
+        .into_iter()
+        .filter(|membership| !is_platform_organization_id(&membership.organization_id))
+        .collect()
 }
 
 async fn active_organization_memberships_for_user(
@@ -3343,7 +3382,7 @@ async fn login_context_selection_challenge_json(
         "options": [
             {
                 "loginScope": "TENANT",
-                "organizationId": "0",
+                "organizationId": PLATFORM_ORGANIZATION_ID,
                 "displayName": "Personal account"
             },
             {
@@ -3415,11 +3454,12 @@ async fn accessible_organization_ids_for_session(
     {
         return vec![organization_id.clone()];
     }
-    active_organization_memberships_for_user(pg, &session.context.tenant_id, &session.user)
-        .await
-        .into_iter()
-        .map(|membership| membership.organization_id)
-        .collect()
+    login_eligible_organization_memberships(
+        active_organization_memberships_for_user(pg, &session.context.tenant_id, &session.user).await,
+    )
+    .into_iter()
+    .map(|membership| membership.organization_id)
+    .collect()
 }
 
 async fn sorted_organizations_for_session(

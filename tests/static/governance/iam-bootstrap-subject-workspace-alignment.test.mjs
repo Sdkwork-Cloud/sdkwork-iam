@@ -81,7 +81,7 @@ for (const manifestRelative of APP_MANIFEST_FIXTURES) {
 test("commerce membership seed uses canonical tenant scope", async () => {
   const seedPath = path.join(
     workspaceRoot,
-    "sdkwork-commerce/crates/sdkwork-commerce-membership-repository-sqlx/src/seed.rs",
+    "sdkwork-membership/crates/sdkwork-commerce-membership-repository-sqlx/src/seed.rs",
   );
   const seed = await readFile(seedPath, "utf8");
   assert.match(seed, /'100001',\s*'0'/);

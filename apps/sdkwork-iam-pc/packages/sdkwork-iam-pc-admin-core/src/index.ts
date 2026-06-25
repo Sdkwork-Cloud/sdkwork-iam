@@ -10,6 +10,7 @@ export const IAM_PC_ADMIN_CAPABILITY_PACKAGES = [
   "@sdkwork/iam-pc-admin-organization",
   "@sdkwork/iam-pc-admin-permission",
   "@sdkwork/iam-pc-admin-account-binding",
+  "@sdkwork/iam-pc-admin-user",
 ] as const;
 
 export type IamPcAdminCapabilityPackage = (typeof IAM_PC_ADMIN_CAPABILITY_PACKAGES)[number];
@@ -58,6 +59,13 @@ export function createSdkworkIamPcAdminModuleRegistry(): readonly IamPcAdminModu
       packageName: "@sdkwork/iam-pc-admin-account-binding",
       permissionPrefix: "iam.account_binding",
       routeBasePath: "/admin/iam/account-binding",
+    },
+    {
+      capability: "user",
+      id: "iam-user",
+      packageName: "@sdkwork/iam-pc-admin-user",
+      permissionPrefix: "iam.users",
+      routeBasePath: "/admin/iam/users",
     },
   ] as const;
 }

@@ -12,7 +12,8 @@ This root follows `APP_PC_ARCHITECTURE_SPEC.md` and `APP_PC_REACT_UI_SPEC.md`. P
 - `sdkwork-auth-pc-react`, `sdkwork-auth-runtime-pc-react`: login/session UI and auth runtime composition
 - `sdkwork-user-pc-react`, `sdkwork-user-center-pc-react`, `sdkwork-user-center-core-pc-react`, `sdkwork-user-center-validation-pc-react`: user-center surfaces and contracts
 - `sdkwork-iam-core-pc-react`: compatibility aggregation export boundary
-- **Backend-admin** (`sdkwork-iam-pc-admin-*`): `@sdkwork/iam-pc-admin-core`, `@sdkwork/iam-pc-admin-shell`, and capability packages for OAuth, tenant, organization, permission, and account-binding administration
+- **User console** (`sdkwork-iam-pc-console-*`): `@sdkwork/iam-pc-console-core`, `@sdkwork/iam-pc-console-shell`, tenant, organization, account-binding, and **user** self-service packages (app-api)
+- **Backend-admin** (`sdkwork-iam-pc-admin-*`): `@sdkwork/iam-pc-admin-core`, `@sdkwork/iam-pc-admin-shell`, and capability packages for OAuth, tenant, organization, permission, account-binding, and user directory administration
 
 ## Related specs
 

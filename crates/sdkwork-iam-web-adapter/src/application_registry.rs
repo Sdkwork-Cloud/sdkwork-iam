@@ -146,7 +146,7 @@ pub async fn ensure_platform_tenant_application(
          version, channel, status, runtime_config_json, artifacts_config_json, default_access_permissions_json, \
          created_at, updated_at) \
          VALUES ($1, '0', $2, $2, 'SDKWork Platform', 'WEB', '1.0.0', 'stable', 'active', '{}'::jsonb, '{}'::jsonb, \
-         '[\"iam.self\"]'::jsonb, $3, $3) \
+         '[\"iam:self\"]'::jsonb, $3, $3) \
          ON CONFLICT (id) DO UPDATE SET status = 'active', updated_at = EXCLUDED.updated_at",
     )
     .bind(PLATFORM_APPLICATION_TEMPLATE_ID)
@@ -163,7 +163,7 @@ pub async fn ensure_platform_tenant_application(
          domain_config_json, access_permissions_json, runtime_config_json, provisioned_at, activated_at, \
          created_at, updated_at) \
          VALUES ($1, $2, $3, '0', $4, '1.0.0', 'default', 'SDKWork Platform', 'prod', 'enabled', 'localhost', \
-         '{}'::jsonb, '[\"iam.self\"]'::jsonb, '{}'::jsonb, $5, $5, $5, $5) \
+         '{}'::jsonb, '[\"iam:self\"]'::jsonb, '{}'::jsonb, $5, $5, $5, $5) \
          ON CONFLICT (id) DO UPDATE SET app_id = EXCLUDED.app_id, status = 'enabled', primary_domain = EXCLUDED.primary_domain, \
          access_permissions_json = EXCLUDED.access_permissions_json, activated_at = EXCLUDED.activated_at, updated_at = EXCLUDED.updated_at",
     )
@@ -441,7 +441,7 @@ pub async fn provision_tenant_application(
         .as_ref()
         .map(|app| app.id.clone())
         .unwrap_or_else(|| {
-            product_tenant_application_row_id(
+            tenant_application_row_id(
                 &command.tenant_id,
                 &command.organization_id,
                 &template.id,
@@ -562,7 +562,7 @@ pub async fn update_tenant_application(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EnsureProductApplicationCommand {
+pub struct EnsureTenantApplicationCommand {
     pub owner_tenant_id: String,
     pub app_key: String,
     pub name: String,
@@ -579,11 +579,11 @@ pub struct EnsureProductApplicationCommand {
     pub runtime_app_id: String,
 }
 
-pub fn product_application_template_id(app_key: &str) -> String {
+pub fn tenant_application_template_id(app_key: &str) -> String {
     format!("tmpl_{}", app_key.replace('-', "_"))
 }
 
-pub fn product_tenant_application_row_id(
+pub fn tenant_application_row_id(
     tenant_id: &str,
     organization_id: &str,
     template_id: &str,
@@ -595,7 +595,28 @@ pub fn product_tenant_application_row_id(
     format!("tapp_{tenant_id}_{organization_id}_{suffix}")
 }
 
-pub fn derive_product_primary_domain_candidate(
+pub fn tenant_application_instance_key(app_key: &str, environment: &str) -> String {
+    let normalized = app_key.trim().replace('-', "_");
+    let env_suffix = if environment.eq_ignore_ascii_case("development")
+        || environment.eq_ignore_ascii_case("dev")
+    {
+        "dev"
+    } else if environment.eq_ignore_ascii_case("production")
+        || environment.eq_ignore_ascii_case("prod")
+    {
+        "prod"
+    } else {
+        let trimmed = environment.trim();
+        if trimmed.is_empty() {
+            "default"
+        } else {
+            return format!("{normalized}_{}", trimmed.replace('-', "_"));
+        }
+    };
+    format!("{normalized}_{env_suffix}")
+}
+
+pub fn derive_tenant_application_primary_domain_candidate(
     requested: &str,
     runtime_app_id: &str,
     attempt: u32,
@@ -631,7 +652,7 @@ async fn find_tenant_application_id_by_primary_domain(
     Ok(row)
 }
 
-async fn resolve_product_tenant_application_primary_domain(
+async fn resolve_tenant_application_primary_domain(
     pg: &PgPool,
     tenant_id: &str,
     tenant_application_id: &str,
@@ -640,11 +661,11 @@ async fn resolve_product_tenant_application_primary_domain(
 ) -> Result<String, String> {
     let requested = requested_primary_domain.trim();
     if requested.is_empty() {
-        return Err("primaryDomain is required for product application bootstrap".to_string());
+        return Err("primaryDomain is required for tenant application bootstrap".to_string());
     }
 
     for attempt in 0..8 {
-        let candidate = derive_product_primary_domain_candidate(requested, runtime_app_id, attempt);
+        let candidate = derive_tenant_application_primary_domain_candidate(requested, runtime_app_id, attempt);
         let existing_id =
             find_tenant_application_id_by_primary_domain(pg, tenant_id, &candidate).await?;
         match existing_id {
@@ -677,20 +698,6 @@ pub async fn reconcile_postgres_tenant_application_org_template_rows(
         total_deleted += deleted;
     }
     Ok(total_deleted)
-}
-
-async fn delete_postgres_tenant_application_row(
-    pg: &PgPool,
-    tenant_id: &str,
-    tenant_application_id: &str,
-) -> Result<(), String> {
-    sqlx::query("DELETE FROM iam_tenant_application WHERE tenant_id = $1 AND id = $2")
-        .bind(tenant_id)
-        .bind(tenant_application_id)
-        .execute(pg)
-        .await
-        .map_err(|error| format!("delete tenant application row failed: {error}"))?;
-    Ok(())
 }
 
 async fn delete_duplicate_postgres_tenant_application_org_template_rows(
@@ -856,15 +863,51 @@ pub async fn ensure_postgres_tenant_application_org_template_unique_index(
     Ok(())
 }
 
-async fn upsert_product_tenant_application_row(
+async fn clear_postgres_tenant_application_competing_rows(
     pg: &PgPool,
-    command: &EnsureProductApplicationCommand,
+    command: &EnsureTenantApplicationCommand,
+    template_id: &str,
+    keep_id: &str,
+) -> Result<u64, String> {
+    let result = sqlx::query(
+        "DELETE FROM iam_tenant_application \
+         WHERE tenant_id = $1 \
+           AND id <> $2 \
+           AND ( \
+             app_id = $3 OR \
+             (organization_id = $4 AND template_id = $5) OR \
+             (instance_key = $6 AND (app_id = $3 OR template_id = $5)) \
+           )",
+    )
+    .bind(&command.tenant_id)
+    .bind(keep_id)
+    .bind(&command.runtime_app_id)
+    .bind(&command.organization_id)
+    .bind(template_id)
+    .bind(&command.instance_key)
+    .execute(pg)
+    .await
+    .map_err(|error| format!("clear competing tenant application rows failed: {error}"))?;
+
+    Ok(result.rows_affected())
+}
+
+async fn upsert_tenant_application_row(
+    pg: &PgPool,
+    command: &EnsureTenantApplicationCommand,
     template_version: &str,
     template_id: &str,
 ) -> Result<String, String> {
     let tenant_application_id =
-        resolve_product_tenant_application_row_id(pg, command, template_id).await?;
-    let primary_domain = resolve_product_tenant_application_primary_domain(
+        resolve_tenant_application_row_id(pg, command, template_id).await?;
+    clear_postgres_tenant_application_competing_rows(
+        pg,
+        command,
+        template_id,
+        tenant_application_id.as_str(),
+    )
+    .await?;
+    let primary_domain = resolve_tenant_application_primary_domain(
         pg,
         &command.tenant_id,
         tenant_application_id.as_str(),
@@ -916,12 +959,12 @@ async fn upsert_product_tenant_application_row(
     Ok(tenant_application_id)
 }
 
-async fn resolve_product_tenant_application_row_id(
+async fn resolve_tenant_application_row_id(
     pg: &PgPool,
-    command: &EnsureProductApplicationCommand,
+    command: &EnsureTenantApplicationCommand,
     template_id: &str,
 ) -> Result<String, String> {
-    let canonical_id = product_tenant_application_row_id(
+    let canonical_id = tenant_application_row_id(
         &command.tenant_id,
         &command.organization_id,
         template_id,
@@ -931,7 +974,7 @@ async fn resolve_product_tenant_application_row_id(
         find_tenant_application_by_runtime_app_id(pg, &command.tenant_id, &command.runtime_app_id)
             .await?
     {
-        return align_product_tenant_application_row(pg, existing.id, command, template_id).await;
+        return Ok(existing.id);
     }
 
     if let Some(existing) = find_tenant_application_by_organization_template(
@@ -952,77 +995,15 @@ async fn resolve_product_tenant_application_row_id(
     )
     .await?
     {
-        return align_product_tenant_application_row(pg, existing.id, command, template_id).await;
+        return Ok(existing.id);
     }
 
     Ok(canonical_id)
 }
 
-async fn align_product_tenant_application_row(
+pub async fn ensure_tenant_application_runtime(
     pg: &PgPool,
-    mut tenant_application_id: String,
-    command: &EnsureProductApplicationCommand,
-    template_id: &str,
-) -> Result<String, String> {
-    for _ in 0..8 {
-        if let Some(conflict) = find_tenant_application_by_organization_template(
-            pg,
-            &command.tenant_id,
-            &command.organization_id,
-            template_id,
-        )
-        .await?
-        {
-            if conflict.id != tenant_application_id {
-                delete_postgres_tenant_application_row(
-                    pg,
-                    &command.tenant_id,
-                    tenant_application_id.as_str(),
-                )
-                .await?;
-                tenant_application_id = conflict.id;
-                continue;
-            }
-        }
-
-        let primary_domain = resolve_product_tenant_application_primary_domain(
-            pg,
-            &command.tenant_id,
-            tenant_application_id.as_str(),
-            &command.primary_domain,
-            &command.runtime_app_id,
-        )
-        .await?;
-        let now = chrono::Utc::now();
-        sqlx::query(
-            "UPDATE iam_tenant_application SET app_id = $2, organization_id = $3, template_id = $4, \
-             instance_key = $5, display_name = $6, environment = $7, primary_domain = $8, \
-             access_permissions_json = $9, updated_at = $10 \
-             WHERE id = $1 AND tenant_id = $11",
-        )
-        .bind(&tenant_application_id)
-        .bind(&command.runtime_app_id)
-        .bind(&command.organization_id)
-        .bind(template_id)
-        .bind(&command.instance_key)
-        .bind(&command.display_name)
-        .bind(&command.environment)
-        .bind(&primary_domain)
-        .bind(Json(&command.default_access_permissions))
-        .bind(&now)
-        .bind(&command.tenant_id)
-        .execute(pg)
-        .await
-        .map_err(|error| format!("align tenant application row failed: {error}"))?;
-        return Ok(tenant_application_id);
-    }
-
-    Err("align tenant application row exceeded conflict resolution retries".to_string())
-}
-
-pub async fn ensure_product_application_runtime(
-    pg: &PgPool,
-    command: &EnsureProductApplicationCommand,
+    command: &EnsureTenantApplicationCommand,
 ) -> Result<TenantApplication, String> {
     if command.default_access_permissions.is_empty() {
         return Err("defaultAccessPermissions is required and must not be empty".to_string());
@@ -1031,7 +1012,7 @@ pub async fn ensure_product_application_runtime(
         return Err("runtime appId is required".to_string());
     }
 
-    let template_id = product_application_template_id(&command.app_key);
+    let template_id = tenant_application_template_id(&command.app_key);
     let register = ApplicationRegisterCommand {
         owner_tenant_id: command.owner_tenant_id.clone(),
         app_key: command.app_key.clone(),
@@ -1054,7 +1035,7 @@ pub async fn ensure_product_application_runtime(
 
     reconcile_postgres_tenant_application_org_template_rows(pg).await?;
     ensure_postgres_tenant_application_org_template_unique_index(pg).await?;
-    let tenant_application_id = upsert_product_tenant_application_row(
+    let tenant_application_id = upsert_tenant_application_row(
         pg,
         command,
         &template.version,
@@ -1736,18 +1717,34 @@ mod tests {
     }
 
     #[test]
-    fn product_application_template_id_normalizes_app_key() {
+    fn tenant_application_template_id_normalizes_app_key() {
         assert_eq!(
             "tmpl_sdkwork_clawrouter",
-            product_application_template_id("sdkwork-clawrouter")
+            tenant_application_template_id("sdkwork-clawrouter")
         );
     }
 
     #[test]
-    fn product_tenant_application_row_id_is_deterministic() {
+    fn tenant_application_instance_key_scopes_by_app_and_environment() {
+        assert_eq!(
+            "sdkwork_clawrouter_dev",
+            tenant_application_instance_key("sdkwork-clawrouter", "development")
+        );
+        assert_eq!(
+            "sdkwork_clawrouter_prod",
+            tenant_application_instance_key("sdkwork-clawrouter", "production")
+        );
+        assert_ne!(
+            tenant_application_instance_key("sdkwork-clawrouter", "production"),
+            "default"
+        );
+    }
+
+    #[test]
+    fn tenant_application_row_id_is_deterministic() {
         assert_eq!(
             "tapp_100001_0_sdkwork_clawrouter",
-            product_tenant_application_row_id("100001", "0", "tmpl_sdkwork_clawrouter")
+            tenant_application_row_id("100001", "0", "tmpl_sdkwork_clawrouter")
         );
     }
 
@@ -1827,17 +1824,17 @@ mod tests {
     }
 
     #[test]
-    fn derive_product_primary_domain_candidate_avoids_shared_localhost_conflicts() {
+    fn derive_tenant_application_primary_domain_candidate_avoids_shared_localhost_conflicts() {
         assert_eq!(
-            derive_product_primary_domain_candidate("localhost", "sdkwork-im-pc", 0),
+            derive_tenant_application_primary_domain_candidate("localhost", "sdkwork-im-pc", 0),
             "localhost"
         );
         assert_eq!(
-            derive_product_primary_domain_candidate("localhost", "sdkwork-im-pc", 1),
+            derive_tenant_application_primary_domain_candidate("localhost", "sdkwork-im-pc", 1),
             "sdkwork-im-pc.localhost"
         );
         assert_eq!(
-            derive_product_primary_domain_candidate("localhost", "sdkwork-im-pc", 2),
+            derive_tenant_application_primary_domain_candidate("localhost", "sdkwork-im-pc", 2),
             "sdkwork-im-pc-2.localhost"
         );
     }

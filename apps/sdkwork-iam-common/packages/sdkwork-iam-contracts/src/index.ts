@@ -1,3 +1,9 @@
+import {
+  isPlatformOrganizationId,
+  resolveSessionOrganizationId,
+  type IamLoginScope,
+} from './login-context.js';
+
 export type IamEnvironment = "dev" | "test" | "prod";
 export type IamDeploymentMode = "saas" | "local" | "private";
 export type IamAuthLevel = "anonymous" | "password" | "mfa" | "system";
@@ -28,6 +34,7 @@ export interface IamAppContext {
   dataScope: string[];
   deploymentMode: IamDeploymentMode;
   environment: IamEnvironment;
+  loginScope?: IamLoginScope;
   organizationId?: string;
   permissionScope: string[];
   sessionId: string;
@@ -1084,17 +1091,28 @@ export const SDKWORK_IAM_CAPABILITIES = [
 ] as const satisfies readonly IamCapabilityContract[];
 
 export function createIamAppContext(input: IamAppContext): IamAppContext {
+  const hasLoginOrganizationHint =
+    input.loginScope !== undefined
+    || input.organizationId !== undefined;
+  const organizationId = hasLoginOrganizationHint
+    ? resolveSessionOrganizationId({
+        loginScope: input.loginScope,
+        organizationId: input.organizationId,
+      })
+    : undefined;
+
   return {
     appId: input.appId,
     authLevel: input.authLevel,
     dataScope: [...input.dataScope],
     deploymentMode: input.deploymentMode,
     environment: input.environment,
-    ...(input.organizationId ? { organizationId: input.organizationId } : {}),
     permissionScope: [...input.permissionScope],
     sessionId: input.sessionId,
     tenantId: input.tenantId,
     userId: input.userId,
+    ...(organizationId !== undefined ? { organizationId } : {}),
+    ...(input.loginScope ? { loginScope: input.loginScope } : {}),
     ...(input.userSurface ? { userSurface: { ...input.userSurface } } : {}),
     ...(input.standardRoleCodes ? { standardRoleCodes: [...input.standardRoleCodes] } : {}),
   };
@@ -1133,7 +1151,11 @@ export {
 } from "./auth-runtime-metadata.ts";
 
 export function createIamShardingContext(input: IamAppContext): IamShardingContext {
-  if (input.organizationId) {
+  if (
+    input.organizationId
+    && input.loginScope !== 'TENANT'
+    && !isPlatformOrganizationId(input.organizationId)
+  ) {
     return {
       shardingKey: input.organizationId,
       shardingStrategy: "organization",
@@ -1235,3 +1257,25 @@ function flattenOperations(value: unknown): Record<string, IamOperationContract>
   visit(value);
   return result;
 }
+
+export {
+  isLoginEligibleOrganizationId,
+  isPlatformOrganizationId,
+  normalizeLoginOrganizationClaim,
+  PLATFORM_ORGANIZATION_ID,
+  resolveSessionOrganizationId,
+} from './login-context.js';
+export type { IamLoginScope } from './login-context.js';
+export {
+  buildOrganizationLoginContextSelectionBody,
+  buildPersonalLoginContextSelectionBody,
+  buildTenantCurrentSessionUpdateBody,
+  isIamLoginContextSelectionChallenge,
+  normalizeIamLoginContextSelectionChallenge,
+} from './login-context-challenge.js';
+export type {
+  IamLoginContextOrganizationChoice,
+  IamLoginContextSelectionChallenge,
+  IamLoginContextSelectionChallengeType,
+  IamLoginContextSelectionOption,
+} from './login-context-challenge.js';

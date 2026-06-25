@@ -5,7 +5,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, patch, post},
+    routing::{get, post},
     Json, Router,
 };
 use sdkwork_iam_database_host;

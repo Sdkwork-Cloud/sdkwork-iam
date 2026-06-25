@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-iam-embedded-application-bootstrap",
+    "displayName": "SDKWork IAM Embedded Application Bootstrap",
+    "version": "0.1.0",
+    "type": "rust-crate",
+    "root": "sdkwork-iam/crates/sdkwork-iam-embedded-application-bootstrap",
+    "domain": "iam",
+    "capability": "embedded-application-bootstrap",
+    "status": "standardizing",
+    "languages": ["rust"],
+    "generated": false,
+    "private": false,
+    "manifests": ["Cargo.toml"]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "IAM_SPEC.md",
+      "path": "../../../../sdkwork-specs/IAM_SPEC.md",
+      "purpose": "IAM domain, permissions, and tenant isolation rules."
+    },
+    {
+      "file": "RUST_CODE_SPEC.md",
+      "path": "../../../../sdkwork-specs/RUST_CODE_SPEC.md",
+      "purpose": "Rust crate and module rules."
+    }
+  ],
+  "contracts": {
+    "publicExports": [
+      "sdkwork_iam_embedded_application_bootstrap::ensure_tenant_application_from_app_root",
+      "sdkwork_iam_embedded_application_bootstrap::load_manifest_from_app_root",
+      "sdkwork_iam_embedded_application_bootstrap::SdkworkAppManifest"
+    ],
+    "runtimeEntrypoints": [],
+    "routeManifest": null,
+    "sdkClients": [],
+    "events": [],
+    "configKeys": ["sdkwork.app.config.json"]
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative.",
+    "dependencyPolicy": "Embedded runtimes consume manifest-driven bootstrap only.",
+    "sdkPolicy": "Generated SDK output is not hand-edited.",
+    "languagePolicy": "Rust code follows Cargo workspace dependencies."
+  },
+  "verification": {
+    "commands": [
+      "pnpm run test:iam-standard-contracts",
+      "cargo test -p sdkwork-iam-embedded-application-bootstrap"
+    ]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-06-24"
+  }
+}

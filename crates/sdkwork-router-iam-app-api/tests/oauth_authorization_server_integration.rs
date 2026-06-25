@@ -12,7 +12,6 @@ use sdkwork_iam_web_adapter::{
     exchange_authorization_code, load_oauth_bearer_scopes, parse_relying_party_config,
     platform_runtime_app_id_for_tenant, resolve_relying_party_client, revoke_oauth_token,
     seed_builtin_oauth_provider_catalog, validate_authorize_request, AuthorizeRequest,
-    PLATFORM_APPLICATION_TEMPLATE_ID,
 };
 use sdkwork_web_core::bootstrap_access_token_jwt;
 use serde_json::{json, Value};
@@ -29,6 +28,7 @@ const OAUTH_E2E_CLIENT_APP_ID: &str = "app_oauth_partner_e2e";
 const OAUTH_E2E_USERNAME: &str = "oauth-pkce-e2e@sdkwork-iam.test";
 const OAUTH_E2E_PASSWORD: &str = "OAuthPkce#2026";
 const OAUTH_E2E_REDIRECT_URI: &str = "https://partner.sdkwork.test/oauth/callback";
+const OAUTH_E2E_PARTNER_TEMPLATE_ID: &str = "tmpl_oauth_partner_e2e";
 const SIGNING_MASTER_SECRET_ENV: &str = "SDKWORK_IAM_TENANT_SIGNING_MASTER_SECRET";
 
 fn local_iam_env_lock() -> &'static Mutex<()> {
@@ -187,19 +187,34 @@ async fn seed_oauth_e2e_fixtures() {
     assert_eq!(catalog_count, 1, "sdkwork provider catalog entry must exist");
 
     sqlx::query(
+        "INSERT INTO iam_application_template (id, owner_tenant_id, app_key, name, display_name, app_type, \
+         version, channel, status, runtime_config_json, artifacts_config_json, default_access_permissions_json, \
+         created_at, updated_at) \
+         VALUES ($1, '0', $2, $2, 'OAuth Partner E2E', 'WEB', '1.0.0', 'stable', 'active', '{}'::jsonb, '{}'::jsonb, \
+         '[\"iam:self\"]'::jsonb, $3, $3) \
+         ON CONFLICT (id) DO UPDATE SET status = 'active', updated_at = EXCLUDED.updated_at",
+    )
+    .bind(OAUTH_E2E_PARTNER_TEMPLATE_ID)
+    .bind(OAUTH_E2E_CLIENT_APP_ID)
+    .bind(&now)
+    .execute(&pg)
+    .await
+    .expect("insert oauth partner application template");
+
+    sqlx::query(
         "INSERT INTO iam_tenant_application (id, app_id, tenant_id, organization_id, template_id, \
          template_version, instance_key, display_name, environment, status, primary_domain, \
          domain_config_json, access_permissions_json, runtime_config_json, provisioned_at, activated_at, \
          created_at, updated_at) \
          VALUES ($1, $2, $3, '0', $4, '1.0.0', 'oauth-partner', 'OAuth Partner', 'prod', 'enabled', \
-         'partner.sdkwork.test', '{}'::jsonb, '[\"iam.self\"]'::jsonb, $5::jsonb, $6, $6, $6, $6) \
+         'partner.sdkwork.test', '{}'::jsonb, '[\"iam:self\"]'::jsonb, $5::jsonb, $6, $6, $6, $6) \
          ON CONFLICT (id) DO UPDATE SET runtime_config_json = EXCLUDED.runtime_config_json, \
          status = 'enabled', updated_at = EXCLUDED.updated_at",
     )
     .bind(format!("tapp_{OAUTH_E2E_TENANT_ID}_oauth_partner"))
     .bind(OAUTH_E2E_CLIENT_APP_ID)
     .bind(OAUTH_E2E_TENANT_ID)
-    .bind(PLATFORM_APPLICATION_TEMPLATE_ID)
+    .bind(OAUTH_E2E_PARTNER_TEMPLATE_ID)
     .bind(runtime_config.to_string())
     .bind(&now)
     .execute(&pg)
@@ -253,7 +268,7 @@ fn iam_context_from_login_data(data: &Value) -> IamAppContext {
         DeploymentMode::Saas,
         AuthLevel::Password,
         vec![],
-        vec!["iam.self".to_string()],
+        vec!["iam:self".to_string()],
     )
 }
 

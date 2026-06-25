@@ -54,7 +54,7 @@ See `../sdkwork-specs/IAM_OAUTH_SPEC.md` for the full contract.
 ## Verification
 
 - `pnpm run verify`: structure, database, IAM bootstrap, typecheck, API materialize, governance, IAM standard contracts
-- `pnpm run test:iam-standard-contracts`: TypeScript contracts, adapter, OAuth PC, Flutter auth-runtime parity; Rust OAuth PKCE E2E when `.env.postgres` is present (see `../sdkwork-clawrouter/.env.postgres`)
+- `pnpm run test:iam-standard-contracts`: TypeScript contracts, IAM adapter parity, PC/H5/Flutter surfaces; Rust HTTP and PostgreSQL integration when `.env.postgres` is present in the workspace database profile
 - `cargo test --workspace`: Rust IAM crate tests (app-api PostgreSQL integration suites require `.env.postgres` and `--test-threads 1`)
 
 ## Related specs

@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/sdkwork-iam-database-host",
     "crates/sdkwork-iam-bootstrap",
+    "crates/sdkwork-iam-embedded-application-bootstrap",
     "crates/sdkwork-iam-module-registry",
     "crates/sdkwork-iam-web-adapter",
     "crates/sdkwork-iam-context-service",
@@ -52,6 +53,7 @@ sdkwork_iam_tauri_host = { package = "sdkwork-iam-tauri-host", path = "crates/sd
 sdkwork_user_center_tauri_host = { package = "sdkwork-user-center-tauri-host", path = "crates/sdkwork-user-center-tauri-host" }
 sdkwork_iam_database_host = { package = "sdkwork-iam-database-host", path = "crates/sdkwork-iam-database-host" }
 sdkwork_iam_bootstrap = { package = "sdkwork-iam-bootstrap", path = "crates/sdkwork-iam-bootstrap" }
+sdkwork_iam_embedded_application_bootstrap = { package = "sdkwork-iam-embedded-application-bootstrap", path = "crates/sdkwork-iam-embedded-application-bootstrap" }
 sdkwork_iam_module_registry = { package = "sdkwork-iam-module-registry", path = "crates/sdkwork-iam-module-registry" }
 sdkwork_database_config = { package = "sdkwork-database-config", path = "../sdkwork-database/crates/sdkwork-database-config" }
 sdkwork_database_lifecycle = { package = "sdkwork-database-lifecycle", path = "../sdkwork-database/crates/sdkwork-database-lifecycle" }

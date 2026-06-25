@@ -20,6 +20,19 @@ const pcReactIamAppDomain = {
   ],
 };
 
+const pcReactIamConsoleDomain = {
+  domain: "iam-console",
+  summary: "PC user-console IAM packages (app-api / app SDK only).",
+  packages: [
+    makePackage("sdkwork-iam-pc-console-core", "User-console runtime: app SDK inventory and console module registry."),
+    makePackage("sdkwork-iam-pc-console-shell", "User-console shell: module menu and route metadata."),
+    makePackage("sdkwork-iam-pc-console-tenant", "Tenant-owner self-service console surfaces."),
+    makePackage("sdkwork-iam-pc-console-organization", "Tenant-owner organization directory console surfaces."),
+    makePackage("sdkwork-iam-pc-console-account-binding", "Tenant-owner account binding self-service console."),
+    makePackage("sdkwork-iam-pc-console-user", "Tenant-owner profile and password self-service console."),
+  ],
+};
+
 const pcReactIamAdminDomain = {
   domain: "iam-admin",
   summary: "PC backend-admin IAM operator packages (backend-api / backend SDK only).",
@@ -31,6 +44,7 @@ const pcReactIamAdminDomain = {
     makePackage("sdkwork-iam-pc-admin-organization", "Organization tree and membership administration."),
     makePackage("sdkwork-iam-pc-admin-permission", "Roles, permissions, policies, and authorization admin."),
     makePackage("sdkwork-iam-pc-admin-account-binding", "Account binding policy admin configuration."),
+    makePackage("sdkwork-iam-pc-admin-user", "User directory administration surfaces."),
   ],
 };
 
@@ -93,7 +107,7 @@ export const appbaseArchitectureCatalog = [
     packageLayout: "flat",
     summary: "PC React IAM UI and user-center packages.",
     scaffoldPackages: true,
-    domains: [pcReactIamAppDomain, pcReactIamAdminDomain],
+    domains: [pcReactIamAppDomain, pcReactIamConsoleDomain, pcReactIamAdminDomain],
   },
 ];
 

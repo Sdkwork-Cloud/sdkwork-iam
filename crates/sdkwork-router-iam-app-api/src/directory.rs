@@ -705,7 +705,11 @@ pub(crate) fn app_context_to_json(ctx: &sdkwork_iam_context_service::IamAppConte
     json!({
         "appId": ctx.app_id, "authLevel": auth_level_to_string(&ctx.auth_level), "dataScope": ctx.data_scope,
         "deploymentMode": deployment_mode_to_string(&ctx.deployment_mode), "environment": environment_to_string(&ctx.environment),
-        "loginScope": login_scope_to_string(&ctx.login_scope), "organizationId": ctx.organization_id,
+        "loginScope": login_scope_to_string(&ctx.login_scope),
+        "organizationId": sdkwork_iam_context_service::serialize_session_organization_id(
+            ctx.organization_id.as_deref(),
+            &ctx.login_scope,
+        ),
         "permissionScope": ctx.permission_scope, "sessionId": ctx.session_id, "tenantId": ctx.tenant_id, "userId": ctx.user_id
     })
 }

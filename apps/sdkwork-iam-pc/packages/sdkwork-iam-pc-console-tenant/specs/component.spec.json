@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-pc-console-tenant",
+    "displayName": "SDKWork IAM PC Console Tenant",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-tenant",
+    "domain": "iam",
+    "capability": "tenant",
+    "surface": "console",
+    "status": "standard",
+    "languages": ["typescript", "react"],
+    "generated": false,
+    "private": true,
+    "manifests": ["package.json"]
+  },
+  "contracts": {
+    "publicExports": ["."],
+    "runtimeEntrypoints": ["package.json#scripts.typecheck"],
+    "sdkClients": ["@sdkwork/iam-app-sdk"],
+    "events": [],
+    "configKeys": ["package.json#sdkwork"],
+    "routeManifest": null
+  },
+  "verification": {
+    "commands": ["pnpm --filter @sdkwork/iam-pc-console-tenant typecheck"]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-06-24"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-pc-admin-user",
+    "displayName": "SDKWork IAM PC Admin User",
+    "version": "0.1.0",
+    "type": "react-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-user",
+    "domain": "iam",
+    "declaredDomain": "iam",
+    "capability": "user",
+    "surface": "backend-admin",
+    "status": "standard",
+    "languages": ["typescript", "react"],
+    "generated": false,
+    "private": true,
+    "manifests": ["package.json"]
+  },
+  "contracts": {
+    "publicExports": ["."],
+    "runtimeEntrypoints": ["package.json#scripts.typecheck"],
+    "sdkClients": ["@sdkwork/iam-backend-sdk"],
+    "events": [],
+    "configKeys": ["package.json#sdkwork"],
+    "routeManifest": null
+  },
+  "verification": {
+    "commands": ["pnpm --filter @sdkwork/iam-pc-admin-user typecheck"]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-06-24"
+  }
+}

@@ -34,7 +34,7 @@ Root SDKWork standards remain authoritative. Local component specs can narrow or
 - `pnpm run typecheck`
 - `pnpm run api:materialize`
 - `pnpm run test:governance-node`
-- `pnpm run test:iam-standard-contracts` for IAM TypeScript and Rust integration parity (PostgreSQL integration tests require `.env.postgres`; without it, app-api HTTP standard tests still run)
+- `pnpm run test:iam-standard-contracts` for IAM TypeScript and Rust integration parity (PostgreSQL integration tests require `.env.postgres`; without it, HTTP standard tests still run for app-api and backend-api route contracts)
 - `pnpm run test:iam-standard-governance` for IAM governance contract coverage
 - `pnpm run test:user-center-standard-contracts` for user-center upstream dispatch parity
 - `pnpm run test:workspace-vitest` for package-level Vitest coverage

@@ -12,6 +12,15 @@ import {
 import { isBlank } from "@sdkwork/utils";
 import { unwrapIamSdkResponse } from "@sdkwork/iam-sdk-adapter";
 import {
+  buildOrganizationLoginContextSelectionBody,
+  buildPersonalLoginContextSelectionBody,
+  buildTenantCurrentSessionUpdateBody,
+  normalizeLoginOrganizationClaim,
+  normalizeIamLoginContextSelectionChallenge,
+  PLATFORM_ORGANIZATION_ID,
+  resolveSessionOrganizationId,
+} from "@sdkwork/iam-contracts";
+import {
   createSdkworkAuthMessages,
   formatSdkworkAuthTemplate,
 } from "./auth-copy.ts";
@@ -605,11 +614,18 @@ function normalizeAuthAppContext(value: unknown): SdkworkAuthAppContext | undefi
       : {}),
     ...(normalizeNullableString(remote.organizationId) !== undefined
       || normalizeNullableString(remote.organization_id) !== undefined
+      || normalizeOptionalString(remote.loginScope)
+      || normalizeOptionalString(remote.login_scope)
       ? {
-          organizationId:
-            normalizeNullableString(remote.organizationId)
-            ?? normalizeNullableString(remote.organization_id)
-            ?? null,
+          organizationId: resolveSessionOrganizationId({
+            loginScope:
+              normalizeOptionalString(remote.loginScope)
+              || normalizeOptionalString(remote.login_scope),
+            organizationId:
+              normalizeNullableString(remote.organizationId)
+              ?? normalizeNullableString(remote.organization_id)
+              ?? null,
+          }),
         }
       : {}),
     ...(normalizeStringArray(remote.permissionScope).length > 0
@@ -688,10 +704,7 @@ function readJwtClaimString(
 }
 
 function normalizeOrganizationClaim(value?: string | null): string {
-  if (!value || value === "0") {
-    return "";
-  }
-  return value;
+  return normalizeLoginOrganizationClaim(value);
 }
 
 function assertSessionTokenContextCoherence(
@@ -752,119 +765,10 @@ function normalizeStringArray(value: unknown): string[] {
     : [];
 }
 
-function normalizeOrganizationChoice(value: unknown): SdkworkAuthOrganizationChoice | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-
-  const organizationId =
-    normalizeOptionalString(value.organizationId)
-    || normalizeOptionalString(value.organization_id)
-    || normalizeOptionalString(value.id);
-  if (!organizationId) {
-    return undefined;
-  }
-
-  return {
-    ...value,
-    organizationId,
-    ...(normalizeOptionalString(value.displayName) || normalizeOptionalString(value.display_name)
-      ? {
-          displayName:
-            normalizeOptionalString(value.displayName)
-            || normalizeOptionalString(value.display_name),
-        }
-      : {}),
-    ...(normalizeOptionalString(value.membershipId) || normalizeOptionalString(value.membership_id)
-      ? {
-          membershipId:
-            normalizeOptionalString(value.membershipId)
-            || normalizeOptionalString(value.membership_id),
-        }
-      : {}),
-    ...(normalizeOptionalString(value.membershipKind) || normalizeOptionalString(value.membership_kind)
-      ? {
-          membershipKind:
-            normalizeOptionalString(value.membershipKind)
-            || normalizeOptionalString(value.membership_kind),
-        }
-      : {}),
-    ...(normalizeOptionalString(value.name) ? { name: normalizeOptionalString(value.name) } : {}),
-    ...(normalizeOptionalString(value.tenantId) || normalizeOptionalString(value.tenant_id)
-      ? {
-          tenantId:
-            normalizeOptionalString(value.tenantId)
-            || normalizeOptionalString(value.tenant_id),
-        }
-      : {}),
-  };
-}
-
 function normalizeOrganizationSelectionChallenge(
   value: SdkworkRemoteLoginData,
 ): SdkworkAuthOrganizationSelectionChallenge | undefined {
-  const challengeType = normalizeOptionalString(value.challengeType);
-  if (challengeType !== "ORGANIZATION_SELECTION" && challengeType !== "LOGIN_CONTEXT_SELECTION") {
-    return undefined;
-  }
-
-  const continuationToken = normalizeOptionalString(value.continuationToken);
-  if (!continuationToken) {
-    return undefined;
-  }
-
-  const organizations = Array.isArray(value.organizations)
-    ? value.organizations
-        .map(normalizeOrganizationChoice)
-        .filter((organization): organization is SdkworkAuthOrganizationChoice => Boolean(organization))
-    : [];
-
-  const options = Array.isArray(value.options)
-    ? value.options
-        .map((option: unknown) => {
-          if (!option || typeof option !== "object" || Array.isArray(option)) {
-            return undefined;
-          }
-          const record = option as Record<string, unknown>;
-          const loginScope = normalizeOptionalString(record.loginScope)
-            || normalizeOptionalString(record.login_scope);
-          if (loginScope !== "TENANT" && loginScope !== "ORGANIZATION") {
-            return undefined;
-          }
-          return {
-            loginScope: loginScope as 'TENANT' | 'ORGANIZATION',
-            ...(normalizeOptionalString(record.organizationId) || normalizeOptionalString(record.organization_id)
-              ? {
-                  organizationId:
-                    normalizeOptionalString(record.organizationId)
-                    || normalizeOptionalString(record.organization_id),
-                }
-              : {}),
-            ...(normalizeOptionalString(record.displayName) || normalizeOptionalString(record.display_name)
-              ? {
-                  displayName:
-                    normalizeOptionalString(record.displayName)
-                    || normalizeOptionalString(record.display_name),
-                }
-              : {}),
-            ...(record.requiresOrganizationSelection === true
-              || record.requires_organization_selection === true
-              ? { requiresOrganizationSelection: true }
-              : {}),
-          };
-        })
-        .filter((option): option is NonNullable<typeof option> => Boolean(option))
-    : undefined;
-
-  return {
-    challengeType,
-    continuationToken,
-    ...(typeof value.expiresAt === "number" || typeof value.expiresAt === "string"
-      ? { expiresAt: value.expiresAt }
-      : {}),
-    organizations,
-    ...(options && options.length > 0 ? { options } : {}),
-  };
+  return normalizeIamLoginContextSelectionChallenge(value);
 }
 
 function throwIfLegacyTenantSelectionChallenge(value: SdkworkRemoteLoginData): void {
@@ -1486,17 +1390,12 @@ export function createSdkworkAuthService(
       formatMethodUnavailable("auth.sessions.loginContextSelection.create"),
       client.auth.sessions?.loginContextSelection,
     );
-    const body: Record<string, unknown> = {
-      continuationToken,
-      loginScope,
-    };
-    if (loginScope === "ORGANIZATION") {
-      const organizationId = normalizeOptionalString(input.organizationId);
-      if (!organizationId) {
-        throw new Error(copy.service.signInFailed);
-      }
-      body.organizationId = organizationId;
-    }
+    const body = loginScope === "ORGANIZATION"
+      ? buildOrganizationLoginContextSelectionBody(
+          continuationToken,
+          normalizeOptionalString(input.organizationId) ?? "",
+        )
+      : buildPersonalLoginContextSelectionBody(continuationToken);
 
     const loginData = unwrapAppSdkResponse<SdkworkRemoteLoginData>(
       await createLoginContextSelection(body),
@@ -1522,6 +1421,7 @@ export function createSdkworkAuthService(
     return selectLoginContext({
       continuationToken: input.continuationToken,
       loginScope: "TENANT",
+      organizationId: PLATFORM_ORGANIZATION_ID,
     });
   }
 
@@ -1727,8 +1627,12 @@ export function createSdkworkAuthService(
       formatMethodUnavailable("auth.sessions.current.update"),
       client.auth.sessions?.current,
     );
+    const loginScope = normalizeOptionalString(input.loginScope)?.toUpperCase();
+    const payload: SdkworkAuthUpdateCurrentSessionInput = loginScope === "TENANT"
+      ? { ...input, ...buildTenantCurrentSessionUpdateBody() }
+      : { ...input };
     const loginData = unwrapAppSdkResponse<SdkworkRemoteLoginData>(
-      await updateCurrentSessionResource(input),
+      await updateCurrentSessionResource(payload),
       copy.service.signInFailed,
     );
 

@@ -1820,6 +1820,7 @@ describe("sdkwork-auth-pc-react service", () => {
     expect(loginContextSelectionCreate).toHaveBeenCalledWith({
       continuationToken: "continue-personal-login-1",
       loginScope: "TENANT",
+      organizationId: "0",
     });
   });
 
@@ -2283,6 +2284,7 @@ describe("sdkwork-auth-pc-react service", () => {
     });
     expect(sessionsCurrentUpdate).toHaveBeenCalledWith({
       loginScope: "TENANT",
+      organizationId: "0",
     });
     expect(commitSession).toHaveBeenCalledWith(
       {

@@ -373,6 +373,7 @@ describe("SDKWork IAM service", () => {
           deploymentMode: "saas",
           environment: "test",
           loginScope: "TENANT",
+          organizationId: "0",
           permissionScope: ["iam:self"],
           sessionId: "s1",
           tenantId: "t1",
@@ -399,11 +400,13 @@ describe("SDKWork IAM service", () => {
     const session = await service.auth.sessions.loginContextSelection.create({
       continuationToken: "select-login-context-token",
       loginScope: "TENANT",
+      organizationId: "0",
     });
 
     expect(loginContextSelectionCreate).toHaveBeenCalledWith({
       continuationToken: "select-login-context-token",
       loginScope: "TENANT",
+      organizationId: "0",
     });
     expect(clearSession).toHaveBeenCalledOnce();
     expect(commitSession).toHaveBeenCalledWith(expect.objectContaining({
@@ -417,6 +420,48 @@ describe("SDKWork IAM service", () => {
       authToken: "personal-auth-token",
       refreshToken: "personal-refresh-token",
       sessionId: "s1",
+    });
+  });
+
+  it("adds platform organizationId when switching current session to TENANT scope", async () => {
+    const currentUpdate = vi.fn().mockResolvedValue({
+      data: {
+        accessToken: "tenant-access-token",
+        authToken: "tenant-auth-token",
+        context: {
+          appId: "app",
+          authLevel: "password",
+          dataScope: ["tenant:t1", "user:u1"],
+          deploymentMode: "saas",
+          environment: "test",
+          loginScope: "TENANT",
+          organizationId: "0",
+          permissionScope: ["iam:self"],
+          sessionId: "s1",
+          tenantId: "t1",
+          userId: "u1",
+        },
+        refreshToken: "tenant-refresh-token",
+        sessionId: "s1",
+      },
+    });
+    const service = createSdkworkIamService({
+      appbaseAppClient: {
+        auth: {
+          sessions: {
+            current: {
+              update: currentUpdate,
+            },
+          },
+        },
+      },
+    });
+
+    await service.auth.sessions.current.update({ loginScope: "TENANT" });
+
+    expect(currentUpdate).toHaveBeenCalledWith({
+      loginScope: "TENANT",
+      organizationId: "0",
     });
   });
 

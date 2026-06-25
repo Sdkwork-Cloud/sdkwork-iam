@@ -18,6 +18,19 @@ describe("@sdkwork/iam-h5-user", () => {
               displayName: "Alice Updated",
               nickname: "ali",
             }),
+            password: {
+              update: vi.fn().mockResolvedValue(undefined),
+            },
+          },
+        },
+      },
+      system: {
+        iam: {
+          verificationPolicy: {
+            retrieve: vi.fn().mockResolvedValue({
+              emailVerificationRequired: true,
+              phoneVerificationRequired: false,
+            }),
           },
         },
       },
@@ -39,6 +52,39 @@ describe("@sdkwork/iam-h5-user", () => {
     expect(service.iam.users.current.update).toHaveBeenCalledWith({
       displayName: "Alice Updated",
       nickname: "ali",
+    });
+    await expect(controller.loadVerificationPolicy()).resolves.toMatchObject({
+      emailVerificationRequired: true,
+    });
+  });
+
+  it("updates the current user password through the IAM service", async () => {
+    const service = {
+      iam: {
+        users: {
+          current: {
+            password: {
+              update: vi.fn().mockResolvedValue(undefined),
+            },
+          },
+        },
+      },
+    };
+
+    const controller = createSdkworkIamH5UserController({ service: service as never });
+
+    await expect(
+      controller.updatePassword({
+        confirmPassword: "NextPass#2026",
+        newPassword: "NextPass#2026",
+        oldPassword: "CurrentPass#2026",
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(service.iam.users.current.password.update).toHaveBeenCalledWith({
+      confirmPassword: "NextPass#2026",
+      newPassword: "NextPass#2026",
+      oldPassword: "CurrentPass#2026",
     });
   });
 });

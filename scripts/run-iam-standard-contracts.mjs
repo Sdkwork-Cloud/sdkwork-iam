@@ -26,6 +26,35 @@ export function iamPostgresProfileAvailable(cwd = sdkworkAppbaseRoot) {
   return candidates.some((candidate) => fs.existsSync(candidate));
 }
 
+export function createBackendApiRustTestCommands(cwd = sdkworkAppbaseRoot) {
+  const threadArgs = ["--", "--test-threads", "1"];
+  const routeStandard = {
+    command: "cargo",
+    args: ["test", "-j", "1", "-p", "sdkwork-router-iam-backend-api", "--test", "iam_backend_route_standard", ...threadArgs],
+  };
+
+  if (!iamPostgresProfileAvailable(cwd)) {
+    return [routeStandard];
+  }
+
+  return [
+    routeStandard,
+    {
+      command: "cargo",
+      args: [
+        "test",
+        "-j",
+        "1",
+        "-p",
+        "sdkwork-router-iam-backend-api",
+        "--test",
+        "iam_backend_postgres_integration",
+        ...threadArgs,
+      ],
+    },
+  ];
+}
+
 export function createAppApiRustTestCommands(cwd = sdkworkAppbaseRoot) {
   const threadArgs = ["--", "--test-threads", "1"];
   const httpStandard = {
@@ -79,8 +108,14 @@ export function createIamStandardContractsPlan({
         path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-permission/tests/iam-permission.controller.test.ts"),
         path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-permission/tests/iam-permission.guards.test.tsx"),
         path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-account-binding/tests/iam-account-binding.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-user/tests/iam-user.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-tenant/tests/iam-console-tenant.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-organization/tests/iam-console-organization.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-account-binding/tests/iam-console-account-binding.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-user/tests/iam-console-user.controller.test.ts"),
         path.join(cwd, "apps/sdkwork-iam-h5/packages/sdkwork-iam-h5-auth/tests/auth-h5.controller.test.ts"),
         path.join(cwd, "apps/sdkwork-iam-h5/packages/sdkwork-iam-h5-user/tests/user-h5.controller.test.ts"),
+        path.join(cwd, "apps/sdkwork-iam-h5/packages/sdkwork-iam-h5-account-binding/tests/account-binding-h5.controller.test.ts"),
         "--config",
         path.join(cwd, "vitest.config.ts"),
         "--configLoader",
@@ -99,14 +134,7 @@ export function createIamStandardContractsPlan({
       ],
     },
     ...createAppApiRustTestCommands(cwd),
-    {
-      command: "cargo",
-      args: [
-        "test",
-        "-p",
-        "sdkwork-router-iam-backend-api",
-      ],
-    },
+    ...createBackendApiRustTestCommands(cwd),
     {
       command: "cargo",
       args: [
@@ -164,6 +192,11 @@ export function createIamStandardContractsPlan({
       command: "dart",
       args: ["test"],
       cwd: path.join(cwd, "apps/sdkwork-iam-flutter-mobile/packages/sdkwork_iam_flutter_mobile_user"),
+    });
+    commands.push({
+      command: "dart",
+      args: ["test"],
+      cwd: path.join(cwd, "apps/sdkwork-iam-flutter-mobile/packages/sdkwork_iam_flutter_mobile_account_binding"),
     });
   }
 

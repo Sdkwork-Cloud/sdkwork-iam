@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import { WORKSPACE_VITEST_RUNTIME_BLOCKED_EXIT_CODE } from "../../../scripts/run-workspace-vitest.mjs";
 import {
   createAppApiRustTestCommands,
+  createBackendApiRustTestCommands,
   createIamStandardContractsPlan,
   iamPostgresProfileAvailable,
   runIamStandardContracts,
@@ -63,13 +65,24 @@ test("IAM standard contracts plan uses the governed Vitest CLI path and Rust pac
     [
       ["test", "-p", "sdkwork-iam-context-service"],
       ...createAppApiRustTestCommands(appbaseRoot).map((command) => command.args),
-      ["test", "-p", "sdkwork-router-iam-backend-api"],
+      ...createBackendApiRustTestCommands(appbaseRoot).map((command) => command.args),
       ["test", "-p", "sdkwork-router-iam-open-api"],
       ["test", "-p", "sdkwork-iam-directory-repository-sqlx"],
       ["test", "-p", "sdkwork-iam-web-adapter"],
       ["test", "-p", "sdkwork-iam-bootstrap"],
       ["test", "-p", "sdkwork-iam-tauri-host"],
-      ["test"],
+      ...(spawnSync("dart", ["--version"], {
+        encoding: "utf8",
+        shell: process.platform === "win32",
+        windowsHide: true,
+      }).status === 0
+        ? [
+            ["test"],
+            ["test"],
+            ["test"],
+            ["test"],
+          ]
+        : []),
     ],
   );
 });

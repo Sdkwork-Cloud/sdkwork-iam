@@ -16,7 +16,8 @@
         "@sdkwork/iam-service",
         "@sdkwork/iam-h5-core",
         "@sdkwork/iam-h5-auth",
-        "@sdkwork/iam-h5-user"
+        "@sdkwork/iam-h5-user",
+        "@sdkwork/iam-h5-account-binding"
       ],
       "hostAdapters": [],
       "dependencyApiExports": [],
@@ -28,7 +29,8 @@
       "workspacePackages": [
         "@sdkwork/iam-h5-core",
         "@sdkwork/iam-h5-auth",
-        "@sdkwork/iam-h5-user"
+        "@sdkwork/iam-h5-user",
+        "@sdkwork/iam-h5-account-binding"
       ]
     }
   }

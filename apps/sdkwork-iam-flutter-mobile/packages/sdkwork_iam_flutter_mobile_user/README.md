@@ -1,6 +1,6 @@
 # sdkwork_iam_flutter_mobile_user
 
-Flutter user-center capability for IAM: current-user profile retrieval and update.
+Flutter user-center capability for IAM: current-user profile retrieval and update, and optional password change.
 
 ## Exports
 

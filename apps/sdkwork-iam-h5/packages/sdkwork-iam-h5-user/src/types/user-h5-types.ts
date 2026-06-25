@@ -15,10 +15,22 @@ export interface SdkworkIamH5UserProfileDraft {
   nickname?: string;
 }
 
+export interface SdkworkIamH5PasswordDraft {
+  confirmPassword: string;
+  newPassword: string;
+  oldPassword: string;
+}
+
+export interface SdkworkIamH5VerificationPolicy {
+  emailVerificationRequired?: boolean;
+  phoneVerificationRequired?: boolean;
+}
+
 export interface SdkworkIamH5UserState {
   lastError?: string;
   profile?: SdkworkIamH5UserProfile;
   status: "idle" | "loading" | "ready" | "error";
+  verificationPolicy?: SdkworkIamH5VerificationPolicy;
 }
 
 export interface CreateSdkworkIamH5UserControllerInput {
@@ -28,6 +40,8 @@ export interface CreateSdkworkIamH5UserControllerInput {
 export interface SdkworkIamH5UserController {
   getState(): SdkworkIamH5UserState;
   loadProfile(): Promise<SdkworkIamH5UserProfile>;
+  loadVerificationPolicy(): Promise<SdkworkIamH5VerificationPolicy>;
+  updatePassword(body: SdkworkIamH5PasswordDraft): Promise<void>;
   updateProfile(body: SdkworkIamH5UserProfileDraft): Promise<SdkworkIamH5UserProfile>;
 }
 

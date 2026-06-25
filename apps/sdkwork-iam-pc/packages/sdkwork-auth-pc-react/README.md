@@ -163,6 +163,19 @@ Explicit `loginMethods` and `registerMethods` still take priority. Use them when
 the host app needs a fixed method list. Use `verificationPolicy` when the app
 wants defaults that can be changed by deployment configuration.
 
+## Login context selection
+
+When appbase returns `LOGIN_CONTEXT_SELECTION`, auth surfaces must treat the
+response as a login continuation rather than an authenticated session.
+
+- Personal platform login: `loginScope = "TENANT"` and `organizationId = "0"`.
+- Organization login: `loginScope = "ORGANIZATION"` and a non-zero organization id from appbase.
+- Organization id `"0"` is a platform sentinel only. It must not appear in organization choice lists and must not be submitted with `loginScope = "ORGANIZATION"`.
+- `SdkworkAuthPage` and `SdkworkOrganizationSelectionDialog` handle this flow through `selectPersonalLogin` and `selectOrganization`.
+- Shared helpers live in `@sdkwork/iam-contracts` (`buildPersonalLoginContextSelectionBody`, `normalizeIamLoginContextSelectionChallenge`, etc.).
+
+The same contract applies to `@sdkwork/iam-h5-auth` and `sdkwork_iam_flutter_mobile_auth`.
+
 The same policy can be enabled from `.env`:
 
 ```env

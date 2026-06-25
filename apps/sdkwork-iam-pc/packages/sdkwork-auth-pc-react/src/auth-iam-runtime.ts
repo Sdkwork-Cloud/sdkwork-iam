@@ -5,6 +5,14 @@ import {
 } from "./auth-controller.ts";
 import { isBlank } from "@sdkwork/utils";
 import {
+  buildOrganizationLoginContextSelectionBody,
+  buildPersonalLoginContextSelectionBody,
+  buildTenantCurrentSessionUpdateBody,
+  normalizeIamLoginContextSelectionChallenge,
+  PLATFORM_ORGANIZATION_ID,
+  resolveSessionOrganizationId,
+} from "@sdkwork/iam-contracts";
+import {
   createSdkworkAuthUserFromIdentity,
   SdkworkAuthOrganizationSelectionRequiredError,
   type SdkworkAuthEmailLoginInput,
@@ -510,13 +518,12 @@ export function createSdkworkIamRuntimeAuthService(
     if (!runtime.service.auth.sessions.loginContextSelection?.create) {
       throw new Error(methodUnavailableMessage);
     }
-    const body: Record<string, unknown> = {
-      continuationToken: input.continuationToken.trim(),
-      loginScope: input.loginScope,
-    };
-    if (input.loginScope === "ORGANIZATION") {
-      body.organizationId = input.organizationId?.trim();
-    }
+    const body = input.loginScope === "ORGANIZATION"
+      ? buildOrganizationLoginContextSelectionBody(
+          input.continuationToken.trim(),
+          input.organizationId?.trim() ?? "",
+        )
+      : buildPersonalLoginContextSelectionBody(input.continuationToken.trim());
     const session = toAuthSession(await runtime.service.auth.sessions.loginContextSelection.create(body));
     return commitStoredSession(runtime, session);
   }
@@ -537,6 +544,7 @@ export function createSdkworkIamRuntimeAuthService(
     return selectLoginContext({
       continuationToken: input.continuationToken,
       loginScope: "TENANT",
+      organizationId: PLATFORM_ORGANIZATION_ID,
     });
   }
 
@@ -547,7 +555,11 @@ export function createSdkworkIamRuntimeAuthService(
     if (!runtime.service.auth.sessions.current.update) {
       throw new Error(methodUnavailableMessage);
     }
-    const session = toAuthSession(await runtime.service.auth.sessions.current.update(input));
+    const loginScope = normalizeOptionalScalar(input.loginScope)?.toUpperCase();
+    const payload: SdkworkAuthUpdateCurrentSessionInput = loginScope === "TENANT"
+      ? { ...input, ...buildTenantCurrentSessionUpdateBody() }
+      : { ...input };
+    const session = toAuthSession(await runtime.service.auth.sessions.current.update(payload));
     return commitStoredSession(runtime, session, { preserveRefreshToken: true });
   }
 
@@ -929,11 +941,18 @@ function toAuthAppContext(value: unknown): SdkworkAuthSession["context"] | undef
       : {}),
     ...(normalizeNullableScalar(record.organizationId) !== undefined
       || normalizeNullableScalar(record.organization_id) !== undefined
+      || normalizeOptionalScalar(record.loginScope)
+      || normalizeOptionalScalar(record.login_scope)
       ? {
-          organizationId:
-            normalizeNullableScalar(record.organizationId)
-            ?? normalizeNullableScalar(record.organization_id)
-            ?? null,
+          organizationId: resolveSessionOrganizationId({
+            loginScope:
+              normalizeOptionalScalar(record.loginScope)
+              || normalizeOptionalScalar(record.login_scope),
+            organizationId:
+              normalizeNullableScalar(record.organizationId)
+              ?? normalizeNullableScalar(record.organization_id)
+              ?? null,
+          }),
         }
       : {}),
     ...(normalizeStringArray(record.permissionScope).length > 0
@@ -992,105 +1011,7 @@ function throwIfTenantSelectionChallenge(value: unknown): void {
 function normalizeOrganizationSelectionChallenge(
   value: unknown,
 ): SdkworkAuthOrganizationSelectionChallenge | undefined {
-  const record = toRecord(value);
-  if (normalizeOptionalScalar(record.challengeType) !== "ORGANIZATION_SELECTION"
-    && normalizeOptionalScalar(record.challengeType) !== "LOGIN_CONTEXT_SELECTION") {
-    return undefined;
-  }
-
-  const continuationToken = normalizeOptionalScalar(record.continuationToken);
-  if (!continuationToken) {
-    return undefined;
-  }
-
-  const organizations = Array.isArray(record.organizations)
-    ? record.organizations
-        .map(normalizeOrganizationChoice)
-        .filter((organization): organization is SdkworkAuthOrganizationChoice => Boolean(organization))
-    : [];
-
-  type OrganizationSelectionOption = NonNullable<
-    SdkworkAuthOrganizationSelectionChallenge["options"]
-  >[number];
-
-  const options = Array.isArray(record.options)
-    ? record.options
-        .map((option): OrganizationSelectionOption | undefined => {
-          const optionRecord = toRecord(option);
-          const loginScope = normalizeOptionalScalar(optionRecord.loginScope)
-            || normalizeOptionalScalar(optionRecord.login_scope);
-          if (loginScope !== "TENANT" && loginScope !== "ORGANIZATION") {
-            return undefined;
-          }
-          return {
-            loginScope,
-            ...(normalizeOptionalScalar(optionRecord.organizationId)
-              || normalizeOptionalScalar(optionRecord.organization_id)
-              ? {
-                  organizationId:
-                    normalizeOptionalScalar(optionRecord.organizationId)
-                    || normalizeOptionalScalar(optionRecord.organization_id),
-                }
-              : {}),
-            ...(normalizeOptionalScalar(optionRecord.displayName)
-              || normalizeOptionalScalar(optionRecord.display_name)
-              ? {
-                  displayName:
-                    normalizeOptionalScalar(optionRecord.displayName)
-                    || normalizeOptionalScalar(optionRecord.display_name),
-                }
-              : {}),
-          };
-        })
-        .filter((option): option is OrganizationSelectionOption => Boolean(option))
-    : undefined;
-
-  return {
-    challengeType: normalizeOptionalScalar(record.challengeType) as SdkworkAuthOrganizationSelectionChallenge["challengeType"],
-    continuationToken,
-    ...(typeof record.expiresAt === "number" || typeof record.expiresAt === "string"
-      ? { expiresAt: record.expiresAt }
-      : {}),
-    organizations,
-    ...(options && options.length > 0 ? { options } : {}),
-  };
-}
-
-function normalizeOrganizationChoice(value: unknown): SdkworkAuthOrganizationChoice | undefined {
-  const record = toRecord(value);
-  const organizationId =
-    normalizeOptionalScalar(record.organizationId)
-    || normalizeOptionalScalar(record.organization_id)
-    || normalizeOptionalScalar(record.id);
-  if (!organizationId) {
-    return undefined;
-  }
-
-  return {
-    organizationId,
-    ...(normalizeOptionalScalar(record.displayName) || normalizeOptionalScalar(record.display_name)
-      ? {
-          displayName:
-            normalizeOptionalScalar(record.displayName)
-            || normalizeOptionalScalar(record.display_name),
-        }
-      : {}),
-    ...(normalizeOptionalScalar(record.membershipKind) || normalizeOptionalScalar(record.membership_kind)
-      ? {
-          membershipKind:
-            normalizeOptionalScalar(record.membershipKind)
-            || normalizeOptionalScalar(record.membership_kind),
-        }
-      : {}),
-    ...(normalizeOptionalScalar(record.name) ? { name: normalizeOptionalScalar(record.name) } : {}),
-    ...(normalizeOptionalScalar(record.tenantId) || normalizeOptionalScalar(record.tenant_id)
-      ? {
-          tenantId:
-            normalizeOptionalScalar(record.tenantId)
-            || normalizeOptionalScalar(record.tenant_id),
-        }
-      : {}),
-  };
+  return normalizeIamLoginContextSelectionChallenge(value);
 }
 
 function toAuthUser(user: SdkworkIamRuntimeAuthUserLike): SdkworkAuthUser {

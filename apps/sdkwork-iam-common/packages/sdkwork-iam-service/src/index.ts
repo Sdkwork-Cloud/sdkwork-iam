@@ -1,4 +1,8 @@
 import { createIamAppContext, type IamAppContext } from "@sdkwork/iam-contracts";
+import {
+  buildTenantCurrentSessionUpdateBody,
+  isIamLoginContextSelectionChallenge,
+} from "@sdkwork/iam-contracts";
 import type { IamAppSdkClient, IamBackendIamResourceClient, IamBackendSdkClient, IamSdkResourceClient } from "@sdkwork/iam-sdk-ports";
 import { createIamBackendOauthService, type IamBackendOauthService } from "./iam-backend-oauth-service";
 
@@ -25,6 +29,15 @@ export interface IamSession {
   sessionId?: string;
   user?: IamUser;
 }
+
+export type { IamLoginContextSelectionChallenge } from "@sdkwork/iam-contracts";
+export {
+  buildOrganizationLoginContextSelectionBody,
+  buildPersonalLoginContextSelectionBody,
+  buildTenantCurrentSessionUpdateBody,
+  isIamLoginContextSelectionChallenge,
+  normalizeIamLoginContextSelectionChallenge,
+} from "@sdkwork/iam-contracts";
 
 export interface IamStoredSession {
   accessToken?: string;
@@ -391,7 +404,12 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
             { preserveRefreshToken: true },
           ),
           update: async (body) => handleSession(
-            await callResourceMethod(appSessions?.current, "update", "appbaseAppClient.auth.sessions.current.update", body),
+            await callResourceMethod(
+              appSessions?.current,
+              "update",
+              "appbaseAppClient.auth.sessions.current.update",
+              normalizeCurrentSessionUpdateBody(body),
+            ),
             input,
             { preserveRefreshToken: true },
           ),
@@ -666,17 +684,7 @@ async function handleAuthSession(
 }
 
 function isAuthSelectionChallenge(value: unknown): value is RemoteSession {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const record = value as Record<string, unknown>;
-  const challengeType = optionalString(record.challengeType);
-  if (challengeType === "ORGANIZATION_SELECTION" || challengeType === "LOGIN_CONTEXT_SELECTION") {
-    return Boolean(optionalString(record.continuationToken));
-  }
-
-  return false;
+  return isIamLoginContextSelectionChallenge(value);
 }
 
 async function callRaw(
@@ -816,6 +824,24 @@ function toUser(value: unknown): IamUser {
 function optionalString(value: unknown): string | undefined {
   const normalized = typeof value === "string" ? value.trim() : "";
   return normalized || undefined;
+}
+
+function normalizeCurrentSessionUpdateBody(
+  body?: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  if (!body) {
+    return body;
+  }
+
+  const loginScope = optionalString(body.loginScope)?.toUpperCase();
+  if (loginScope === "TENANT") {
+    return {
+      ...body,
+      ...buildTenantCurrentSessionUpdateBody(),
+    };
+  }
+
+  return body;
 }
 
 export type { IamAppSdkClient, IamBackendSdkClient, IamSdkResourceClient };

@@ -33,4 +33,61 @@ void main() {
 
     expect(controller.profile?.displayName, 'Alice Updated');
   });
+
+  test('updates the current user password when configured', () async {
+    IamFlutterMobilePasswordDraft? captured;
+
+    final controller = IamFlutterMobileUserProfileController(
+      retrieveProfile: () async => {
+        'userId': 'user-1',
+        'displayName': 'Alice',
+      },
+      updateProfile: (draft) async => {
+        'userId': 'user-1',
+        'displayName': draft.displayName,
+      },
+      updatePassword: (draft) async {
+        captured = draft;
+      },
+    );
+
+    await controller.changePassword(
+      const IamFlutterMobilePasswordDraft(
+        confirmPassword: 'NextPass#2026',
+        newPassword: 'NextPass#2026',
+        oldPassword: 'CurrentPass#2026',
+      ),
+    );
+
+    expect(captured?.oldPassword, 'CurrentPass#2026');
+    expect(captured?.newPassword, 'NextPass#2026');
+  });
+
+  test('loads verification policy when configured', () async {
+    final controller = IamFlutterMobileUserProfileController(
+      retrieveProfile: () async => {
+        'userId': 'user-1',
+        'displayName': 'Alice',
+      },
+      updateProfile: (draft) async => {
+        'userId': 'user-1',
+        'displayName': draft.displayName,
+      },
+      retrieveVerificationPolicy: () async => {
+        'emailVerificationRequired': true,
+        'phoneVerificationRequired': false,
+      },
+    );
+
+    await expectLater(
+      controller.loadVerificationPolicy(),
+      completion(
+        isA<IamFlutterMobileVerificationPolicy>().having(
+          (policy) => policy.emailVerificationRequired,
+          'emailVerificationRequired',
+          true,
+        ),
+      ),
+    );
+  });
 }

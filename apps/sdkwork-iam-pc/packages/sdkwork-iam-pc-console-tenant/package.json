@@ -1,0 +1,42 @@
+{
+  "name": "@sdkwork/iam-pc-console-tenant",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Tenant-owner self-service console: runtime context, organizations, and memberships via app-api.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": ["src", "README.md"],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sdkwork/iam-pc-console-core": "workspace:*",
+    "@sdkwork/iam-service": "workspace:*",
+    "@sdkwork/ui-pc-react": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0 <20.0.0",
+    "react-dom": ">=18.2.0 <20.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "react-dom": { "optional": true }
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "sdkwork": {
+    "workspace": "sdkwork-iam",
+    "architecture": "pc-console",
+    "surface": "console",
+    "domain": "iam",
+    "capability": "tenant",
+    "status": "standard"
+  }
+}

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import {
   getSdkworkMediaDeliveryUrl,
-  toExternalSdkworkMediaResource,
+  toExternalSdkworkPaymentMediaResource,
 } from "@sdkwork/runtime-bootstrap";
 import {
   Button,
@@ -258,7 +258,7 @@ export function SdkworkUserProfileSection({
             <Input
               disabled={!capabilities.avatarEditable}
               value={getSdkworkMediaDeliveryUrl(draft.avatar) || ""}
-              onChange={(event) => setDraft({ ...draft, avatar: toExternalSdkworkMediaResource(event.target.value, "image") })}
+              onChange={(event) => setDraft({ ...draft, avatar: toExternalSdkworkPaymentMediaResource(event.target.value, "image") })}
             />
           </div>
           {capabilities.contactBindingEnabled ? (

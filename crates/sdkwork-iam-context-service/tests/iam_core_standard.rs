@@ -1,6 +1,7 @@
 use sdkwork_iam_context_service::{
-    validate_dual_token_context, AuthLevel, DeploymentMode, Environment, IamAppContext,
-    IamSessionTokens, IamShardingContext, IamShardingStrategy, LoginScope,
+    is_platform_organization_id, serialize_session_organization_id, validate_dual_token_context,
+    AuthLevel, DeploymentMode, Environment, IamAppContext, IamSessionTokens, IamShardingContext,
+    IamShardingStrategy, LoginScope, PLATFORM_ORGANIZATION_ID,
 };
 
 #[test]
@@ -156,5 +157,55 @@ fn validates_dual_token_subject_and_access_context_match() {
     assert_eq!(
         validate_dual_token_context(&tokens, &other_context).unwrap_err(),
         "access token context does not match request context"
+    );
+}
+
+#[test]
+fn platform_organization_id_is_login_sentinel_only() {
+    assert!(is_platform_organization_id(PLATFORM_ORGANIZATION_ID));
+    assert!(is_platform_organization_id(" 0 "));
+    assert!(!is_platform_organization_id("org-1"));
+}
+
+#[test]
+fn serializes_tenant_login_organization_id_as_platform_sentinel() {
+    let tenant_context = IamAppContext::new(
+        "tenant-1",
+        None,
+        "user-1",
+        "session-1",
+        "sdkwork-router",
+        Environment::Dev,
+        DeploymentMode::Saas,
+        AuthLevel::Password,
+        vec![],
+        vec![],
+    );
+    assert_eq!(
+        serialize_session_organization_id(
+            tenant_context.organization_id.as_deref(),
+            &tenant_context.login_scope,
+        ),
+        PLATFORM_ORGANIZATION_ID
+    );
+
+    let organization_context = IamAppContext::new(
+        "tenant-1",
+        Some("org-1"),
+        "user-1",
+        "session-1",
+        "sdkwork-router",
+        Environment::Dev,
+        DeploymentMode::Saas,
+        AuthLevel::Password,
+        vec![],
+        vec![],
+    );
+    assert_eq!(
+        serialize_session_organization_id(
+            organization_context.organization_id.as_deref(),
+            &organization_context.login_scope,
+        ),
+        "org-1"
     );
 }

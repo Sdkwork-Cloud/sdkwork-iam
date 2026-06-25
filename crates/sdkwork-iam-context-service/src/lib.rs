@@ -10,6 +10,34 @@ pub use permission_standard::{
     ORG_OPERATIONS_ROLE_CODE, PLATFORM_SUPER_ADMIN_ROLE_CODE, PLATFORM_SYSTEM_ADMIN_ROLE_CODE,
 };
 
+/// Sentinel organization id for platform (personal) login — not a selectable organization.
+pub const PLATFORM_ORGANIZATION_ID: &str = "0";
+
+/// Returns true when `value` is the platform personal-login sentinel (`"0"`).
+pub fn is_platform_organization_id(value: &str) -> bool {
+    value.trim() == PLATFORM_ORGANIZATION_ID
+}
+
+/// Normalizes login/session organization input: blank and `"0"` mean platform personal context.
+pub fn normalize_login_organization_id(organization_id: Option<&str>) -> Option<String> {
+    normalize_organization_id(organization_id)
+}
+
+/// Serializes organization id for API responses and JWT claims.
+pub fn serialize_session_organization_id(
+    organization_id: Option<&str>,
+    login_scope: &LoginScope,
+) -> String {
+    if login_scope == &LoginScope::Tenant {
+        return PLATFORM_ORGANIZATION_ID.to_owned();
+    }
+
+    organization_id
+        .filter(|value| !is_blank(Some(value)) && !is_platform_organization_id(value))
+        .map(str::to_string)
+        .unwrap_or_else(|| PLATFORM_ORGANIZATION_ID.to_owned())
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Environment {
     Dev,

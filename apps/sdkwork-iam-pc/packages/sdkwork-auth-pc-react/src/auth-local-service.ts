@@ -2,6 +2,7 @@ import {
   createSdkworkAuthMessages,
   formatSdkworkAuthTemplate,
 } from "./auth-copy.ts";
+import { PLATFORM_ORGANIZATION_ID } from "@sdkwork/iam-contracts";
 import {
   DEFAULT_SDKWORK_AUTH_VERIFICATION_POLICY,
   type SdkworkAuthResolvedVerificationPolicy,
@@ -343,6 +344,7 @@ export function createSdkworkLocalAuthService<TAuthenticatedUser>(
         const result = await options.selectLoginContext({
           continuationToken: input.continuationToken,
           loginScope: "TENANT",
+          organizationId: PLATFORM_ORGANIZATION_ID,
         });
         return resolveAuthSession(result);
       }

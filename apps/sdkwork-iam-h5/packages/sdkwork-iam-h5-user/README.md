@@ -1,6 +1,6 @@
 # @sdkwork/iam-h5-user
 
-H5 user-center capability for IAM: current-user profile retrieval and update through `@sdkwork/iam-service`.
+H5 user-center capability for IAM: current-user profile retrieval and update, and password change through `@sdkwork/iam-service`.
 
 ## Exports
 

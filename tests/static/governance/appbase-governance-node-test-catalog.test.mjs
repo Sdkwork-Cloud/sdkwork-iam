@@ -28,6 +28,8 @@ test('iam governance node test catalog publishes the exact governed test surface
       'tests/static/governance/iam-application-bootstrap-standard.test.mjs',
       'tests/static/governance/iam-database-init-standard.test.mjs',
       'tests/static/governance/iam-login-integration-standard.test.mjs',
+      'tests/static/governance/credential-entry-runtime-standard.test.mjs',
+      'tests/static/governance/iam-renderer-dev-bootstrap-orchestration-standard.test.mjs',
       'tests/static/governance/iam-apps-layout-standard.test.mjs',
       'tests/static/governance/iam-module-federation-standard.test.mjs',
       'tests/static/governance/iam-bootstrap-subject-workspace-alignment.test.mjs',

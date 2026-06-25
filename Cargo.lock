@@ -2010,6 +2010,7 @@ dependencies = [
  "sdkwork-database-lifecycle",
  "sdkwork-database-spi",
  "sdkwork-database-sqlx",
+ "sdkwork-iam-embedded-application-bootstrap",
  "sdkwork-iam-module-registry",
  "sdkwork-iam-web-adapter",
  "serde_json",
@@ -2024,6 +2025,19 @@ version = "0.1.0"
 dependencies = [
  "sdkwork-database-config",
  "sdkwork-iam-context-service",
+]
+
+[[package]]
+name = "sdkwork-iam-embedded-application-bootstrap"
+version = "0.1.0"
+dependencies = [
+ "sdkwork-database-config",
+ "sdkwork-iam-bootstrap",
+ "sdkwork-iam-web-adapter",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
 ]
 
 [[package]]
@@ -2134,9 +2148,11 @@ dependencies = [
 name = "sdkwork-router-iam-backend-api"
 version = "0.1.0"
 dependencies = [
+ "argon2",
  "axum",
  "chrono",
  "http-body-util",
+ "sdkwork-database-config",
  "sdkwork-database-sqlx",
  "sdkwork-iam-bootstrap",
  "sdkwork-iam-database-host",

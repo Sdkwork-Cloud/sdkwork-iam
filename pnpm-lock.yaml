@@ -71,6 +71,27 @@ importers:
       '@sdkwork/iam-pc-admin-tenant':
         specifier: workspace:*
         version: link:apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-tenant
+      '@sdkwork/iam-pc-admin-user':
+        specifier: workspace:*
+        version: link:apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-user
+      '@sdkwork/iam-pc-console-account-binding':
+        specifier: workspace:*
+        version: link:apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-account-binding
+      '@sdkwork/iam-pc-console-core':
+        specifier: workspace:*
+        version: link:apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-core
+      '@sdkwork/iam-pc-console-organization':
+        specifier: workspace:*
+        version: link:apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-organization
+      '@sdkwork/iam-pc-console-shell':
+        specifier: workspace:*
+        version: link:apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-shell
+      '@sdkwork/iam-pc-console-tenant':
+        specifier: workspace:*
+        version: link:apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-tenant
+      '@sdkwork/iam-pc-console-user':
+        specifier: workspace:*
+        version: link:apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-user
       '@sdkwork/iam-pc-core':
         specifier: workspace:*
         version: link:apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-core
@@ -579,6 +600,25 @@ importers:
         specifier: ^6.0.2
         version: 6.0.3
 
+  apps/sdkwork-iam-h5/packages/sdkwork-iam-h5-account-binding:
+    dependencies:
+      '@sdkwork/iam-h5-core':
+        specifier: workspace:*
+        version: link:../sdkwork-iam-h5-core
+      '@sdkwork/iam-service':
+        specifier: workspace:*
+        version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-service
+      react:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4
+      react-dom:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+
   apps/sdkwork-iam-h5/packages/sdkwork-iam-h5-auth:
     dependencies:
       '@sdkwork/iam-h5-core':
@@ -854,6 +894,148 @@ importers:
       '@sdkwork/iam-pc-admin-core':
         specifier: workspace:*
         version: link:../sdkwork-iam-pc-admin-core
+      '@sdkwork/iam-service':
+        specifier: workspace:*
+        version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-service
+      '@sdkwork/ui-pc-react':
+        specifier: workspace:*
+        version: link:../../../../../sdkwork-ui/sdkwork-ui-pc-react
+      react:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4
+      react-dom:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+
+  apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-user:
+    dependencies:
+      '@sdkwork/iam-pc-admin-core':
+        specifier: workspace:*
+        version: link:../sdkwork-iam-pc-admin-core
+      '@sdkwork/iam-service':
+        specifier: workspace:*
+        version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-service
+      '@sdkwork/ui-pc-react':
+        specifier: workspace:*
+        version: link:../../../../../sdkwork-ui/sdkwork-ui-pc-react
+      react:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4
+      react-dom:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+
+  apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-account-binding:
+    dependencies:
+      '@sdkwork/iam-pc-console-core':
+        specifier: workspace:*
+        version: link:../sdkwork-iam-pc-console-core
+      '@sdkwork/iam-service':
+        specifier: workspace:*
+        version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-service
+      '@sdkwork/ui-pc-react':
+        specifier: workspace:*
+        version: link:../../../../../sdkwork-ui/sdkwork-ui-pc-react
+      react:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4
+      react-dom:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+
+  apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-core:
+    dependencies:
+      '@sdkwork/iam-contracts':
+        specifier: workspace:*
+        version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-contracts
+      '@sdkwork/iam-sdk-adapter':
+        specifier: workspace:*
+        version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-sdk-adapter
+      '@sdkwork/iam-sdk-ports':
+        specifier: workspace:*
+        version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-sdk-ports
+      '@sdkwork/iam-service':
+        specifier: workspace:*
+        version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-service
+    devDependencies:
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+
+  apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-organization:
+    dependencies:
+      '@sdkwork/iam-pc-console-core':
+        specifier: workspace:*
+        version: link:../sdkwork-iam-pc-console-core
+      '@sdkwork/iam-service':
+        specifier: workspace:*
+        version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-service
+      '@sdkwork/ui-pc-react':
+        specifier: workspace:*
+        version: link:../../../../../sdkwork-ui/sdkwork-ui-pc-react
+      react:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4
+      react-dom:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+
+  apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-shell:
+    dependencies:
+      '@sdkwork/iam-pc-console-core':
+        specifier: workspace:*
+        version: link:../sdkwork-iam-pc-console-core
+      react:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4
+    devDependencies:
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+
+  apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-tenant:
+    dependencies:
+      '@sdkwork/iam-pc-console-core':
+        specifier: workspace:*
+        version: link:../sdkwork-iam-pc-console-core
+      '@sdkwork/iam-service':
+        specifier: workspace:*
+        version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-service
+      '@sdkwork/ui-pc-react':
+        specifier: workspace:*
+        version: link:../../../../../sdkwork-ui/sdkwork-ui-pc-react
+      react:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4
+      react-dom:
+        specifier: '>=18.2.0 <20.0.0'
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      typescript:
+        specifier: ^6.0.2
+        version: 6.0.3
+
+  apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-console-user:
+    dependencies:
+      '@sdkwork/iam-pc-console-core':
+        specifier: workspace:*
+        version: link:../sdkwork-iam-pc-console-core
       '@sdkwork/iam-service':
         specifier: workspace:*
         version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-service

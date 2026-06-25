@@ -22,6 +22,8 @@ api:
     status: complete
     authority: apis/backend-api/iam/sdkwork-iam-backend-api.openapi.yaml
     router: crates/sdkwork-router-iam-backend-api/
+    postgresIntegrationTests: crates/sdkwork-router-iam-backend-api/tests/iam_backend_postgres_integration.rs
+    authenticatedRoundtrip: backend_postgres_authenticated_user_list_roundtrip
   app-api:
     status: complete
     authority: apis/app-api/iam/sdkwork-iam-app-api.openapi.yaml
@@ -48,7 +50,7 @@ capabilities:
     open-api: partial
     pc-app: complete
     pc-admin: n/a
-    pc-console: missing
+    pc-console: n/a
     h5-app: partial
     flutter-app: partial
 
@@ -58,7 +60,7 @@ capabilities:
     app-api: missing-by-design
     pc-app: partial
     pc-admin: complete
-    pc-console: missing
+    pc-console: complete
     h5-app: missing
     flutter-app: missing
 
@@ -68,7 +70,7 @@ capabilities:
     app-api: partial
     pc-app: partial
     pc-admin: complete
-    pc-console: missing
+    pc-console: complete
     h5-app: missing
     flutter-app: missing
 
@@ -78,7 +80,7 @@ capabilities:
     app-api: partial
     pc-app: missing
     pc-admin: complete
-    pc-console: missing
+    pc-console: missing-by-design
     h5-app: missing
     flutter-app: missing
 
@@ -89,7 +91,17 @@ capabilities:
     open-api: complete
     pc-app: partial
     pc-admin: complete
-    pc-console: missing
+    pc-console: missing-by-design
+    h5-app: missing
+    flutter-app: missing
+
+  - id: user-directory
+    database: complete
+    backend-api: complete
+    app-api: partial
+    pc-app: partial
+    pc-admin: complete
+    pc-console: missing-by-design
     h5-app: missing
     flutter-app: missing
 
@@ -99,9 +111,9 @@ capabilities:
     app-api: complete
     pc-app: partial
     pc-admin: complete
-    pc-console: missing
-    h5-app: missing
-    flutter-app: missing
+    pc-console: complete
+    h5-app: partial
+    flutter-app: partial
 
   - id: user-center
     database: complete
@@ -109,20 +121,16 @@ capabilities:
     app-api: partial
     pc-app: complete
     pc-admin: missing-by-design
-    pc-console: missing
+    pc-console: complete
     h5-app: partial
     flutter-app: partial
+    notes: Profile, password, and verification policy on H5/Flutter/PC console; local preferences remain PC app-only
 
 priorityBacklog:
-  p0:
-    - Backend-api PostgreSQL integration test suite
-    - PC admin user management package (@sdkwork/iam-pc-admin-user)
-    - H5 account-binding capability package
-    - Flutter account-binding parity
+  p0: []
   p1:
-    - PC console surface (sdkwork-iam-pc-console-*)
-    - Expand H5/Flutter user-center UI (password, bindings, preferences)
-    - PC app-side naming migration (sdkwork-iam-pc-*)
+    - PC app-side naming migration (sdkwork-iam-pc-auth, sdkwork-iam-pc-user-center targets)
+    - Wire sendVerifyCode through iam-service when app-api verification endpoints are materialized
   p2:
     - Multi-language SDK materialization
     - Dedicated iam_account_binding tables vs iam_policy composition

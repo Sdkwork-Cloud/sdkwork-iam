@@ -6,9 +6,20 @@ This document is the local index for `apps/sdkwork-iam-pc/packages/` surface nam
 
 | Surface | Users | API / SDK | Directory pattern | npm example |
 | --- | --- | --- | --- | --- |
-| **App** | End users, app login/session | app-api / `@sdkwork/iam-app-sdk` | `sdkwork-iam-pc-<capability>` or legacy `sdkwork-*-pc-react` app modules | `@sdkwork/auth-pc-react` (app auth; migration target: `@sdkwork/iam-pc-auth`) |
-| **Console** | Customers, tenant owners, self-service management | app-api / app SDK | `sdkwork-iam-pc-console-<capability>` | `@sdkwork/iam-pc-console-<capability>` (reserved; not yet scaffolded) |
+| **App** | End users, app login/session | app-api / `@sdkwork/iam-app-sdk` | `sdkwork-iam-pc-<capability>` (target; legacy `sdkwork-*-pc-react` still wired) | `@sdkwork/iam-pc-auth` (target) |
+| **Console** | Customers, tenant owners, self-service management | app-api / app SDK | `sdkwork-iam-pc-console-<capability>` | `@sdkwork/iam-pc-console-tenant` |
 | **Admin** | Internal staff, operators, auditors | backend-api / `@sdkwork/iam-backend-sdk` | `sdkwork-iam-pc-admin-<capability>` | `@sdkwork/iam-pc-admin-oauth` |
+
+## Console package tree (implemented)
+
+```text
+sdkwork-iam-pc-console-core/       # app SDK inventory, console module registry
+sdkwork-iam-pc-console-shell/      # console menu and route metadata
+sdkwork-iam-pc-console-tenant/     # tenant-owner self-service workspace
+sdkwork-iam-pc-console-organization/  # organization directory console
+sdkwork-iam-pc-console-account-binding/  # account binding self-service console
+sdkwork-iam-pc-console-user/           # profile and password self-service console
+```
 
 ## Admin package tree (implemented)
 
@@ -20,6 +31,7 @@ sdkwork-iam-pc-admin-tenant/
 sdkwork-iam-pc-admin-organization/
 sdkwork-iam-pc-admin-permission/
 sdkwork-iam-pc-admin-account-binding/
+sdkwork-iam-pc-admin-user/
 ```
 
 Each capability package exposes:
@@ -40,7 +52,14 @@ Do not create or reference these for operator UI:
 - `sdkwork-iam-organization-pc-react` / `@sdkwork/iam-organization-pc-react`
 - `sdkwork-iam-permission-pc-react` / `@sdkwork/iam-permission-pc-react`
 
-## Metadata
+Console packages declare:
+
+```json
+"sdkwork": {
+  "architecture": "pc-console",
+  "surface": "console"
+}
+```
 
 Admin packages declare:
 
@@ -56,5 +75,6 @@ Admin packages declare:
 ```bash
 pnpm run check:structure
 pnpm --filter "@sdkwork/iam-pc-admin-*" typecheck
+pnpm --filter "@sdkwork/iam-pc-console-*" typecheck
 pnpm run test:iam-standard-contracts
 ```

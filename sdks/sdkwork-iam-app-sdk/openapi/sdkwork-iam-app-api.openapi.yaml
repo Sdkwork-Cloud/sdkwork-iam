@@ -747,6 +747,7 @@
           "auth"
         ],
         "summary": "Sessions login Context Selection create.",
+        "description": "Completes a LOGIN_CONTEXT_SELECTION challenge. Personal login requires loginScope=TENANT and organizationId=0. Organization login requires loginScope=ORGANIZATION and a non-zero organizationId that matches an active membership returned in the challenge.",
         "operationId": "sessions.loginContextSelection.create",
         "parameters": [],
         "responses": {
@@ -848,6 +849,8 @@
           "auth"
         ],
         "summary": "Sessions organization Selection create.",
+        "description": "Legacy organization-selection continuation endpoint. Prefer auth.sessions.loginContextSelection.create with loginScope=ORGANIZATION. organizationId=0 is reserved for platform personal login and is rejected.",
+        "deprecated": true,
         "operationId": "sessions.organizationSelection.create",
         "parameters": [],
         "responses": {

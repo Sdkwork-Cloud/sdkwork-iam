@@ -100,5 +100,12 @@ async fn run_post_bootstrap_hooks(pool: &DatabasePool) -> Result<(), String> {
     sdkwork_iam_module_registry::materialize_postgres_catalog(pg, Some(&app_root), "operational")
         .await
         .map_err(|error| format!("materialize iam module catalog failed: {error}"))?;
+    sdkwork_iam_embedded_application_bootstrap::ensure_tenant_application_from_app_root_if_configured(
+        pg,
+        None,
+        &[],
+    )
+    .await
+        .map_err(|error| format!("ensure embedded IAM tenant application bootstrap failed: {error}"))?;
     Ok(())
 }

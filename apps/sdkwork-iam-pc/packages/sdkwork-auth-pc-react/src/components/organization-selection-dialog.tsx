@@ -6,6 +6,7 @@ import {
 import {
   Button,
 } from "@sdkwork/ui-pc-react";
+import { isLoginEligibleOrganizationId } from "@sdkwork/iam-contracts";
 import type {
   SdkworkAuthOrganizationChoice,
   SdkworkAuthOrganizationSelectionChallenge,
@@ -69,6 +70,9 @@ export function SdkworkOrganizationSelectionDialog({
   const showPersonalOption = challenge.challengeType === "LOGIN_CONTEXT_SELECTION"
     && typeof onSelectPersonal === "function";
   const isBusy = Boolean(selectedOrganizationId) || selectingPersonal;
+  const organizationChoices = challenge.organizations.filter((organization) =>
+    isLoginEligibleOrganizationId(organization.organizationId),
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 px-4 py-6">
@@ -131,7 +135,7 @@ export function SdkworkOrganizationSelectionDialog({
             </button>
           ) : null}
 
-          {challenge.organizations.map((organization) => {
+          {organizationChoices.map((organization) => {
             const isSelecting = selectedOrganizationId === organization.organizationId;
             return (
               <button
