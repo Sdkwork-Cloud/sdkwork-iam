@@ -7,6 +7,8 @@ use sha2::{Digest, Sha256};
 use std::sync::OnceLock;
 
 const ENCRYPTED_PREFIX: &str = "enc:v1:";
+const MISSING_SIGNING_MASTER_SECRET: &str =
+    "tenant signing master secret is required (set SDKWORK_IAM_TENANT_SIGNING_MASTER_SECRET)";
 
 static SIGNING_MASTER_SECRET: OnceLock<String> = OnceLock::new();
 
@@ -79,10 +81,7 @@ fn resolve_signing_master_secret_from_env() -> Result<String, String> {
         "SDKWORK_IAM_TENANT_SIGNING_MASTER_SECRET",
         "SDKWORK_CLAW_APP_SESSION_SECRET",
     ])
-    .ok_or_else(|| {
-        "tenant signing master secret is required (SDKWORK_IAM_TENANT_SIGNING_MASTER_SECRET or SDKWORK_CLAW_APP_SESSION_SECRET)"
-            .to_string()
-    })
+    .ok_or_else(|| MISSING_SIGNING_MASTER_SECRET.to_string())
 }
 
 fn candidate_signing_master_secrets() -> Result<Vec<String>, String> {
@@ -107,10 +106,7 @@ fn candidate_signing_master_secrets() -> Result<Vec<String>, String> {
         }
     }
     if secrets.is_empty() {
-        return Err(
-            "tenant signing master secret is required (SDKWORK_IAM_TENANT_SIGNING_MASTER_SECRET or SDKWORK_CLAW_APP_SESSION_SECRET)"
-                .to_string(),
-        );
+        return Err(MISSING_SIGNING_MASTER_SECRET.to_string());
     }
     Ok(secrets)
 }
