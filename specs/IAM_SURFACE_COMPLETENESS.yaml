@@ -21,13 +21,13 @@ api:
   backend-api:
     status: complete
     authority: apis/backend-api/iam/sdkwork-iam-backend-api.openapi.yaml
-    router: crates/sdkwork-router-iam-backend-api/
-    postgresIntegrationTests: crates/sdkwork-router-iam-backend-api/tests/iam_backend_postgres_integration.rs
+    router: crates/sdkwork-routes-iam-backend-api/
+    postgresIntegrationTests: crates/sdkwork-routes-iam-backend-api/tests/iam_backend_postgres_integration.rs
     authenticatedRoundtrip: backend_postgres_authenticated_user_list_roundtrip
   app-api:
     status: complete
     authority: apis/app-api/iam/sdkwork-iam-app-api.openapi.yaml
-    router: crates/sdkwork-router-iam-app-api/
+    router: crates/sdkwork-routes-iam-app-api/
   open-api:
     status: complete
     scope: oauth-authorization-server

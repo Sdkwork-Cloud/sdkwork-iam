@@ -177,14 +177,14 @@ fn decode_jwt_payload(token: &str) -> Value {
 
 #[test]
 fn creates_the_canonical_default_runtime_config() {
-    let config = create_default_user_center_runtime_config("sdkwork-router-portal");
+    let config = create_default_user_center_runtime_config("sdkwork-routes-portal");
 
     assert_eq!(USER_CENTER_DEFAULT_SQLITE_FILENAME, "user-center.db");
     assert_eq!(USER_CENTER_TABLE_PREFIX, "iam_");
-    assert_eq!(config.namespace, "sdkwork-router-portal");
+    assert_eq!(config.namespace, "sdkwork-routes-portal");
     assert_eq!(config.mode, "local-native");
     assert_eq!(config.provider.kind, "local");
-    assert_eq!(config.provider.provider_key, "sdkwork-router-portal-local");
+    assert_eq!(config.provider.provider_key, "sdkwork-routes-portal-local");
     assert_eq!(config.integration.active_kind, "builtin-local");
     assert_eq!(
         config.integration.builtin_local.user_system_scope,
@@ -193,7 +193,7 @@ fn creates_the_canonical_default_runtime_config() {
     assert!(!config.integration.external_app_api.enabled);
     assert_eq!(
         config.storage_topology.database_key,
-        "sdkwork-router-portal-user-center"
+        "sdkwork-routes-portal-user-center"
     );
     assert_eq!(config.storage_topology.table_prefix, "iam_");
     assert_eq!(
@@ -206,7 +206,7 @@ fn creates_the_canonical_default_runtime_config() {
     );
     assert_eq!(
         config.storage_plan.session_token_key,
-        "sdkwork-router-portal.user-center.session-token"
+        "sdkwork-routes-portal.user-center.session-token"
     );
     assert_eq!(config.local_api.profile, "/app/v3/api/iam/users/current");
 }
@@ -255,15 +255,15 @@ fn creates_the_canonical_local_api_routes() {
 
 #[test]
 fn creates_the_canonical_upstream_integration_shape_for_seed_disabled_modes() {
-    let storage_plan = create_user_center_storage_plan("sdkwork-router-portal");
+    let storage_plan = create_user_center_storage_plan("sdkwork-routes-portal");
     let local_provider = UserCenterProviderConfig {
         base_url: None,
         headers: Vec::new(),
         kind: "local".to_string(),
-        provider_key: "sdkwork-router-portal-local".to_string(),
+        provider_key: "sdkwork-routes-portal-local".to_string(),
     };
     let builtin_local_auth = create_user_center_auth_profile(
-        "sdkwork-router-portal",
+        "sdkwork-routes-portal",
         &local_provider,
         "local-native",
         &storage_plan,
@@ -272,16 +272,16 @@ fn creates_the_canonical_upstream_integration_shape_for_seed_disabled_modes() {
         base_url: Some("https://cloud.sdkwork.test/app".to_string()),
         headers: Vec::new(),
         kind: "sdkwork-cloud-app-api".to_string(),
-        provider_key: "sdkwork-router-portal-app-api".to_string(),
+        provider_key: "sdkwork-routes-portal-app-api".to_string(),
     };
     let upstream_auth = create_user_center_auth_profile(
-        "sdkwork-router-portal",
+        "sdkwork-routes-portal",
         &upstream_provider,
         "app-api-hub",
         &storage_plan,
     );
     let integration = create_user_center_integration_profiles(
-        "sdkwork-router-portal",
+        "sdkwork-routes-portal",
         &upstream_provider,
         USER_CENTER_DEFAULT_LOCAL_API_BASE_PATH,
         "app-api-hub",

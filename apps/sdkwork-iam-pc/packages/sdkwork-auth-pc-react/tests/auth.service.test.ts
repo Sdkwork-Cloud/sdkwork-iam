@@ -3670,13 +3670,13 @@ describe("sdkwork-auth-pc-react service", () => {
         createdAt: "2026-06-03T13:23:32Z",
         updatedAt: "2026-06-03T13:24:02Z",
         session: {
-          accessToken: mockAccessToken("sdkwork-router-qr-access-token"),
-          authToken: mockAuthToken("sdkwork-router-qr-auth-token"),
-          refreshToken: "sdkwork-router-qr-refresh-token",
+          accessToken: mockAccessToken("sdkwork-routes-qr-access-token"),
+          authToken: mockAuthToken("sdkwork-routes-qr-auth-token"),
+          refreshToken: "sdkwork-routes-qr-refresh-token",
           user: {
             displayName: "Sdkwork Router QR Operator",
-            email: "sdkwork-router-qr@sdkwork.ai",
-            id: "sdkwork-router-qr-user-1",
+            email: "sdkwork-routes-qr@sdkwork.ai",
+            id: "sdkwork-routes-qr-user-1",
           },
         },
       },
@@ -3703,17 +3703,17 @@ describe("sdkwork-auth-pc-react service", () => {
       username: "alice",
     })).resolves.toMatchObject({
       session: {
-        accessToken: mockAccessToken("sdkwork-router-qr-access-token"),
-        authToken: mockAuthToken("sdkwork-router-qr-auth-token"),
-        refreshToken: "sdkwork-router-qr-refresh-token",
+        accessToken: mockAccessToken("sdkwork-routes-qr-access-token"),
+        authToken: mockAuthToken("sdkwork-routes-qr-auth-token"),
+        refreshToken: "sdkwork-routes-qr-refresh-token",
         user: {
-          email: "sdkwork-router-qr@sdkwork.ai",
-          id: "sdkwork-router-qr-user-1",
+          email: "sdkwork-routes-qr@sdkwork.ai",
+          id: "sdkwork-routes-qr-user-1",
         },
       },
       status: "confirmed",
       user: {
-        email: "sdkwork-router-qr@sdkwork.ai",
+        email: "sdkwork-routes-qr@sdkwork.ai",
       },
     });
     expect(create).toHaveBeenCalledWith("f87f5a94c62a69b471a71faaa0922b9e", {
@@ -3721,9 +3721,9 @@ describe("sdkwork-auth-pc-react service", () => {
       username: "alice",
     });
     expect(commitSession).toHaveBeenCalledWith({
-      accessToken: mockAccessToken("sdkwork-router-qr-access-token"),
-      authToken: mockAuthToken("sdkwork-router-qr-auth-token"),
-      refreshToken: "sdkwork-router-qr-refresh-token",
+      accessToken: mockAccessToken("sdkwork-routes-qr-access-token"),
+      authToken: mockAuthToken("sdkwork-routes-qr-auth-token"),
+      refreshToken: "sdkwork-routes-qr-refresh-token",
     });
   });
 

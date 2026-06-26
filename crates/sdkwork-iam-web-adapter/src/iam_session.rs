@@ -11,8 +11,6 @@ use sha2::{Digest, Sha256};
 use sqlx::{types::Json, PgPool, Row};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::signing_secrets;
-
 type HmacSha256 = Hmac<Sha256>;
 
 pub async fn resolve_iam_app_context_from_auth_token(
@@ -534,30 +532,15 @@ fn decode_jwt_json(part: &str) -> Option<Value> {
 }
 
 async fn load_signing_key_by_kid(pg: &PgPool, kid: &str) -> Option<TenantSigningKey> {
-    let tenant_hint = kid.split(':').next().filter(|value| !value.is_empty());
-    let row = sqlx::query(
-        "SELECT tenant_id, kid, secret_ref FROM iam_tenant_signing_key \
-         WHERE kid = $1 AND status IN ('active', 'rotating') \
-           AND (active_until IS NULL OR active_until::timestamptz > $2::timestamptz) \
-         ORDER BY active_from DESC LIMIT 1",
-    )
-    .bind(kid)
-    .bind(current_timestamp_utc())
-    .fetch_optional(pg)
-    .await
-    .ok()??;
-    let tenant_id: String = row.get(0);
-    if tenant_hint.is_some_and(|hint| hint != tenant_id) {
-        return None;
-    }
-    let kid: String = row.get(1);
-    let secret_ref: String = row.get(2);
-    let secret = signing_secrets::decode_signing_secret_ref(&secret_ref).ok()?;
-    Some(TenantSigningKey {
-        tenant_id,
-        kid,
-        secret,
-    })
+    sdkwork_iam_bootstrap::resolve_postgres_tenant_signing_key_by_kid(pg, kid)
+        .await
+        .ok()
+        .flatten()
+        .map(|material| TenantSigningKey {
+            tenant_id: material.tenant_id,
+            kid: material.kid,
+            secret: material.secret,
+        })
 }
 
 fn verify_local_session_token(

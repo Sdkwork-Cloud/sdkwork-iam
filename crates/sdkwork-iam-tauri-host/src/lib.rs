@@ -1,5 +1,5 @@
-use sdkwork_router_iam_app_api::app_routes;
-use sdkwork_router_iam_backend_api::backend_routes;
+use sdkwork_routes_iam_app_api::app_routes;
+use sdkwork_routes_iam_backend_api::backend_routes;
 use sdkwork_web_contract::HttpRoute as IamHttpRoute;
 
 #[derive(Clone, Debug, Eq, PartialEq)]

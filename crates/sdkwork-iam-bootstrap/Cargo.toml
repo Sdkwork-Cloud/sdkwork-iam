@@ -10,7 +10,12 @@ name = "sdkwork_iam_bootstrap"
 path = "src/lib.rs"
 
 [dependencies]
+aes-gcm = "0.10"
+base64 = "0.22"
 chrono = { workspace = true }
+rand_core = { version = "0.6", features = ["getrandom"] }
+sha2 = "0.10"
 sqlx = { workspace = true }
+uuid = { version = "1", features = ["v7"] }
 sdkwork_iam_context_service.workspace = true
 sdkwork_iam_module_registry = { workspace = true }

@@ -861,21 +861,18 @@ struct TenantSigningKey {
     secret: Vec<u8>,
 }
 
-async fn load_active_signing_key(pg: &PgPool, tenant_id: &str) -> Result<TenantSigningKey, String> {
-    let row = sqlx::query(
-        "SELECT kid, secret_ref FROM iam_tenant_signing_key \
-         WHERE tenant_id = $1 AND status = 'active' \
-         ORDER BY active_from DESC LIMIT 1",
-    )
-    .bind(tenant_id)
-    .fetch_optional(pg)
-    .await
-    .map_err(|error| format!("load tenant signing key failed: {error}"))?
-    .ok_or_else(|| "tenant signing key is not configured".to_string())?;
-    let kid: String = row.get(0);
-    let secret_ref: String = row.get(1);
-    let secret = crate::decode_signing_secret_ref(&secret_ref)?;
-    Ok(TenantSigningKey { kid, secret })
+async fn load_active_signing_key(
+    pg: &PgPool,
+    tenant_id: &str,
+) -> Result<TenantSigningKey, String> {
+    let material = sdkwork_iam_bootstrap::load_postgres_active_tenant_signing_key(pg, tenant_id)
+        .await
+        .map_err(|error| format!("load tenant signing key failed: {error}"))?
+        .ok_or_else(|| "tenant signing key is not configured".to_string())?;
+    Ok(TenantSigningKey {
+        kid: material.kid,
+        secret: material.secret,
+    })
 }
 
 fn iam_context_from_session_row(row: &sqlx::postgres::PgRow) -> Result<IamAppContext, String> {

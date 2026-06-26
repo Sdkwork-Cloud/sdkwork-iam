@@ -36,8 +36,8 @@ test("user-center validation node contract exports canonical package identity an
   const plugin = createUserCenterValidationPluginDefinition({
     host: "browser",
     mode: "app-api-hub",
-    namespace: "sdkwork-router-portal",
-    packageNames: ["sdkwork-router-portal-validation"],
+    namespace: "sdkwork-routes-portal",
+    packageNames: ["sdkwork-routes-portal-validation"],
     provider: {
       kind: "sdkwork-cloud-app-api",
       providerKey: "router-remote",
@@ -47,7 +47,7 @@ test("user-center validation node contract exports canonical package identity an
 
   assert.equal(plugin.capability, "user-center-validation");
   assert.equal(plugin.dependency.capability, "user-center");
-  assert.equal(plugin.dependency.namespace, "sdkwork-router-portal");
+  assert.equal(plugin.dependency.namespace, "sdkwork-routes-portal");
   assert.equal(plugin.dependency.providerKey, "router-remote");
   assert.equal(plugin.dependency.activeIntegrationKind, "sdkwork-cloud-app-api");
   assert.equal(plugin.validation.authMode, "upstream-app-api-token-bridge");
@@ -78,7 +78,7 @@ test("user-center validation node contract exports canonical package identity an
   assert.equal(plugin.manifests.validation?.dependencyCapability, "user-center");
   assert.equal(plugin.manifests.validation?.host, "browser");
   assert.deepEqual(plugin.manifests.validation?.packageNames, [
-    "sdkwork-router-portal-validation",
+    "sdkwork-routes-portal-validation",
   ]);
 });
 
@@ -174,7 +174,7 @@ test("user-center validation node contract creates provider-agnostic interop con
   const routerValidation = createUserCenterValidationPluginDefinition({
     host: "browser",
     mode: "app-api-hub",
-    namespace: "sdkwork-router-portal",
+    namespace: "sdkwork-routes-portal",
     provider: {
       kind: "sdkwork-cloud-app-api",
       providerKey: "router-remote",
@@ -244,7 +244,7 @@ test("user-center validation node contract creates preflight reports from local 
   const routerValidation = createUserCenterValidationPluginDefinition({
     host: "browser",
     mode: "app-api-hub",
-    namespace: "sdkwork-router-portal",
+    namespace: "sdkwork-routes-portal",
     provider: {
       kind: "sdkwork-cloud-app-api",
       providerKey: "router-remote",

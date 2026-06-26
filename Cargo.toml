@@ -1,15 +1,16 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/sdkwork-iam-gateway-assembly",
     "crates/sdkwork-iam-database-host",
     "crates/sdkwork-iam-bootstrap",
     "crates/sdkwork-iam-embedded-application-bootstrap",
     "crates/sdkwork-iam-module-registry",
     "crates/sdkwork-iam-web-adapter",
     "crates/sdkwork-iam-context-service",
-    "crates/sdkwork-router-iam-app-api",
-    "crates/sdkwork-router-iam-backend-api",
-    "crates/sdkwork-router-iam-open-api",
+    "crates/sdkwork-routes-iam-app-api",
+    "crates/sdkwork-routes-iam-backend-api",
+    "crates/sdkwork-routes-iam-open-api",
     "crates/sdkwork-iam-rpc-rust",
     "crates/sdkwork-iam-directory-repository-sqlx",
     "crates/sdkwork-iam-tauri-host",
@@ -44,9 +45,9 @@ sdkwork_rpc_core = { package = "sdkwork-rpc-core-rust", path = "../sdkwork-appba
 sdkwork_platform_id_service = { package = "sdkwork-platform-id-service", path = "../sdkwork-appbase/crates/sdkwork-platform-id-service" }
 sdkwork_iam_web_adapter = { package = "sdkwork-iam-web-adapter", path = "crates/sdkwork-iam-web-adapter" }
 sdkwork_iam_context_service = { package = "sdkwork-iam-context-service", path = "crates/sdkwork-iam-context-service" }
-sdkwork_router_iam_app_api = { package = "sdkwork-router-iam-app-api", path = "crates/sdkwork-router-iam-app-api" }
-sdkwork_router_iam_backend_api = { package = "sdkwork-router-iam-backend-api", path = "crates/sdkwork-router-iam-backend-api" }
-sdkwork_router_iam_open_api = { package = "sdkwork-router-iam-open-api", path = "crates/sdkwork-router-iam-open-api" }
+sdkwork_routes_iam_app_api = { package = "sdkwork-routes-iam-app-api", path = "crates/sdkwork-routes-iam-app-api" }
+sdkwork_routes_iam_backend_api = { package = "sdkwork-routes-iam-backend-api", path = "crates/sdkwork-routes-iam-backend-api" }
+sdkwork_routes_iam_open_api = { package = "sdkwork-routes-iam-open-api", path = "crates/sdkwork-routes-iam-open-api" }
 sdkwork_iam_rpc = { package = "sdkwork-iam-rpc-rust", path = "crates/sdkwork-iam-rpc-rust" }
 sdkwork_iam_directory_repository_sqlx = { package = "sdkwork-iam-directory-repository-sqlx", path = "crates/sdkwork-iam-directory-repository-sqlx" }
 sdkwork_iam_tauri_host = { package = "sdkwork-iam-tauri-host", path = "crates/sdkwork-iam-tauri-host" }

@@ -35,6 +35,8 @@ pub struct IamDatabaseWebRequestContextResolver {
 
 /// Alias documenting IAM open-api multi-scheme resolver wiring.
 pub type IamOpenApiWebRequestContextResolver = IamDatabaseWebRequestContextResolver;
+/// Canonical default resolver for application integration.
+pub type IamWebRequestContextResolver = IamDatabaseWebRequestContextResolver;
 
 impl IamDatabaseWebRequestContextResolver {
     pub fn new(iam_pool: Option<Arc<PgPool>>) -> Self {

@@ -12,5 +12,5 @@ path = "src/lib.rs"
 [dependencies]
 sdkwork_iam_context_service.workspace = true
 sdkwork-web-contract.workspace = true
-sdkwork_router_iam_app_api.workspace = true
-sdkwork_router_iam_backend_api.workspace = true
+sdkwork_routes_iam_app_api.workspace = true
+sdkwork_routes_iam_backend_api.workspace = true

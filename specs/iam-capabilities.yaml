@@ -48,13 +48,13 @@ capabilities:
         path: crates/sdkwork-iam-web-adapter
         manifest: Cargo.toml
       - kind: native_rust_route_app_api
-        path: crates/sdkwork-router-iam-app-api
+        path: crates/sdkwork-routes-iam-app-api
         manifest: Cargo.toml
       - kind: native_rust_route_backend_api
-        path: crates/sdkwork-router-iam-backend-api
+        path: crates/sdkwork-routes-iam-backend-api
         manifest: Cargo.toml
       - kind: native_rust_route_open_api
-        path: crates/sdkwork-router-iam-open-api
+        path: crates/sdkwork-routes-iam-open-api
         manifest: Cargo.toml
       - kind: native_rust_rpc
         path: crates/sdkwork-iam-rpc-rust
@@ -89,7 +89,7 @@ capabilities:
       - category: web_framework
         command: cargo test -p sdkwork-iam-web-adapter
       - category: open_api
-        command: cargo test -p sdkwork-router-iam-open-api
+        command: cargo test -p sdkwork-routes-iam-open-api
       - category: frontend
         command: pnpm --filter @sdkwork/iam-react typecheck
     integration:
@@ -125,7 +125,7 @@ capabilities:
       - category: adapter
         command: cargo test -p sdkwork-iam-web-adapter
       - category: router
-        command: cargo test -p sdkwork-router-iam-backend-api
+        command: cargo test -p sdkwork-routes-iam-backend-api
     integration:
       domainForksForbidden: true
       sdkBoundary: generated-sdk-through-ports

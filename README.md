@@ -62,3 +62,13 @@ See `../sdkwork-specs/IAM_OAUTH_SPEC.md` for the full contract.
 - `../sdkwork-specs/IAM_SPEC.md`
 - `../sdkwork-specs/IAM_OAUTH_SPEC.md`
 - `../sdkwork-specs/README.md`
+
+## Application Roots
+
+- [apps directory index](apps/README.md)
+
+## Documentation Canon
+
+- [docs/README.md](docs/README.md)
+- [docs/product/prd/PRD.md](docs/product/prd/PRD.md)
+- [docs/architecture/tech/TECH_ARCHITECTURE.md](docs/architecture/tech/TECH_ARCHITECTURE.md)

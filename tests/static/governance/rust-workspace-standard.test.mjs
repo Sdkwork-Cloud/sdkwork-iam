@@ -27,9 +27,9 @@ const forbiddenNames = [
 ];
 
 const requiredRouteCrates = [
-  "crates/sdkwork-router-iam-app-api",
-  "crates/sdkwork-router-iam-backend-api",
-  "crates/sdkwork-router-iam-open-api",
+  "crates/sdkwork-routes-iam-app-api",
+  "crates/sdkwork-routes-iam-backend-api",
+  "crates/sdkwork-routes-iam-open-api",
 ];
 
 const activeRustCatalogFiles = [
@@ -240,7 +240,7 @@ test("rust workspace uses standard crates layout and canonical crate names", () 
           errors.push(
             `${crateRelativeRoot}/specs/component.spec.json verification.commands must be declared`,
           );
-        } else if (component.name === "sdkwork-router-iam-app-api") {
+        } else if (component.name === "sdkwork-routes-iam-app-api") {
           const commands = componentSpec.verification.commands;
           const hasGovernedHttpTests = commands.some(
             (command) => typeof command === "string"
@@ -274,7 +274,7 @@ test("rust workspace uses standard crates layout and canonical crate names", () 
             }
           }
         }
-        if (component.name === "sdkwork-router-iam-app-api") {
+        if (component.name === "sdkwork-routes-iam-app-api") {
           const requiredFocusedModules = [
             "src/directory.rs",
             "src/passwords.rs",

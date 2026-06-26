@@ -22,6 +22,14 @@ import {
   type CreateSdkworkAppbasePcAuthSessionBridgeOptions,
   type SdkworkAppbasePcAuthSessionBridge,
 } from "./appbasePcAuthSessionBridge.ts";
+import {
+  attachSdkworkSdkSessionAuthBoundary,
+  type SdkworkSdkClientWithHttp,
+} from "./attachSdkworkSdkSessionAuthBoundary.ts";
+import {
+  createSdkworkSessionAuthUnauthorizedIntegration,
+  type CreateSdkworkSessionAuthUnauthorizedIntegrationOptions,
+} from "./createSdkworkSessionAuthUnauthorizedIntegration.ts";
 
 export interface SdkworkAppbasePcAuthRuntimeAppConfig {
   appId: string;
@@ -61,6 +69,7 @@ export interface CreateSdkworkAppbasePcAuthRuntimeOptions {
   hooks?: SdkworkAppbasePcAuthRuntimeHooks;
   localeProvider?: () => string | undefined;
   sdkClients?: readonly SdkworkAppbasePcAuthRuntimeSdkClient[];
+  sessionAuth?: boolean | CreateSdkworkSessionAuthUnauthorizedIntegrationOptions;
   sessionBridge?: CreateSdkworkAppbasePcAuthSessionBridgeOptions;
   tokenManager?: AuthTokenManager;
   tokenStore?: IamTokenStore;
@@ -91,20 +100,24 @@ export function createSdkworkAppbasePcAuthRuntime(
     platform,
     tokenManager,
   });
-  const appbaseApp = options.credentialEntry?.skipWrap
-    ? rawAppbaseApp
-    : wrapCredentialEntryClient(rawAppbaseApp, {
-        tokenManager,
-        ...(options.credentialEntry?.prepareTokens
-          ? { prepareTokens: options.credentialEntry.prepareTokens }
-          : {}),
-      });
+  const appbaseApp = wrapAppbaseAppClientWithSessionAuth(
+    options.credentialEntry?.skipWrap
+      ? rawAppbaseApp
+      : wrapCredentialEntryClient(rawAppbaseApp, {
+          tokenManager,
+          ...(options.credentialEntry?.prepareTokens
+            ? { prepareTokens: options.credentialEntry.prepareTokens }
+            : {}),
+        }),
+    options,
+  );
+  const sdkClients = wrapSdkClientsWithSessionAuth(options.sdkClients, options);
 
   const runtime = createRuntimeWithHooks(
     createIamRuntime({
       clients: {
         appbaseApp,
-        sdkClients: options.sdkClients,
+        sdkClients,
       },
       config: {
         appApiBaseUrl: options.baseUrls.appbaseAppApiBaseUrl,
@@ -253,4 +266,57 @@ function serializeStoredSession(session: IamStoredSession | AuthTokens): string 
 function optionalString(value: unknown): string | undefined {
   const normalized = typeof value === "string" ? value.trim() : "";
   return normalized || undefined;
+}
+
+function shouldEnableSessionAuth(
+  sessionAuth: CreateSdkworkAppbasePcAuthRuntimeOptions["sessionAuth"],
+): boolean {
+  if (sessionAuth === false) {
+    return false;
+  }
+  return typeof window !== "undefined";
+}
+
+function resolveSessionAuthIntegrationOptions(
+  options: CreateSdkworkAppbasePcAuthRuntimeOptions,
+): CreateSdkworkSessionAuthUnauthorizedIntegrationOptions {
+  const sessionAuth = options.sessionAuth;
+  const integrationOptions = sessionAuth === true || sessionAuth === undefined
+    ? {}
+    : sessionAuth;
+
+  return {
+    ...integrationOptions,
+    clearSession: integrationOptions.clearSession ?? options.sessionBridge?.clearSession,
+  };
+}
+
+function wrapAppbaseAppClientWithSessionAuth(
+  client: AppbaseAppSdkClient,
+  options: CreateSdkworkAppbasePcAuthRuntimeOptions,
+): AppbaseAppSdkClient {
+  if (!shouldEnableSessionAuth(options.sessionAuth)) {
+    return client;
+  }
+  return attachSdkworkSdkSessionAuthBoundary(
+    client as AppbaseAppSdkClient & SdkworkSdkClientWithHttp,
+    resolveSessionAuthIntegrationOptions(options),
+  ) as AppbaseAppSdkClient;
+}
+
+function wrapSdkClientsWithSessionAuth(
+  sdkClients: readonly SdkworkAppbasePcAuthRuntimeSdkClient[] | undefined,
+  options: CreateSdkworkAppbasePcAuthRuntimeOptions,
+): readonly SdkworkAppbasePcAuthRuntimeSdkClient[] | undefined {
+  if (!sdkClients?.length || !shouldEnableSessionAuth(options.sessionAuth)) {
+    return sdkClients;
+  }
+
+  const integrationOptions = resolveSessionAuthIntegrationOptions(options);
+  return sdkClients.map((client) =>
+    attachSdkworkSdkSessionAuthBoundary(
+      client as SdkworkAppbasePcAuthRuntimeSdkClient & SdkworkSdkClientWithHttp,
+      integrationOptions,
+    ),
+  );
 }

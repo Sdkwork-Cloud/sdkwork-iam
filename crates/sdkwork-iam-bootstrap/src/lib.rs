@@ -1,9 +1,17 @@
 pub mod constants;
+pub mod iam_scope_resolver;
 pub mod permission_catalog;
 pub mod rbac_scope;
 pub mod role_catalog;
+pub mod tenant_signing_key;
 
 pub use constants::*;
+pub use iam_scope_resolver::{
+    effective_iam_organization_code, effective_iam_tenant_code,
+    resolve_postgres_iam_organization_id_string, resolve_postgres_iam_scope,
+    resolve_postgres_iam_tenant_id_string, resolve_sqlite_iam_organization_id_string,
+    resolve_sqlite_iam_scope, resolve_sqlite_iam_tenant_id_string, IamScopeResolveOptions,
+};
 pub use rbac_scope::{
     ensure_assigner_covers_role_permissions, ensure_permission_grant_within_assigner_scope,
     ensure_role_assignment_allowed, ensure_role_grant_within_assigner_scope,
@@ -13,6 +21,13 @@ pub use rbac_scope::{
 };
 pub use role_catalog::{
     expanded_role_permission_codes, standard_role_id, standard_role_permission_id,
+};
+pub use tenant_signing_key::{
+    decode_signing_secret_ref, encode_signing_secret_ref, ensure_postgres_tenant_signing_key,
+    ensure_sqlite_tenant_signing_key, load_postgres_active_tenant_signing_key,
+    load_sqlite_active_tenant_signing_key, resolve_postgres_tenant_signing_key_by_kid,
+    resolve_sqlite_tenant_signing_key_by_kid, tenant_primary_signing_kid,
+    TenantSigningKeyMaterial,
 };
 
 use chrono::Utc;
@@ -111,6 +126,7 @@ pub async fn upsert_sqlite_default_subject(pool: &SqlitePool) -> Result<(), sqlx
     .bind(&now)
     .execute(pool)
     .await?;
+    ensure_sqlite_tenant_signing_key(pool, DEFAULT_IAM_TENANT_ID).await?;
     Ok(())
 }
 
@@ -196,6 +212,7 @@ pub async fn upsert_postgres_default_subject(pool: &PgPool) -> Result<(), sqlx::
     .bind(DEFAULT_IAM_ORGANIZATION_VERIFICATION_STATUS)
     .execute(pool)
     .await?;
+    ensure_postgres_tenant_signing_key(pool, DEFAULT_IAM_TENANT_ID).await?;
     Ok(())
 }
 

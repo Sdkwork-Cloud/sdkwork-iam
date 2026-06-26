@@ -44,7 +44,11 @@
     "admin:iam-modules:validate": "node tools/validators/validate-iam-module-manifests.mjs",
     "admin:iam-modules:reconcile": "node tools/validators/reconcile-iam-module-openapi-permissions.mjs",
     "admin:iam-modules:materialize:manifests": "node tools/generators/materialize-iam-module-manifests.mjs",
-    "admin:bootstrap:app": "node scripts/bootstrap/bootstrap-app.mjs"
+    "admin:bootstrap:app": "node scripts/bootstrap/bootstrap-app.mjs",
+    "gateway:assembly:materialize": "node scripts/gateway/assembly-materialize.mjs",
+    "gateway:assembly:validate": "node scripts/gateway/assembly-validate.mjs",
+    "db:postgres:init": "node ../sdkwork-specs/tools/postgres/postgres-db-cli.mjs --mode init --config .env.postgres --app-root .",
+    "db:postgres:plan": "node ../sdkwork-specs/tools/postgres/postgres-db-cli.mjs --mode plan --config .env.postgres --app-root . --dry-run"
   },
   "devDependencies": {
     "@sdkwork/auth-pc-react": "workspace:*",

@@ -30,7 +30,7 @@ export function createBackendApiRustTestCommands(cwd = sdkworkAppbaseRoot) {
   const threadArgs = ["--", "--test-threads", "1"];
   const routeStandard = {
     command: "cargo",
-    args: ["test", "-j", "1", "-p", "sdkwork-router-iam-backend-api", "--test", "iam_backend_route_standard", ...threadArgs],
+    args: ["test", "-j", "1", "-p", "sdkwork-routes-iam-backend-api", "--test", "iam_backend_route_standard", ...threadArgs],
   };
 
   if (!iamPostgresProfileAvailable(cwd)) {
@@ -46,7 +46,7 @@ export function createBackendApiRustTestCommands(cwd = sdkworkAppbaseRoot) {
         "-j",
         "1",
         "-p",
-        "sdkwork-router-iam-backend-api",
+        "sdkwork-routes-iam-backend-api",
         "--test",
         "iam_backend_postgres_integration",
         ...threadArgs,
@@ -59,7 +59,7 @@ export function createAppApiRustTestCommands(cwd = sdkworkAppbaseRoot) {
   const threadArgs = ["--", "--test-threads", "1"];
   const httpStandard = {
     command: "cargo",
-    args: ["test", "-j", "1", "-p", "sdkwork-router-iam-app-api", "--test", "iam_http_standard", ...threadArgs],
+    args: ["test", "-j", "1", "-p", "sdkwork-routes-iam-app-api", "--test", "iam_http_standard", ...threadArgs],
   };
 
   if (!iamPostgresProfileAvailable(cwd)) {
@@ -75,7 +75,7 @@ export function createAppApiRustTestCommands(cwd = sdkworkAppbaseRoot) {
         "-j",
         "1",
         "-p",
-        "sdkwork-router-iam-app-api",
+        "sdkwork-routes-iam-app-api",
         "--test",
         "oauth_authorization_server_integration",
         ...threadArgs,
@@ -140,7 +140,7 @@ export function createIamStandardContractsPlan({
       args: [
         "test",
         "-p",
-        "sdkwork-router-iam-open-api",
+        "sdkwork-routes-iam-open-api",
       ],
     },
     {

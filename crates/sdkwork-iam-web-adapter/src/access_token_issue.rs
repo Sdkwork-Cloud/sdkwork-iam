@@ -12,7 +12,7 @@ use sdkwork_iam_context_service::{
 use sdkwork_web_core::stamp_token_version;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use sqlx::{types::Json, PgPool, Row};
+use sqlx::{types::Json, PgPool};
 
 use sdkwork_iam_bootstrap::resolve_session_scopes as bootstrap_resolve_session_scopes;
 
@@ -267,63 +267,19 @@ async fn ensure_tenant_signing_key(
     pg: &PgPool,
     tenant_id: &str,
 ) -> Result<TenantSigningKey, String> {
-    let row = sqlx::query(
-        "SELECT tenant_id, kid, secret_ref FROM iam_tenant_signing_key \
-         WHERE tenant_id = $1 AND status = 'active' \
-         ORDER BY active_from DESC LIMIT 1",
-    )
-    .bind(tenant_id)
-    .fetch_optional(pg)
-    .await
-    .map_err(|error| format!("load signing key failed: {error}"))?;
+    sdkwork_iam_bootstrap::ensure_postgres_tenant_signing_key(pg, tenant_id)
+        .await
+        .map_err(|error| format!("provision tenant signing key failed: {error}"))?;
 
-    if let Some(row) = row {
-        let _tenant_id: String = row.get(0);
-        let kid: String = row.get(1);
-        let secret_ref: String = row.get(2);
-        let secret = crate::decode_signing_secret_ref(&secret_ref)?;
-        return Ok(TenantSigningKey { kid, secret });
-    }
+    let material = sdkwork_iam_bootstrap::load_postgres_active_tenant_signing_key(pg, tenant_id)
+        .await
+        .map_err(|error| format!("load signing key failed: {error}"))?
+        .ok_or_else(|| format!("tenant signing key not provisioned for tenant {tenant_id}"))?;
 
-    let mut secret = vec![0u8; 64];
-    OsRng.fill_bytes(&mut secret);
-    let kid = format!("{tenant_id}:local-hs256:{}", uuid::Uuid::now_v7());
-    let secret_ref = crate::encode_signing_secret_ref(&secret)?;
-    let secret_hash = hash_token(&secret_ref);
-    let now = chrono::Utc::now();
-
-    sqlx::query(
-        "INSERT INTO iam_tenant_signing_key (id, tenant_id, kid, alg, secret_ref, secret_hash, status, active_from, created_at, updated_at) \
-         VALUES ($1, $2, $3, 'HS256', $4, $5, 'active', $6, $7, $8) \
-         ON CONFLICT (tenant_id, kid) DO NOTHING",
-    )
-    .bind(&uuid::Uuid::now_v7().to_string())
-    .bind(tenant_id)
-    .bind(&kid)
-    .bind(&secret_ref)
-    .bind(&secret_hash)
-    .bind(&now)
-    .bind(&now)
-    .bind(&now)
-    .execute(pg)
-    .await
-    .map_err(|error| format!("insert signing key failed: {error}"))?;
-
-    let row = sqlx::query(
-        "SELECT tenant_id, kid, secret_ref FROM iam_tenant_signing_key \
-         WHERE tenant_id = $1 AND status = 'active' \
-         ORDER BY active_from DESC LIMIT 1",
-    )
-    .bind(tenant_id)
-    .fetch_optional(pg)
-    .await
-    .map_err(|error| format!("load signing key after insert failed: {error}"))?
-    .ok_or_else(|| "signing key not found after insert".to_string())?;
-
-    let kid: String = row.get(1);
-    let secret_ref: String = row.get(2);
-    let secret = crate::decode_signing_secret_ref(&secret_ref)?;
-    Ok(TenantSigningKey { kid, secret })
+    Ok(TenantSigningKey {
+        kid: material.kid,
+        secret: material.secret,
+    })
 }
 
 fn sign_local_session_token(

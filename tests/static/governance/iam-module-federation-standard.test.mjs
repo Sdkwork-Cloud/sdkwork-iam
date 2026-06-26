@@ -79,7 +79,7 @@ test("rbac scope resolver matches group and service-account principals", async (
 test("backend role binding enforces assigner permission_scope coverage", async () => {
   const managementPath = path.join(
     appRoot,
-    "crates/sdkwork-router-iam-backend-api/src/management.rs",
+    "crates/sdkwork-routes-iam-backend-api/src/management.rs",
   );
   const source = await readFile(managementPath, "utf8");
   assert.match(source, /ensure_role_grant_within_assigner_scope/);
@@ -89,7 +89,7 @@ test("backend role binding enforces assigner permission_scope coverage", async (
 test("backend exposes group and service account directory routes", async () => {
   const manifestPath = path.join(
     appRoot,
-    "crates/sdkwork-router-iam-backend-api/src/manifest.rs",
+    "crates/sdkwork-routes-iam-backend-api/src/manifest.rs",
   );
   const source = await readFile(manifestPath, "utf8");
   assert.match(source, /\/backend\/v3\/api\/iam\/groups/);
@@ -133,7 +133,7 @@ test("commerce module declares nested department templates", async () => {
 test("app api directory provisioning uses canonical bootstrap subject", async () => {
   const directoryPath = path.join(
     appRoot,
-    "crates/sdkwork-router-iam-app-api/src/directory.rs",
+    "crates/sdkwork-routes-iam-app-api/src/directory.rs",
   );
   const source = await readFile(directoryPath, "utf8");
   assert.match(source, /upsert_postgres_default_subject/);
@@ -219,7 +219,7 @@ test("operational zh-CN locale seed is declared and present", async () => {
 test("backend role permission grant blocks retired permissions and assigner overflow", async () => {
   const crudPath = path.join(
     appRoot,
-    "crates/sdkwork-router-iam-backend-api/src/directory_crud.impl.rs",
+    "crates/sdkwork-routes-iam-backend-api/src/directory_crud.impl.rs",
   );
   const source = await readFile(crudPath, "utf8");
   assert.match(source, /iam_permission_retired/);

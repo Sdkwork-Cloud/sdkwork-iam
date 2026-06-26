@@ -29,4 +29,4 @@ This directory is the local standards index for `sdkwork-iam-web-adapter`. Root 
 ## Verification
 
 - `cargo test -p sdkwork-iam-web-adapter`
-- `cargo test -p sdkwork-router-iam-open-api`
+- `cargo test -p sdkwork-routes-iam-open-api`

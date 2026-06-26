@@ -2,6 +2,12 @@ export * from "./authRuntimeComposition.ts";
 export * from "./authRuntimeDevelopmentPrefill.ts";
 export * from "./appbasePcAuthSessionBridge.ts";
 export * from "./appbasePcAuthRuntime.ts";
+export * from "./sessionAuthUnauthorized.ts";
+export * from "./sdkSessionAuthError.ts";
+export * from "./sessionAuthUnauthorizedEnv.ts";
+export * from "./handleSdkworkSessionAuthUnauthorizedError.ts";
+export * from "./attachSdkworkSdkSessionAuthBoundary.ts";
+export * from "./createSdkworkSessionAuthUnauthorizedIntegration.ts";
 export {
   resolveSdkworkAuthRuntimeConfigFromMetadata,
 } from "../../sdkwork-auth-pc-react/src/auth-runtime-metadata.ts";

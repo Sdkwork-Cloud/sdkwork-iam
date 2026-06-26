@@ -122,6 +122,6 @@ The following tables are explicitly dropped and must not return:
 
 - Bootstrap crate: `crates/sdkwork-iam-database-host`
 - Entrypoints: `bootstrap_iam_database_from_env()` / `bootstrap_iam_database(pool)`
-- Wired from: `sdkwork-router-iam-app-api`, `sdkwork-router-iam-backend-api`
+- Wired from: `sdkwork-routes-iam-app-api`, `sdkwork-routes-iam-backend-api`
 - Contract materialization: `pnpm run db:materialize:contract`
 - `database.manifest.json` sets `lifecycle.autoMigrate=true` so IAM keeps boot-time schema alignment through `LifecycleOrchestrator`

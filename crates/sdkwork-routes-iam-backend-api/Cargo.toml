@@ -1,0 +1,38 @@
+[package]
+name = "sdkwork-routes-iam-backend-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SDKWork IAM backend-api route metadata and fail-closed router for Rust local/private deployments."
+
+[lib]
+name = "sdkwork_routes_iam_backend_api"
+path = "src/lib.rs"
+
+[dependencies]
+axum.workspace = true
+chrono.workspace = true
+sdkwork_iam_bootstrap.workspace = true
+sdkwork_iam_module_registry = { workspace = true }
+sdkwork_iam_database_host.workspace = true
+sdkwork_database_sqlx.workspace = true
+sdkwork-web-contract.workspace = true
+sdkwork-web-core.workspace = true
+sdkwork_iam_web_adapter.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+argon2 = "0.5"
+chrono = { workspace = true }
+http-body-util = "0.1"
+sdkwork_database_config = { workspace = true }
+sdkwork_iam_bootstrap = { workspace = true }
+sdkwork_iam_web_adapter = { workspace = true }
+sqlx = { workspace = true, features = ["postgres", "runtime-tokio"] }
+tokio.workspace = true
+tower.workspace = true
+serde_json.workspace = true
+uuid = { version = "1", features = ["v7"] }

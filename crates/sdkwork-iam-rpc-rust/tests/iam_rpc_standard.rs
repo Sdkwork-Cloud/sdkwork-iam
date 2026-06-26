@@ -1,6 +1,6 @@
 use sdkwork_iam_rpc::{all_iam_rpc_service_manifests, iam_app_rpc_service_manifests};
-use sdkwork_router_iam_app_api::app_routes;
-use sdkwork_router_iam_backend_api::backend_routes;
+use sdkwork_routes_iam_app_api::app_routes;
+use sdkwork_routes_iam_backend_api::backend_routes;
 use sdkwork_rpc_core::validate_manifest;
 
 #[test]

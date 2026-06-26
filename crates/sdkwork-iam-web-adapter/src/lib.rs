@@ -1,3 +1,4 @@
+mod iam_database_env;
 mod access_token_issue;
 mod account_binding_policy;
 mod api_key_lookup;
@@ -17,6 +18,7 @@ mod resolver;
 mod runtime_auth_metadata;
 mod signing_secrets;
 mod super_admin_auth;
+mod tenant_signing_key_store;
 
 pub(crate) use sdkwork_utils_rust::is_blank;
 
@@ -63,6 +65,7 @@ pub use application_registry::{
 };
 pub use authorization_policy::IamAuthorizationPolicy;
 pub use dev_runtime::allows_dev_authentication_fallback;
+pub use iam_database_env::{bridge_iam_database_env_from_im, resolve_iam_postgres_pool_from_env};
 pub use ephemeral_rate_limit::{check_rate_limit, check_rate_limit_sqlite};
 pub use iam_session::{
     resolve_iam_app_context_from_access_token, resolve_iam_app_context_from_auth_token,
@@ -99,7 +102,7 @@ pub use oauth_redirect::{
 pub use oauth_token_lookup::IamOAuthTokenLookupService;
 pub use resolver::{
     web_request_principal_from_iam, IamDatabaseWebRequestContextResolver,
-    IamOpenApiWebRequestContextResolver,
+    IamOpenApiWebRequestContextResolver, IamWebRequestContextResolver,
 };
 pub use runtime_auth_metadata::{
     build_runtime_auth_metadata_json, default_runtime_auth_metadata_json,
@@ -108,7 +111,16 @@ pub use runtime_auth_metadata::{
     RuntimeAuthMetadataInput,
 };
 pub use signing_secrets::{
-    decode_signing_secret_ref, encode_signing_secret_ref, prime_signing_master_secret,
+    decode_signing_secret_ref, encode_signing_secret_ref, ensure_postgres_tenant_signing_key,
+    ensure_sqlite_tenant_signing_key, load_postgres_active_tenant_signing_key,
+    load_sqlite_active_tenant_signing_key, resolve_postgres_tenant_signing_key_by_kid,
+    resolve_sqlite_tenant_signing_key_by_kid, tenant_primary_signing_kid,
+    TenantSigningKeyMaterial,
+};
+pub use tenant_signing_key_store::{
+    tenant_signing_key_store_for_database_config, LegacyGlobalTenantSigningKeyStore,
+    PostgresTenantSigningKeyStore, SqliteTenantSigningKeyStore, TenantSigningKeyFuture,
+    TenantSigningKeyResolver, TenantSigningKeyStore, TenantSigningKeyStoreWebResolver,
 };
 pub use super_admin_auth::{
     allows_automatic_super_admin_auth, ensure_actor_tenant_scope, ensure_bootstrap_permission,
@@ -191,15 +203,15 @@ where
 }
 
 pub fn build_iam_app_web_framework_layer(
-    resolver: IamDatabaseWebRequestContextResolver,
+    resolver: IamWebRequestContextResolver,
     route_manifest: HttpRouteManifest,
-) -> sdkwork_web_axum::WebFrameworkLayer<IamDatabaseWebRequestContextResolver> {
+) -> sdkwork_web_axum::WebFrameworkLayer<IamWebRequestContextResolver> {
     build_web_framework_layer(resolver, route_manifest, Vec::new())
 }
 
 pub fn wrap_router_with_iam_app_web_framework(
     router: axum::Router,
-    resolver: IamDatabaseWebRequestContextResolver,
+    resolver: IamWebRequestContextResolver,
     route_manifest: HttpRouteManifest,
 ) -> axum::Router {
     wrap_router_with_iam_app_web_framework_resolver(router, resolver, route_manifest)
@@ -223,23 +235,23 @@ pub async fn wrap_router_with_iam_backend_web_framework_from_env(
     router: axum::Router,
     route_manifest: HttpRouteManifest,
 ) -> axum::Router {
-    let resolver = iam_database_resolver_from_env().await;
+    let resolver = iam_web_request_context_resolver_from_env().await;
     wrap_router_with_iam_backend_web_framework(router, resolver, route_manifest)
 }
 
 /// Backend-api routes are dual-token protected; no public IAM prefixes on this surface.
 pub fn build_iam_backend_web_framework_layer(
-    resolver: IamDatabaseWebRequestContextResolver,
+    resolver: IamWebRequestContextResolver,
     route_manifest: HttpRouteManifest,
-) -> sdkwork_web_axum::WebFrameworkLayer<IamDatabaseWebRequestContextResolver> {
+) -> sdkwork_web_axum::WebFrameworkLayer<IamWebRequestContextResolver> {
     build_web_framework_layer(resolver, route_manifest, Vec::new())
 }
 
 /// Open-api IAM ingress lives under `/iam/v3/api` with header-driven API key or OAuth bearer auth.
 pub fn build_iam_open_api_web_framework_layer(
-    resolver: IamDatabaseWebRequestContextResolver,
+    resolver: IamWebRequestContextResolver,
     route_manifest: HttpRouteManifest,
-) -> sdkwork_web_axum::WebFrameworkLayer<IamDatabaseWebRequestContextResolver> {
+) -> sdkwork_web_axum::WebFrameworkLayer<IamWebRequestContextResolver> {
     let authorization_policy = std::sync::Arc::new(IamAuthorizationPolicy::new(route_manifest));
     sdkwork_web_axum::WebFrameworkLayer::new(resolver)
         .with_profile(WebRequestContextProfile {
@@ -254,7 +266,7 @@ pub fn build_iam_open_api_web_framework_layer(
 
 pub fn wrap_router_with_iam_backend_web_framework(
     router: axum::Router,
-    resolver: IamDatabaseWebRequestContextResolver,
+    resolver: IamWebRequestContextResolver,
     route_manifest: HttpRouteManifest,
 ) -> axum::Router {
     sdkwork_web_axum::with_web_request_context(
@@ -265,7 +277,7 @@ pub fn wrap_router_with_iam_backend_web_framework(
 
 pub fn wrap_router_with_iam_open_api_web_framework(
     router: axum::Router,
-    resolver: IamDatabaseWebRequestContextResolver,
+    resolver: IamWebRequestContextResolver,
     route_manifest: HttpRouteManifest,
 ) -> axum::Router {
     sdkwork_web_axum::with_web_request_context(
@@ -274,11 +286,16 @@ pub fn wrap_router_with_iam_open_api_web_framework(
     )
 }
 
-pub async fn iam_database_resolver_from_env() -> IamDatabaseWebRequestContextResolver {
-    let iam_pool = sdkwork_database_sqlx::create_pool_from_env("IAM")
-        .await
-        .ok()
-        .flatten()
-        .and_then(|pool| pool.as_postgres().cloned().map(std::sync::Arc::new));
-    IamDatabaseWebRequestContextResolver::new(iam_pool)
+pub async fn iam_web_request_context_resolver_from_env() -> IamWebRequestContextResolver {
+    let iam_pool = resolve_iam_postgres_pool_from_env().await;
+    IamWebRequestContextResolver::new(iam_pool)
+}
+
+/// Compatibility alias for repositories that have not migrated to the canonical resolver factory.
+#[deprecated(
+    since = "0.1.0",
+    note = "Use iam_web_request_context_resolver_from_env for application integration."
+)]
+pub async fn iam_database_resolver_from_env() -> IamWebRequestContextResolver {
+    iam_web_request_context_resolver_from_env().await
 }

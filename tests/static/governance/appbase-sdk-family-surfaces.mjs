@@ -9,19 +9,19 @@ const sdkFamilySurfaces = [
     directory: 'sdks/sdkwork-iam-app-sdk',
     authority: 'sdkwork-iam-app-api',
     apisSurface: 'app-api',
-    routeCrate: 'sdkwork-router-iam-app-api',
+    routeCrate: 'sdkwork-routes-iam-app-api',
   },
   {
     directory: 'sdks/sdkwork-iam-backend-sdk',
     authority: 'sdkwork-iam-backend-api',
     apisSurface: 'backend-api',
-    routeCrate: 'sdkwork-router-iam-backend-api',
+    routeCrate: 'sdkwork-routes-iam-backend-api',
   },
   {
     directory: 'sdks/sdkwork-iam-open-sdk',
     authority: 'sdkwork-iam-open-api',
     apisSurface: 'open-api',
-    routeCrate: 'sdkwork-router-iam-open-api',
+    routeCrate: 'sdkwork-routes-iam-open-api',
   },
 ];
 

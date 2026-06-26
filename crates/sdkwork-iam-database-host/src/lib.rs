@@ -92,7 +92,6 @@ async fn run_post_bootstrap_hooks(pool: &DatabasePool) -> Result<(), String> {
         return Ok(());
     };
 
-    sdkwork_iam_web_adapter::prime_signing_master_secret();
     sdkwork_iam_web_adapter::seed_builtin_oauth_provider_catalog(pg)
         .await
         .map_err(|error| format!("seed oauth provider catalog failed: {error}"))?;

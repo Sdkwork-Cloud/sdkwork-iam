@@ -30,3 +30,6 @@ export * from "./components/qr-login-panel.tsx";
 export * from "./pages/AuthOAuthCallbackPage.tsx";
 export * from "./pages/AuthPage.tsx";
 export * from "./pages/IamAuthRoutes.tsx";
+export * from "./SessionAuthUnauthorizedProvider.tsx";
+export * from "./SdkworkSessionAuthBrowserRoot.tsx";
+export * from "./components/session-auth-required-dialog.tsx";

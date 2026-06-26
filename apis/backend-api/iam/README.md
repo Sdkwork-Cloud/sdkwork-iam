@@ -6,7 +6,7 @@ Authoritative OpenAPI 3.1.2 contracts for the `sdkwork-iam` backend-api surface.
 
 | File | Purpose |
 | --- | --- |
-| `sdkwork-iam-backend-api.openapi.yaml` | Materialized OpenAPI authority from `sdkwork-router-iam-backend-api` route manifests |
+| `sdkwork-iam-backend-api.openapi.yaml` | Materialized OpenAPI authority from `sdkwork-routes-iam-backend-api` route manifests |
 
 ## Materialization
 

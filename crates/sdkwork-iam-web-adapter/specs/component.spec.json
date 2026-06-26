@@ -44,13 +44,18 @@
   "contracts": {
     "publicExports": [
       ".",
-      "sdkwork_iam_web_adapter::IamDatabaseWebRequestContextResolver",
+      "sdkwork_iam_web_adapter::IamWebRequestContextResolver",
       "sdkwork_iam_web_adapter::IamOpenApiWebRequestContextResolver",
+      "sdkwork_iam_web_adapter::iam_web_request_context_resolver_from_env",
+      "sdkwork_iam_web_adapter::resolve_iam_postgres_pool_from_env",
       "sdkwork_iam_web_adapter::IamApiKeyLookupService",
       "sdkwork_iam_web_adapter::IamOAuthTokenLookupService",
       "sdkwork_iam_web_adapter::wrap_router_with_iam_app_web_framework",
       "sdkwork_iam_web_adapter::wrap_router_with_iam_open_api_web_framework",
-      "sdkwork_iam_web_adapter::build_iam_open_api_web_framework_layer"
+      "sdkwork_iam_web_adapter::build_iam_open_api_web_framework_layer",
+      "sdkwork_iam_web_adapter::TenantSigningKeyStore",
+      "sdkwork_iam_web_adapter::TenantSigningKeyResolver",
+      "sdkwork_iam_web_adapter::tenant_signing_key_store_for_database_config"
     ],
     "runtimeEntrypoints": [],
     "routeManifest": null,
@@ -70,8 +75,8 @@
     "verification": {
     "commands": [
       "cargo test -p sdkwork-iam-web-adapter",
-      "cargo test -p sdkwork-router-iam-backend-api",
-      "cargo test -p sdkwork-router-iam-open-api"
+      "cargo test -p sdkwork-routes-iam-backend-api",
+      "cargo test -p sdkwork-routes-iam-open-api"
     ]
   },
   "metadata": {

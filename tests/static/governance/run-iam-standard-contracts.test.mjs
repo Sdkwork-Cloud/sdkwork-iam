@@ -66,7 +66,7 @@ test("IAM standard contracts plan uses the governed Vitest CLI path and Rust pac
       ["test", "-p", "sdkwork-iam-context-service"],
       ...createAppApiRustTestCommands(appbaseRoot).map((command) => command.args),
       ...createBackendApiRustTestCommands(appbaseRoot).map((command) => command.args),
-      ["test", "-p", "sdkwork-router-iam-open-api"],
+      ["test", "-p", "sdkwork-routes-iam-open-api"],
       ["test", "-p", "sdkwork-iam-directory-repository-sqlx"],
       ["test", "-p", "sdkwork-iam-web-adapter"],
       ["test", "-p", "sdkwork-iam-bootstrap"],
@@ -95,7 +95,7 @@ test("IAM standard contracts plan runs governed app-api HTTP and OAuth AS integr
     },
   });
 
-  const appRouterPlans = plan.filter((command) => command.args?.includes("sdkwork-router-iam-app-api"));
+  const appRouterPlans = plan.filter((command) => command.args?.includes("sdkwork-routes-iam-app-api"));
   assert.deepEqual(appRouterPlans, createAppApiRustTestCommands(appbaseRoot));
   assert.ok(appRouterPlans.some((command) => command.args.includes("iam_http_standard")));
   if (iamPostgresProfileAvailable(appbaseRoot)) {

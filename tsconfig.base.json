@@ -151,11 +151,11 @@
             "@sdkwork/permission-pc-react": [
                 "../sdkwork-appbase/packages/pc-react/system/sdkwork-permission-pc-react/src/index.ts"
             ],
-            "@sdkwork/router-mobile-react": [
-                "../sdkwork-appbase/packages/mobile-react/foundation/sdkwork-router-mobile-react/src/index.ts"
+            "@sdkwork/shell-mobile-react": [
+                "../sdkwork-appbase/packages/mobile-react/foundation/sdkwork-shell-mobile-react/src/index.ts"
             ],
-            "@sdkwork/router-pc-react": [
-                "../sdkwork-appbase/packages/pc-react/foundation/sdkwork-router-pc-react/src/index.ts"
+            "@sdkwork/workspace-pc-react": [
+                "../sdkwork-appbase/packages/pc-react/foundation/sdkwork-workspace-pc-react/src/index.ts"
             ],
             "@sdkwork/runtime-bootstrap": [
                 "../sdkwork-appbase/packages/common/foundation/sdkwork-runtime-bootstrap/src/index.ts"

@@ -11,5 +11,5 @@ path = "src/lib.rs"
 
 [dependencies]
 sdkwork_rpc_core.workspace = true
-sdkwork_router_iam_app_api.workspace = true
-sdkwork_router_iam_backend_api.workspace = true
+sdkwork_routes_iam_app_api.workspace = true
+sdkwork_routes_iam_backend_api.workspace = true

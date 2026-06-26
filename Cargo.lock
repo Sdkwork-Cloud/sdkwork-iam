@@ -1984,10 +1984,15 @@ dependencies = [
 name = "sdkwork-iam-bootstrap"
 version = "0.1.0"
 dependencies = [
+ "aes-gcm",
+ "base64",
  "chrono",
+ "rand_core 0.6.4",
  "sdkwork-iam-context-service",
  "sdkwork-iam-module-registry",
+ "sha2",
  "sqlx",
+ "uuid",
 ]
 
 [[package]]
@@ -2057,8 +2062,8 @@ dependencies = [
 name = "sdkwork-iam-rpc-rust"
 version = "0.1.0"
 dependencies = [
- "sdkwork-router-iam-app-api",
- "sdkwork-router-iam-backend-api",
+ "sdkwork-routes-iam-app-api",
+ "sdkwork-routes-iam-backend-api",
  "sdkwork-rpc-core-rust",
 ]
 
@@ -2067,8 +2072,8 @@ name = "sdkwork-iam-tauri-host"
 version = "0.1.0"
 dependencies = [
  "sdkwork-iam-context-service",
- "sdkwork-router-iam-app-api",
- "sdkwork-router-iam-backend-api",
+ "sdkwork-routes-iam-app-api",
+ "sdkwork-routes-iam-backend-api",
  "sdkwork-web-contract",
 ]
 
@@ -2086,6 +2091,7 @@ dependencies = [
  "password-hash",
  "rand_core 0.6.4",
  "reqwest",
+ "sdkwork-database-config",
  "sdkwork-database-sqlx",
  "sdkwork-iam-bootstrap",
  "sdkwork-iam-context-service",
@@ -2110,7 +2116,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sdkwork-router-iam-app-api"
+name = "sdkwork-routes-iam-app-api"
 version = "0.1.0"
 dependencies = [
  "argon2",
@@ -2128,7 +2134,7 @@ dependencies = [
  "sdkwork-iam-context-service",
  "sdkwork-iam-database-host",
  "sdkwork-iam-web-adapter",
- "sdkwork-router-iam-open-api",
+ "sdkwork-routes-iam-open-api",
  "sdkwork-utils-rust",
  "sdkwork-web-axum",
  "sdkwork-web-contract",
@@ -2145,7 +2151,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sdkwork-router-iam-backend-api"
+name = "sdkwork-routes-iam-backend-api"
 version = "0.1.0"
 dependencies = [
  "argon2",
@@ -2169,7 +2175,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sdkwork-router-iam-open-api"
+name = "sdkwork-routes-iam-open-api"
 version = "0.1.0"
 dependencies = [
  "axum",

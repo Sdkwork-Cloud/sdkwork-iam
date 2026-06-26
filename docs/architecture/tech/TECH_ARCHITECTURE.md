@@ -3,7 +3,7 @@
 Status: active
 Owner: SDKWork maintainers
 Updated: 2026-06-25
-Specs: IAM_SPEC.md, ENGINEERING_WORKFLOW_SPEC.md, DOCUMENTATION_SPEC.md
+Specs: IAM_SPEC.md, ENGINEERING_WORKFLOW_SPEC.md, DOCUMENTATION_SPEC.md, ARCHITECTURE_DECISION_SPEC.md
 
 ## 1. Architecture Overview
 

@@ -34,6 +34,12 @@ Read `../sdkwork-specs/SOUL.md` before executing tasks in this root.
 - Rust: `../sdkwork-specs/RUST_CODE_SPEC.md`
 - TypeScript/UI: `../sdkwork-specs/TYPESCRIPT_CODE_SPEC.md`, `FRONTEND_CODE_SPEC.md`, `APP_PC_REACT_UI_SPEC.md`
 
+## Documentation Canon
+
+- [docs/README.md](docs/README.md)
+- [docs/product/prd/PRD.md](docs/product/prd/PRD.md)
+- [docs/architecture/tech/TECH_ARCHITECTURE.md](docs/architecture/tech/TECH_ARCHITECTURE.md)
+
 ## Build, Test, and Verification
 
 Run commands from this directory:

@@ -1,6 +1,6 @@
 use axum::body::Body;
 use axum::extract::Request;
-use sdkwork_iam_web_adapter::IamDatabaseWebRequestContextResolver;
+use sdkwork_iam_web_adapter::IamWebRequestContextResolver;
 use sdkwork_web_core::{
     AllowAllAuthorizationPolicy, WebAuthMode, WebCallInterceptorChain, WebCallRuntime,
     WebCallState, WebFrameworkErrorKind, WebRequestContextProfile,
@@ -10,7 +10,7 @@ use std::sync::Arc;
 #[tokio::test]
 async fn iam_open_api_resolver_accepts_dev_inline_api_key() {
     std::env::set_var("SDKWORK_ENV", "dev");
-    let mut runtime = WebCallRuntime::new(IamDatabaseWebRequestContextResolver::new(None))
+    let mut runtime = WebCallRuntime::new(IamWebRequestContextResolver::new(None))
         .with_profile(WebRequestContextProfile {
             open_api_prefixes: vec!["/iam/v3/api".to_owned()],
             ..Default::default()
@@ -40,7 +40,7 @@ async fn iam_open_api_resolver_accepts_dev_inline_api_key() {
 #[tokio::test]
 async fn iam_open_api_resolver_accepts_dev_inline_oauth_bearer() {
     std::env::set_var("SDKWORK_ENV", "dev");
-    let mut runtime = WebCallRuntime::new(IamDatabaseWebRequestContextResolver::new(None))
+    let mut runtime = WebCallRuntime::new(IamWebRequestContextResolver::new(None))
         .with_profile(WebRequestContextProfile {
             open_api_prefixes: vec!["/iam/v3/api".to_owned()],
             ..Default::default()
@@ -69,7 +69,7 @@ async fn iam_open_api_resolver_accepts_dev_inline_oauth_bearer() {
 
 #[tokio::test]
 async fn iam_open_api_resolver_rejects_missing_credentials() {
-    let runtime = WebCallRuntime::new(IamDatabaseWebRequestContextResolver::new(None))
+    let runtime = WebCallRuntime::new(IamWebRequestContextResolver::new(None))
         .with_profile(WebRequestContextProfile {
             open_api_prefixes: vec!["/iam/v3/api".to_owned()],
             ..Default::default()

@@ -14,7 +14,7 @@ Owner: `sdkwork-iam` maintainers.
 
 ```bash
 cp .env.postgres.example .env.postgres
-cargo test -p sdkwork-router-iam-app-api
+cargo test -p sdkwork-routes-iam-app-api
 ```
 
 ## Notes

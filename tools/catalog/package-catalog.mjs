@@ -69,9 +69,9 @@ const nativeRustIamDomains = [
     packages: [
       makePackage("sdkwork-iam-web-adapter", "IAM adapters for sdkwork-web-framework request context pipeline."),
       makePackage("sdkwork-iam-context-service", "Rust IAM domain, AppContext, and dual-token contracts."),
-      makePackage("sdkwork-router-iam-app-api", "Rust IAM app-api route contracts and executable router."),
-      makePackage("sdkwork-router-iam-backend-api", "Rust IAM backend-api route metadata and router."),
-      makePackage("sdkwork-router-iam-open-api", "Rust IAM open-api route metadata and router."),
+      makePackage("sdkwork-routes-iam-app-api", "Rust IAM app-api route contracts and executable router."),
+      makePackage("sdkwork-routes-iam-backend-api", "Rust IAM backend-api route metadata and router."),
+      makePackage("sdkwork-routes-iam-open-api", "Rust IAM open-api route metadata and router."),
       makePackage("sdkwork-iam-rpc-rust", "Rust IAM RPC service manifest and adapter foundation."),
       makePackage("sdkwork-iam-directory-repository-sqlx", "Rust IAM SQL directory repository and migration catalog."),
       makePackage("sdkwork-iam-module-registry", "IMF discovery, validation, and materialization."),

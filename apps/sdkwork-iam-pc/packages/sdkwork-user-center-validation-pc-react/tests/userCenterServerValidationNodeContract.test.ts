@@ -27,7 +27,7 @@ const typesPath = path.join(
 test("user-center server validation node contract builds an independent middleware plugin that depends on the user-center server plugin", () => {
   const userCenterServerPlugin = createUserCenterServerPluginDefinition({
     mode: "app-api-hub",
-    namespace: "sdkwork-router-portal",
+    namespace: "sdkwork-routes-portal",
     provider: {
       baseUrl: "https://app-api.sdkwork.local/router",
       kind: "sdkwork-cloud-app-api",
@@ -41,7 +41,7 @@ test("user-center server validation node contract builds an independent middlewa
 
   assert.equal(validation.capability, "user-center-server-validation");
   assert.equal(validation.dependency.capability, "user-center-server");
-  assert.equal(validation.dependency.namespace, "sdkwork-router-portal");
+  assert.equal(validation.dependency.namespace, "sdkwork-routes-portal");
   assert.equal(validation.dependency.providerKey, "router-app-api");
   assert.equal(validation.dependency.activeIntegrationKind, "sdkwork-cloud-app-api");
   assert.equal(validation.manifests.serverValidation.host, "server");

@@ -9,20 +9,20 @@ const iamRoot = resolve(__dirname, '../..');
 const routeSources = [
   {
     owner: 'iam',
-    packageName: 'sdkwork-router-iam-app-api',
-    path: resolve(iamRoot, 'crates/sdkwork-router-iam-app-api/src/manifest.rs'),
+    packageName: 'sdkwork-routes-iam-app-api',
+    path: resolve(iamRoot, 'crates/sdkwork-routes-iam-app-api/src/manifest.rs'),
     constructors: ['HttpRoute::credential_entry_public', 'HttpRoute::public', 'HttpRoute::dual_token', 'HttpRoute::api_key'],
   },
   {
     owner: 'iam',
-    packageName: 'sdkwork-router-iam-backend-api',
-    path: resolve(iamRoot, 'crates/sdkwork-router-iam-backend-api/src/manifest.rs'),
+    packageName: 'sdkwork-routes-iam-backend-api',
+    path: resolve(iamRoot, 'crates/sdkwork-routes-iam-backend-api/src/manifest.rs'),
     constructors: ['HttpRoute::public', 'HttpRoute::dual_token', 'HttpRoute::backend_admin', 'HttpRoute::api_key'],
   },
   {
     owner: 'iam',
-    packageName: 'sdkwork-router-iam-open-api',
-    path: resolve(iamRoot, 'crates/sdkwork-router-iam-open-api/src/manifest.rs'),
+    packageName: 'sdkwork-routes-iam-open-api',
+    path: resolve(iamRoot, 'crates/sdkwork-routes-iam-open-api/src/manifest.rs'),
     constructors: [
       'HttpRoute::public',
       'HttpRoute::oauth',
@@ -200,7 +200,7 @@ function selectRoutes(routes, prefix) {
 
 function selectOpenRoutes(routes) {
   return routes
-    .filter((route) => route.routeCrate === 'sdkwork-router-iam-open-api')
+    .filter((route) => route.routeCrate === 'sdkwork-routes-iam-open-api')
     .sort(compareRoutes);
 }
 
@@ -335,13 +335,13 @@ function buildRequestContext(surface) {
 
 function materializedFromSources(surface) {
   if (surface.sdkType === 'open') {
-    return routeSources.filter((source) => source.packageName === 'sdkwork-router-iam-open-api');
+    return routeSources.filter((source) => source.packageName === 'sdkwork-routes-iam-open-api');
   }
   if (surface.sdkType === 'app') {
-    return routeSources.filter((source) => source.packageName === 'sdkwork-router-iam-app-api');
+    return routeSources.filter((source) => source.packageName === 'sdkwork-routes-iam-app-api');
   }
   if (surface.sdkType === 'backend') {
-    return routeSources.filter((source) => source.packageName === 'sdkwork-router-iam-backend-api');
+    return routeSources.filter((source) => source.packageName === 'sdkwork-routes-iam-backend-api');
   }
   return routeSources;
 }

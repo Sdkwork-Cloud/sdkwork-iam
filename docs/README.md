@@ -4,6 +4,10 @@ IAM architecture notes, ADRs, runbooks, and operational documentation.
 
 Owner: `sdkwork-iam` maintainers.
 
+## Integration
+
+Consumer applications must follow [`IAM_INTEGRATION.md`](IAM_INTEGRATION.md). IAM SQL, signing keys, scope resolution, and session/token logic belong in this repository only.
+
 ## Relationship To `sdkwork-appbase`
 
 IAM domain code, tests, APIs, database module, and SDK families live in this repository. `sdkwork-appbase` only declares the external boundary and delegates verification.
@@ -29,8 +33,8 @@ OAuth and SSO are IAM session extensions owned by this repository. Canonical con
 
 | Layer | Location |
 | --- | --- |
-| Rust routers (app/backend/open-api) | `crates/sdkwork-router-iam-*`, `crates/sdkwork-iam-web-adapter` |
-| Backend OAuth CRUD | `crates/sdkwork-router-iam-backend-api/src/oauth_*` |
+| Rust routers (app/backend/open-api) | `crates/sdkwork-routes-iam-*`, `crates/sdkwork-iam-web-adapter` |
+| Backend OAuth CRUD | `crates/sdkwork-routes-iam-backend-api/src/oauth_*` |
 | TypeScript service + adapter | `apps/sdkwork-iam-common/packages/sdkwork-iam-service`, `sdkwork-iam-sdk-adapter` |
 | PC admin UI | `@sdkwork/iam-pc-admin-oauth` — `SdkworkIamOauthAdminWorkspace` (Inbound IdP / Authorization server / Extended platform / Diagnostics & audit) |
 | Auth runtime discovery | `apps/sdkwork-iam-common/packages/sdkwork-iam-contracts/src/auth-runtime-metadata.ts` |
@@ -50,3 +54,23 @@ Per `IAM_OAUTH_SPEC.md` §4.2:
 ## Layout
 
 Add ADRs, runbooks, and architecture shards under this directory as IAM-owned documentation grows.
+
+## Canon Documents
+
+| Document | Path |
+| --- | --- |
+| Product PRD | [product/prd/PRD.md](product/prd/PRD.md) |
+| Technical architecture | [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md) |
+
+- [docs/product/prd/PRD.md](product/prd/PRD.md)
+- [docs/architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md)
+
+## Canon Documents
+
+| Document | Path |
+| --- | --- |
+| Product PRD | [product/prd/PRD.md](product/prd/PRD.md) |
+| Technical architecture | [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md) |
+
+- [docs/product/prd/PRD.md](product/prd/PRD.md)
+- [docs/architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md)

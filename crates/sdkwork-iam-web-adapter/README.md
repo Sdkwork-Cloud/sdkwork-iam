@@ -17,9 +17,15 @@ and route manifest integration.
 - `wrap_router_with_iam_backend_web_framework`
 - `wrap_router_with_iam_open_api_web_framework`
 - `build_iam_open_api_web_framework_layer`
-- `IamDatabaseWebRequestContextResolver` / `IamOpenApiWebRequestContextResolver`
+- `IamWebRequestContextResolver` (canonical application integration resolver)
+- `IamOpenApiWebRequestContextResolver` (open-api alias)
+- `iam_web_request_context_resolver_from_env`
 - `IamApiKeyLookupService` / `IamOAuthTokenLookupService` (database-backed open-api)
 - `resolve_iam_app_context_from_oauth_bearer`
+
+`IamWebRequestContextResolver` is the canonical resolver name for application integration.
+`IamDatabaseWebRequestContextResolver` remains the concrete implementation struct and
+compatibility alias target for advanced or legacy references.
 
 ## Framework Integration
 
@@ -31,7 +37,7 @@ This crate depends on `sdkwork-web-framework` (`sdkwork-web-core`,
 
 ```bash
 cargo test -p sdkwork-iam-web-adapter
-cargo test -p sdkwork-router-iam-open-api
+cargo test -p sdkwork-routes-iam-open-api
 ```
 
 ## Owner And Status

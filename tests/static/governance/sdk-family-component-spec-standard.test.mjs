@@ -10,19 +10,19 @@ const SDK_FAMILIES = [
     directory: 'sdks/sdkwork-iam-app-sdk',
     apiAuthority: 'sdkwork-iam-app-api',
     sdkType: 'app',
-    routeCrate: 'sdkwork-router-iam-app-api',
+    routeCrate: 'sdkwork-routes-iam-app-api',
   },
   {
     directory: 'sdks/sdkwork-iam-backend-sdk',
     apiAuthority: 'sdkwork-iam-backend-api',
     sdkType: 'backend',
-    routeCrate: 'sdkwork-router-iam-backend-api',
+    routeCrate: 'sdkwork-routes-iam-backend-api',
   },
   {
     directory: 'sdks/sdkwork-iam-open-sdk',
     apiAuthority: 'sdkwork-iam-open-api',
     sdkType: 'open',
-    routeCrate: 'sdkwork-router-iam-open-api',
+    routeCrate: 'sdkwork-routes-iam-open-api',
   },
 ];
 

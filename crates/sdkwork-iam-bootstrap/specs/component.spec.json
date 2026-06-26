@@ -31,6 +31,16 @@
     "publicExports": [
       "sdkwork_iam_bootstrap::upsert_sqlite_default_subject",
       "sdkwork_iam_bootstrap::upsert_postgres_default_subject",
+      "sdkwork_iam_bootstrap::ensure_postgres_tenant_signing_key",
+      "sdkwork_iam_bootstrap::ensure_sqlite_tenant_signing_key",
+      "sdkwork_iam_bootstrap::load_postgres_active_tenant_signing_key",
+      "sdkwork_iam_bootstrap::load_sqlite_active_tenant_signing_key",
+      "sdkwork_iam_bootstrap::resolve_postgres_tenant_signing_key_by_kid",
+      "sdkwork_iam_bootstrap::resolve_sqlite_tenant_signing_key_by_kid",
+      "sdkwork_iam_bootstrap::resolve_postgres_iam_scope",
+      "sdkwork_iam_bootstrap::resolve_sqlite_iam_scope",
+      "sdkwork_iam_bootstrap::IamScopeResolveOptions",
+      "sdkwork_iam_bootstrap::tenant_primary_signing_kid",
       "sdkwork_iam_bootstrap::IAM_STANDARD_PERMISSION_SEEDS"
     ],
     "runtimeEntrypoints": [],

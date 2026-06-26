@@ -18372,8 +18372,8 @@
   "x-sdkwork-materialized-from": [
     {
       "owner": "iam",
-      "routeCrate": "sdkwork-router-iam-backend-api",
-      "path": "<sdkwork-iam>/crates/sdkwork-router-iam-backend-api/src/manifest.rs"
+      "routeCrate": "sdkwork-routes-iam-backend-api",
+      "path": "<sdkwork-iam>/crates/sdkwork-routes-iam-backend-api/src/manifest.rs"
     }
   ],
   "x-sdkwork-request-context": {
