@@ -2,6 +2,7 @@ pub mod constants;
 pub mod iam_entity_ids;
 pub mod iam_scope_resolver;
 pub mod iam_sql_subject;
+pub mod legacy_subject_repair;
 pub mod permission_catalog;
 pub mod rbac_scope;
 pub mod role_catalog;
@@ -18,6 +19,10 @@ pub use iam_scope_resolver::{
     resolve_postgres_iam_organization_id_string, resolve_postgres_iam_scope,
     resolve_postgres_iam_tenant_id_string, resolve_sqlite_iam_organization_id_string,
     resolve_sqlite_iam_scope, resolve_sqlite_iam_tenant_id_string, IamScopeResolveOptions,
+};
+pub use legacy_subject_repair::{
+    repair_postgres_legacy_opaque_iam_user_ids, repair_sqlite_legacy_opaque_iam_user_ids,
+    LegacyIamSubjectRepairReport,
 };
 pub use rbac_scope::{
     ensure_assigner_covers_role_permissions, ensure_permission_grant_within_assigner_scope,
@@ -134,6 +139,7 @@ pub async fn upsert_sqlite_default_subject(pool: &SqlitePool) -> Result<(), sqlx
     .execute(pool)
     .await?;
     ensure_sqlite_tenant_signing_key(pool, DEFAULT_IAM_TENANT_ID).await?;
+    let _ = repair_sqlite_legacy_opaque_iam_user_ids(pool).await?;
     Ok(())
 }
 
@@ -220,6 +226,7 @@ pub async fn upsert_postgres_default_subject(pool: &PgPool) -> Result<(), sqlx::
     .execute(pool)
     .await?;
     ensure_postgres_tenant_signing_key(pool, DEFAULT_IAM_TENANT_ID).await?;
+    let _ = repair_postgres_legacy_opaque_iam_user_ids(pool).await?;
     Ok(())
 }
 

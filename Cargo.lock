@@ -1990,6 +1990,7 @@ dependencies = [
  "rand_core 0.6.4",
  "sdkwork-iam-context-service",
  "sdkwork-iam-module-registry",
+ "sdkwork-id-core",
  "sha2",
  "sqlx",
  "uuid",
@@ -2042,6 +2043,17 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "tokio",
+]
+
+[[package]]
+name = "sdkwork-iam-gateway-assembly"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "sdkwork-routes-iam-app-api",
+ "sdkwork-routes-iam-backend-api",
+ "sdkwork-routes-iam-open-api",
  "tokio",
 ]
 

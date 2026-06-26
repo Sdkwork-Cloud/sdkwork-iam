@@ -1,6 +1,6 @@
 //! Repairs legacy opaque IAM user ids (`iamu_*`, UUID strings) into numeric snowflake ids.
 
-use sqlx::{PgPool, SqlitePool};
+use sqlx::{PgPool, Row, SqlitePool};
 
 use crate::iam_entity_ids::new_iam_user_id;
 use crate::iam_sql_subject::is_legacy_opaque_iam_subject_id;
@@ -14,26 +14,21 @@ pub struct LegacyIamSubjectRepairReport {
 pub async fn repair_postgres_legacy_opaque_iam_user_ids(
     pool: &PgPool,
 ) -> Result<LegacyIamSubjectRepairReport, sqlx::Error> {
-    let legacy_users: Vec<(String, String)> = sqlx::query_as(
-        "SELECT tenant_id, id FROM iam_user \
-         WHERE status = 'active' AND is_deleted = 0",
+    let rows = sqlx::query(
+        "SELECT tenant_id, id FROM iam_user WHERE status = 'active' AND is_deleted = 0",
     )
     .fetch_all(pool)
-    .await?
-    .into_iter()
-    .filter_map(|(tenant_id, user_id): (String, String)| {
-        if user_id == DEFAULT_BOOTSTRAP_ADMIN_USER_ID {
-            return None;
-        }
-        is_legacy_opaque_iam_subject_id(&user_id)
-            .then_some((tenant_id, user_id))
-    })
-    .collect();
+    .await?;
 
     let mut repaired_users = 0_u32;
-    for (tenant_id, old_user_id) in legacy_users {
+    for row in rows {
+        let tenant_id: String = row.get(0);
+        let user_id: String = row.get(1);
+        if user_id == DEFAULT_BOOTSTRAP_ADMIN_USER_ID || !is_legacy_opaque_iam_subject_id(&user_id) {
+            continue;
+        }
         let new_user_id = new_iam_user_id();
-        repair_postgres_iam_user_id_references(pool, &tenant_id, &old_user_id, &new_user_id).await?;
+        repair_postgres_iam_user_id_references(pool, &tenant_id, &user_id, &new_user_id).await?;
         repaired_users += 1;
     }
 
@@ -43,26 +38,21 @@ pub async fn repair_postgres_legacy_opaque_iam_user_ids(
 pub async fn repair_sqlite_legacy_opaque_iam_user_ids(
     pool: &SqlitePool,
 ) -> Result<LegacyIamSubjectRepairReport, sqlx::Error> {
-    let legacy_users: Vec<(String, String)> = sqlx::query_as(
-        "SELECT tenant_id, id FROM iam_user \
-         WHERE status = 'active' AND is_deleted = 0",
+    let rows = sqlx::query(
+        "SELECT tenant_id, id FROM iam_user WHERE status = 'active' AND is_deleted = 0",
     )
     .fetch_all(pool)
-    .await?
-    .into_iter()
-    .filter_map(|(tenant_id, user_id): (String, String)| {
-        if user_id == DEFAULT_BOOTSTRAP_ADMIN_USER_ID {
-            return None;
-        }
-        is_legacy_opaque_iam_subject_id(&user_id)
-            .then_some((tenant_id, user_id))
-    })
-    .collect();
+    .await?;
 
     let mut repaired_users = 0_u32;
-    for (tenant_id, old_user_id) in legacy_users {
+    for row in rows {
+        let tenant_id: String = row.get(0);
+        let user_id: String = row.get(1);
+        if user_id == DEFAULT_BOOTSTRAP_ADMIN_USER_ID || !is_legacy_opaque_iam_subject_id(&user_id) {
+            continue;
+        }
         let new_user_id = new_iam_user_id();
-        repair_sqlite_iam_user_id_references(pool, &tenant_id, &old_user_id, &new_user_id).await?;
+        repair_sqlite_iam_user_id_references(pool, &tenant_id, &user_id, &new_user_id).await?;
         repaired_users += 1;
     }
 

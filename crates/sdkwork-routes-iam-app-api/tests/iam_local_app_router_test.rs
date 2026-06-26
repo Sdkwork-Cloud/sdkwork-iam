@@ -508,8 +508,8 @@ async fn local_appbase_directory_reads_registered_iam_users_without_fixture_rows
         .as_str()
         .expect("registration should return tenant id");
     assert!(
-        user_id.starts_with("iamu_"),
-        "registered IAM user id must be an opaque IAM id: {user_id}"
+        user_id.parse::<i64>().is_ok_and(|value| value > 0),
+        "registered IAM user id must be a positive numeric snowflake id: {user_id}"
     );
     assert_ne!(
         user_id, "user_directory_user",

@@ -230,6 +230,7 @@ impl LocalIamState {
         let config = LocalIamConfig::from_env();
         let host = sdkwork_iam_database_host::bootstrap_iam_database_from_env().await?;
         backfill_tenant_members(host.pool()).await?;
+        repair_legacy_opaque_user_ids(host.pool()).await?;
         Ok(Self::new(host.pool().clone(), config, None))
     }
 
@@ -237,6 +238,7 @@ impl LocalIamState {
         let config = LocalIamConfig::from_env();
         let host = sdkwork_iam_database_host::bootstrap_iam_database(pool).await?;
         backfill_tenant_members(host.pool()).await?;
+        repair_legacy_opaque_user_ids(host.pool()).await?;
         Ok(Self::new(host.pool().clone(), config, None))
     }
 
@@ -284,6 +286,22 @@ async fn ensure_ephemeral_artifact_table(pool: &DatabasePool) -> Result<(), Stri
 }
 
 // ── Tenant backfill ───────────────────────────────────────────────
+
+async fn repair_legacy_opaque_user_ids(pool: &DatabasePool) -> Result<(), String> {
+    match pool {
+        DatabasePool::Postgres(pg, _) => {
+            sdkwork_iam_bootstrap::repair_postgres_legacy_opaque_iam_user_ids(pg)
+                .await
+                .map_err(|error| format!("repair legacy IAM user ids failed: {error}"))?;
+        }
+        DatabasePool::Sqlite(sqlite, _) => {
+            sdkwork_iam_bootstrap::repair_sqlite_legacy_opaque_iam_user_ids(sqlite)
+                .await
+                .map_err(|error| format!("repair legacy IAM user ids failed: {error}"))?;
+        }
+    }
+    Ok(())
+}
 
 async fn backfill_tenant_members(pool: &DatabasePool) -> Result<(), String> {
     let Some(pg) = pool.as_postgres() else {
