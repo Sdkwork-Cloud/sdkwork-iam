@@ -6,7 +6,7 @@ use crate::{
     contacts::load_user_by_id,
     directory::resolve_open_registration_tenant_id,
     state::{LocalIamConfig, LocalIamUser},
-    utils::{canonical_identity, current_timestamp_utc, LOCAL_EPHEMERAL_SCOPE},
+    utils::{canonical_identity, current_timestamp_utc, new_iam_user_id, LOCAL_EPHEMERAL_SCOPE},
 };
 use sdkwork_iam_web_adapter::{
     builtin_oauth_provider_catalog, catalog_entry_for_provider, exchange_oauth_authorization_code,
@@ -364,7 +364,7 @@ async fn create_oauth_user(
     tenant_id: &str,
     profile: &LocalOAuthProviderProfile,
 ) -> Result<LocalIamUser, String> {
-    let user_id = uuid::Uuid::now_v7().to_string();
+    let user_id = new_iam_user_id();
     let username = format!("{}:{}", profile.provider, profile.subject);
     let display_name = profile
         .name

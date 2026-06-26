@@ -53,11 +53,11 @@ pub(crate) fn login_scope_from_string(value: &str) -> sdkwork_iam_context_servic
 }
 
 pub(crate) fn new_iam_user_id() -> String {
-    format!("iamu_{}", uuid::Uuid::now_v7())
+    sdkwork_iam_bootstrap::new_iam_user_id()
 }
 
 pub(crate) fn new_iam_tenant_id() -> String {
-    format!("iamt_{}", uuid::Uuid::now_v7())
+    sdkwork_iam_bootstrap::new_iam_tenant_id()
 }
 
 pub(crate) fn optional_string(value: Option<&Value>) -> Option<String> {

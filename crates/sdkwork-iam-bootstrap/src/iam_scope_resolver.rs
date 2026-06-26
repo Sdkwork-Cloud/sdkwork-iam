@@ -1,6 +1,7 @@
 use sqlx::{Executor, PgPool, Postgres, Row, Sqlite, SqlitePool};
 
 use crate::constants::{DEFAULT_IAM_ORGANIZATION_CODE, DEFAULT_IAM_TENANT_CODE};
+use crate::iam_sql_subject::{parse_iam_sql_organization_id, parse_iam_sql_tenant_id};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IamScopeResolveOptions {
@@ -42,7 +43,8 @@ pub async fn resolve_sqlite_iam_scope(
     options: IamScopeResolveOptions,
 ) -> Result<(i64, i64), sqlx::Error> {
     let tenant_id_string = resolve_sqlite_iam_tenant_id_string(pool, tenant_code, options).await?;
-    let tenant_id = parse_numeric_iam_subject_id(&tenant_id_string)?;
+    let tenant_id = parse_iam_sql_tenant_id(&tenant_id_string)
+        .map_err(|_| sqlx::Error::Protocol(iam_tenant_not_found_message()))?;
     let organization_id_string = resolve_sqlite_iam_organization_id_string(
         pool,
         &tenant_id_string,
@@ -52,7 +54,8 @@ pub async fn resolve_sqlite_iam_scope(
     .await?;
     Ok((
         tenant_id,
-        parse_numeric_iam_organization_id(&organization_id_string)?,
+        parse_iam_sql_organization_id(&organization_id_string)
+            .map_err(|_| sqlx::Error::Protocol(iam_organization_not_found_message()))?,
     ))
 }
 
@@ -64,7 +67,8 @@ pub async fn resolve_postgres_iam_scope(
 ) -> Result<(i64, i64), sqlx::Error> {
     let tenant_id_string =
         resolve_postgres_iam_tenant_id_string(pool, tenant_code, options).await?;
-    let tenant_id = parse_numeric_iam_subject_id(&tenant_id_string)?;
+    let tenant_id = parse_iam_sql_tenant_id(&tenant_id_string)
+        .map_err(|_| sqlx::Error::Protocol(iam_tenant_not_found_message()))?;
     let organization_id_string = resolve_postgres_iam_organization_id_string(
         pool,
         &tenant_id_string,
@@ -74,7 +78,8 @@ pub async fn resolve_postgres_iam_scope(
     .await?;
     Ok((
         tenant_id,
-        parse_numeric_iam_organization_id(&organization_id_string)?,
+        parse_iam_sql_organization_id(&organization_id_string)
+            .map_err(|_| sqlx::Error::Protocol(iam_organization_not_found_message()))?,
     ))
 }
 
@@ -200,20 +205,6 @@ fn organization_deleted_filter_postgres(options: IamScopeResolveOptions) -> &'st
     } else {
         ""
     }
-}
-
-fn parse_numeric_iam_subject_id(value: &str) -> Result<i64, sqlx::Error> {
-    value
-        .trim()
-        .parse::<i64>()
-        .map_err(|_| sqlx::Error::Protocol(iam_tenant_not_found_message()))
-}
-
-fn parse_numeric_iam_organization_id(value: &str) -> Result<i64, sqlx::Error> {
-    value
-        .trim()
-        .parse::<i64>()
-        .map_err(|_| sqlx::Error::Protocol(iam_organization_not_found_message()))
 }
 
 fn iam_tenant_not_found_message() -> String {

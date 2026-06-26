@@ -1,11 +1,18 @@
 pub mod constants;
+pub mod iam_entity_ids;
 pub mod iam_scope_resolver;
+pub mod iam_sql_subject;
 pub mod permission_catalog;
 pub mod rbac_scope;
 pub mod role_catalog;
 pub mod tenant_signing_key;
 
 pub use constants::*;
+pub use iam_entity_ids::{new_iam_snowflake_id, new_iam_tenant_id, new_iam_user_id};
+pub use iam_sql_subject::{
+    is_legacy_opaque_iam_subject_id, parse_iam_sql_organization_id, parse_iam_sql_tenant_id,
+    parse_iam_sql_user_id, IamSqlSubjectParseError,
+};
 pub use iam_scope_resolver::{
     effective_iam_organization_code, effective_iam_tenant_code,
     resolve_postgres_iam_organization_id_string, resolve_postgres_iam_scope,

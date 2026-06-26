@@ -17,5 +17,6 @@ rand_core = { version = "0.6", features = ["getrandom"] }
 sha2 = "0.10"
 sqlx = { workspace = true }
 uuid = { version = "1", features = ["v7"] }
+sdkwork-id-core.workspace = true
 sdkwork_iam_context_service.workspace = true
 sdkwork_iam_module_registry = { workspace = true }
