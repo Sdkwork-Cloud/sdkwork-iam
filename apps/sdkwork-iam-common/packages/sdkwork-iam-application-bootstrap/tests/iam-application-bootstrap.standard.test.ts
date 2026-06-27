@@ -21,7 +21,7 @@ const TEST_ACCESS_CREDENTIAL = createTestJwt({
 });
 const TEST_AUTH_TOKEN = createTestJwt({
   tenant_id: "100001",
-  user_id: "admin",
+  user_id: "1",
   session_id: "session-1",
   app_id: "app-1",
   auth_level: "system",

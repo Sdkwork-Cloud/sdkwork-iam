@@ -12,8 +12,8 @@ fn backend_context(login_scope: WebLoginScope, organization_id: Option<&str>) ->
         auth_mode: WebAuthMode::DualToken,
         principal: Some(
             WebRequestPrincipal::builder()
-                .tenant_id("tenant-1")
-                .user_id("user-1")
+                .tenant_id("100001")
+                .user_id("1")
                 .login_scope(login_scope)
                 .organization_id(organization_id.map(str::to_string))
                 .app_id("app-1")
@@ -41,8 +41,8 @@ fn app_context(login_scope: WebLoginScope, organization_id: Option<&str>) -> Web
         auth_mode: WebAuthMode::DualToken,
         principal: Some(
             WebRequestPrincipal::builder()
-                .tenant_id("tenant-1")
-                .user_id("user-1")
+                .tenant_id("100001")
+                .user_id("1")
                 .login_scope(login_scope)
                 .organization_id(organization_id.map(str::to_string))
                 .app_id("app-1")

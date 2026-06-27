@@ -3,7 +3,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use sdkwork_id_core::{SnowflakeIdError, SnowflakeIdGenerator};
+use sdkwork_database_id::{SnowflakeIdError, SnowflakeIdGenerator};
 
 mod user_center_authority;
 mod user_center_validation;

@@ -1,7 +1,9 @@
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
-use sdkwork_iam_web_adapter::{ensure_platform_tenant_application, platform_runtime_app_id_for_tenant};
+use sdkwork_iam_web_adapter::{
+    ensure_platform_tenant_application, platform_runtime_app_id_for_tenant,
+};
 use sdkwork_web_core::bootstrap_access_token_jwt;
 use serde_json::{json, Value};
 use std::sync::{Mutex, MutexGuard, OnceLock};
@@ -533,7 +535,7 @@ async fn local_appbase_directory_reads_registered_iam_users_without_fixture_rows
     assert_eq!(matches[0].user_id, user_id);
     assert!(
         directory
-            .search_user_profiles("t_demo", &directory_username)
+            .search_user_profiles("100001", &directory_username)
             .await
             .is_empty(),
         "directory search must stay tenant-scoped"
@@ -619,7 +621,7 @@ async fn local_app_router_login_rejects_inbound_auth_or_context_headers() {
         .method(Method::POST)
         .uri("/app/v3/api/auth/sessions")
         .header("content-type", "application/json")
-        .header("x-sdkwork-tenant-id", "t_demo")
+        .header("x-sdkwork-tenant-id", "100001")
         .header("x-sdkwork-organization-id", "org_demo")
         .header("x-sdkwork-user-id", "user_test006_a_com")
         .body(Body::from(
@@ -1102,10 +1104,7 @@ async fn local_app_router_personal_login_via_login_context_selection() {
     let selection_body = read_json(selection_response).await;
     assert_eq!(selection_body["code"], "2000");
     assert_eq!(selection_body["data"]["context"]["loginScope"], "TENANT");
-    assert_eq!(
-        selection_body["data"]["context"]["organizationId"],
-        "0"
-    );
+    assert_eq!(selection_body["data"]["context"]["organizationId"], "0");
     assert!(selection_body["data"]["authToken"].as_str().is_some());
 }
 
@@ -3594,7 +3593,10 @@ async fn local_app_router_open_registration_defaults_to_canonical_tenant_with_mu
         ),
     )
     .await;
-    assert_eq!(mismatched_register_response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        mismatched_register_response.status(),
+        StatusCode::BAD_REQUEST
+    );
     let mismatched_register_body = read_json(mismatched_register_response).await;
     assert_eq!(
         mismatched_register_body["code"],
@@ -3646,8 +3648,7 @@ async fn local_app_router_open_registration_defaults_to_canonical_tenant_with_mu
 }
 
 #[tokio::test]
-async fn local_app_router_rejects_cross_tenant_duplicate_account_without_bootstrap_tenant_match(
-) {
+async fn local_app_router_rejects_cross_tenant_duplicate_account_without_bootstrap_tenant_match() {
     cleanup_secondary_tenant_login_fixtures().await;
     let app = build_router_with_bootstrap().await;
     let email = unique_registration_username("cross-tenant");

@@ -1,3 +1,5 @@
+#[cfg(test)]
+use axum::http::Method;
 use axum::{
     extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode},
@@ -5,12 +7,10 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-#[cfg(test)]
-use axum::http::Method;
 use sdkwork_iam_web_adapter::{
     handle_provider_callback_get as process_provider_callback_get,
-    handle_provider_callback_post as process_provider_callback_post,
-    ProviderCallbackHttpResponse, ProviderCallbackRequestMeta,
+    handle_provider_callback_post as process_provider_callback_post, ProviderCallbackHttpResponse,
+    ProviderCallbackRequestMeta,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -46,7 +46,10 @@ pub(crate) fn build_sdkwork_iam_open_api_routes(state: OpenIamState) -> Router {
         .route("/iam/v3/oauth/revoke", post(handle_oauth_revoke))
         .route("/iam/v3/api/oauth/revoke", post(handle_oauth_revoke))
         .route("/iam/v3/oauth/introspect", post(handle_oauth_introspect))
-        .route("/iam/v3/api/oauth/introspect", post(handle_oauth_introspect))
+        .route(
+            "/iam/v3/api/oauth/introspect",
+            post(handle_oauth_introspect),
+        )
         .route("/iam/v3/oauth/jwks", get(retrieve_oauth_jwks))
         .route("/iam/v3/api/oauth/jwks", get(retrieve_oauth_jwks))
         .route("/iam/v3/oauth/userinfo", get(handle_oauth_userinfo))
@@ -128,13 +131,25 @@ fn provider_callback_response(response: ProviderCallbackHttpResponse) -> Respons
 
 fn provider_callback_error(message: String) -> Response {
     let (status, code) = if message.contains("was not found") {
-        (StatusCode::NOT_FOUND, "iam_oauth_provider_callback_not_found")
+        (
+            StatusCode::NOT_FOUND,
+            "iam_oauth_provider_callback_not_found",
+        )
     } else if message.contains("verification failed") || message.contains("is invalid") {
-        (StatusCode::FORBIDDEN, "iam_oauth_provider_callback_verification_failed")
+        (
+            StatusCode::FORBIDDEN,
+            "iam_oauth_provider_callback_verification_failed",
+        )
     } else if message.contains("is not configured") {
-        (StatusCode::SERVICE_UNAVAILABLE, "iam_oauth_provider_callback_unavailable")
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "iam_oauth_provider_callback_unavailable",
+        )
     } else {
-        (StatusCode::BAD_REQUEST, "iam_oauth_provider_callback_failed")
+        (
+            StatusCode::BAD_REQUEST,
+            "iam_oauth_provider_callback_failed",
+        )
     };
 
     (

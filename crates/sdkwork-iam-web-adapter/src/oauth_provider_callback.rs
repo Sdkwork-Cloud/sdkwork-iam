@@ -54,9 +54,12 @@ pub async fn handle_provider_callback_get(
         return Ok(response);
     }
 
-    if let Some(response) =
-        try_hub_challenge_verification(query, &verification_token, "hub.verify_token", "hub.challenge")?
-    {
+    if let Some(response) = try_hub_challenge_verification(
+        query,
+        &verification_token,
+        "hub.verify_token",
+        "hub.challenge",
+    )? {
         record_callback_event(
             pg,
             &config,
@@ -262,7 +265,11 @@ fn try_hub_challenge_verification(
     verify_token_key: &str,
     challenge_key: &str,
 ) -> Result<Option<ProviderCallbackHttpResponse>, String> {
-    let mode = match query.get("hub.mode").or_else(|| query.get("hub_mode")).map(String::as_str) {
+    let mode = match query
+        .get("hub.mode")
+        .or_else(|| query.get("hub_mode"))
+        .map(String::as_str)
+    {
         Some(value) if value == "subscribe" => value,
         _ => return Ok(None),
     };
@@ -400,16 +407,28 @@ async fn update_webhook_event(
     Ok(())
 }
 
-fn read_query_or_json(body: &Value, query: &HashMap<String, String>, keys: &[&str]) -> Option<String> {
+fn read_query_or_json(
+    body: &Value,
+    query: &HashMap<String, String>,
+    keys: &[&str],
+) -> Option<String> {
     for key in keys {
         if let Some(value) = query.get(*key).filter(|value| !value.is_empty()) {
             return Some(value.clone());
         }
-        if let Some(value) = body.get(*key).and_then(Value::as_str).filter(|value| !value.is_empty()) {
+        if let Some(value) = body
+            .get(*key)
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+        {
             return Some(value.to_string());
         }
         let snake = to_snake_case(key);
-        if let Some(value) = body.get(&snake).and_then(Value::as_str).filter(|value| !value.is_empty()) {
+        if let Some(value) = body
+            .get(&snake)
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+        {
             return Some(value.to_string());
         }
     }
@@ -461,9 +480,10 @@ mod tests {
         query.insert("hub.verify_token".to_string(), "secret".to_string());
         query.insert("hub.challenge".to_string(), "123456".to_string());
 
-        let response = try_hub_challenge_verification(&query, "secret", "hub.verify_token", "hub.challenge")
-            .expect("verification should succeed")
-            .expect("challenge response should exist");
+        let response =
+            try_hub_challenge_verification(&query, "secret", "hub.verify_token", "hub.challenge")
+                .expect("verification should succeed")
+                .expect("challenge response should exist");
         assert_eq!(response.body, "123456");
         assert_eq!(response.content_type, Some("text/plain"));
     }

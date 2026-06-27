@@ -92,7 +92,10 @@ async fn seed_oauth_e2e_fixtures() {
     let user_id = format!("iamu_{}", uuid::Uuid::now_v7());
     let member_id = format!("iamtm_{}", uuid::Uuid::now_v7());
     let password_hash = Argon2::default()
-        .hash_password(OAUTH_E2E_PASSWORD.as_bytes(), &SaltString::generate(&mut OsRng))
+        .hash_password(
+            OAUTH_E2E_PASSWORD.as_bytes(),
+            &SaltString::generate(&mut OsRng),
+        )
         .expect("hash oauth e2e password")
         .to_string();
     let runtime_config = json!({
@@ -178,7 +181,10 @@ async fn seed_oauth_e2e_fixtures() {
     .fetch_one(&pg)
     .await
     .expect("count sdkwork oauth provider catalog row");
-    assert_eq!(catalog_count, 1, "sdkwork provider catalog entry must exist");
+    assert_eq!(
+        catalog_count, 1,
+        "sdkwork provider catalog entry must exist"
+    );
 
     sqlx::query(
         "INSERT INTO iam_application_template (id, owner_tenant_id, app_key, name, display_name, app_type, \
@@ -216,7 +222,10 @@ async fn seed_oauth_e2e_fixtures() {
     .expect("insert oauth relying party tenant application");
 
     let parsed = parse_relying_party_config(&runtime_config);
-    assert!(parsed.enabled, "oauth relying party fixture must be enabled");
+    assert!(
+        parsed.enabled,
+        "oauth relying party fixture must be enabled"
+    );
 }
 
 async fn login_oauth_e2e_session(app: &axum::Router) -> Value {
@@ -289,9 +298,10 @@ async fn oauth_authorization_code_pkce_exchange_userinfo_and_revocation() {
     let session = iam_context_from_login_data(&login_data);
     let pg = postgres_pool_for_tests().await;
 
-    let client = resolve_relying_party_client(&pg, OAUTH_E2E_CLIENT_APP_ID, Some(OAUTH_E2E_TENANT_ID))
-        .await
-        .expect("resolve oauth relying party client");
+    let client =
+        resolve_relying_party_client(&pg, OAUTH_E2E_CLIENT_APP_ID, Some(OAUTH_E2E_TENANT_ID))
+            .await
+            .expect("resolve oauth relying party client");
     let (code_verifier, code_challenge) = pkce_pair("oauth-pkce-verifier-with-sufficient-length");
     let authorize_request = AuthorizeRequest {
         client_id: OAUTH_E2E_CLIENT_APP_ID.to_string(),
@@ -303,7 +313,8 @@ async fn oauth_authorization_code_pkce_exchange_userinfo_and_revocation() {
         code_challenge_method: Some("S256".to_string()),
         tenant_id: Some(OAUTH_E2E_TENANT_ID.to_string()),
     };
-    let scopes = validate_authorize_request(&authorize_request, &client).expect("authorize request");
+    let scopes =
+        validate_authorize_request(&authorize_request, &client).expect("authorize request");
     let (authorization_state_id, _login_url) =
         create_pending_authorization_state(&pg, &client, &authorize_request, &scopes)
             .await
@@ -329,7 +340,10 @@ async fn oauth_authorization_code_pkce_exchange_userinfo_and_revocation() {
         .as_str()
         .expect("access token");
     assert_eq!(token_response["token_type"], "Bearer");
-    assert!(token_response.get("refresh_token").and_then(Value::as_str).is_some());
+    assert!(token_response
+        .get("refresh_token")
+        .and_then(Value::as_str)
+        .is_some());
 
     let bearer = format!("Bearer {access_token}");
     let oauth_context =
@@ -379,7 +393,10 @@ async fn oauth_authorization_code_pkce_exchange_userinfo_and_revocation() {
         None,
     )
     .await;
-    assert!(reused.is_err(), "authorization code must be one-time consumable");
+    assert!(
+        reused.is_err(),
+        "authorization code must be one-time consumable"
+    );
 }
 
 #[tokio::test]
@@ -395,9 +412,10 @@ async fn oauth_open_api_http_token_and_userinfo_endpoints_exchange_pkce_flow() {
     let session = iam_context_from_login_data(&login_data);
     let pg = postgres_pool_for_tests().await;
 
-    let client = resolve_relying_party_client(&pg, OAUTH_E2E_CLIENT_APP_ID, Some(OAUTH_E2E_TENANT_ID))
-        .await
-        .expect("resolve oauth relying party client");
+    let client =
+        resolve_relying_party_client(&pg, OAUTH_E2E_CLIENT_APP_ID, Some(OAUTH_E2E_TENANT_ID))
+            .await
+            .expect("resolve oauth relying party client");
     let (code_verifier, code_challenge) = pkce_pair("oauth-pkce-verifier-with-sufficient-length");
     let authorize_request = AuthorizeRequest {
         client_id: OAUTH_E2E_CLIENT_APP_ID.to_string(),
@@ -409,7 +427,8 @@ async fn oauth_open_api_http_token_and_userinfo_endpoints_exchange_pkce_flow() {
         code_challenge_method: Some("S256".to_string()),
         tenant_id: Some(OAUTH_E2E_TENANT_ID.to_string()),
     };
-    let scopes = validate_authorize_request(&authorize_request, &client).expect("authorize request");
+    let scopes =
+        validate_authorize_request(&authorize_request, &client).expect("authorize request");
     let (authorization_state_id, _) =
         create_pending_authorization_state(&pg, &client, &authorize_request, &scopes)
             .await
@@ -462,7 +481,11 @@ async fn oauth_open_api_http_token_and_userinfo_endpoints_exchange_pkce_flow() {
         .expect("open-api userinfo request");
     let userinfo_status = userinfo_response.status();
     let userinfo_body = read_json(userinfo_response).await;
-    assert_eq!(userinfo_status, StatusCode::OK, "userinfo body: {userinfo_body}");
+    assert_eq!(
+        userinfo_status,
+        StatusCode::OK,
+        "userinfo body: {userinfo_body}"
+    );
     assert_eq!(userinfo_body["sub"], session.user_id);
     assert_eq!(userinfo_body["email"], OAUTH_E2E_USERNAME);
 }
@@ -480,9 +503,10 @@ async fn oauth_public_client_token_exchange_rejects_invalid_pkce_verifier() {
     let session = iam_context_from_login_data(&login_data);
     let pg = postgres_pool_for_tests().await;
 
-    let client = resolve_relying_party_client(&pg, OAUTH_E2E_CLIENT_APP_ID, Some(OAUTH_E2E_TENANT_ID))
-        .await
-        .expect("resolve oauth relying party client");
+    let client =
+        resolve_relying_party_client(&pg, OAUTH_E2E_CLIENT_APP_ID, Some(OAUTH_E2E_TENANT_ID))
+            .await
+            .expect("resolve oauth relying party client");
     let (_code_verifier, code_challenge) = pkce_pair("oauth-pkce-verifier-with-sufficient-length");
     let authorize_request = AuthorizeRequest {
         client_id: OAUTH_E2E_CLIENT_APP_ID.to_string(),
@@ -494,7 +518,8 @@ async fn oauth_public_client_token_exchange_rejects_invalid_pkce_verifier() {
         code_challenge_method: Some("S256".to_string()),
         tenant_id: Some(OAUTH_E2E_TENANT_ID.to_string()),
     };
-    let scopes = validate_authorize_request(&authorize_request, &client).expect("authorize request");
+    let scopes =
+        validate_authorize_request(&authorize_request, &client).expect("authorize request");
     let (authorization_state_id, _) =
         create_pending_authorization_state(&pg, &client, &authorize_request, &scopes)
             .await

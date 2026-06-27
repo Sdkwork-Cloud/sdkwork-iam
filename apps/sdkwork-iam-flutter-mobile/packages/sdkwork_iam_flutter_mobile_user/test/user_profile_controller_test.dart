@@ -7,14 +7,14 @@ void main() {
 
     final controller = IamFlutterMobileUserProfileController(
       retrieveProfile: () async => {
-        'userId': 'user-1',
+        'userId': '1',
         'displayName': storedDisplayName,
         'email': 'alice@example.com',
       },
       updateProfile: (draft) async {
         storedDisplayName = draft.displayName ?? storedDisplayName;
         return {
-          'userId': 'user-1',
+          'userId': '1',
           'displayName': storedDisplayName,
           'nickname': draft.nickname,
         };
@@ -39,11 +39,11 @@ void main() {
 
     final controller = IamFlutterMobileUserProfileController(
       retrieveProfile: () async => {
-        'userId': 'user-1',
+        'userId': '1',
         'displayName': 'Alice',
       },
       updateProfile: (draft) async => {
-        'userId': 'user-1',
+        'userId': '1',
         'displayName': draft.displayName,
       },
       updatePassword: (draft) async {
@@ -66,11 +66,11 @@ void main() {
   test('loads verification policy when configured', () async {
     final controller = IamFlutterMobileUserProfileController(
       retrieveProfile: () async => {
-        'userId': 'user-1',
+        'userId': '1',
         'displayName': 'Alice',
       },
       updateProfile: (draft) async => {
-        'userId': 'user-1',
+        'userId': '1',
         'displayName': draft.displayName,
       },
       retrieveVerificationPolicy: () async => {

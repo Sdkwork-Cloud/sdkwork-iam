@@ -36,7 +36,7 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
                 id: "membership-1",
                 membershipId: "membership-1",
                 organizationId: "org-child",
-                userId: "user-1",
+                userId: "1",
               },
             ],
           }),
@@ -86,7 +86,7 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
                 organizationId: "org-child",
                 organizationMembershipId: "membership-1",
                 positionName: "Platform Lead",
-                userId: "user-1",
+                userId: "1",
               },
             ],
           }),
@@ -120,7 +120,7 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
 
     const controller = createSdkworkIamOrganizationController(service as never);
 
-    await controller.listOrganizations({ tenantId: "tenant-1" });
+    await controller.listOrganizations({ tenantId: "100001" });
     expect(controller.getState().tree).toMatchObject([
       {
         children: [
@@ -145,7 +145,7 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
         membershipId: "membership-1",
         organizationId: "org-child",
         status: undefined,
-        userId: "user-1",
+        userId: "1",
         username: undefined,
       },
     ]);
@@ -186,7 +186,7 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
         organizationMembershipId: "membership-1",
         positionName: "Platform Lead",
         status: undefined,
-        userId: "user-1",
+        userId: "1",
       },
     ]);
     await expect(controller.listPositions({ departmentId: "dept-platform" })).resolves.toMatchObject([
@@ -201,7 +201,7 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
       },
     ]);
 
-    expect(service.iam.organizations.list).toHaveBeenCalledWith({ tenantId: "tenant-1" });
+    expect(service.iam.organizations.list).toHaveBeenCalledWith({ tenantId: "100001" });
     expect(service.iam.organizationMemberships.list).toHaveBeenCalledWith({ organizationId: "org-child" });
     expect(service.iam.organizationMemberships.create).toHaveBeenCalledWith({
       organizationId: "org-child",
@@ -256,8 +256,8 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
           list: vi.fn().mockResolvedValue([]),
         },
         organizationMemberships: {
-          create: vi.fn().mockResolvedValue({ membershipId: "m-1", userId: "user-1", organizationId: "org-new" }),
-          update: vi.fn().mockResolvedValue({ membershipId: "m-1", userId: "user-1", status: "inactive" }),
+          create: vi.fn().mockResolvedValue({ membershipId: "m-1", userId: "1", organizationId: "org-new" }),
+          update: vi.fn().mockResolvedValue({ membershipId: "m-1", userId: "1", status: "inactive" }),
           list: vi.fn().mockResolvedValue({ records: [] }),
         },
         departments: {
@@ -279,8 +279,8 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
     await expect(controller.createDepartment({ name: "Engineering", organizationId: "org-new" })).resolves.toMatchObject({
       departmentId: "dept-1",
     });
-    await expect(controller.addMembership("org-new", { userId: "user-1" })).resolves.toMatchObject({
-      userId: "user-1",
+    await expect(controller.addMembership("org-new", { userId: "1" })).resolves.toMatchObject({
+      userId: "1",
     });
     await expect(controller.updateMembership("m-1", { status: "inactive" })).resolves.toMatchObject({
       status: "inactive",

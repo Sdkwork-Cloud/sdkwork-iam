@@ -9,19 +9,19 @@ import {
   resolveDevBootstrapContext,
 } from './run-pc-renderer-dev-with-bootstrap.mjs';
 
-const commercePcRoot = path.resolve(
+const shopPcRoot = path.resolve(
   import.meta.dirname,
-  '../../../sdkwork-commerce/apps/sdkwork-commerce-pc',
+  '../../../sdkwork-shop/apps/sdkwork-shop-pc',
 );
 
 test('resolveDevBootstrapContext prefers nearest app manifest and repo root', () => {
-  const context = resolveDevBootstrapContext(commercePcRoot);
+  const context = resolveDevBootstrapContext(shopPcRoot);
   assert.equal(context.manifestPath, 'sdkwork.app.config.json');
-  assert.match(context.repoRoot, /sdkwork-commerce-pc$/u);
+  assert.match(context.repoRoot, /sdkwork-shop-pc$/u);
 });
 
-test('run-pc-renderer bootstrap context merges access token for commerce pc', () => {
-  const context = resolveDevBootstrapContext(commercePcRoot);
+test('run-pc-renderer bootstrap context merges access token for shop pc', () => {
+  const context = resolveDevBootstrapContext(shopPcRoot);
   const merged = mergeRepoDevBootstrapAccessTokenEnv({
     env: {},
     manifestPath: context.manifestPath,

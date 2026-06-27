@@ -4,7 +4,7 @@
   "moduleId": "commerce",
   "catalogVersion": "1.0.0",
   "domain": "commerce",
-  "owner": "sdkwork-commerce",
+  "owner": "sdkwork-iam",
   "displayName": "commerce module",
   "permissions": {
     "catalog": [

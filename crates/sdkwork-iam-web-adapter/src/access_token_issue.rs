@@ -403,12 +403,12 @@ mod tests {
     #[test]
     fn parse_access_credential_create_request_accepts_camel_case_fields() {
         let body = json!({
-            "tenantId": "tenant-1",
+            "tenantId": "100001",
             "organizationId": "org-1",
             "tenantApplicationId": "tapp-1"
         });
         let request = parse_access_credential_create_request(&body).expect("parse request");
-        assert_eq!(request.tenant_id, "tenant-1");
+        assert_eq!(request.tenant_id, "100001");
         assert_eq!(request.organization_id, "org-1");
         assert_eq!(request.tenant_application_id.as_deref(), Some("tapp-1"));
     }

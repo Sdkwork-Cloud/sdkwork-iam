@@ -16,7 +16,6 @@ const authPcReactRoot = path.join(
 const IAM_PC_APP_ROOTS = [
   "sdkwork-birdcoder/apps/sdkwork-birdcoder-pc",
   "sdkwork-clawrouter/apps/sdkwork-clawrouter-pc",
-  "sdkwork-commerce/apps/sdkwork-commerce-pc",
   "sdkwork-dezhou/apps/sdkwork-dezhou-pc",
   "sdkwork-documents/apps/sdkwork-documents-pc",
   "sdkwork-drive/apps/sdkwork-drive-pc",

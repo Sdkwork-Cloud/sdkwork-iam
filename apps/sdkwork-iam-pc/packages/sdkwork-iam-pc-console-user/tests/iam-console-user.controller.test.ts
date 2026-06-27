@@ -9,12 +9,12 @@ describe("@sdkwork/iam-pc-console-user", () => {
         users: {
           current: {
             retrieve: vi.fn().mockResolvedValue({
-              userId: "user-1",
+              userId: "1",
               displayName: "Alice",
               email: "alice@example.com",
             }),
             update: vi.fn().mockResolvedValue({
-              userId: "user-1",
+              userId: "1",
               displayName: "Alice Updated",
             }),
             password: {
@@ -37,7 +37,7 @@ describe("@sdkwork/iam-pc-console-user", () => {
     const controller = createSdkworkIamConsoleUserController({ service: service as never });
 
     await expect(controller.refreshWorkspace()).resolves.toMatchObject({
-      profile: { userId: "user-1", displayName: "Alice" },
+      profile: { userId: "1", displayName: "Alice" },
       verificationPolicy: { emailVerificationRequired: true },
     });
     await expect(controller.updateProfile({ displayName: "Alice Updated" })).resolves.toMatchObject({

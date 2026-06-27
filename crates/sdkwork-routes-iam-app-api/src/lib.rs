@@ -35,16 +35,12 @@ pub use manifest::{
 pub use password_session_bridge::{PasswordSessionBridge, PasswordSessionBridgeResult};
 pub use paths::APP_API_PREFIX;
 pub use routes::{
-    build_sdkwork_iam_app_api_router,
-    build_sdkwork_iam_app_api_router_with_local_directory,
-    build_sdkwork_iam_app_api_router_with_pool,
-    build_sdkwork_iam_app_api_router_with_web_resolver,
+    build_sdkwork_iam_app_api_router, build_sdkwork_iam_app_api_router_with_local_directory,
+    build_sdkwork_iam_app_api_router_with_pool, build_sdkwork_iam_app_api_router_with_web_resolver,
     build_sdkwork_iam_oauth_device_authorization_router_with_pool,
     build_sdkwork_iam_oauth_device_authorization_router_with_pool_and_password_session_bridge,
 };
-pub use sdkwork_iam_web_adapter::{
-    web_request_principal_from_iam, IamWebRequestContextResolver,
-};
+pub use sdkwork_iam_web_adapter::{web_request_principal_from_iam, IamWebRequestContextResolver};
 pub use sdkwork_web_contract::{HttpMethod, HttpRoute, HttpRoute as IamHttpRoute, RouteAuth};
 pub use tokens::resolve_iam_app_context_from_dual_tokens;
 
@@ -57,5 +53,7 @@ pub fn gateway_route_manifest() -> sdkwork_web_core::HttpRouteManifest {
 }
 
 pub async fn gateway_mount() -> axum::Router {
-    build_sdkwork_iam_app_api_router().await.expect("gateway_mount failed to build route crate router")
+    build_sdkwork_iam_app_api_router()
+        .await
+        .expect("gateway_mount failed to build route crate router")
 }

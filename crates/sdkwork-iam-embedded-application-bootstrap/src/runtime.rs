@@ -70,7 +70,9 @@ pub async fn connect_iam_postgres_bootstrap_pool(database_url: &str) -> Result<P
         .connect(database_url.as_str())
         .await
         .map_err(|error| {
-            format!("connect postgres IAM database for tenant application bootstrap failed: {error}")
+            format!(
+                "connect postgres IAM database for tenant application bootstrap failed: {error}"
+            )
         })?;
     Ok(pool)
 }
@@ -99,23 +101,21 @@ pub async fn ensure_tenant_applications_on_pool(
         .await
         .map_err(|error| format!("ensure default IAM subject failed: {error}"))?;
 
-    let commands = manifest_to_ensure_commands(
-        manifest,
-        options,
-        primary_runtime,
-        additional_runtimes,
-    )
-    .map_err(|error| {
-        format!("build embedded IAM tenant application bootstrap commands failed: {error}")
-    })?;
+    let commands =
+        manifest_to_ensure_commands(manifest, options, primary_runtime, additional_runtimes)
+            .map_err(|error| {
+                format!("build embedded IAM tenant application bootstrap commands failed: {error}")
+            })?;
 
     for command in commands {
-        ensure_tenant_application_runtime(pg, &command).await.map_err(|error| {
-            format!(
-                "ensure IAM tenant application runtime for {} failed: {error}",
-                command.runtime_app_id
-            )
-        })?;
+        ensure_tenant_application_runtime(pg, &command)
+            .await
+            .map_err(|error| {
+                format!(
+                    "ensure IAM tenant application runtime for {} failed: {error}",
+                    command.runtime_app_id
+                )
+            })?;
     }
 
     Ok(())
@@ -128,9 +128,8 @@ pub async fn ensure_tenant_application_from_app_root(
     additional_runtimes: &[EmbeddedApplicationRuntimeBinding],
 ) -> Result<(), String> {
     let manifest = load_manifest_from_app_root(app_root)?;
-    let database_url = resolve_unified_database_url("SDKWORK_IAM").map_err(|error| {
-        format!("resolve unified postgres IAM database URL failed: {error}")
-    })?;
+    let database_url = resolve_unified_database_url("SDKWORK_IAM")
+        .map_err(|error| format!("resolve unified postgres IAM database URL failed: {error}"))?;
     if database_url.starts_with("sqlite:") {
         return Ok(());
     }

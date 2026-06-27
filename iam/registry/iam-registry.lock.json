@@ -1,6 +1,6 @@
 {
   "kind": "sdkwork.iam.registry.lock",
-  "materializedAt": "2026-06-26T09:43:09.963847400+00:00",
+  "materializedAt": "2026-06-27T07:37:37.751179300+00:00",
   "modules": [
     {
       "catalogVersion": "1.0.0",
@@ -24,7 +24,7 @@
     },
     {
       "catalogVersion": "1.0.0",
-      "manifestSha256": "a5c5a70878abb510d4f67583b45c5392e47953516d26aa74529903d59e49fcfb",
+      "manifestSha256": "b6bd3c6381c85d12d8cee4d1e1b9aa8cc0cd71719929ea6b957c2b7eaae1fee6",
       "moduleId": "commerce"
     },
     {

@@ -1,12 +1,12 @@
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
+use sdkwork_iam_web_adapter::ensure_platform_tenant_application;
 use sdkwork_routes_iam_app_api::{
     app_routes, build_sdkwork_iam_app_api_router, required_dual_token_headers, HttpMethod,
     HttpRoute, APP_API_PREFIX, IAM_ANONYMOUS_BOOTSTRAP_OPERATION_IDS,
     IAM_CREDENTIAL_ENTRY_OPERATION_IDS, IAM_HANDLER_SESSION_OPERATION_IDS,
 };
-use sdkwork_iam_web_adapter::ensure_platform_tenant_application;
 use sdkwork_web_core::bootstrap_access_token_jwt;
 use serde_json::{json, Value};
 use std::sync::{Mutex, MutexGuard, OnceLock};
@@ -723,10 +723,12 @@ fn app_router_source_does_not_emit_duplicate_login_session_fields() {
 
 #[test]
 fn pc_auth_source_does_not_expose_synthetic_session_construction() {
-    let auth_service_source =
-        include_str!("../../../apps/sdkwork-iam-pc/packages/sdkwork-auth-pc-react/src/auth-service.ts");
-    let auth_authority_source =
-        include_str!("../../../apps/sdkwork-iam-pc/packages/sdkwork-auth-pc-react/src/auth-authority.ts");
+    let auth_service_source = include_str!(
+        "../../../apps/sdkwork-iam-pc/packages/sdkwork-auth-pc-react/src/auth-service.ts"
+    );
+    let auth_authority_source = include_str!(
+        "../../../apps/sdkwork-iam-pc/packages/sdkwork-auth-pc-react/src/auth-authority.ts"
+    );
     let auth_local_service_source = include_str!(
         "../../../apps/sdkwork-iam-pc/packages/sdkwork-auth-pc-react/src/auth-local-service.ts"
     );
@@ -1424,7 +1426,10 @@ async fn reset_iam_tenants_for_open_registration() {
 fn set_real_local_iam_runtime_env() -> (MutexGuard<'static, ()>, EnvSnapshot) {
     let guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
-    let snapshot = EnvSnapshot::capture(&["SDKWORK_IAM_RATE_LIMIT_MAX_REQUESTS", "SDKWORK_IAM_RATE_LIMIT_WINDOW_SECONDS"]);
+    let snapshot = EnvSnapshot::capture(&[
+        "SDKWORK_IAM_RATE_LIMIT_MAX_REQUESTS",
+        "SDKWORK_IAM_RATE_LIMIT_WINDOW_SECONDS",
+    ]);
     std::env::set_var("SDKWORK_IAM_RATE_LIMIT_MAX_REQUESTS", "10000");
     std::env::set_var("SDKWORK_IAM_RATE_LIMIT_WINDOW_SECONDS", "60");
 

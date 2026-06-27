@@ -22,7 +22,7 @@ describe("@sdkwork/iam-pc-admin-tenant", () => {
                 {
                   displayName: "Alice",
                   tenantId: "100001",
-                  userId: "user-1",
+                  userId: "1",
                 },
               ],
             }),
@@ -52,11 +52,11 @@ describe("@sdkwork/iam-pc-admin-tenant", () => {
       {
         displayName: "Alice",
         email: undefined,
-        id: "user-1",
+        id: "1",
         roleCode: undefined,
         status: undefined,
         tenantId: "100001",
-        userId: "user-1",
+        userId: "1",
         username: undefined,
       },
     ]);

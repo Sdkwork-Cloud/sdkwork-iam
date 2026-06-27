@@ -441,11 +441,7 @@ pub async fn provision_tenant_application(
         .as_ref()
         .map(|app| app.id.clone())
         .unwrap_or_else(|| {
-            tenant_application_row_id(
-                &command.tenant_id,
-                &command.organization_id,
-                &template.id,
-            )
+            tenant_application_row_id(&command.tenant_id, &command.organization_id, &template.id)
         });
     let runtime_app_id = existing
         .as_ref()
@@ -665,7 +661,8 @@ async fn resolve_tenant_application_primary_domain(
     }
 
     for attempt in 0..8 {
-        let candidate = derive_tenant_application_primary_domain_candidate(requested, runtime_app_id, attempt);
+        let candidate =
+            derive_tenant_application_primary_domain_candidate(requested, runtime_app_id, attempt);
         let existing_id =
             find_tenant_application_id_by_primary_domain(pg, tenant_id, &candidate).await?;
         match existing_id {
@@ -809,7 +806,9 @@ async fn postgres_unique_index_is_valid(
     .bind(index_name)
     .fetch_one(pg)
     .await
-    .map_err(|error| format!("probe tenant application org-template index validity failed: {error}"))
+    .map_err(|error| {
+        format!("probe tenant application org-template index validity failed: {error}")
+    })
 }
 
 pub async fn ensure_postgres_tenant_application_org_template_unique_index(
@@ -831,7 +830,9 @@ pub async fn ensure_postgres_tenant_application_org_template_unique_index(
     sqlx::query("DROP INDEX IF EXISTS uk_iam_tenant_application_org_template")
         .execute(pg)
         .await
-        .map_err(|error| format!("drop tenant application org-template unique index failed: {error}"))?;
+        .map_err(|error| {
+            format!("drop tenant application org-template unique index failed: {error}")
+        })?;
 
     reconcile_postgres_tenant_application_org_template_rows(pg).await?;
 
@@ -898,8 +899,7 @@ async fn upsert_tenant_application_row(
     template_version: &str,
     template_id: &str,
 ) -> Result<String, String> {
-    let tenant_application_id =
-        resolve_tenant_application_row_id(pg, command, template_id).await?;
+    let tenant_application_id = resolve_tenant_application_row_id(pg, command, template_id).await?;
     clear_postgres_tenant_application_competing_rows(
         pg,
         command,
@@ -964,11 +964,8 @@ async fn resolve_tenant_application_row_id(
     command: &EnsureTenantApplicationCommand,
     template_id: &str,
 ) -> Result<String, String> {
-    let canonical_id = tenant_application_row_id(
-        &command.tenant_id,
-        &command.organization_id,
-        template_id,
-    );
+    let canonical_id =
+        tenant_application_row_id(&command.tenant_id, &command.organization_id, template_id);
 
     if let Some(existing) =
         find_tenant_application_by_runtime_app_id(pg, &command.tenant_id, &command.runtime_app_id)
@@ -988,12 +985,9 @@ async fn resolve_tenant_application_row_id(
         return Ok(existing.id);
     }
 
-    if let Some(existing) = find_tenant_application_by_instance_key(
-        pg,
-        &command.tenant_id,
-        &command.instance_key,
-    )
-    .await?
+    if let Some(existing) =
+        find_tenant_application_by_instance_key(pg, &command.tenant_id, &command.instance_key)
+            .await?
     {
         return Ok(existing.id);
     }
@@ -1035,13 +1029,9 @@ pub async fn ensure_tenant_application_runtime(
 
     reconcile_postgres_tenant_application_org_template_rows(pg).await?;
     ensure_postgres_tenant_application_org_template_unique_index(pg).await?;
-    let tenant_application_id = upsert_tenant_application_row(
-        pg,
-        command,
-        &template.version,
-        &resolved_template_id,
-    )
-    .await?;
+    let tenant_application_id =
+        upsert_tenant_application_row(pg, command, &template.version, &resolved_template_id)
+            .await?;
 
     let enabled = enable_tenant_application(pg, &command.tenant_id, &tenant_application_id).await?;
     resolve_tenant_application(
@@ -1783,7 +1773,10 @@ mod tests {
             }
         });
         let redacted = redact_runtime_config_for_response(&runtime_config);
-        assert_eq!(redacted["oauth"]["relyingParty"]["clientSecretHash"], json!("[redacted]"));
+        assert_eq!(
+            redacted["oauth"]["relyingParty"]["clientSecretHash"],
+            json!("[redacted]")
+        );
         assert_eq!(redacted["oauth"]["relyingParty"]["enabled"], json!(true));
     }
 

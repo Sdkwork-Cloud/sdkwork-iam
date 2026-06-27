@@ -39,7 +39,8 @@ fn iam_postgres_url() -> Option<String> {
 }
 
 async fn connect_iam_postgres() -> PgPool {
-    let database_url = iam_postgres_url().expect("IAM postgres URL must be configured for integration tests");
+    let database_url =
+        iam_postgres_url().expect("IAM postgres URL must be configured for integration tests");
     sqlx::postgres::PgPoolOptions::new()
         .max_connections(2)
         .connect(&database_url)
@@ -62,7 +63,8 @@ async fn backend_postgres_router_wires_database_pool_for_user_list() {
         .expect("seed default IAM tenant and organization");
 
     let router = build_sdkwork_iam_backend_api_router_from_env().await;
-    let (status, body_text, _payload) = request_backend_route(router, Method::GET, "/backend/v3/api/iam/users", None).await;
+    let (status, body_text, _payload) =
+        request_backend_route(router, Method::GET, "/backend/v3/api/iam/users", None).await;
 
     assert_ne!(
         StatusCode::SERVICE_UNAVAILABLE,
@@ -125,7 +127,11 @@ async fn backend_postgres_user_list_query_reads_seeded_directory_rows() {
     .await
     .expect("query seeded backend user rows");
 
-    assert_eq!(1, rows.len(), "seeded user must be readable through postgres directory query");
+    assert_eq!(
+        1,
+        rows.len(),
+        "seeded user must be readable through postgres directory query"
+    );
     assert_eq!(user_id, rows[0].get::<String, _>("id"));
 
     let _ = sqlx::query("DELETE FROM iam_user WHERE id = $1")

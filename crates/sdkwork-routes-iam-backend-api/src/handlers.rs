@@ -103,8 +103,7 @@ pub async fn build_sdkwork_iam_backend_api_router_from_env() -> Router {
             )
             .route(
                 "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}",
-                get(retrieve_tenant_application_handler)
-                    .patch(update_tenant_application_handler),
+                get(retrieve_tenant_application_handler).patch(update_tenant_application_handler),
             )
             .route(
                 "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}/enable",

@@ -26,8 +26,8 @@ describe("@sdkwork/iam-h5-account-binding", () => {
         users: {
           current: {
             emailBindings: {
-              create: vi.fn().mockResolvedValue({ userId: "user-1" }),
-              delete: vi.fn().mockResolvedValue({ userId: "user-1" }),
+              create: vi.fn().mockResolvedValue({ userId: "1" }),
+              delete: vi.fn().mockResolvedValue({ userId: "1" }),
             },
           },
         },

@@ -9,12 +9,12 @@ describe("@sdkwork/iam-h5-user", () => {
         users: {
           current: {
             retrieve: vi.fn().mockResolvedValue({
-              userId: "user-1",
+              userId: "1",
               displayName: "Alice",
               email: "alice@example.com",
             }),
             update: vi.fn().mockResolvedValue({
-              userId: "user-1",
+              userId: "1",
               displayName: "Alice Updated",
               nickname: "ali",
             }),
@@ -39,7 +39,7 @@ describe("@sdkwork/iam-h5-user", () => {
     const controller = createSdkworkIamH5UserController({ service: service as never });
 
     await expect(controller.loadProfile()).resolves.toMatchObject({
-      userId: "user-1",
+      userId: "1",
       displayName: "Alice",
       email: "alice@example.com",
     });

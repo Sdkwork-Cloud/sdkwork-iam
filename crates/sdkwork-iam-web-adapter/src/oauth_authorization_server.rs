@@ -142,7 +142,9 @@ pub async fn resolve_relying_party_client(
         return Err("OAuth client_id is not registered or enabled".to_string());
     }
     if rows.len() > 1 && tenant_hint.is_none() {
-        return Err("OAuth tenant_id is required because client_id is not globally unique".to_string());
+        return Err(
+            "OAuth tenant_id is required because client_id is not globally unique".to_string(),
+        );
     }
 
     let row = &rows[0];
@@ -161,7 +163,10 @@ pub async fn resolve_relying_party_client(
     })
 }
 
-pub fn validate_authorize_request(request: &AuthorizeRequest, client: &ResolvedRelyingParty) -> Result<Vec<String>, String> {
+pub fn validate_authorize_request(
+    request: &AuthorizeRequest,
+    client: &ResolvedRelyingParty,
+) -> Result<Vec<String>, String> {
     if request.response_type != "code" {
         return Err("OAuth response_type must be code".to_string());
     }
@@ -175,7 +180,9 @@ pub fn validate_authorize_request(request: &AuthorizeRequest, client: &ResolvedR
     }
     for scope in &scopes {
         if !scope_allowed(&client.config.allowed_scopes, scope) {
-            return Err(format!("OAuth scope {scope} is not allowed for this client"));
+            return Err(format!(
+                "OAuth scope {scope} is not allowed for this client"
+            ));
         }
     }
 
@@ -186,10 +193,7 @@ pub fn validate_authorize_request(request: &AuthorizeRequest, client: &ResolvedR
             .map(str::trim)
             .filter(|value| !value.is_empty())
             .ok_or_else(|| "OAuth code_challenge is required for public clients".to_string())?;
-        let method = request
-            .code_challenge_method
-            .as_deref()
-            .unwrap_or("plain");
+        let method = request.code_challenge_method.as_deref().unwrap_or("plain");
         if method != "S256" {
             return Err("OAuth code_challenge_method must be S256".to_string());
         }
@@ -210,8 +214,8 @@ pub async fn create_pending_authorization_state(
     let state_id = generate_opaque_token("oauth_state");
     let now = chrono::Utc::now();
     let expires_at = now + chrono::Duration::seconds(AUTHORIZATION_CODE_TTL_SECONDS);
-    let requested_scopes_json =
-        serde_json::to_string(scopes).map_err(|error| format!("serialize scopes failed: {error}"))?;
+    let requested_scopes_json = serde_json::to_string(scopes)
+        .map_err(|error| format!("serialize scopes failed: {error}"))?;
 
     sqlx::query(
         "INSERT INTO iam_oauth_authorization_state (\
@@ -227,15 +231,12 @@ pub async fn create_pending_authorization_state(
     .bind(&client.tenant_id)
     .bind(&client.app_id)
     .bind(SDKWORK_OAUTH_PROVIDER_CODE)
-    .bind(format!("integration:{}:{}", client.tenant_id, SDKWORK_OAUTH_PROVIDER_CODE))
+    .bind(format!(
+        "integration:{}:{}",
+        client.tenant_id, SDKWORK_OAUTH_PROVIDER_CODE
+    ))
     .bind(&client.app_id)
-    .bind(
-        request
-            .state
-            .as_deref()
-            .map(hash_value)
-            .unwrap_or_default(),
-    )
+    .bind(request.state.as_deref().map(hash_value).unwrap_or_default())
     .bind(request.code_challenge.as_deref().unwrap_or(""))
     .bind(request.code_challenge_method.as_deref().unwrap_or("S256"))
     .bind(&request.redirect_uri)
@@ -288,7 +289,9 @@ pub async fn complete_authorization_state(
         return Err("OAuth authorization state has expired".to_string());
     }
     if tenant_id != session.tenant_id {
-        return Err("OAuth authorization tenant does not match the authenticated session".to_string());
+        return Err(
+            "OAuth authorization tenant does not match the authenticated session".to_string(),
+        );
     }
 
     let authorization_code = generate_opaque_token("oauth_code");
@@ -312,7 +315,10 @@ pub async fn complete_authorization_state(
     .bind(session.organization_id.as_deref().unwrap_or("0"))
     .bind(&session.user_id)
     .bind(SDKWORK_OAUTH_PROVIDER_CODE)
-    .bind(format!("integration:{}:{}", tenant_id, SDKWORK_OAUTH_PROVIDER_CODE))
+    .bind(format!(
+        "integration:{}:{}",
+        tenant_id, SDKWORK_OAUTH_PROVIDER_CODE
+    ))
     .bind(&client_app_id)
     .bind(&scopes_json)
     .bind(now.to_rfc3339())
@@ -383,14 +389,13 @@ pub async fn exchange_authorization_code(
     let return_path: String = row.get(6);
     let grant_id = parse_grant_id_from_return_path(&return_path)
         .ok_or_else(|| "OAuth authorization grant reference is missing".to_string())?;
-    let user_id: String = sqlx::query_scalar(
-        "SELECT user_id FROM iam_oauth_grant WHERE id = $1 LIMIT 1",
-    )
-    .bind(&grant_id)
-    .fetch_optional(pg)
-    .await
-    .map_err(|error| format!("load oauth grant owner failed: {error}"))?
-    .ok_or_else(|| "OAuth authorization grant was not found".to_string())?;
+    let user_id: String =
+        sqlx::query_scalar("SELECT user_id FROM iam_oauth_grant WHERE id = $1 LIMIT 1")
+            .bind(&grant_id)
+            .fetch_optional(pg)
+            .await
+            .map_err(|error| format!("load oauth grant owner failed: {error}"))?
+            .ok_or_else(|| "OAuth authorization grant was not found".to_string())?;
 
     if stored_redirect_uri != redirect_uri {
         return Err("OAuth redirect_uri does not match the authorization request".to_string());
@@ -420,7 +425,10 @@ pub async fn exchange_authorization_code(
     let context = if let Some(session_row) = session_row {
         iam_context_from_session_row(&session_row)?
     } else {
-        return Err("OAuth authorization code cannot be exchanged without an active IAM session".to_string());
+        return Err(
+            "OAuth authorization code cannot be exchanged without an active IAM session"
+                .to_string(),
+        );
     };
 
     let access_token = sign_oauth_access_token(pg, &context, &client.app_id).await?;
@@ -585,7 +593,11 @@ pub async fn load_oauth_bearer_scopes(pg: &PgPool, bearer_token: &str) -> Vec<St
     vec!["openid".to_string()]
 }
 
-pub async fn build_userinfo_claims(pg: &PgPool, context: &IamAppContext, scopes: &[String]) -> Result<Value, String> {
+pub async fn build_userinfo_claims(
+    pg: &PgPool,
+    context: &IamAppContext,
+    scopes: &[String],
+) -> Result<Value, String> {
     let user_row = sqlx::query(
         "SELECT id, email, phone, display_name, avatar_resource_snapshot \
          FROM iam_user \
@@ -681,7 +693,9 @@ pub async fn introspect_oauth_token(
         None
     };
 
-    if let Some(context) = crate::iam_session::resolve_iam_app_context_from_oauth_bearer(pg, token).await {
+    if let Some(context) =
+        crate::iam_session::resolve_iam_app_context_from_oauth_bearer(pg, token).await
+    {
         return Ok(json!({
             "active": true,
             "sub": context.user_id,
@@ -748,7 +762,10 @@ fn normalize_scopes(raw: &str) -> Vec<String> {
         .collect()
 }
 
-fn verify_client_secret(client: &ResolvedRelyingParty, provided: Option<&str>) -> Result<(), String> {
+fn verify_client_secret(
+    client: &ResolvedRelyingParty,
+    provided: Option<&str>,
+) -> Result<(), String> {
     let Some(expected_hash) = client
         .config
         .client_secret_hash
@@ -861,10 +878,7 @@ struct TenantSigningKey {
     secret: Vec<u8>,
 }
 
-async fn load_active_signing_key(
-    pg: &PgPool,
-    tenant_id: &str,
-) -> Result<TenantSigningKey, String> {
+async fn load_active_signing_key(pg: &PgPool, tenant_id: &str) -> Result<TenantSigningKey, String> {
     let material = sdkwork_iam_bootstrap::load_postgres_active_tenant_signing_key(pg, tenant_id)
         .await
         .map_err(|error| format!("load tenant signing key failed: {error}"))?
@@ -908,11 +922,7 @@ fn iam_context_from_session_row(row: &sqlx::postgres::PgRow) -> Result<IamAppCon
 }
 
 fn sign_jwt(secret: &[u8], header: &Value, payload: &Value) -> Result<String, String> {
-    let signing_input = format!(
-        "{}.{}",
-        encode_jwt_json(header),
-        encode_jwt_json(payload)
-    );
+    let signing_input = format!("{}.{}", encode_jwt_json(header), encode_jwt_json(payload));
     let mut mac = HmacSha256::new_from_slice(secret)
         .map_err(|error| format!("jwt signing key is invalid: {error}"))?;
     mac.update(signing_input.as_bytes());
@@ -1021,14 +1031,12 @@ fn jwt_scope_claim(token: &str) -> Option<Vec<String>> {
             if let Some(raw) = scope.as_str() {
                 return Some(normalize_scopes(raw));
             }
-            scope
-                .as_array()
-                .map(|items| {
-                    items
-                        .iter()
-                        .filter_map(|item| item.as_str().map(str::to_string))
-                        .collect()
-                })
+            scope.as_array().map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| item.as_str().map(str::to_string))
+                    .collect()
+            })
         })
         .filter(|scopes| !scopes.is_empty())
 }
@@ -1057,7 +1065,7 @@ mod tests {
     #[test]
     fn authorize_request_requires_openid_scope() {
         let client = ResolvedRelyingParty {
-            tenant_id: "tenant-1".to_string(),
+            tenant_id: "100001".to_string(),
             app_id: "app_forum".to_string(),
             config: RelyingPartyConfig {
                 enabled: true,
@@ -1106,11 +1114,8 @@ mod tests {
     #[test]
     fn public_client_authorize_request_requires_pkce() {
         let client = sample_public_relying_party();
-        let err = validate_authorize_request(
-            &sample_authorize_request(None, None),
-            &client,
-        )
-        .expect_err("missing pkce");
+        let err = validate_authorize_request(&sample_authorize_request(None, None), &client)
+            .expect_err("missing pkce");
         assert!(err.contains("code_challenge"));
     }
 
@@ -1132,7 +1137,7 @@ mod tests {
     #[test]
     fn confidential_client_authorize_request_allows_missing_pkce() {
         let client = ResolvedRelyingParty {
-            tenant_id: "tenant-1".to_string(),
+            tenant_id: "100001".to_string(),
             app_id: "app_forum".to_string(),
             config: RelyingPartyConfig {
                 enabled: true,
@@ -1142,16 +1147,13 @@ mod tests {
                 client_secret_hash: Some("hash".to_string()),
             },
         };
-        validate_authorize_request(
-            &sample_authorize_request(None, None),
-            &client,
-        )
-        .expect("confidential client may omit pkce at authorize time");
+        validate_authorize_request(&sample_authorize_request(None, None), &client)
+            .expect("confidential client may omit pkce at authorize time");
     }
 
     fn sample_public_relying_party() -> ResolvedRelyingParty {
         ResolvedRelyingParty {
-            tenant_id: "tenant-1".to_string(),
+            tenant_id: "100001".to_string(),
             app_id: "app_forum".to_string(),
             config: RelyingPartyConfig {
                 enabled: true,

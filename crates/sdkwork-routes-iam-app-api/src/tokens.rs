@@ -38,8 +38,12 @@ pub(crate) async fn create_session_record(
         return Err("runtime appId is required for session creation".to_string());
     }
 
-    sdkwork_iam_web_adapter::validate_enabled_tenant_runtime_app(pg, &user.tenant_id, runtime_app_id)
-        .await?;
+    sdkwork_iam_web_adapter::validate_enabled_tenant_runtime_app(
+        pg,
+        &user.tenant_id,
+        runtime_app_id,
+    )
+    .await?;
 
     let app_id = runtime_app_id.trim().to_string();
     let session_id = generate_opaque_token("session");

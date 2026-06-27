@@ -1,9 +1,7 @@
 use std::path::Path;
 
 use sdkwork_iam_bootstrap::{DEFAULT_IAM_ORGANIZATION_ID, DEFAULT_IAM_TENANT_ID};
-use sdkwork_iam_web_adapter::{
-    tenant_application_instance_key, EnsureTenantApplicationCommand,
-};
+use sdkwork_iam_web_adapter::{tenant_application_instance_key, EnsureTenantApplicationCommand};
 use serde::Deserialize;
 
 use crate::EmbeddedApplicationBootstrapOptions;
@@ -90,7 +88,9 @@ pub fn load_manifest_from_path(manifest_path: &Path) -> Result<SdkworkAppManifes
     })
 }
 
-pub fn validate_manifest_for_embedded_bootstrap(manifest: &SdkworkAppManifest) -> Result<(), String> {
+pub fn validate_manifest_for_embedded_bootstrap(
+    manifest: &SdkworkAppManifest,
+) -> Result<(), String> {
     if manifest.app.key.trim().is_empty() {
         return Err("app.key must be configured in sdkwork.app.config.json".to_string());
     }
@@ -128,7 +128,11 @@ pub fn manifest_to_ensure_commands(
     if primary_runtime.is_some() || !additional_runtimes.is_empty() {
         let mut commands = Vec::new();
         if let Some(binding) = primary_runtime {
-            commands.push(manifest_to_ensure_command(manifest, options, Some(binding))?);
+            commands.push(manifest_to_ensure_command(
+                manifest,
+                options,
+                Some(binding),
+            )?);
         }
         for binding in additional_runtimes {
             commands.push(manifest_to_ensure_command(

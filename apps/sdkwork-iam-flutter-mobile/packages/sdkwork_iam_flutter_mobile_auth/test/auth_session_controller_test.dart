@@ -7,7 +7,7 @@ void main() {
     final controller = IamFlutterMobileAuthSessionController(
       createSession: (_) async => {
         'sessionId': 'sess-1',
-        'userId': 'user-1',
+        'userId': '1',
         'accessToken': 'token',
         'authToken': 'auth-token',
       },
@@ -21,7 +21,7 @@ void main() {
     );
 
     expect(result, isA<IamFlutterMobileLoginSessionResult>());
-    expect((result as IamFlutterMobileLoginSessionResult).session.userId, 'user-1');
+    expect((result as IamFlutterMobileLoginSessionResult).session.userId, '1');
     expect(controller.session?.sessionId, 'sess-1');
 
     await controller.signOut();
@@ -43,7 +43,7 @@ void main() {
         capturedBody = body;
         return {
           'sessionId': 'sess-2',
-          'userId': 'user-1',
+          'userId': '1',
           'accessToken': 'token',
           'authToken': 'auth-token',
         };

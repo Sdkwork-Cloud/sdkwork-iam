@@ -7,21 +7,21 @@ use sdkwork_iam_context_service::{
 #[test]
 fn creates_app_context_and_organization_first_sharding_context() {
     let context = IamAppContext::new(
-        "tenant-1",
+        "100001",
         Some("org-1"),
-        "user-1",
+        "1",
         "session-1",
         "sdkwork-router",
         Environment::Dev,
         DeploymentMode::Saas,
         AuthLevel::Mfa,
-        vec!["tenant:tenant-1".to_string()],
+        vec!["tenant:100001".to_string()],
         vec!["iam.users.read".to_string()],
     );
 
-    assert_eq!(context.tenant_id, "tenant-1");
+    assert_eq!(context.tenant_id, "100001");
     assert_eq!(context.organization_id.as_deref(), Some("org-1"));
-    assert_eq!(context.user_id, "user-1");
+    assert_eq!(context.user_id, "1");
     assert_eq!(context.environment, Environment::Dev);
     assert_eq!(context.deployment_mode, DeploymentMode::Saas);
     assert_eq!(context.auth_level, AuthLevel::Mfa);
@@ -42,9 +42,9 @@ fn creates_app_context_and_organization_first_sharding_context() {
 #[test]
 fn falls_back_to_tenant_sharding_when_no_organization_context_exists() {
     let context = IamAppContext::new(
-        "tenant-1",
+        "100001",
         None,
-        "user-1",
+        "1",
         "session-1",
         "sdkwork-router",
         Environment::Dev,
@@ -57,7 +57,7 @@ fn falls_back_to_tenant_sharding_when_no_organization_context_exists() {
     assert_eq!(
         IamShardingContext::from_app_context(&context),
         IamShardingContext {
-            sharding_key: "tenant-1".to_string(),
+            sharding_key: "100001".to_string(),
             sharding_strategy: IamShardingStrategy::Tenant,
             database_key: None,
             schema: None,
@@ -71,9 +71,9 @@ fn falls_back_to_tenant_sharding_when_no_organization_context_exists() {
 fn treats_empty_organization_as_tenant_login_scope() {
     for organization_id in [Some(""), Some("  "), None] {
         let context = IamAppContext::new(
-            "tenant-1",
+            "100001",
             organization_id,
-            "user-1",
+            "1",
             "session-1",
             "sdkwork-router",
             Environment::Dev,
@@ -88,7 +88,7 @@ fn treats_empty_organization_as_tenant_login_scope() {
         assert_eq!(
             IamShardingContext::from_app_context(&context),
             IamShardingContext {
-                sharding_key: "tenant-1".to_string(),
+                sharding_key: "100001".to_string(),
                 sharding_strategy: IamShardingStrategy::Tenant,
                 database_key: None,
                 schema: None,
@@ -103,7 +103,7 @@ fn treats_root_organization_id_zero_as_personal_login_scope() {
     let context = IamAppContext::new(
         "100001",
         Some("0"),
-        "user-1",
+        "1",
         "session-1",
         "sdkwork-router",
         Environment::Dev,
@@ -130,9 +130,9 @@ fn treats_root_organization_id_zero_as_personal_login_scope() {
 #[test]
 fn validates_dual_token_subject_and_access_context_match() {
     let context = IamAppContext::new(
-        "tenant-1",
+        "100001",
         None,
-        "user-1",
+        "1",
         "session-1",
         "sdkwork-router",
         Environment::Test,
@@ -170,9 +170,9 @@ fn platform_organization_id_is_login_sentinel_only() {
 #[test]
 fn serializes_tenant_login_organization_id_as_platform_sentinel() {
     let tenant_context = IamAppContext::new(
-        "tenant-1",
+        "100001",
         None,
-        "user-1",
+        "1",
         "session-1",
         "sdkwork-router",
         Environment::Dev,
@@ -190,9 +190,9 @@ fn serializes_tenant_login_organization_id_as_platform_sentinel() {
     );
 
     let organization_context = IamAppContext::new(
-        "tenant-1",
+        "100001",
         Some("org-1"),
-        "user-1",
+        "1",
         "session-1",
         "sdkwork-router",
         Environment::Dev,

@@ -32,14 +32,14 @@ describe("sdkwork-user-pc-react", () => {
       createUserProfileSummary({
         email: "jason@sdkwork.ai",
         firstName: "Jason",
-        id: "user-1",
+        id: "1",
         lastName: "Young",
       }),
     ).toEqual({
       avatar: undefined,
       displayName: "Jason Young",
       email: "jason@sdkwork.ai",
-      id: "user-1",
+      id: "1",
       initials: "JY",
     });
 

@@ -53,9 +53,7 @@ fn parse_positive_iam_sql_subject_id(
     if trimmed.is_empty() {
         return Err(error);
     }
-    let parsed = trimmed
-        .parse::<i64>()
-        .map_err(|_| error)?;
+    let parsed = trimmed.parse::<i64>().map_err(|_| error)?;
     if parsed <= 0 {
         return Err(error);
     }
@@ -75,7 +73,9 @@ mod tests {
 
     #[test]
     fn rejects_legacy_opaque_ids() {
-        assert!(is_legacy_opaque_iam_subject_id("iamu_0192ab3c-4d5e-7890-abcd-ef1234567890"));
+        assert!(is_legacy_opaque_iam_subject_id(
+            "iamu_0192ab3c-4d5e-7890-abcd-ef1234567890"
+        ));
         assert!(is_legacy_opaque_iam_subject_id(
             "550e8400-e29b-41d4-a716-446655440000"
         ));

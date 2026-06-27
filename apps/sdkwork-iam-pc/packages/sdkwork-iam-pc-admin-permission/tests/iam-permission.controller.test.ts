@@ -53,7 +53,7 @@ describe("@sdkwork/iam-pc-admin-permission", () => {
         roleBindings: {
           create: vi.fn().mockResolvedValue({
             id: "role-binding-1",
-            principalId: "user-1",
+            principalId: "1",
             principalKind: "user",
             roleId: "role-1",
             scopeId: "org-1",
@@ -63,7 +63,7 @@ describe("@sdkwork/iam-pc-admin-permission", () => {
           list: vi.fn().mockResolvedValue([
             {
               id: "role-binding-1",
-              principalId: "user-1",
+              principalId: "1",
               principalKind: "user",
               roleId: "role-1",
               scopeId: "org-1",
@@ -94,11 +94,11 @@ describe("@sdkwork/iam-pc-admin-permission", () => {
     await controller.listPermissions();
     await controller.listPolicies();
     await controller.listRolePermissions("role-1");
-    await controller.listRoleBindings({ principalKind: "user", principalId: "user-1", scopeKind: "organization", scopeId: "org-1" });
+    await controller.listRoleBindings({ principalKind: "user", principalId: "1", scopeKind: "organization", scopeId: "org-1" });
     await controller.assignRolePermission("role-1", "permission-1");
     await controller.revokeRolePermission("role-1", "permission-1");
     await controller.assignRoleBinding({
-      principalId: "user-1",
+      principalId: "1",
       principalKind: "user",
       roleId: "role-1",
       scopeId: "org-1",
@@ -116,7 +116,7 @@ describe("@sdkwork/iam-pc-admin-permission", () => {
 
     expect(service.iam.roles.permissions.create).toHaveBeenCalledWith("role-1", "permission-1");
     expect(service.iam.roleBindings.create).toHaveBeenCalledWith({
-      principalId: "user-1",
+      principalId: "1",
       principalKind: "user",
       roleId: "role-1",
       scopeId: "org-1",

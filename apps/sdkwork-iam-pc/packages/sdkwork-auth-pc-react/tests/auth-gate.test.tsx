@@ -67,13 +67,13 @@ describe("SdkworkAuthGate", () => {
           refreshToken: "refresh-token-1",
           user: {
             displayName: "Sdkwork Operator",
-            id: "user-1",
+            id: "1",
             username: "sdkwork",
           },
         }),
         getCurrentUser: vi.fn().mockResolvedValue({
           displayName: "Sdkwork Operator",
-          id: "user-1",
+          id: "1",
           username: "sdkwork",
         }),
       },
@@ -152,13 +152,13 @@ describe("SdkworkAuthGate", () => {
           refreshToken: "refresh-token-1",
           user: {
             displayName: "Sdkwork Operator",
-            id: "user-1",
+            id: "1",
             username: "sdkwork",
           },
         }),
         getCurrentUser: vi.fn().mockResolvedValue({
           displayName: "Sdkwork Operator",
-          id: "user-1",
+          id: "1",
           username: "sdkwork",
         }),
       },

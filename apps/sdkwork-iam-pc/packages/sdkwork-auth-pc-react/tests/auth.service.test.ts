@@ -321,7 +321,7 @@ describe("sdkwork-auth-pc-react service", () => {
       state: "state-1",
     })).resolves.toBe("https://auth.sdkwork.ai/oauth/github");
     await expect(controller.updateCurrentSession({
-      organizationId: "org-1",
+      organizationId: "100001",
     })).resolves.toMatchObject({
       accessToken: mockAccessToken("updated-access-token"),
       authToken: mockAuthToken("updated-auth-token"),
@@ -416,7 +416,7 @@ describe("sdkwork-auth-pc-react service", () => {
       state: "state-1",
     });
     expect(runtime.service.auth.sessions.current.update).toHaveBeenCalledWith({
-      organizationId: "org-1",
+      organizationId: "100001",
     });
     expect(runtime.service.auth.sessions.refresh).toHaveBeenCalledWith({
       refreshToken: "stored-refresh-token",
@@ -455,13 +455,13 @@ describe("sdkwork-auth-pc-react service", () => {
               organizations: [
                 {
                   displayName: "Primary Workspace",
-                  organizationId: "org-1",
-                  tenantId: "tenant-1",
+                  organizationId: "100001",
+                  tenantId: "100001",
                 },
                 {
                   displayName: "Secondary Workspace",
-                  organizationId: "org-2",
-                  tenantId: "tenant-1",
+                  organizationId: "100002",
+                  tenantId: "100001",
                 },
               ],
             }),
@@ -493,11 +493,11 @@ describe("sdkwork-auth-pc-react service", () => {
       organizations: [
         {
           displayName: "Primary Workspace",
-          organizationId: "org-1",
+          organizationId: "100001",
         },
         {
           displayName: "Secondary Workspace",
-          organizationId: "org-2",
+          organizationId: "100002",
         },
       ],
     });
@@ -575,8 +575,8 @@ describe("sdkwork-auth-pc-react service", () => {
                   organizations: [
                     {
                       displayName: "Secondary Workspace",
-                      organizationId: "org-2",
-                      tenantId: "tenant-1",
+                      organizationId: "100002",
+                      tenantId: "100001",
                     },
                   ],
                   status: "organization_selection_required",
@@ -603,7 +603,7 @@ describe("sdkwork-auth-pc-react service", () => {
         organizations: [
           {
             displayName: "Secondary Workspace",
-            organizationId: "org-2",
+            organizationId: "100002",
           },
         ],
       },
@@ -675,12 +675,12 @@ describe("sdkwork-auth-pc-react service", () => {
     const registeredContext = {
       appId: "sdkwork-chat-pc",
       authLevel: "password",
-      dataScope: ["tenant:t_demo"],
+      dataScope: ["tenant:100001"],
       deploymentMode: "saas",
       environment: "dev",
       permissionScope: ["*"],
       sessionId: "registered-session-id",
-      tenantId: "t_demo",
+      tenantId: "100001",
       userId: "registered-user-1",
     };
     const tokenStore = {
@@ -1442,7 +1442,7 @@ describe("sdkwork-auth-pc-react service", () => {
                 avatar: authAvatar,
                 email: "sdkwork@sdkwork.ai",
                 displayName: "Sdkwork Operator",
-                userId: "user-1",
+                userId: "1",
                 username: "sdkwork",
               },
             }),
@@ -1481,7 +1481,7 @@ describe("sdkwork-auth-pc-react service", () => {
         displayName: "Sdkwork Operator",
         email: "sdkwork@sdkwork.ai",
         firstName: "Sdkwork",
-        id: "user-1",
+        id: "1",
         initials: "SO",
         lastName: "Operator",
         username: "sdkwork",
@@ -1496,10 +1496,10 @@ describe("sdkwork-auth-pc-react service", () => {
       deploymentMode: "saas",
       environment: "dev",
       loginScope: "ORGANIZATION",
-      organizationId: "org-1",
+      organizationId: "100001",
       sessionId: "session-1",
-      tenantId: "tenant-1",
-      userId: "user-1",
+      tenantId: "100001",
+      userId: "1",
     };
     const accessToken = mockAccessToken("access-token-1", {
       app_id: "sdkwork-chat",
@@ -1565,20 +1565,20 @@ describe("sdkwork-auth-pc-react service", () => {
               context: {
                 app_id: "sdkwork-chat",
                 auth_level: "password",
-                data_scope: ["tenant:tenant-1"],
+                data_scope: ["tenant:100001"],
                 deployment_mode: "saas",
                 environment: "test",
                 extraContext: "must-not-leak",
                 login_scope: "ORGANIZATION",
-                organization_id: "org-1",
+                organization_id: "100001",
                 permission_scope: ["iam.users.read"],
                 session_id: "session-1",
                 shardingContext: {
                   shardingKey: "wrong",
                   shardingStrategy: "single",
                 },
-                tenant_id: "tenant-1",
-                user_id: "user-1",
+                tenant_id: "100001",
+                user_id: "1",
               },
             },
           }),
@@ -1599,15 +1599,15 @@ describe("sdkwork-auth-pc-react service", () => {
     expect(session.context).toEqual({
       appId: "sdkwork-chat",
       authLevel: "password",
-      dataScope: ["tenant:tenant-1"],
+      dataScope: ["tenant:100001"],
       deploymentMode: "saas",
       environment: "test",
       loginScope: "ORGANIZATION",
-      organizationId: "org-1",
+      organizationId: "100001",
       permissionScope: ["iam.users.read"],
       sessionId: "session-1",
-      tenantId: "tenant-1",
-      userId: "user-1",
+      tenantId: "100001",
+      userId: "1",
     });
     expect(session.sessionId).toBe("session-1");
     expect(commitSession).toHaveBeenCalledWith({
@@ -1632,13 +1632,13 @@ describe("sdkwork-auth-pc-react service", () => {
               organizations: [
                 {
                   displayName: "Primary Workspace",
-                  organizationId: "org-1",
-                  tenantId: "tenant-1",
+                  organizationId: "100001",
+                  tenantId: "100001",
                 },
                 {
                   displayName: "Secondary Workspace",
-                  organizationId: "org-2",
-                  tenantId: "tenant-1",
+                  organizationId: "100002",
+                  tenantId: "100001",
                 },
               ],
             },
@@ -1668,13 +1668,13 @@ describe("sdkwork-auth-pc-react service", () => {
       organizations: [
         {
           displayName: "Primary Workspace",
-          organizationId: "org-1",
-          tenantId: "tenant-1",
+          organizationId: "100001",
+          tenantId: "100001",
         },
         {
           displayName: "Secondary Workspace",
-          organizationId: "org-2",
-          tenantId: "tenant-1",
+          organizationId: "100002",
+          tenantId: "100001",
         },
       ],
     });
@@ -1686,18 +1686,18 @@ describe("sdkwork-auth-pc-react service", () => {
     const selectedAccessToken = mockAccessToken("selected-access-token", {
       app_id: "sdkwork-chat",
       login_scope: "ORGANIZATION",
-      organization_id: "org-2",
+      organization_id: "100002",
       session_id: "session-2",
-      tenant_id: "tenant-1",
-      user_id: "user-1",
+      tenant_id: "100001",
+      user_id: "1",
     });
     const selectedAuthToken = mockAuthToken("selected-auth-token", {
       app_id: "sdkwork-chat",
       login_scope: "ORGANIZATION",
-      organization_id: "org-2",
+      organization_id: "100002",
       session_id: "session-2",
-      tenant_id: "tenant-1",
-      user_id: "user-1",
+      tenant_id: "100001",
+      user_id: "1",
     });
     const loginContextSelectionCreate = vi.fn().mockResolvedValue({
       data: {
@@ -1706,10 +1706,10 @@ describe("sdkwork-auth-pc-react service", () => {
         context: {
           appId: "sdkwork-chat",
           loginScope: "ORGANIZATION",
-          organizationId: "org-2",
+          organizationId: "100002",
           sessionId: "session-2",
-          tenantId: "tenant-1",
-          userId: "user-1",
+          tenantId: "100001",
+          userId: "1",
         },
         refreshToken: "selected-refresh-token",
         sessionId: "session-2",
@@ -1731,12 +1731,12 @@ describe("sdkwork-auth-pc-react service", () => {
 
     await expect(service.selectOrganization({
       continuationToken: " continue-org-selection-1 ",
-      organizationId: " org-2 ",
+      organizationId: " 100002 ",
     })).resolves.toMatchObject({
       accessToken: selectedAccessToken,
       authToken: selectedAuthToken,
       context: {
-        organizationId: "org-2",
+        organizationId: "100002",
         sessionId: "session-2",
       },
       refreshToken: "selected-refresh-token",
@@ -1745,13 +1745,13 @@ describe("sdkwork-auth-pc-react service", () => {
     expect(loginContextSelectionCreate).toHaveBeenCalledWith({
       continuationToken: "continue-org-selection-1",
       loginScope: "ORGANIZATION",
-      organizationId: "org-2",
+      organizationId: "100002",
     });
     expect(commitSession).toHaveBeenCalledWith({
       accessToken: selectedAccessToken,
       authToken: selectedAuthToken,
       context: expect.objectContaining({
-        organizationId: "org-2",
+        organizationId: "100002",
         sessionId: "session-2",
       }),
       refreshToken: "selected-refresh-token",
@@ -1766,16 +1766,16 @@ describe("sdkwork-auth-pc-react service", () => {
       login_scope: "TENANT",
       organization_id: "0",
       session_id: "session-personal",
-      tenant_id: "tenant-1",
-      user_id: "user-1",
+      tenant_id: "100001",
+      user_id: "1",
     });
     const selectedAuthToken = mockAuthToken("personal-auth-token", {
       app_id: "sdkwork-chat",
       login_scope: "TENANT",
       organization_id: "0",
       session_id: "session-personal",
-      tenant_id: "tenant-1",
-      user_id: "user-1",
+      tenant_id: "100001",
+      user_id: "1",
     });
     const loginContextSelectionCreate = vi.fn().mockResolvedValue({
       data: {
@@ -1785,8 +1785,8 @@ describe("sdkwork-auth-pc-react service", () => {
           appId: "sdkwork-chat",
           loginScope: "TENANT",
           sessionId: "session-personal",
-          tenantId: "tenant-1",
-          userId: "user-1",
+          tenantId: "100001",
+          userId: "1",
         },
         refreshToken: "personal-refresh-token",
         sessionId: "session-personal",
@@ -2181,7 +2181,7 @@ describe("sdkwork-auth-pc-react service", () => {
       refreshToken: "stored-refresh-token",
     });
     await expect(service.updateCurrentSession({
-      organizationId: "org-1",
+      organizationId: "100001",
     })).resolves.toMatchObject({
       accessToken: mockAccessToken("updated-access-token"),
       authToken: mockAuthToken("updated-auth-token"),
@@ -2192,7 +2192,7 @@ describe("sdkwork-auth-pc-react service", () => {
       refreshToken: "stored-refresh-token",
     });
     expect(sessionsCurrentUpdate).toHaveBeenCalledWith({
-      organizationId: "org-1",
+      organizationId: "100001",
     });
     expect(commitSession).toHaveBeenNthCalledWith(
       1,
@@ -2221,16 +2221,16 @@ describe("sdkwork-auth-pc-react service", () => {
       login_scope: "TENANT",
       organization_id: "0",
       session_id: "session-personal",
-      tenant_id: "tenant-1",
-      user_id: "user-1",
+      tenant_id: "100001",
+      user_id: "1",
     });
     const personalAuthToken = mockAuthToken("personal-auth-token", {
       app_id: "sdkwork-chat",
       login_scope: "TENANT",
       organization_id: "0",
       session_id: "session-personal",
-      tenant_id: "tenant-1",
-      user_id: "user-1",
+      tenant_id: "100001",
+      user_id: "1",
     });
     const sessionsCurrentUpdate = vi.fn().mockResolvedValue({
       data: {
@@ -2238,11 +2238,11 @@ describe("sdkwork-auth-pc-react service", () => {
         authToken: personalAuthToken,
         context: {
           appId: "sdkwork-chat",
-          dataScope: ["tenant:tenant-1", "user:user-1"],
+          dataScope: ["tenant:100001", "user:1"],
           loginScope: "TENANT",
           sessionId: "session-personal",
-          tenantId: "tenant-1",
-          userId: "user-1",
+          tenantId: "100001",
+          userId: "1",
         },
         sessionId: "session-personal",
       },
@@ -2261,11 +2261,11 @@ describe("sdkwork-auth-pc-react service", () => {
       readSession: () => ({
         accessToken: mockAccessToken("org-access-token", {
           login_scope: "ORGANIZATION",
-          organization_id: "org-1",
+          organization_id: "100001",
         }),
         authToken: mockAuthToken("org-auth-token", {
           login_scope: "ORGANIZATION",
-          organization_id: "org-1",
+          organization_id: "100001",
         }),
         refreshToken: "stored-refresh-token",
       }),
@@ -3500,8 +3500,8 @@ describe("sdkwork-auth-pc-react service", () => {
         organizations: [
           {
             displayName: "Secondary Workspace",
-            organizationId: "org-2",
-            tenantId: "tenant-1",
+            organizationId: "100002",
+            tenantId: "100001",
           },
         ],
         status: "organization_selection_required",
@@ -3534,7 +3534,7 @@ describe("sdkwork-auth-pc-react service", () => {
         organizations: [
           {
             displayName: "Secondary Workspace",
-            organizationId: "org-2",
+            organizationId: "100002",
           },
         ],
       },
@@ -4211,7 +4211,7 @@ describe("sdkwork-auth-pc-react service", () => {
       refreshToken: "refresh-token-1",
     });
     const updatedSession = await service.updateCurrentSession({
-      organizationId: "org-1",
+      organizationId: "100001",
     });
 
     expect(register).toHaveBeenCalledWith({
@@ -4254,7 +4254,7 @@ describe("sdkwork-auth-pc-react service", () => {
       },
     });
     expect(updateCurrentSession).toHaveBeenCalledWith({
-      organizationId: "org-1",
+      organizationId: "100001",
     });
     expect(updatedSession).toMatchObject({
       accessToken: mockAccessToken("updated-access-token"),

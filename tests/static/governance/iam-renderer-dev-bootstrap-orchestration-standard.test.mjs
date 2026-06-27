@@ -31,7 +31,6 @@ const IAM_PC_RENDERER_DEV_ORCHESTRATORS = Object.freeze([
 ]);
 
 const STANDALONE_IAM_PC_RENDERER_PACKAGES = Object.freeze([
-  { repo: 'sdkwork-commerce', relativePath: 'apps/sdkwork-commerce-pc/package.json' },
   { repo: 'sdkwork-mall', relativePath: 'apps/sdkwork-mall-pc/package.json' },
   { repo: 'sdkwork-games', relativePath: 'apps/sdkwork-games-pc/package.json' },
   { repo: 'sdkwork-gameengine', relativePath: 'apps/sdkwork-gameengine-pc/package.json' },

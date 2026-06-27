@@ -18,7 +18,7 @@ describe("@sdkwork/iam-pc-console-organization", () => {
         },
         organizationMemberships: {
           list: vi.fn().mockResolvedValue({
-            items: [{ userId: "user-1", displayName: "Alice", organizationId: "org-1" }],
+            items: [{ userId: "1", displayName: "Alice", organizationId: "org-1" }],
           }),
         },
       },
@@ -29,7 +29,7 @@ describe("@sdkwork/iam-pc-console-organization", () => {
     await expect(controller.refreshWorkspace("org-1")).resolves.toMatchObject({
       organizations: [{ organizationId: "org-1", name: "HQ" }],
       departments: [{ departmentId: "dept-1" }],
-      memberships: [{ userId: "user-1" }],
+      memberships: [{ userId: "1" }],
     });
 
     expect(service.iam.organizations.list).toHaveBeenCalled();

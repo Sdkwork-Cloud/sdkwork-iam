@@ -10,7 +10,7 @@ describe("@sdkwork/iam-pc-console-tenant", () => {
           runtime: {
             retrieve: vi.fn().mockResolvedValue({
               tenantId: "100001",
-              userId: "user-1",
+              userId: "1",
               environment: "dev",
               deploymentMode: "saas",
             }),
@@ -25,7 +25,7 @@ describe("@sdkwork/iam-pc-console-tenant", () => {
         },
         organizationMemberships: {
           list: vi.fn().mockResolvedValue({
-            items: [{ id: "m-1", userId: "user-1", organizationId: "org-1", roleCode: "owner" }],
+            items: [{ id: "m-1", userId: "1", organizationId: "org-1", roleCode: "owner" }],
           }),
         },
       },
@@ -34,9 +34,9 @@ describe("@sdkwork/iam-pc-console-tenant", () => {
     const controller = createSdkworkIamConsoleTenantController({ service: service as never });
 
     await expect(controller.refreshWorkspace()).resolves.toMatchObject({
-      runtime: { tenantId: "100001", userId: "user-1" },
+      runtime: { tenantId: "100001", userId: "1" },
       organizations: [{ organizationId: "org-1", name: "Primary Org" }],
-      memberships: [{ userId: "user-1", organizationId: "org-1", roleCode: "owner" }],
+      memberships: [{ userId: "1", organizationId: "org-1", roleCode: "owner" }],
     });
 
     expect(service.system.iam.runtime.retrieve).toHaveBeenCalled();

@@ -34,27 +34,36 @@ pub async fn handle_oauth_authorize(
     let request = match parse_authorize_request(&query) {
         Ok(request) => request,
         Err(message) => {
-            return oauth_error(StatusCode::BAD_REQUEST, "iam_oauth_authorize_invalid", &message);
+            return oauth_error(
+                StatusCode::BAD_REQUEST,
+                "iam_oauth_authorize_invalid",
+                &message,
+            );
         }
     };
 
-    let client = match resolve_relying_party_client(
-        pg,
-        &request.client_id,
-        request.tenant_id.as_deref(),
-    )
-    .await
-    {
-        Ok(client) => client,
-        Err(message) => {
-            return oauth_error(StatusCode::BAD_REQUEST, "iam_oauth_client_invalid", &message);
-        }
-    };
+    let client =
+        match resolve_relying_party_client(pg, &request.client_id, request.tenant_id.as_deref())
+            .await
+        {
+            Ok(client) => client,
+            Err(message) => {
+                return oauth_error(
+                    StatusCode::BAD_REQUEST,
+                    "iam_oauth_client_invalid",
+                    &message,
+                );
+            }
+        };
 
     let scopes = match validate_authorize_request(&request, &client) {
         Ok(scopes) => scopes,
         Err(message) => {
-            return oauth_error(StatusCode::BAD_REQUEST, "iam_oauth_authorize_invalid", &message);
+            return oauth_error(
+                StatusCode::BAD_REQUEST,
+                "iam_oauth_authorize_invalid",
+                &message,
+            );
         }
     };
 
@@ -100,7 +109,11 @@ pub async fn handle_oauth_token(
     let client = match resolve_relying_party_client(pg, &client_id, tenant_id.as_deref()).await {
         Ok(client) => client,
         Err(message) => {
-            return oauth_error(StatusCode::BAD_REQUEST, "iam_oauth_client_invalid", &message);
+            return oauth_error(
+                StatusCode::BAD_REQUEST,
+                "iam_oauth_client_invalid",
+                &message,
+            );
         }
     };
 
@@ -115,14 +128,7 @@ pub async fn handle_oauth_token(
                 );
             }
         };
-        match exchange_refresh_token(
-            pg,
-            &client,
-            &refresh_token,
-            client_secret.as_deref(),
-        )
-        .await
-        {
+        match exchange_refresh_token(pg, &client, &refresh_token, client_secret.as_deref()).await {
             Ok(token_response) => return (StatusCode::OK, Json(token_response)).into_response(),
             Err(message) => {
                 return oauth_error(
@@ -175,7 +181,11 @@ pub async fn handle_oauth_token(
     .await
     {
         Ok(token_response) => (StatusCode::OK, Json(token_response)).into_response(),
-        Err(message) => oauth_error(StatusCode::BAD_REQUEST, "iam_oauth_token_exchange_failed", &message),
+        Err(message) => oauth_error(
+            StatusCode::BAD_REQUEST,
+            "iam_oauth_token_exchange_failed",
+            &message,
+        ),
     }
 }
 
@@ -261,9 +271,11 @@ pub async fn handle_oauth_introspect(
     .await
     {
         Ok(claims) => (StatusCode::OK, Json(claims)).into_response(),
-        Err(message) => {
-            oauth_error(StatusCode::BAD_REQUEST, "iam_oauth_introspect_failed", &message)
-        }
+        Err(message) => oauth_error(
+            StatusCode::BAD_REQUEST,
+            "iam_oauth_introspect_failed",
+            &message,
+        ),
     }
 }
 

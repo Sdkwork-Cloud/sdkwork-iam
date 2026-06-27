@@ -24,7 +24,8 @@ pub async fn repair_postgres_legacy_opaque_iam_user_ids(
     for row in rows {
         let tenant_id: String = row.get(0);
         let user_id: String = row.get(1);
-        if user_id == DEFAULT_BOOTSTRAP_ADMIN_USER_ID || !is_legacy_opaque_iam_subject_id(&user_id) {
+        if user_id == DEFAULT_BOOTSTRAP_ADMIN_USER_ID || !is_legacy_opaque_iam_subject_id(&user_id)
+        {
             continue;
         }
         let new_user_id = new_iam_user_id();
@@ -48,7 +49,8 @@ pub async fn repair_sqlite_legacy_opaque_iam_user_ids(
     for row in rows {
         let tenant_id: String = row.get(0);
         let user_id: String = row.get(1);
-        if user_id == DEFAULT_BOOTSTRAP_ADMIN_USER_ID || !is_legacy_opaque_iam_subject_id(&user_id) {
+        if user_id == DEFAULT_BOOTSTRAP_ADMIN_USER_ID || !is_legacy_opaque_iam_subject_id(&user_id)
+        {
             continue;
         }
         let new_user_id = new_iam_user_id();

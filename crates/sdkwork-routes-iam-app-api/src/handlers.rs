@@ -5,7 +5,9 @@ use axum::{
     routing::{delete, get, post},
     Json, Router,
 };
-use sdkwork_iam_context_service::{is_platform_organization_id, LoginScope, PLATFORM_ORGANIZATION_ID};
+use sdkwork_iam_context_service::{
+    is_platform_organization_id, LoginScope, PLATFORM_ORGANIZATION_ID,
+};
 use sdkwork_iam_web_adapter::{
     account_binding_policy_to_json, contact_binding_allowed, default_account_binding_policy,
     load_account_binding_policy, merge_account_binding_policy, oauth_binding_allowed,
@@ -89,10 +91,7 @@ pub fn oauth_device_authorization_routes() -> Router<LocalIamState> {
 }
 
 fn build_sdkwork_iam_app_api_router_with_state(state: LocalIamState) -> Router {
-    wrap_router_with_web_framework(
-        &state,
-        build_sdkwork_iam_app_api_core_router(state.clone()),
-    )
+    wrap_router_with_web_framework(&state, build_sdkwork_iam_app_api_core_router(state.clone()))
 }
 
 fn build_sdkwork_iam_app_api_router_with_state_and_resolver<R>(
@@ -102,10 +101,7 @@ fn build_sdkwork_iam_app_api_router_with_state_and_resolver<R>(
 where
     R: sdkwork_web_core::WebRequestContextResolver + Clone + Send + Sync + 'static,
 {
-    wrap_router_with_web_framework_resolver(
-        build_sdkwork_iam_app_api_core_router(state),
-        resolver,
-    )
+    wrap_router_with_web_framework_resolver(build_sdkwork_iam_app_api_core_router(state), resolver)
 }
 
 fn build_sdkwork_iam_app_api_core_router(state: LocalIamState) -> Router {
@@ -728,25 +724,24 @@ async fn issue_login_continuation_session(
     continuation: LocalLoginContinuation,
     organization_id: Option<String>,
 ) -> Response {
-    let session =
-        match create_session_record(
-            pg,
-            &state.config,
-            &continuation.user,
-            organization_id,
-            continuation.runtime_app_id.as_str(),
-        )
-        .await
-        {
-            Ok(session) => session,
-            Err(error) => {
-                return appbase_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "iam_session_create_failed",
-                    &error,
-                )
-            }
-        };
+    let session = match create_session_record(
+        pg,
+        &state.config,
+        &continuation.user,
+        organization_id,
+        continuation.runtime_app_id.as_str(),
+    )
+    .await
+    {
+        Ok(session) => session,
+        Err(error) => {
+            return appbase_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "iam_session_create_failed",
+                &error,
+            )
+        }
+    };
 
     if let Some(qr_session_key) = continuation.qr_session_key.clone() {
         let session_for_qr = session.clone();
@@ -1678,9 +1673,7 @@ async fn create_oauth_session(
                 };
             (tenant_id, runtime_app_id)
         };
-    if let Err(error) =
-        validate_enabled_tenant_runtime_app(pg, &tenant_id, &runtime_app_id).await
-    {
+    if let Err(error) = validate_enabled_tenant_runtime_app(pg, &tenant_id, &runtime_app_id).await {
         return appbase_error(
             StatusCode::UNAUTHORIZED,
             "iam_runtime_app_id_invalid",
@@ -2395,10 +2388,7 @@ async fn retrieve_runtime(State(state): State<LocalIamState>, ctx: WebRequestCon
                 ctx.app_id().filter(|value| !value.is_empty()),
             ) {
                 sdkwork_iam_web_adapter::load_runtime_auth_metadata_input(
-                    pg,
-                    tenant_id,
-                    app_id,
-                    &defaults,
+                    pg, tenant_id, app_id, &defaults,
                 )
                 .await
                 .unwrap_or(defaults)
@@ -2864,8 +2854,7 @@ async fn resolve_password_login_session_outcome(
     runtime_app_id: &str,
 ) -> PasswordLoginSessionOutcome {
     if let Some(pg) = state.pool.as_postgres() {
-        return match authenticate_password(pg, tenant_id, username, password, &state.config).await
-        {
+        return match authenticate_password(pg, tenant_id, username, password, &state.config).await {
             PasswordAuthenticationOutcome::Authenticated(user) => {
                 record_successful_password_login(pg, &state.config, &user, username).await;
                 match create_authenticated_session_or_challenge(
@@ -3455,7 +3444,8 @@ async fn accessible_organization_ids_for_session(
         return vec![organization_id.clone()];
     }
     login_eligible_organization_memberships(
-        active_organization_memberships_for_user(pg, &session.context.tenant_id, &session.user).await,
+        active_organization_memberships_for_user(pg, &session.context.tenant_id, &session.user)
+            .await,
     )
     .into_iter()
     .map(|membership| membership.organization_id)

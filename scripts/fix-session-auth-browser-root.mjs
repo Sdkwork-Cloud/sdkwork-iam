@@ -1,7 +1,6 @@
 import fs from "node:fs";
 
 const paths = [
-  "E:/sdkwork-space/sdkwork-commerce/apps/sdkwork-commerce-pc/src/App.tsx",
   "E:/sdkwork-space/sdkwork-games/apps/sdkwork-games-pc/src/App.tsx",
   "E:/sdkwork-space/sdkwork-skills/apps/sdkwork-skills-pc/src/main.tsx",
   "E:/sdkwork-space/sdkwork-notary/apps/sdkwork-notary-pc/src/App.tsx",

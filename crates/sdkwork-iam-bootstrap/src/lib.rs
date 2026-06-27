@@ -10,15 +10,15 @@ pub mod tenant_signing_key;
 
 pub use constants::*;
 pub use iam_entity_ids::{new_iam_snowflake_id, new_iam_tenant_id, new_iam_user_id};
-pub use iam_sql_subject::{
-    is_legacy_opaque_iam_subject_id, parse_iam_sql_organization_id, parse_iam_sql_tenant_id,
-    parse_iam_sql_user_id, IamSqlSubjectParseError,
-};
 pub use iam_scope_resolver::{
     effective_iam_organization_code, effective_iam_tenant_code,
     resolve_postgres_iam_organization_id_string, resolve_postgres_iam_scope,
     resolve_postgres_iam_tenant_id_string, resolve_sqlite_iam_organization_id_string,
     resolve_sqlite_iam_scope, resolve_sqlite_iam_tenant_id_string, IamScopeResolveOptions,
+};
+pub use iam_sql_subject::{
+    is_legacy_opaque_iam_subject_id, parse_iam_sql_organization_id, parse_iam_sql_tenant_id,
+    parse_iam_sql_user_id, IamSqlSubjectParseError,
 };
 pub use legacy_subject_repair::{
     repair_postgres_legacy_opaque_iam_user_ids, repair_sqlite_legacy_opaque_iam_user_ids,
@@ -38,8 +38,7 @@ pub use tenant_signing_key::{
     decode_signing_secret_ref, encode_signing_secret_ref, ensure_postgres_tenant_signing_key,
     ensure_sqlite_tenant_signing_key, load_postgres_active_tenant_signing_key,
     load_sqlite_active_tenant_signing_key, resolve_postgres_tenant_signing_key_by_kid,
-    resolve_sqlite_tenant_signing_key_by_kid, tenant_primary_signing_kid,
-    TenantSigningKeyMaterial,
+    resolve_sqlite_tenant_signing_key_by_kid, tenant_primary_signing_kid, TenantSigningKeyMaterial,
 };
 
 use chrono::Utc;

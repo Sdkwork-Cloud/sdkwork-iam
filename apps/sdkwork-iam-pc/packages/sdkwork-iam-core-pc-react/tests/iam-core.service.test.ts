@@ -54,11 +54,11 @@ describe("sdkwork-iam-core-pc-react", () => {
             expiresAt: "2026-05-11T12:00:00Z",
             refreshToken: "refresh-token-1",
             sessionId: "session-1",
-            tenantId: "tenant-1",
+            tenantId: "100001",
             user: {
               displayName: "Sdkwork Operator",
               email: "operator@sdkwork.ai",
-              userId: "user-1",
+              userId: "1",
               username: "sdkwork",
             },
           }),
@@ -143,7 +143,7 @@ describe("sdkwork-iam-core-pc-react", () => {
       authToken: "auth-token-1",
       user: {
         displayName: "Sdkwork Operator",
-        id: "user-1",
+        id: "1",
       },
     });
     expect(current).toMatchObject({
@@ -189,13 +189,13 @@ describe("sdkwork-iam-core-pc-react", () => {
           },
         },
         tenants: {
-          list: vi.fn().mockResolvedValue([{ name: "Default", tenantId: "tenant-1" }]),
+          list: vi.fn().mockResolvedValue([{ name: "Default", tenantId: "100001" }]),
           members: {
-            list: vi.fn().mockResolvedValue([{ tenantId: "tenant-1", userId: "user-1" }]),
+            list: vi.fn().mockResolvedValue([{ tenantId: "100001", userId: "1" }]),
           },
         },
         users: {
-          list: vi.fn().mockResolvedValue([{ userId: "user-1" }]),
+          list: vi.fn().mockResolvedValue([{ userId: "1" }]),
           retrieve: vi.fn().mockResolvedValue({
             displayName: "Backend User",
             userId: "backend-user",
@@ -212,14 +212,14 @@ describe("sdkwork-iam-core-pc-react", () => {
     await expect(service.iam.tenants.list({ page_size: 20 })).resolves.toEqual([
       {
         name: "Default",
-        tenantId: "tenant-1",
+        tenantId: "100001",
       },
     ]);
     await expect(service.iam.users.current.retrieve()).resolves.toMatchObject({
       displayName: "App Current User",
       id: "app-user",
     });
-    await expect(service.iam.organizationMemberships.create({ organizationId: "org-1", userId: "user-1" })).resolves.toEqual({
+    await expect(service.iam.organizationMemberships.create({ organizationId: "org-1", userId: "1" })).resolves.toEqual({
       membershipId: "membership-1",
     });
     await expect(service.iam.roles.permissions.delete("role-1", "iam.users.read")).resolves.toBeUndefined();
@@ -227,7 +227,7 @@ describe("sdkwork-iam-core-pc-react", () => {
     expect(backendClient.iam.tenants.list).toHaveBeenCalledWith({ page_size: 20 });
     expect(backendClient.iam.organizationMemberships.create).toHaveBeenCalledWith({
       organizationId: "org-1",
-      userId: "user-1",
+      userId: "1",
     });
     expect(backendClient.iam.roles.permissions.delete).toHaveBeenCalledWith(
       "role-1",

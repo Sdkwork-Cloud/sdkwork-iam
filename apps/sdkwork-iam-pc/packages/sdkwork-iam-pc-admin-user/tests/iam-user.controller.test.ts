@@ -12,23 +12,23 @@ describe("@sdkwork/iam-pc-admin-user", () => {
               {
                 displayName: "Alice",
                 email: "alice@example.com",
-                id: "user-1",
-                userId: "user-1",
+                id: "1",
+                userId: "1",
                 username: "alice",
               },
             ],
           }),
           retrieve: vi.fn().mockResolvedValue({
             displayName: "Alice",
-            id: "user-1",
-            userId: "user-1",
+            id: "1",
+            userId: "1",
           }),
         },
       },
     };
 
     const controller = createSdkworkIamUserAdminController({
-      selectedUserId: "user-1",
+      selectedUserId: "1",
       service: service as never,
     });
 
@@ -36,16 +36,16 @@ describe("@sdkwork/iam-pc-admin-user", () => {
       {
         displayName: "Alice",
         email: "alice@example.com",
-        id: "user-1",
+        id: "1",
         phone: undefined,
         status: undefined,
-        userId: "user-1",
+        userId: "1",
         username: "alice",
       },
     ]);
-    await expect(controller.selectUser("user-1")).resolves.toMatchObject({ userId: "user-1" });
+    await expect(controller.selectUser("1")).resolves.toMatchObject({ userId: "1" });
     expect(service.iam.users.list).toHaveBeenCalledWith({ page_size: 20 });
-    expect(controller.getSelectedUser()).toMatchObject({ userId: "user-1" });
+    expect(controller.getSelectedUser()).toMatchObject({ userId: "1" });
   });
 
   it("creates, updates, and deletes users through backend IAM resources", async () => {

@@ -27,7 +27,7 @@ Options:
 
 Examples:
   node run-pc-renderer-dev-with-bootstrap.mjs -- vite --host 127.0.0.1 --port 5174
-  node run-pc-renderer-dev-with-bootstrap.mjs --cwd apps/sdkwork-commerce-pc -- vite
+  node run-pc-renderer-dev-with-bootstrap.mjs --cwd apps/sdkwork-mall-pc -- vite
 `);
 }
 

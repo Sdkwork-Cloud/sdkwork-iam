@@ -119,7 +119,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
             authToken: "auth-token",
             user: {
               email: body.username,
-              id: "user-1",
+              id: "1",
             },
           },
         },
@@ -235,7 +235,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
                   authToken: "auth-token",
                   user: {
                     email: body.username,
-                    id: "user-1",
+                    id: "1",
                   },
                 },
               },
@@ -526,8 +526,8 @@ describe("SDKWork IAM generated SDK adapters", () => {
     await appClient.system?.iam?.runtime?.retrieve?.({ tenantCode: "default" });
     await appClient.system?.iam?.verificationPolicy?.retrieve?.();
     await appClient.iam?.users?.current?.retrieve?.();
-    await appClient.iam?.organizations?.list?.({ tenantId: "tenant-1" });
-    await appClient.iam?.organizations?.tree?.retrieve?.({ tenantId: "tenant-1" });
+    await appClient.iam?.organizations?.list?.({ tenantId: "100001" });
+    await appClient.iam?.organizations?.tree?.retrieve?.({ tenantId: "100001" });
     await appClient.iam?.organizationMemberships?.list?.({ organizationId: "org-1" });
     await appClient.iam?.departments?.list?.({ organizationId: "org-1" });
     await appClient.iam?.departments?.tree?.retrieve?.({ organizationId: "org-1" });
@@ -543,8 +543,8 @@ describe("SDKWork IAM generated SDK adapters", () => {
     expect(generatedAppClient.system.iam.runtime.retrieve).toHaveBeenCalledWith({ tenantCode: "default" });
     expect(generatedAppClient.system.iam.verificationPolicy.retrieve).toHaveBeenCalledTimes(1);
     expect(generatedAppClient.iam.users.current.retrieve).toHaveBeenCalled();
-    expect(generatedAppClient.iam.organizations.list).toHaveBeenCalledWith({ tenantId: "tenant-1" });
-    expect(generatedAppClient.iam.organizations.tree.retrieve).toHaveBeenCalledWith({ tenantId: "tenant-1" });
+    expect(generatedAppClient.iam.organizations.list).toHaveBeenCalledWith({ tenantId: "100001" });
+    expect(generatedAppClient.iam.organizations.tree.retrieve).toHaveBeenCalledWith({ tenantId: "100001" });
     expect(generatedAppClient.iam.departments.list).toHaveBeenCalledWith({ organizationId: "org-1" });
     expect(generatedAppClient.iam.departmentAssignments.list).toHaveBeenCalledWith({ departmentId: "dept-1" });
   });
@@ -652,11 +652,11 @@ describe("SDKWork IAM generated SDK adapters", () => {
           update: vi.fn().mockResolvedValue({ data: { tenantApplicationId: "ta-1" } }),
         },
         tenants: {
-          create: vi.fn().mockResolvedValue({ data: { id: "tenant-1" } }),
+          create: vi.fn().mockResolvedValue({ data: { id: "100001" } }),
           delete: vi.fn().mockResolvedValue({ data: true }),
           list: vi.fn().mockResolvedValue({ data: [] }),
-          retrieve: vi.fn().mockResolvedValue({ data: { id: "tenant-1" } }),
-          update: vi.fn().mockResolvedValue({ data: { id: "tenant-1" } }),
+          retrieve: vi.fn().mockResolvedValue({ data: { id: "100001" } }),
+          update: vi.fn().mockResolvedValue({ data: { id: "100001" } }),
           members: {
             create: vi.fn().mockResolvedValue({ data: { id: "tenant-member-1" } }),
             delete: vi.fn().mockResolvedValue({ data: true }),
@@ -665,7 +665,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
           },
         },
         users: {
-          create: vi.fn().mockResolvedValue({ data: { id: "user-1" } }),
+          create: vi.fn().mockResolvedValue({ data: { id: "1" } }),
           delete: vi.fn().mockResolvedValue({ data: true }),
           list: vi.fn().mockResolvedValue({ data: [] }),
           retrieve: vi.fn().mockResolvedValue({ data: { id: "u1" } }),
@@ -693,8 +693,8 @@ describe("SDKWork IAM generated SDK adapters", () => {
     await backendClient.iam?.tenants?.members?.update?.("t1", "u1", { status: "active" });
     await backendClient.iam?.apiKeys?.list?.();
     await backendClient.iam?.apiKeys?.revoke?.("api-key-1");
-    await backendClient.iam?.auditEvents?.list?.({ tenantId: "tenant-1" });
-    await backendClient.iam?.securityEvents?.list?.({ tenantId: "tenant-1" });
+    await backendClient.iam?.auditEvents?.list?.({ tenantId: "100001" });
+    await backendClient.iam?.securityEvents?.list?.({ tenantId: "100001" });
     await backendClient.iam?.organizations?.create?.({ name: "Org" });
     await backendClient.iam?.organizations?.delete?.("o1");
     await backendClient.iam?.organizations?.retrieve?.("o1");
@@ -750,8 +750,8 @@ describe("SDKWork IAM generated SDK adapters", () => {
     expect(generatedBackendClient.iam.tenants.list).toHaveBeenCalled();
     expect(generatedBackendClient.iam.apiKeys.list).toHaveBeenCalled();
     expect(generatedBackendClient.iam.apiKeys.revoke).toHaveBeenCalledWith("api-key-1");
-    expect(generatedBackendClient.iam.auditEvents.list).toHaveBeenCalledWith({ tenantId: "tenant-1" });
-    expect(generatedBackendClient.iam.securityEvents.list).toHaveBeenCalledWith({ tenantId: "tenant-1" });
+    expect(generatedBackendClient.iam.auditEvents.list).toHaveBeenCalledWith({ tenantId: "100001" });
+    expect(generatedBackendClient.iam.securityEvents.list).toHaveBeenCalledWith({ tenantId: "100001" });
     expect(generatedBackendClient.iam.organizations.create).toHaveBeenCalledWith({ name: "Org" });
     expect(generatedBackendClient.iam.organizations.delete).toHaveBeenCalledWith("o1");
     expect(generatedBackendClient.iam.organizations.retrieve).toHaveBeenCalledWith("o1");

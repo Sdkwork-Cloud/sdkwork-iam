@@ -20,7 +20,7 @@ describe("user-center app SDK runtime client", () => {
           refresh: vi.fn().mockResolvedValue({ code: "2000", data: { accessToken: "next-access" } }),
           current: {
             delete: vi.fn().mockResolvedValue({ code: "2000", data: true }),
-            retrieve: vi.fn().mockResolvedValue({ code: "2000", data: { tenantId: "tenant-1" } }),
+            retrieve: vi.fn().mockResolvedValue({ code: "2000", data: { tenantId: "100001" } }),
             update: vi.fn(),
           },
         },
@@ -32,14 +32,14 @@ describe("user-center app SDK runtime client", () => {
               code: "2000",
               data: {
                 displayName: "Sdkwork Operator",
-                id: "user-1",
+                id: "1",
               },
             }),
             update: vi.fn().mockResolvedValue({
               code: "2000",
               data: {
                 displayName: "Updated Operator",
-                id: "user-1",
+                id: "1",
               },
             }),
           },
@@ -66,7 +66,7 @@ describe("user-center app SDK runtime client", () => {
 
     await expect(client.getProfile()).resolves.toEqual({
       displayName: "Sdkwork Operator",
-      id: "user-1",
+      id: "1",
     });
     await expect(client.loginSession({ password: "secret", username: "alice" })).resolves.toEqual({
       accessToken: "access-token",

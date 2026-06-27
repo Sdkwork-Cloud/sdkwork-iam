@@ -7,15 +7,15 @@ import { createIamRuntime, createMemoryIamTokenStore } from "../src/index";
 import { BACKEND_OAUTH_RESOURCE_TREE } from "../../sdkwork-iam-sdk-adapter/src/backend-oauth-resource-tree.ts";
 
 const DEFAULT_ACCESS_TOKEN = createTestJwt({
-  tenant_id: "t1",
+  tenant_id: "100001",
   session_id: "s1",
   app_id: "sdkwork-router",
   environment: "test",
   deployment_mode: "saas",
 });
 const DEFAULT_AUTH_TOKEN = createTestJwt({
-  tenant_id: "t1",
-  user_id: "u1",
+  tenant_id: "100001",
+  user_id: "1",
   session_id: "s1",
   app_id: "sdkwork-router",
   auth_level: "password",
@@ -23,7 +23,7 @@ const DEFAULT_AUTH_TOKEN = createTestJwt({
 
 function sessionAccessToken(marker = "default"): string {
   return createTestJwt({
-    tenant_id: "t1",
+    tenant_id: "100001",
     session_id: "s1",
     app_id: "sdkwork-router",
     environment: "test",
@@ -34,8 +34,8 @@ function sessionAccessToken(marker = "default"): string {
 
 function sessionAuthToken(marker = "default"): string {
   return createTestJwt({
-    tenant_id: "t1",
-    user_id: "u1",
+    tenant_id: "100001",
+    user_id: "1",
     session_id: "s1",
     app_id: "sdkwork-router",
     auth_level: "password",
@@ -88,14 +88,14 @@ describe("SDKWork IAM runtime", () => {
           accessToken: DEFAULT_ACCESS_TOKEN,
           authLevel: "password",
           authToken: DEFAULT_AUTH_TOKEN,
-          dataScope: ["tenant:t1"],
+          dataScope: ["tenant:100001"],
           deploymentMode: "saas",
           environment: "test",
           permissionScope: ["iam.users.read"],
           refreshToken: "refresh-token",
           sessionId: "s1",
-          tenantId: "t1",
-          userId: "u1",
+          tenantId: "100001",
+          userId: "1",
         }),
       },
       config: {
@@ -166,14 +166,14 @@ describe("SDKWork IAM runtime", () => {
           accessToken: DEFAULT_ACCESS_TOKEN,
           authLevel: "mfa",
           authToken: DEFAULT_AUTH_TOKEN,
-          dataScope: ["tenant:t1", "organization:o1"],
+          dataScope: ["tenant:100001", "organization:o1"],
           deploymentMode: "saas",
           environment: "prod",
           organizationId: "o1",
           permissionScope: ["iam.organizations.read"],
           sessionId: "s1",
-          tenantId: "t1",
-          userId: "u1",
+          tenantId: "100001",
+          userId: "1",
         }),
       },
       config: {
@@ -191,8 +191,8 @@ describe("SDKWork IAM runtime", () => {
 
     expect(await runtime.contextStore.getAppContext()).toMatchObject({
       organizationId: "o1",
-      tenantId: "t1",
-      userId: "u1",
+      tenantId: "100001",
+      userId: "1",
     });
     expect(await runtime.contextStore.getShardingContext()).toEqual({
       shardingKey: "o1",
@@ -206,10 +206,10 @@ describe("SDKWork IAM runtime", () => {
         appbaseApp: createStandardAppClient({
           accessToken: DEFAULT_ACCESS_TOKEN,
           authToken: DEFAULT_AUTH_TOKEN,
-          dataScope: ["tenant:t1"],
+          dataScope: ["tenant:100001"],
           permissionScope: ["iam.users.read"],
-          tenantId: "t1",
-          userId: "u1",
+          tenantId: "100001",
+          userId: "1",
         }),
       },
       config: {
@@ -237,10 +237,10 @@ describe("SDKWork IAM runtime", () => {
     const appbaseApp = createStandardAppClient({
       accessToken: DEFAULT_ACCESS_TOKEN,
       authToken: DEFAULT_AUTH_TOKEN,
-      dataScope: ["tenant:t1"],
+      dataScope: ["tenant:100001"],
       permissionScope: ["iam.users.read"],
-      tenantId: "t1",
-      userId: "u1",
+      tenantId: "100001",
+      userId: "1",
     });
     appbaseApp.auth.sessions.current.delete = vi.fn().mockRejectedValue(new Error("remote logout unavailable"));
     const runtime = createIamRuntime({
@@ -376,11 +376,11 @@ describe("SDKWork IAM runtime", () => {
     const appbaseApp = createStandardAppClient({
       accessToken: DEFAULT_ACCESS_TOKEN,
       authToken: DEFAULT_AUTH_TOKEN,
-      dataScope: ["tenant:t1"],
+      dataScope: ["tenant:100001"],
       permissionScope: ["iam.users.read"],
       refreshToken: "refresh-token",
-      tenantId: "t1",
-      userId: "u1",
+      tenantId: "100001",
+      userId: "1",
     });
     const runtime = createIamRuntime({
       clients: {
@@ -399,8 +399,8 @@ describe("SDKWork IAM runtime", () => {
       username: "alice",
     });
     expect(await runtime.contextStore.getAppContext()).toMatchObject({
-      tenantId: "t1",
-      userId: "u1",
+      tenantId: "100001",
+      userId: "1",
     });
 
     appbaseApp.auth.sessions.refresh = vi.fn().mockResolvedValue({
@@ -438,11 +438,11 @@ describe("SDKWork IAM runtime", () => {
         appbaseApp: createStandardAppClient({
           accessToken: DEFAULT_ACCESS_TOKEN,
           authToken: DEFAULT_AUTH_TOKEN,
-          dataScope: ["tenant:t1"],
+          dataScope: ["tenant:100001"],
           permissionScope: ["iam.users.read"],
           refreshToken: "refresh-token",
-          tenantId: "t1",
-          userId: "u1",
+          tenantId: "100001",
+          userId: "1",
         }),
       },
       config: {
@@ -471,10 +471,10 @@ describe("SDKWork IAM runtime", () => {
       accessToken: DEFAULT_ACCESS_TOKEN,
       authToken: DEFAULT_AUTH_TOKEN,
       refreshToken: "refresh-token",
-      dataScope: ["tenant:t1"],
+      dataScope: ["tenant:100001"],
       permissionScope: ["iam.users.read"],
-      tenantId: "t1",
-      userId: "u1",
+      tenantId: "100001",
+      userId: "1",
     });
     const appbaseBackendClient = {
       iam: createStandardBackendIamClient(),

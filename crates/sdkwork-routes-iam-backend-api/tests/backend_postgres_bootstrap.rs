@@ -3,7 +3,8 @@
 use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
 use argon2::Argon2;
 use sdkwork_iam_bootstrap::{
-    standard_role_id, upsert_postgres_standard_roles, DEFAULT_IAM_ORGANIZATION_ID, DEFAULT_IAM_TENANT_ID,
+    standard_role_id, upsert_postgres_standard_roles, DEFAULT_IAM_ORGANIZATION_ID,
+    DEFAULT_IAM_TENANT_ID,
 };
 use sdkwork_iam_web_adapter::{
     ensure_platform_tenant_application, platform_runtime_app_id_for_tenant,
@@ -114,14 +115,12 @@ pub async fn seed_backend_integration_bootstrap_owner(pg: &PgPool) -> String {
     .await
     .ok();
 
-    sqlx::query(
-        "DELETE FROM iam_user WHERE tenant_id = $1 AND LOWER(email) = $2",
-    )
-    .bind(DEFAULT_IAM_TENANT_ID)
-    .bind(&account_key)
-    .execute(pg)
-    .await
-    .ok();
+    sqlx::query("DELETE FROM iam_user WHERE tenant_id = $1 AND LOWER(email) = $2")
+        .bind(DEFAULT_IAM_TENANT_ID)
+        .bind(&account_key)
+        .execute(pg)
+        .await
+        .ok();
 
     sqlx::query(
         "INSERT INTO iam_user (id, tenant_id, username, display_name, email, phone, \
@@ -237,7 +236,9 @@ async fn ensure_integration_organization_and_tenant_application(
     .bind(&tenant_application_id)
     .execute(pg)
     .await
-    .map_err(|error| format!("align integration tenant application organization failed: {error}"))?;
+    .map_err(|error| {
+        format!("align integration tenant application organization failed: {error}")
+    })?;
 
     let _ = runtime_app_id;
     Ok(())

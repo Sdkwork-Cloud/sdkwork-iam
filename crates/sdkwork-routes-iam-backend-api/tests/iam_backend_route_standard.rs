@@ -2,8 +2,7 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
 use sdkwork_routes_iam_backend_api::{
-    backend_routes, build_sdkwork_iam_backend_api_router, HttpMethod, HttpRoute,
-    BACKEND_API_PREFIX,
+    backend_routes, build_sdkwork_iam_backend_api_router, HttpMethod, HttpRoute, BACKEND_API_PREFIX,
 };
 use serde_json::Value;
 use tower::ServiceExt;

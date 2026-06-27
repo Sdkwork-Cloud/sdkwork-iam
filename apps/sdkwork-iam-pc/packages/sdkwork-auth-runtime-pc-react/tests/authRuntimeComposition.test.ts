@@ -7,40 +7,40 @@ import {
 import { createTestJwt } from "@sdkwork/runtime-bootstrap";
 
 const ACCESS_TOKEN = createTestJwt({
-  tenant_id: "t_demo",
-  user_id: "alice",
+  tenant_id: "100001",
+  user_id: "1",
   app_id: "sdkwork-chat-pc",
   marker: "access",
 });
 const AUTH_TOKEN = createTestJwt({
-  tenant_id: "t_demo",
-  user_id: "alice",
+  tenant_id: "100001",
+  user_id: "1",
   app_id: "sdkwork-chat-pc",
   auth_level: "password",
   marker: "auth",
 });
-const OLD_ACCESS_TOKEN = createTestJwt({ tenant_id: "t_demo", user_id: "alice", marker: "old-access" });
+const OLD_ACCESS_TOKEN = createTestJwt({ tenant_id: "100001", user_id: "1", marker: "old-access" });
 const OLD_AUTH_TOKEN = createTestJwt({
-  tenant_id: "t_demo",
-  user_id: "alice",
+  tenant_id: "100001",
+  user_id: "1",
   auth_level: "password",
   marker: "old-auth",
 });
-const NEW_ACCESS_TOKEN = createTestJwt({ tenant_id: "t_demo", user_id: "alice", marker: "new-access" });
+const NEW_ACCESS_TOKEN = createTestJwt({ tenant_id: "100001", user_id: "1", marker: "new-access" });
 const NEW_AUTH_TOKEN = createTestJwt({
-  tenant_id: "t_demo",
-  user_id: "alice",
+  tenant_id: "100001",
+  user_id: "1",
   auth_level: "password",
   marker: "new-auth",
 });
-const REGISTERED_ACCESS_TOKEN = createTestJwt({ tenant_id: "t_demo", marker: "registered-access" });
+const REGISTERED_ACCESS_TOKEN = createTestJwt({ tenant_id: "100001", marker: "registered-access" });
 const REGISTERED_AUTH_TOKEN = createTestJwt({
-  tenant_id: "t_demo",
+  tenant_id: "100001",
   auth_level: "password",
   marker: "registered-auth",
 });
 const PARTIAL_AUTH_TOKEN = createTestJwt({
-  tenant_id: "t_demo",
+  tenant_id: "100001",
   auth_level: "password",
   marker: "partial-auth",
 });
@@ -201,14 +201,14 @@ describe("auth-runtime composition", () => {
     const appContext = {
       appId: "sdkwork-chat-pc",
       authLevel: "password",
-      dataScope: ["tenant:t_demo"],
+      dataScope: ["tenant:100001"],
       deploymentMode: "saas",
       environment: "dev",
-      organizationId: "org_demo",
+      organizationId: "100001",
       permissionScope: ["*"],
       sessionId: "session-id",
-      tenantId: "t_demo",
-      userId: "alice",
+      tenantId: "100001",
+      userId: "1",
     };
     let storedSession: Record<string, unknown> | null = {
       accessToken: OLD_ACCESS_TOKEN,
@@ -217,7 +217,7 @@ describe("auth-runtime composition", () => {
       refreshToken: "old-refresh-token",
       sessionId: "old-session-id",
       user: {
-        userId: "alice",
+        userId: "1",
       },
     };
     const clearSession = vi.fn(() => {
@@ -257,7 +257,7 @@ describe("auth-runtime composition", () => {
     expect(storedSession?.context).toEqual(appContext);
     expect(await bridge?.contextStore.getAppContext()).toEqual(appContext);
     expect(await bridge?.contextStore.getShardingContext()).toEqual({
-      shardingKey: "org_demo",
+      shardingKey: "100001",
       shardingStrategy: "organization",
     });
 
@@ -286,7 +286,7 @@ describe("auth-runtime composition", () => {
       authToken: OLD_AUTH_TOKEN,
       refreshToken: "old-refresh-token",
       user: {
-        userId: "alice",
+        userId: "1",
       },
     };
     const clearSession = vi.fn(() => {
@@ -332,12 +332,12 @@ describe("auth-runtime composition", () => {
     const staleAppContext = {
       appId: "sdkwork-chat-pc",
       authLevel: "password",
-      dataScope: ["tenant:t_demo"],
+      dataScope: ["tenant:100001"],
       deploymentMode: "saas",
       environment: "dev",
       permissionScope: ["*"],
       sessionId: "stale-session-id",
-      tenantId: "t_demo",
+      tenantId: "100001",
       userId: "user_test006_a_com",
     };
     let storedSession: Record<string, unknown> | null = {
@@ -392,12 +392,12 @@ describe("auth-runtime composition", () => {
     const newContext = {
       appId: "sdkwork-chat-pc",
       authLevel: "password",
-      dataScope: ["tenant:t_demo"],
+      dataScope: ["tenant:100001"],
       deploymentMode: "saas",
       environment: "dev",
       permissionScope: ["*"],
       sessionId: "registered-session-id",
-      tenantId: "t_demo",
+      tenantId: "100001",
       userId: "registered-user-1",
     };
     let storedSession: Record<string, unknown> | null = {
@@ -755,7 +755,7 @@ function createStandardAppClient() {
       data: {
         displayName: "Alice",
         email: "alice@example.com",
-        userId: "alice",
+        userId: "1",
       },
     }),
   }) as ReturnType<typeof createMethodTree> & {
@@ -793,20 +793,20 @@ function standardSession() {
     context: {
       appId: "sdkwork-chat-pc",
       authLevel: "password",
-      dataScope: ["tenant:t_demo"],
+      dataScope: ["tenant:100001"],
       deploymentMode: "saas",
       environment: "dev",
       permissionScope: ["*"],
       sessionId: "session-id",
-      tenantId: "t_demo",
-      userId: "alice",
+      tenantId: "100001",
+      userId: "1",
     },
     refreshToken: "refresh-token",
     sessionId: "session-id",
     user: {
       displayName: "Alice",
       email: "alice@example.com",
-      userId: "alice",
+      userId: "1",
     },
   };
 }

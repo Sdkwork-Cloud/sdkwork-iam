@@ -94,7 +94,7 @@ describe("canonical user-center runtime bridge", () => {
           refresh: vi.fn(),
           current: {
             delete: vi.fn(),
-            retrieve: vi.fn().mockResolvedValue({ code: "2000", data: { tenantId: "tenant-1" } }),
+            retrieve: vi.fn().mockResolvedValue({ code: "2000", data: { tenantId: "100001" } }),
             update: vi.fn(),
           },
         },

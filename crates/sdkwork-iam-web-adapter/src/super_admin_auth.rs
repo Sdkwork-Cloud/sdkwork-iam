@@ -371,8 +371,7 @@ async fn user_has_permission_code(
     user_id: &str,
     permission_code: &str,
 ) -> Result<bool, String> {
-    sdkwork_iam_bootstrap::user_has_permission_code(pg, tenant_id, user_id, permission_code)
-        .await
+    sdkwork_iam_bootstrap::user_has_permission_code(pg, tenant_id, user_id, permission_code).await
 }
 
 async fn user_is_owner(pg: &PgPool, tenant_id: &str, user_id: &str) -> Result<bool, String> {
@@ -439,12 +438,12 @@ mod tests {
     #[test]
     fn ensure_actor_tenant_scope_rejects_cross_tenant_access() {
         let actor = AccessTokenActor {
-            user_id: "user-1".to_owned(),
-            tenant_id: "tenant-a".to_owned(),
+            user_id: "1".to_owned(),
+            tenant_id: "100001".to_owned(),
             environment: Environment::Dev,
             deployment_mode: DeploymentMode::Local,
         };
-        let error = ensure_actor_tenant_scope(&actor, "tenant-b").expect_err("cross tenant");
+        let error = ensure_actor_tenant_scope(&actor, "100002").expect_err("cross tenant");
         assert!(error.contains("does not match"));
     }
 

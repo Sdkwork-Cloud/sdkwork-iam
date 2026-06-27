@@ -11,7 +11,7 @@ describe("@sdkwork/iam-h5-auth", () => {
             accessToken: "token",
             authToken: "auth-token",
             sessionId: "sess-1",
-            userId: "user-1",
+            userId: "1",
           }),
           current: {
             delete: vi.fn().mockResolvedValue(undefined),
@@ -26,7 +26,7 @@ describe("@sdkwork/iam-h5-auth", () => {
       kind: "session",
       session: {
         sessionId: "sess-1",
-        userId: "user-1",
+        userId: "1",
       },
     });
     await controller.logout();
@@ -51,7 +51,7 @@ describe("@sdkwork/iam-h5-auth", () => {
               accessToken: "token",
               authToken: "auth-token",
               sessionId: "sess-2",
-              userId: "user-1",
+              userId: "1",
             }),
           },
         },

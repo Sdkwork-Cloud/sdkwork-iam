@@ -1,10 +1,10 @@
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
+use sdkwork_iam_web_adapter::build_openid_configuration_document;
 use sdkwork_routes_iam_open_api::{
     build_sdkwork_iam_open_api_router, open_routes, HttpMethod, HttpRoute,
 };
-use sdkwork_iam_web_adapter::build_openid_configuration_document;
 use serde_json::Value;
 use tower::ServiceExt;
 
@@ -168,7 +168,9 @@ async fn open_router_serves_well_known_oidc_discovery_without_database() {
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let payload: Value = serde_json::from_slice(&body).expect("json");
     assert_eq!(
-        payload.get("authorization_endpoint").and_then(Value::as_str),
+        payload
+            .get("authorization_endpoint")
+            .and_then(Value::as_str),
         Some("https://iam.sdkwork.local/iam/v3/oauth/authorize")
     );
 }

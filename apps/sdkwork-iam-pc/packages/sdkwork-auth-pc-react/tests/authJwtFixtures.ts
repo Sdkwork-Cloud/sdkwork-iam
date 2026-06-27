@@ -1,10 +1,10 @@
 import { createTestJwt } from "@sdkwork/runtime-bootstrap";
 
 const DEFAULT_ACCESS_CLAIMS = {
-  tenant_id: "tenant-1",
-  user_id: "user-1",
+  tenant_id: "100001",
+  user_id: "1",
   session_id: "session-1",
-  organization_id: "org-1",
+  organization_id: "0",
   login_scope: "ORGANIZATION",
   app_id: "sdkwork-test-app",
   environment: "test",

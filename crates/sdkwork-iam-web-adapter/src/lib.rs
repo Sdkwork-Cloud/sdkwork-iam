@@ -1,4 +1,3 @@
-mod iam_database_env;
 mod access_token_issue;
 mod account_binding_policy;
 mod api_key_lookup;
@@ -6,6 +5,7 @@ mod application_registry;
 mod authorization_policy;
 mod dev_runtime;
 mod ephemeral_rate_limit;
+mod iam_database_env;
 mod iam_session;
 mod oauth_authorization_server;
 mod oauth_integration_exchange;
@@ -44,29 +44,28 @@ pub use account_binding_policy::{
 };
 pub use api_key_lookup::IamApiKeyLookupService;
 pub use application_registry::{
-    enable_tenant_application, ensure_platform_tenant_application, intersect_permission_scopes,
+    dedupe_postgres_tenant_application_org_template_rows,
+    derive_tenant_application_primary_domain_candidate, enable_tenant_application,
+    ensure_platform_tenant_application,
+    ensure_postgres_tenant_application_org_template_unique_index,
+    ensure_tenant_application_runtime, intersect_permission_scopes,
     parse_application_register_command, parse_tenant_application_provision_command,
     parse_tenant_application_update_command, platform_runtime_app_id_for_tenant,
-    provision_tenant_application, register_application_template,
-    registered_application_template_to_json, resolve_tenant_application,
-    tenant_application_to_json, update_tenant_application, validate_enabled_tenant_runtime_app,
-    ensure_postgres_tenant_application_org_template_unique_index,
-    dedupe_postgres_tenant_application_org_template_rows,
-    reconcile_postgres_tenant_application_org_template_rows,
-    ensure_tenant_application_runtime, tenant_application_instance_key,
-    tenant_application_template_id,
-    tenant_application_row_id, ApplicationPackageSyncCommand,
-    derive_tenant_application_primary_domain_candidate,
-    ApplicationRegisterCommand, EnsureTenantApplicationCommand,
-    RegisteredApplicationTemplate, TenantApplication, TenantApplicationProvisionCommand, TenantApplicationUpdateCommand,
+    provision_tenant_application, reconcile_postgres_tenant_application_org_template_rows,
+    register_application_template, registered_application_template_to_json,
+    resolve_tenant_application, tenant_application_instance_key, tenant_application_row_id,
+    tenant_application_template_id, tenant_application_to_json, update_tenant_application,
+    validate_enabled_tenant_runtime_app, ApplicationPackageSyncCommand, ApplicationRegisterCommand,
+    EnsureTenantApplicationCommand, RegisteredApplicationTemplate, TenantApplication,
+    TenantApplicationProvisionCommand, TenantApplicationUpdateCommand,
     IAM_APPLICATIONS_REGISTER_PERMISSION, IAM_TENANT_APPLICATIONS_ENABLE_PERMISSION,
     IAM_TENANT_APPLICATIONS_PROVISION_PERMISSION, IAM_TENANT_APPLICATIONS_UPDATE_PERMISSION,
     PLATFORM_APPLICATION_KEY, PLATFORM_APPLICATION_TEMPLATE_ID,
 };
 pub use authorization_policy::IamAuthorizationPolicy;
 pub use dev_runtime::allows_dev_authentication_fallback;
-pub use iam_database_env::{bridge_iam_database_env_from_im, resolve_iam_postgres_pool_from_env};
 pub use ephemeral_rate_limit::{check_rate_limit, check_rate_limit_sqlite};
+pub use iam_database_env::{bridge_iam_database_env_from_im, resolve_iam_postgres_pool_from_env};
 pub use iam_session::{
     resolve_iam_app_context_from_access_token, resolve_iam_app_context_from_auth_token,
     resolve_iam_app_context_from_dual_tokens, resolve_iam_app_context_from_oauth_bearer,
@@ -74,14 +73,10 @@ pub use iam_session::{
 pub use oauth_authorization_server::{
     build_oauth_jwks_document, build_openid_configuration_document, build_userinfo_claims,
     complete_authorization_state, create_pending_authorization_state, exchange_authorization_code,
-    exchange_refresh_token, introspect_oauth_token, load_oauth_bearer_scopes, oauth_issuer_base_url,
-    oauth_login_base_url, parse_relying_party_config, resolve_relying_party_client,
-    revoke_oauth_token, validate_authorize_request, AuthorizeRequest, AuthorizationCompletion,
-    RelyingPartyConfig, ResolvedRelyingParty,
-};
-pub use oauth_provider_callback::{
-    handle_provider_callback_get, handle_provider_callback_post, ProviderCallbackHttpResponse,
-    ProviderCallbackRequestMeta,
+    exchange_refresh_token, introspect_oauth_token, load_oauth_bearer_scopes,
+    oauth_issuer_base_url, oauth_login_base_url, parse_relying_party_config,
+    resolve_relying_party_client, revoke_oauth_token, validate_authorize_request,
+    AuthorizationCompletion, AuthorizeRequest, RelyingPartyConfig, ResolvedRelyingParty,
 };
 pub use oauth_integration_exchange::{
     builtin_authorization_endpoint, builtin_default_scopes, builtin_token_endpoint,
@@ -90,6 +85,10 @@ pub use oauth_integration_exchange::{
     OAuthIntegrationExchangeContext,
 };
 pub use oauth_login_local::{LocalOAuthAuthority, LocalOAuthProviderProfile};
+pub use oauth_provider_callback::{
+    handle_provider_callback_get, handle_provider_callback_post, ProviderCallbackHttpResponse,
+    ProviderCallbackRequestMeta,
+};
 pub use oauth_provider_catalog::{
     builtin_oauth_provider_catalog, catalog_entry_for_provider, normalize_oauth_provider_code,
     oauth_provider_allowed, provider_catalog_entry_to_json, OauthProviderCatalogEntry,
@@ -114,19 +113,18 @@ pub use signing_secrets::{
     decode_signing_secret_ref, encode_signing_secret_ref, ensure_postgres_tenant_signing_key,
     ensure_sqlite_tenant_signing_key, load_postgres_active_tenant_signing_key,
     load_sqlite_active_tenant_signing_key, resolve_postgres_tenant_signing_key_by_kid,
-    resolve_sqlite_tenant_signing_key_by_kid, tenant_primary_signing_kid,
-    TenantSigningKeyMaterial,
-};
-pub use tenant_signing_key_store::{
-    tenant_signing_key_store_for_database_config, LegacyGlobalTenantSigningKeyStore,
-    PostgresTenantSigningKeyStore, SqliteTenantSigningKeyStore, TenantSigningKeyFuture,
-    TenantSigningKeyResolver, TenantSigningKeyStore, TenantSigningKeyStoreWebResolver,
+    resolve_sqlite_tenant_signing_key_by_kid, tenant_primary_signing_kid, TenantSigningKeyMaterial,
 };
 pub use super_admin_auth::{
     allows_automatic_super_admin_auth, ensure_actor_tenant_scope, ensure_bootstrap_permission,
     ensure_super_admin_sync_actor, resolve_access_token_actor, resolve_bootstrap_actor,
     AccessTokenActor, SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV, SDKWORK_IAM_SUPER_ADMIN_PASSWORD_ENV,
     SDKWORK_SUPER_ADMIN_PROFILE_ENV, SDKWORK_USERS_DIR_ENV,
+};
+pub use tenant_signing_key_store::{
+    tenant_signing_key_store_for_database_config, LegacyGlobalTenantSigningKeyStore,
+    PostgresTenantSigningKeyStore, SqliteTenantSigningKeyStore, TenantSigningKeyFuture,
+    TenantSigningKeyResolver, TenantSigningKeyStore, TenantSigningKeyStoreWebResolver,
 };
 
 pub fn iam_app_context_from_web_request(context: &WebRequestContext) -> Option<IamAppContext> {

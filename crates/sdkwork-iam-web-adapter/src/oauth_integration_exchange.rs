@@ -621,9 +621,15 @@ pub async fn seed_builtin_oauth_provider_catalog(pg: &PgPool) -> Result<(), Stri
                 )
             } else {
                 (
-                    builtin_authorization_endpoint(provider_code).unwrap_or("").to_string(),
-                    builtin_token_endpoint(provider_code).unwrap_or("").to_string(),
-                    builtin_userinfo_endpoint(provider_code).unwrap_or("").to_string(),
+                    builtin_authorization_endpoint(provider_code)
+                        .unwrap_or("")
+                        .to_string(),
+                    builtin_token_endpoint(provider_code)
+                        .unwrap_or("")
+                        .to_string(),
+                    builtin_userinfo_endpoint(provider_code)
+                        .unwrap_or("")
+                        .to_string(),
                 )
             };
         let default_scopes = serde_json::to_string(&builtin_default_scopes(provider_code))

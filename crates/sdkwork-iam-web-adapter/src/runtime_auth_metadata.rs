@@ -87,7 +87,9 @@ pub async fn load_tenant_application_runtime_config(
     .await
     .map_err(|error| format!("load tenant application runtime config failed: {error}"))?;
 
-    Ok(row.map(|sqlx::types::Json(value)| value).unwrap_or_else(|| json!({})))
+    Ok(row
+        .map(|sqlx::types::Json(value)| value)
+        .unwrap_or_else(|| json!({})))
 }
 
 fn read_bool_field(value: Option<&Value>, keys: &[&str]) -> Option<bool> {
@@ -141,11 +143,7 @@ pub fn build_runtime_auth_metadata_json(
 }
 
 pub fn default_runtime_auth_metadata_json(input: &RuntimeAuthMetadataInput) -> Value {
-    build_runtime_auth_metadata_json(
-        &default_account_binding_policy(),
-        &[],
-        input,
-    )
+    build_runtime_auth_metadata_json(&default_account_binding_policy(), &[], input)
 }
 
 fn infer_oauth_provider_region(oauth_providers: &[Value]) -> &'static str {

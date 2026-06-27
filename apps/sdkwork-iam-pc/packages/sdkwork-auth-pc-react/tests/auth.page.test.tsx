@@ -302,12 +302,12 @@ describe("sdkwork-auth-pc-react page", () => {
         {
           displayName: "Primary Workspace",
           organizationId: "org-1",
-          tenantId: "tenant-1",
+          tenantId: "100001",
         },
         {
           displayName: "Secondary Workspace",
           organizationId: "org-2",
-          tenantId: "tenant-1",
+          tenantId: "100001",
         },
       ],
     }));
@@ -317,15 +317,15 @@ describe("sdkwork-auth-pc-react page", () => {
       context: {
         organizationId: "org-2",
         sessionId: "session-2",
-        tenantId: "tenant-1",
-        userId: "user-1",
+        tenantId: "100001",
+        userId: "1",
       },
       sessionId: "session-2",
       user: {
         displayName: "Selected Operator",
         email: "selected@sdkwork.ai",
         firstName: "Selected",
-        id: "user-1",
+        id: "1",
         initials: "SO",
         lastName: "Operator",
         username: "selected@sdkwork.ai",
@@ -382,7 +382,7 @@ describe("sdkwork-auth-pc-react page", () => {
         {
           displayName: "Primary Workspace",
           organizationId: "org-1",
-          tenantId: "tenant-1",
+          tenantId: "100001",
         },
       ],
     }));
@@ -392,15 +392,15 @@ describe("sdkwork-auth-pc-react page", () => {
       context: {
         loginScope: "TENANT",
         sessionId: "session-personal",
-        tenantId: "tenant-1",
-        userId: "user-1",
+        tenantId: "100001",
+        userId: "1",
       },
       sessionId: "session-personal",
       user: {
         displayName: "Personal Operator",
         email: "personal@sdkwork.ai",
         firstName: "Personal",
-        id: "user-1",
+        id: "1",
         initials: "PO",
         lastName: "Operator",
         username: "personal@sdkwork.ai",
@@ -527,7 +527,7 @@ describe("sdkwork-auth-pc-react page", () => {
           {
             displayName: "Secondary Workspace",
             organizationId: "org-2",
-            tenantId: "tenant-1",
+            tenantId: "100001",
           },
         ],
       },
@@ -2404,7 +2404,7 @@ describe("sdkwork-auth-pc-react page", () => {
         context: {
           organizationId: "org-1",
           sessionId: "session-register",
-          tenantId: "tenant-1",
+          tenantId: "100001",
           userId: "user-register",
         },
         sessionId: "session-register",

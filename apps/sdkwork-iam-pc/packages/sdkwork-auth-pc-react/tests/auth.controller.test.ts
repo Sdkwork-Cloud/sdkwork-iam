@@ -18,7 +18,7 @@ describe("sdkwork-auth-pc-react controller", () => {
           displayName: "Sdkwork Operator",
           email: "sdkwork@sdkwork.ai",
           firstName: "Sdkwork",
-          id: "user-1",
+          id: "1",
           initials: "CO",
           lastName: "Operator",
           username: "sdkwork",
@@ -84,15 +84,15 @@ describe("sdkwork-auth-pc-react controller", () => {
         context: {
           organizationId: "org-2",
           sessionId: "session-2",
-          tenantId: "tenant-1",
-          userId: "user-1",
+          tenantId: "100001",
+          userId: "1",
         },
         sessionId: "session-2",
         user: {
           displayName: "Sdkwork Operator",
           email: "sdkwork@sdkwork.ai",
           firstName: "Sdkwork",
-          id: "user-1",
+          id: "1",
           initials: "SO",
           lastName: "Operator",
           username: "sdkwork",
@@ -123,7 +123,7 @@ describe("sdkwork-auth-pc-react controller", () => {
       },
       status: "authenticated",
       user: {
-        id: "user-1",
+        id: "1",
       },
     });
   });
