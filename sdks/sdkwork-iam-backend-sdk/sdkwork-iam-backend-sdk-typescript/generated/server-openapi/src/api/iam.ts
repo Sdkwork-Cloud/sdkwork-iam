@@ -1,7 +1,7 @@
 import { backendApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseAccessCredentialCreateCommand, AppbaseApiResult, AppbaseApplicationRegisterCommand, AppbaseOperationCommand, AppbaseTenantApplicationEnableCommand, AppbaseTenantApplicationProvisionCommand, AppbaseTenantApplicationUpdateCommand } from '../types';
+import type { AppbaseAccessCredentialCreateCommand, AppbaseApplicationRegisterCommand, AppbaseOperationCommand, AppbaseTenantApplicationEnableCommand, AppbaseTenantApplicationProvisionCommand, AppbaseTenantApplicationUpdateCommand, PageInfo } from '../types';
 
 
 export interface IamUsersListParams {
@@ -21,7 +21,7 @@ export class IamUsersApi {
 
 
 /** Users list. */
-  async list(params?: IamUsersListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamUsersListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -29,27 +29,27 @@ export class IamUsersApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/users`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/users`), query));
   }
 
 /** Users create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/users`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/users`), body, undefined, undefined, 'application/json');
   }
 
 /** Users delete. */
-  async delete(userId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/users/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`));
+  async delete(userId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/users/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`));
   }
 
 /** Users retrieve. */
-  async retrieve(userId: string): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/users/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`));
+  async retrieve(userId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/users/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`));
   }
 
 /** Users update. */
-  async update(userId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/users/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(userId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/users/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -70,7 +70,7 @@ export class IamTenantsMembersApi {
 
 
 /** Tenants members list. */
-  async list(tenantId: string, params?: IamTenantsMembersListParams): Promise<AppbaseApiResult> {
+  async list(tenantId: string, params?: IamTenantsMembersListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -78,22 +78,22 @@ export class IamTenantsMembersApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/members`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/members`), query));
   }
 
 /** Tenants members create. */
-  async create(tenantId: string, body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/members`), body, undefined, undefined, 'application/json');
+  async create(tenantId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/members`), body, undefined, undefined, 'application/json');
   }
 
 /** Tenants members delete. */
-  async delete(tenantId: string, userId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/members/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`));
+  async delete(tenantId: string, userId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/members/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`));
   }
 
 /** Tenants members update. */
-  async update(tenantId: string, userId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/members/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(tenantId: string, userId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/members/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -116,7 +116,7 @@ export class IamTenantsApi {
 
 
 /** Tenants list. */
-  async list(params?: IamTenantsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamTenantsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -124,27 +124,27 @@ export class IamTenantsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/tenants`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/tenants`), query));
   }
 
 /** Tenants create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/tenants`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/tenants`), body, undefined, undefined, 'application/json');
   }
 
 /** Tenants delete. */
-  async delete(tenantId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}`));
+  async delete(tenantId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}`));
   }
 
 /** Tenants retrieve. */
-  async retrieve(tenantId: string): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}`));
+  async retrieve(tenantId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}`));
   }
 
 /** Tenants update. */
-  async update(tenantId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(tenantId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -157,23 +157,23 @@ export class IamTenantApplicationsApi {
 
 
 /** Tenant Applications provision. */
-  async provision(body: AppbaseTenantApplicationProvisionCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/tenant_applications`), body, undefined, undefined, 'application/json');
+  async provision(body: AppbaseTenantApplicationProvisionCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/tenant_applications`), body, undefined, undefined, 'application/json');
   }
 
 /** Tenant Applications retrieve. */
-  async retrieve(tenantApplicationId: string): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/tenant_applications/${serializePathParameter(tenantApplicationId, { name: 'tenantApplicationId', style: 'simple', explode: false })}`));
+  async retrieve(tenantApplicationId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/tenant_applications/${serializePathParameter(tenantApplicationId, { name: 'tenantApplicationId', style: 'simple', explode: false })}`));
   }
 
 /** Tenant Applications update. */
-  async update(tenantApplicationId: string, body?: AppbaseTenantApplicationUpdateCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/tenant_applications/${serializePathParameter(tenantApplicationId, { name: 'tenantApplicationId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(tenantApplicationId: string, body?: AppbaseTenantApplicationUpdateCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/tenant_applications/${serializePathParameter(tenantApplicationId, { name: 'tenantApplicationId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 
 /** Tenant Applications enable. */
-  async enable(tenantApplicationId: string, body: AppbaseTenantApplicationEnableCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/tenant_applications/${serializePathParameter(tenantApplicationId, { name: 'tenantApplicationId', style: 'simple', explode: false })}/enable`), body, undefined, undefined, 'application/json');
+  async enable(tenantApplicationId: string, body: AppbaseTenantApplicationEnableCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/tenant_applications/${serializePathParameter(tenantApplicationId, { name: 'tenantApplicationId', style: 'simple', explode: false })}/enable`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -194,7 +194,7 @@ export class IamServiceAccountsApi {
 
 
 /** Service Accounts list. */
-  async list(params?: IamServiceAccountsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamServiceAccountsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -202,27 +202,27 @@ export class IamServiceAccountsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/service_accounts`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/service_accounts`), query));
   }
 
 /** Service Accounts create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/service_accounts`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/service_accounts`), body, undefined, undefined, 'application/json');
   }
 
 /** Service Accounts delete. */
-  async delete(serviceAccountId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/service_accounts/${serializePathParameter(serviceAccountId, { name: 'serviceAccountId', style: 'simple', explode: false })}`));
+  async delete(serviceAccountId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/service_accounts/${serializePathParameter(serviceAccountId, { name: 'serviceAccountId', style: 'simple', explode: false })}`));
   }
 
 /** Service Accounts retrieve. */
-  async retrieve(serviceAccountId: string): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/service_accounts/${serializePathParameter(serviceAccountId, { name: 'serviceAccountId', style: 'simple', explode: false })}`));
+  async retrieve(serviceAccountId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/service_accounts/${serializePathParameter(serviceAccountId, { name: 'serviceAccountId', style: 'simple', explode: false })}`));
   }
 
 /** Service Accounts update. */
-  async update(serviceAccountId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/service_accounts/${serializePathParameter(serviceAccountId, { name: 'serviceAccountId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(serviceAccountId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/service_accounts/${serializePathParameter(serviceAccountId, { name: 'serviceAccountId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -243,7 +243,7 @@ export class IamSecurityEventsApi {
 
 
 /** Security Events list. */
-  async list(params?: IamSecurityEventsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamSecurityEventsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -251,7 +251,7 @@ export class IamSecurityEventsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/security_events`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/security_events`), query));
   }
 }
 
@@ -272,7 +272,7 @@ export class IamRolesPermissionsApi {
 
 
 /** Roles permissions list. */
-  async list(roleId: string, params?: IamRolesPermissionsListParams): Promise<AppbaseApiResult> {
+  async list(roleId: string, params?: IamRolesPermissionsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -280,17 +280,17 @@ export class IamRolesPermissionsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}/permissions`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}/permissions`), query));
   }
 
 /** Roles permissions create. */
-  async create(roleId: string, body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}/permissions`), body, undefined, undefined, 'application/json');
+  async create(roleId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}/permissions`), body, undefined, undefined, 'application/json');
   }
 
 /** Roles permissions delete. */
-  async delete(roleId: string, permissionId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`));
+  async delete(roleId: string, permissionId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`));
   }
 }
 
@@ -313,7 +313,7 @@ export class IamRolesApi {
 
 
 /** Roles list. */
-  async list(params?: IamRolesListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamRolesListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -321,27 +321,27 @@ export class IamRolesApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/roles`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/roles`), query));
   }
 
 /** Roles create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/roles`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/roles`), body, undefined, undefined, 'application/json');
   }
 
 /** Roles delete. */
-  async delete(roleId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}`));
+  async delete(roleId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}`));
   }
 
 /** Roles retrieve. */
-  async retrieve(roleId: string): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}`));
+  async retrieve(roleId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}`));
   }
 
 /** Roles update. */
-  async update(roleId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(roleId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -362,7 +362,7 @@ export class IamRoleBindingsApi {
 
 
 /** Role Bindings list. */
-  async list(params?: IamRoleBindingsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamRoleBindingsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -370,17 +370,17 @@ export class IamRoleBindingsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/role_bindings`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/role_bindings`), query));
   }
 
 /** Role Bindings create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/role_bindings`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/role_bindings`), body, undefined, undefined, 'application/json');
   }
 
 /** Role Bindings delete. */
-  async delete(roleBindingId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/role_bindings/${serializePathParameter(roleBindingId, { name: 'roleBindingId', style: 'simple', explode: false })}`));
+  async delete(roleBindingId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/role_bindings/${serializePathParameter(roleBindingId, { name: 'roleBindingId', style: 'simple', explode: false })}`));
   }
 }
 
@@ -401,7 +401,7 @@ export class IamPositionsApi {
 
 
 /** Positions list. */
-  async list(params?: IamPositionsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamPositionsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -409,22 +409,22 @@ export class IamPositionsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/positions`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/positions`), query));
   }
 
 /** Positions create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/positions`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/positions`), body, undefined, undefined, 'application/json');
   }
 
 /** Positions delete. */
-  async delete(positionId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/positions/${serializePathParameter(positionId, { name: 'positionId', style: 'simple', explode: false })}`));
+  async delete(positionId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/positions/${serializePathParameter(positionId, { name: 'positionId', style: 'simple', explode: false })}`));
   }
 
 /** Positions update. */
-  async update(positionId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/positions/${serializePathParameter(positionId, { name: 'positionId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(positionId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/positions/${serializePathParameter(positionId, { name: 'positionId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -445,7 +445,7 @@ export class IamPositionAssignmentsApi {
 
 
 /** Position Assignments list. */
-  async list(params?: IamPositionAssignmentsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamPositionAssignmentsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -453,17 +453,17 @@ export class IamPositionAssignmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/position_assignments`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/position_assignments`), query));
   }
 
 /** Position Assignments create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/position_assignments`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/position_assignments`), body, undefined, undefined, 'application/json');
   }
 
 /** Position Assignments update. */
-  async update(assignmentId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/position_assignments/${serializePathParameter(assignmentId, { name: 'assignmentId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(assignmentId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/position_assignments/${serializePathParameter(assignmentId, { name: 'assignmentId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -484,7 +484,7 @@ export class IamPoliciesApi {
 
 
 /** Policies list. */
-  async list(params?: IamPoliciesListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamPoliciesListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -492,27 +492,27 @@ export class IamPoliciesApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/policies`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/policies`), query));
   }
 
 /** Policies create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/policies`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/policies`), body, undefined, undefined, 'application/json');
   }
 
 /** Policies delete. */
-  async delete(policyId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`));
+  async delete(policyId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`));
   }
 
 /** Policies retrieve. */
-  async retrieve(policyId: string): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`));
+  async retrieve(policyId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`));
   }
 
 /** Policies update. */
-  async update(policyId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(policyId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -533,7 +533,7 @@ export class IamPermissionsApi {
 
 
 /** Permissions list. */
-  async list(params?: IamPermissionsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamPermissionsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -541,27 +541,27 @@ export class IamPermissionsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/permissions`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/permissions`), query));
   }
 
 /** Permissions create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/permissions`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/permissions`), body, undefined, undefined, 'application/json');
   }
 
 /** Permissions delete. */
-  async delete(permissionId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`));
+  async delete(permissionId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`));
   }
 
 /** Permissions retrieve. */
-  async retrieve(permissionId: string): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`));
+  async retrieve(permissionId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`));
   }
 
 /** Permissions update. */
-  async update(permissionId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(permissionId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -574,8 +574,8 @@ export class IamOrganizationsTreeApi {
 
 
 /** Organizations tree retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/organizations/tree`));
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/organizations/tree`));
   }
 }
 
@@ -598,7 +598,7 @@ export class IamOrganizationsApi {
 
 
 /** Organizations list. */
-  async list(params?: IamOrganizationsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamOrganizationsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -606,27 +606,27 @@ export class IamOrganizationsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/organizations`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/organizations`), query));
   }
 
 /** Organizations create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/organizations`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/organizations`), body, undefined, undefined, 'application/json');
   }
 
 /** Organizations delete. */
-  async delete(organizationId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/organizations/${serializePathParameter(organizationId, { name: 'organizationId', style: 'simple', explode: false })}`));
+  async delete(organizationId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/organizations/${serializePathParameter(organizationId, { name: 'organizationId', style: 'simple', explode: false })}`));
   }
 
 /** Organizations retrieve. */
-  async retrieve(organizationId: string): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/organizations/${serializePathParameter(organizationId, { name: 'organizationId', style: 'simple', explode: false })}`));
+  async retrieve(organizationId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/organizations/${serializePathParameter(organizationId, { name: 'organizationId', style: 'simple', explode: false })}`));
   }
 
 /** Organizations update. */
-  async update(organizationId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/organizations/${serializePathParameter(organizationId, { name: 'organizationId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(organizationId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/organizations/${serializePathParameter(organizationId, { name: 'organizationId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -647,7 +647,7 @@ export class IamOrganizationMembershipsApi {
 
 
 /** Organization Memberships list. */
-  async list(params?: IamOrganizationMembershipsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamOrganizationMembershipsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -655,17 +655,17 @@ export class IamOrganizationMembershipsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/organization_memberships`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/organization_memberships`), query));
   }
 
 /** Organization Memberships create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/organization_memberships`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/organization_memberships`), body, undefined, undefined, 'application/json');
   }
 
 /** Organization Memberships update. */
-  async update(membershipId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/organization_memberships/${serializePathParameter(membershipId, { name: 'membershipId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(membershipId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/organization_memberships/${serializePathParameter(membershipId, { name: 'membershipId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -686,7 +686,7 @@ export class IamGroupsMembersApi {
 
 
 /** Groups members list. */
-  async list(groupId: string, params?: IamGroupsMembersListParams): Promise<AppbaseApiResult> {
+  async list(groupId: string, params?: IamGroupsMembersListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -694,17 +694,17 @@ export class IamGroupsMembersApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}/members`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}/members`), query));
   }
 
 /** Groups members create. */
-  async create(groupId: string, body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}/members`), body, undefined, undefined, 'application/json');
+  async create(groupId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}/members`), body, undefined, undefined, 'application/json');
   }
 
 /** Groups members delete. */
-  async delete(groupId: string, memberId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}/members/${serializePathParameter(memberId, { name: 'memberId', style: 'simple', explode: false })}`));
+  async delete(groupId: string, memberId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}/members/${serializePathParameter(memberId, { name: 'memberId', style: 'simple', explode: false })}`));
   }
 }
 
@@ -727,7 +727,7 @@ export class IamGroupsApi {
 
 
 /** Groups list. */
-  async list(params?: IamGroupsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamGroupsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -735,27 +735,27 @@ export class IamGroupsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/groups`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/groups`), query));
   }
 
 /** Groups create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/groups`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/groups`), body, undefined, undefined, 'application/json');
   }
 
 /** Groups delete. */
-  async delete(groupId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}`));
+  async delete(groupId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}`));
   }
 
 /** Groups retrieve. */
-  async retrieve(groupId: string): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}`));
+  async retrieve(groupId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}`));
   }
 
 /** Groups update. */
-  async update(groupId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(groupId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -768,8 +768,8 @@ export class IamDepartmentsTreeApi {
 
 
 /** Departments tree retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/departments/tree`));
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/departments/tree`));
   }
 }
 
@@ -792,7 +792,7 @@ export class IamDepartmentsApi {
 
 
 /** Departments list. */
-  async list(params?: IamDepartmentsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamDepartmentsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -800,27 +800,27 @@ export class IamDepartmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/departments`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/departments`), query));
   }
 
 /** Departments create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/departments`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/departments`), body, undefined, undefined, 'application/json');
   }
 
 /** Departments delete. */
-  async delete(departmentId: string): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(backendApiPath(`/iam/departments/${serializePathParameter(departmentId, { name: 'departmentId', style: 'simple', explode: false })}`));
+  async delete(departmentId: string): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/departments/${serializePathParameter(departmentId, { name: 'departmentId', style: 'simple', explode: false })}`));
   }
 
 /** Departments retrieve. */
-  async retrieve(departmentId: string): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/departments/${serializePathParameter(departmentId, { name: 'departmentId', style: 'simple', explode: false })}`));
+  async retrieve(departmentId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/departments/${serializePathParameter(departmentId, { name: 'departmentId', style: 'simple', explode: false })}`));
   }
 
 /** Departments update. */
-  async update(departmentId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/departments/${serializePathParameter(departmentId, { name: 'departmentId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(departmentId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/departments/${serializePathParameter(departmentId, { name: 'departmentId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -841,7 +841,7 @@ export class IamDepartmentAssignmentsApi {
 
 
 /** Department Assignments list. */
-  async list(params?: IamDepartmentAssignmentsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamDepartmentAssignmentsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -849,17 +849,17 @@ export class IamDepartmentAssignmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/department_assignments`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/department_assignments`), query));
   }
 
 /** Department Assignments create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/department_assignments`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/department_assignments`), body, undefined, undefined, 'application/json');
   }
 
 /** Department Assignments update. */
-  async update(assignmentId: string, body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/department_assignments/${serializePathParameter(assignmentId, { name: 'assignmentId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(assignmentId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/department_assignments/${serializePathParameter(assignmentId, { name: 'assignmentId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -880,7 +880,7 @@ export class IamAuditEventsApi {
 
 
 /** Audit Events list. */
-  async list(params?: IamAuditEventsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamAuditEventsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -888,7 +888,7 @@ export class IamAuditEventsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/audit_events`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/audit_events`), query));
   }
 }
 
@@ -901,8 +901,8 @@ export class IamApplicationsApi {
 
 
 /** Applications register. */
-  async register(body: AppbaseApplicationRegisterCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/applications/register`), body, undefined, undefined, 'application/json');
+  async register(body: AppbaseApplicationRegisterCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/applications/register`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -923,7 +923,7 @@ export class IamApiKeysApi {
 
 
 /** Api Keys list. */
-  async list(params?: IamApiKeysListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamApiKeysListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -931,12 +931,12 @@ export class IamApiKeysApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(backendApiPath(`/iam/api_keys`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/api_keys`), query));
   }
 
 /** Api Keys revoke. */
-  async revoke(apiKeyId: string, body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/api_keys/${serializePathParameter(apiKeyId, { name: 'apiKeyId', style: 'simple', explode: false })}/revoke`), body, undefined, undefined, 'application/json');
+  async revoke(apiKeyId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/api_keys/${serializePathParameter(apiKeyId, { name: 'apiKeyId', style: 'simple', explode: false })}/revoke`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -949,13 +949,13 @@ export class IamAccountBindingPolicyApi {
 
 
 /** Account Binding Policy retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(backendApiPath(`/iam/account_binding_policy`));
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/account_binding_policy`));
   }
 
 /** Account Binding Policy update. */
-  async update(body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(backendApiPath(`/iam/account_binding_policy`), body, undefined, undefined, 'application/json');
+  async update(body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/account_binding_policy`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -968,8 +968,8 @@ export class IamAccessCredentialsApi {
 
 
 /** Access Credentials create. */
-  async create(body: AppbaseAccessCredentialCreateCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(backendApiPath(`/iam/access_credentials`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseAccessCredentialCreateCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/access_credentials`), body, undefined, undefined, 'application/json');
   }
 }
 

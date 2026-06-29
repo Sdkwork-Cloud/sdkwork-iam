@@ -1,39 +1,14 @@
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    Json,
-};
-use sdkwork_web_core::{new_request_id, WebRequestContext};
-use serde_json::{json, Value};
+use axum::{http::StatusCode, response::Response};
+use sdkwork_iam_web_adapter::{iam_api_error, iam_api_success};
+use sdkwork_web_core::WebRequestContext;
 use sqlx::PgPool;
 
-use crate::state::LocalIamConfig;
-
-fn next_request_id() -> String {
-    new_request_id()
-}
-
-pub(crate) fn appbase_ok(data: Value) -> Response {
-    Json(json!({
-        "code": "2000",
-        "data": data,
-        "message": "success",
-        "requestId": next_request_id()
-    }))
-    .into_response()
+pub(crate) fn appbase_ok(data: serde_json::Value) -> Response {
+    iam_api_success(data)
 }
 
 pub(crate) fn appbase_error(status: StatusCode, code: &str, message: &str) -> Response {
-    (
-        status,
-        Json(json!({
-            "code": code,
-            "data": Value::Null,
-            "message": message,
-            "requestId": next_request_id()
-        })),
-    )
-        .into_response()
+    iam_api_error(status, code, message)
 }
 
 pub(crate) fn iam_session_required_error() -> Response {
@@ -61,7 +36,7 @@ pub(crate) fn password_credential_unavailable_error() -> Response {
     )
 }
 
-pub(crate) fn password_policy_violation_error(config: &LocalIamConfig) -> Response {
+pub(crate) fn password_policy_violation_error(config: &crate::state::LocalIamConfig) -> Response {
     appbase_error(
         StatusCode::BAD_REQUEST,
         "iam_password_policy_violation",

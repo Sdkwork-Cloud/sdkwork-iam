@@ -6,10 +6,12 @@ mod routes;
 mod state;
 mod web_bootstrap;
 
-pub use manifest::{open_routes, sdkwork_iam_open_api_routes};
+use axum::Router;
+pub use manifest::{open_route_manifest, open_routes, sdkwork_iam_open_api_routes};
 pub use paths::OPEN_API_PREFIX;
 pub use routes::{build_sdkwork_iam_open_api_router, build_sdkwork_iam_open_api_router_from_env};
 pub use sdkwork_web_contract::{HttpMethod, HttpRoute, HttpRoute as IamHttpRoute};
+use sdkwork_web_core::HttpRouteManifest;
 
 pub fn gateway_route_manifest() -> HttpRouteManifest {
     open_route_manifest()

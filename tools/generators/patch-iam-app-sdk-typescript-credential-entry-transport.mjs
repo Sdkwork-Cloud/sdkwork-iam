@@ -149,13 +149,90 @@ function appApiPathCallRegExp(openApiPath) {
 
 function patchHttpClient(clientPath) {
   let source = readFileSync(clientPath, 'utf8');
-  if (source.includes('credentialEntryBootstrap')) {
+  if (source.includes('config?.credentialEntryBootstrap')) {
     return;
   }
 
   source = source.replace(
     'type HttpRequestOptions = RequestOptions & {\n  method?: string;\n  body?: unknown;\n  headers?: Record<string, string>;\n  contentType?: string;\n};',
     'type HttpRequestOptions = RequestOptions & {\n  method?: string;\n  body?: unknown;\n  headers?: Record<string, string>;\n  contentType?: string;\n  credentialEntryBootstrap?: boolean;\n};',
+  );
+
+  const patchedBuildHeaders = `  protected buildHeaders(config: any, skipAuth = false): Record<string, string> {
+    const headers = super.buildHeaders(config, skipAuth);
+    if (config?.credentialEntryBootstrap) {
+      this.stripForbiddenCredentialEntryHeaders(headers);
+      this.applyCredentialEntryBootstrapAccessToken(headers);
+      return headers;
+    }
+    if (!skipAuth && !config?.skipAuth) {
+      return headers;
+    }
+
+    this.stripAllAuthHeaders(headers);
+    return headers;
+  }
+
+  private stripForbiddenCredentialEntryHeaders(headers: Record<string, string>): void {
+    [
+      'Authorization',
+      ['X', 'API', 'Key'].join('-'),
+      'X-Tenant-Id',
+      'X-Organization-Id',
+      'X-Platform',
+      'X-User-Id',
+      'X-Sdkwork-Tenant-Id',
+      'X-Sdkwork-Organization-Id',
+      'X-Sdkwork-User-Id',
+    ].forEach((key) => {
+      delete headers[key];
+    });
+  }
+
+  private stripAllAuthHeaders(headers: Record<string, string>): void {
+    [
+      HttpClient.ACCESS_TOKEN_HEADER,
+      'Authorization',
+      'Access-Token',
+      ['X', 'API', 'Key'].join('-'),
+      'X-Tenant-Id',
+      'X-Organization-Id',
+      'X-Platform',
+      'X-User-Id',
+      'X-Sdkwork-Tenant-Id',
+      'X-Sdkwork-Organization-Id',
+      'X-Sdkwork-User-Id',
+    ].forEach((key) => {
+      delete headers[key];
+    });
+  }`;
+
+  source = source.replace(
+    `  protected buildHeaders(config: any, skipAuth = false): Record<string, string> {
+    const headers = super.buildHeaders(config, skipAuth);
+    if (!skipAuth && !config?.skipAuth) {
+      return headers;
+    }
+
+    [
+      HttpClient.ACCESS_TOKEN_HEADER,
+      'Authorization',
+      'Access-Token',
+      ['X', 'API', 'Key'].join('-'),
+      'X-Tenant-Id',
+      'X-Organization-Id',
+      'X-Platform',
+      'X-User-Id',
+      'X-Sdkwork-Tenant-Id',
+      'X-Sdkwork-Organization-Id',
+      'X-Sdkwork-User-Id',
+    ].forEach((key) => {
+      delete headers[key];
+    });
+    this.applyCredentialEntryBootstrapAccessToken(headers);
+    return headers;
+  }`,
+    patchedBuildHeaders,
   );
 
   source = source.replace(
@@ -281,7 +358,7 @@ function patchHttpClient(clientPath) {
   source = source.replace(
     `    const { body, headers, contentType, method = 'GET', skipAuth, ...rest } = options;
     const requestHeaders = skipAuth ? headers : this.applySdkworkAuthHeaders(headers);
-    return withRetry(
+    const payload = await withRetry(
       () => execute.call(this, {
         url: path,
         method,
@@ -289,7 +366,10 @@ function patchHttpClient(clientPath) {
         skipAuth,
         body: this.buildRequestBody(body, contentType),
         headers: this.buildRequestHeaders(requestHeaders, body == null ? undefined : contentType),
-      }),`,
+      }),
+      { maxRetries: 3 }
+    );
+    return this.unwrapSdkworkV3Payload<T>(payload);`,
     `    const {
       body,
       headers,
@@ -304,7 +384,7 @@ function patchHttpClient(clientPath) {
       : skipAuth
         ? headers
         : this.applySdkworkAuthHeaders(headers);
-    return withRetry(
+    const payload = await withRetry(
       () => execute.call(this, {
         url: path,
         method,
@@ -313,7 +393,10 @@ function patchHttpClient(clientPath) {
         credentialEntryBootstrap,
         body: this.buildRequestBody(body, contentType),
         headers: this.buildRequestHeaders(requestHeaders, body == null ? undefined : contentType),
-      }),`,
+      }),
+      { maxRetries: 3 }
+    );
+    return this.unwrapSdkworkV3Payload<T>(payload);`,
   );
 
   source = source.replace(
@@ -352,6 +435,20 @@ function patchHttpClient(clientPath) {
   writeFileSync(clientPath, source, 'utf8');
 }
 
+function postRequestCallRegExp(appApiPathCallPattern) {
+  return new RegExp(
+    `return this\\.client\\.post<(?:Record<string, unknown>|[^>]+)>\\(${appApiPathCallPattern}, body, undefined, undefined, 'application/json'\\);`,
+    'u',
+  );
+}
+
+function getRequestCallRegExp(appApiPathCallPattern) {
+  return new RegExp(
+    `return this\\.client\\.get<(?:Record<string, unknown>|[^>]+)>\\(${appApiPathCallPattern}\\);`,
+    'u',
+  );
+}
+
 function patchApiFile(apiPath, operations, authMode) {
   let source = readFileSync(apiPath, 'utf8');
   const fileTag = path.basename(apiPath, '.ts');
@@ -371,29 +468,23 @@ function patchApiFile(apiPath, operations, authMode) {
 
     if (operation.method === 'POST') {
       source = source.replace(
-        new RegExp(
-          `return this\\.client\\.post<([^>]+)>\\((${appApiPathMatcher.source}), body, undefined, undefined, 'application/json'\\);`,
-          'u',
-        ),
-        `return this.client.request<$1>($2, { method: 'POST' as any, body, contentType: 'application/json', ${suppressionFlag} });`,
+        postRequestCallRegExp(`(${appApiPathMatcher.source})`),
+        `return this.client.request<Record<string, unknown>>($1, { method: 'POST' as any, body, contentType: 'application/json', ${suppressionFlag} });`,
+      );
+      source = source.replace(
+        postRequestCallRegExp(escapeRegExp(appApiPathCall)),
+        `return this.client.request<Record<string, unknown>>(${appApiPathCall}, { method: 'POST' as any, body, contentType: 'application/json', ${suppressionFlag} });`,
       );
       source = source.replace(
         new RegExp(
-          `return this\\.client\\.post<([^>]+)>\\(${escapedAppApiPathCall}, body, undefined, undefined, 'application/json'\\);`,
-          'u',
-        ),
-        `return this.client.request<$1>(${appApiPathCall}, { method: 'POST' as any, body, contentType: 'application/json', ${suppressionFlag} });`,
-      );
-      source = source.replace(
-        new RegExp(
-          `(return this\\.client\\.request<[^>]+>\\((${appApiPathMatcher.source}), \\{ method: 'POST' as any,[\\s\\S]*?)(credentialEntryBootstrap: true|skipAuth: true)`,
+          `(return this\\.client\\.request<Record<string, unknown>>\\((${appApiPathMatcher.source}), \\{ method: 'POST' as any,[\\s\\S]*?)(credentialEntryBootstrap: true|skipAuth: true)`,
           'u',
         ),
         `$1${suppressionFlag}`,
       );
       source = source.replace(
         new RegExp(
-          `(return this\\.client\\.request<[^>]+>\\(${escapedAppApiPathCall}, \\{ method: 'POST' as any,[\\s\\S]*?)(credentialEntryBootstrap: true|skipAuth: true)`,
+          `(return this\\.client\\.request<Record<string, unknown>>\\(${escapedAppApiPathCall}, \\{ method: 'POST' as any,[\\s\\S]*?)(credentialEntryBootstrap: true|skipAuth: true)`,
           'u',
         ),
         `$1${suppressionFlag}`,
@@ -403,29 +494,23 @@ function patchApiFile(apiPath, operations, authMode) {
 
     if (operation.method === 'GET') {
       source = source.replace(
-        new RegExp(
-          `return this\\.client\\.get<([^>]+)>\\((${appApiPathMatcher.source})\\);`,
-          'u',
-        ),
-        `return this.client.request<$1>($2, { method: 'GET' as any, ${suppressionFlag} });`,
+        getRequestCallRegExp(`(${appApiPathMatcher.source})`),
+        `return this.client.request<Record<string, unknown>>($1, { method: 'GET' as any, ${suppressionFlag} });`,
+      );
+      source = source.replace(
+        getRequestCallRegExp(escapeRegExp(appApiPathCall)),
+        `return this.client.request<Record<string, unknown>>(${appApiPathCall}, { method: 'GET' as any, ${suppressionFlag} });`,
       );
       source = source.replace(
         new RegExp(
-          `return this\\.client\\.get<([^>]+)>\\(${escapedAppApiPathCall}\\);`,
-          'u',
-        ),
-        `return this.client.request<$1>(${appApiPathCall}, { method: 'GET' as any, ${suppressionFlag} });`,
-      );
-      source = source.replace(
-        new RegExp(
-          `(return this\\.client\\.request<[^>]+>\\((${appApiPathMatcher.source}), \\{ method: 'GET' as any,[\\s\\S]*?)(credentialEntryBootstrap: true|skipAuth: true)`,
+          `(return this\\.client\\.request<Record<string, unknown>>\\((${appApiPathMatcher.source}), \\{ method: 'GET' as any,[\\s\\S]*?)(credentialEntryBootstrap: true|skipAuth: true)`,
           'u',
         ),
         `$1${suppressionFlag}`,
       );
       source = source.replace(
         new RegExp(
-          `(return this\\.client\\.request<[^>]+>\\(${escapedAppApiPathCall}, \\{ method: 'GET' as any,[\\s\\S]*?)(credentialEntryBootstrap: true|skipAuth: true)`,
+          `(return this\\.client\\.request<Record<string, unknown>>\\(${escapedAppApiPathCall}, \\{ method: 'GET' as any,[\\s\\S]*?)(credentialEntryBootstrap: true|skipAuth: true)`,
           'u',
         ),
         `$1${suppressionFlag}`,
@@ -433,7 +518,30 @@ function patchApiFile(apiPath, operations, authMode) {
     }
   }
 
+  source = repairGeneratedTransportCalls(source, suppressionFlag);
+
   writeFileSync(apiPath, source, 'utf8');
+}
+
+function repairGeneratedTransportCalls(source, suppressionFlag) {
+  const brokenRequestCall = new RegExp(
+    "return this\\.client\\.request<Record<string, unknown>>\\((appApiPath\\(`[\\s\\S]*?`\\)), body, undefined, undefined, 'application/json'\\);",
+    'gu',
+  );
+  const brokenPostCall = new RegExp(
+    "return this\\.client\\.post<Record<string, unknown>>\\((appApiPath\\(`[\\s\\S]*?`\\)), (\\{ method: 'POST' as any, body, contentType: 'application/json', (?:skipAuth: true|credentialEntryBootstrap: true) \\})\\);",
+    'gu',
+  );
+
+  return source
+    .replace(
+      brokenRequestCall,
+      `return this.client.request<Record<string, unknown>>($1, { method: 'POST' as any, body, contentType: 'application/json', ${suppressionFlag} });`,
+    )
+    .replace(
+      brokenPostCall,
+      'return this.client.request<Record<string, unknown>>($1, $2);',
+    );
 }
 
 if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}` || process.argv[1]?.endsWith('patch-iam-app-sdk-typescript-credential-entry-transport.mjs')) {

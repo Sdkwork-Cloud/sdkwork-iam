@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "@sdkwork/iam-open-sdk"
   },
-  "changeFingerprint": "9f536dff9c8a7f052e2f7c508c68aafc52c4d6fea107ff63de4e9349beb93965",
+  "changeFingerprint": "092292f737eee04431b57ba53ba44acbcbd42a8ff8208ad65737ee1d4c92235f",
   "changes": {
     "createdGeneratedFiles": [
       "bin/publish-core.mjs",
@@ -32,7 +32,6 @@
       "src/index.ts",
       "src/sdk.ts",
       "src/types/appbase-access-credential-create-command.ts",
-      "src/types/appbase-api-result.ts",
       "src/types/appbase-application-register-command.ts",
       "src/types/appbase-operation-command.ts",
       "src/types/appbase-session-create-command.ts",
@@ -42,7 +41,16 @@
       "src/types/common.ts",
       "src/types/field-error.ts",
       "src/types/index.ts",
+      "src/types/page-info.ts",
       "src/types/problem-detail.ts",
+      "src/types/sdk-work-api-response.ts",
+      "src/types/sdk-work-command-data.ts",
+      "src/types/sdk-work-command-response.ts",
+      "src/types/sdk-work-list-response.ts",
+      "src/types/sdk-work-page-data.ts",
+      "src/types/sdk-work-platform-error-code.ts",
+      "src/types/sdk-work-resource-data.ts",
+      "src/types/sdk-work-resource-response.ts",
       "tsconfig.json"
     ],
     "updatedGeneratedFiles": [],
@@ -83,7 +91,6 @@
         "area": "models",
         "paths": [
           "src/types/appbase-access-credential-create-command.ts",
-          "src/types/appbase-api-result.ts",
           "src/types/appbase-application-register-command.ts",
           "src/types/appbase-operation-command.ts",
           "src/types/appbase-session-create-command.ts",
@@ -93,7 +100,16 @@
           "src/types/common.ts",
           "src/types/field-error.ts",
           "src/types/index.ts",
-          "src/types/problem-detail.ts"
+          "src/types/page-info.ts",
+          "src/types/problem-detail.ts",
+          "src/types/sdk-work-api-response.ts",
+          "src/types/sdk-work-command-data.ts",
+          "src/types/sdk-work-command-response.ts",
+          "src/types/sdk-work-list-response.ts",
+          "src/types/sdk-work-page-data.ts",
+          "src/types/sdk-work-platform-error-code.ts",
+          "src/types/sdk-work-resource-data.ts",
+          "src/types/sdk-work-resource-response.ts"
         ]
       },
       {

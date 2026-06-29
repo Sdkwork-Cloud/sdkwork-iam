@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseApiResult, AppbaseOperationCommand, AppbaseSessionCreateCommand } from '../types';
+import type { AppbaseOperationCommand, AppbaseSessionCreateCommand } from '../types';
 
 
 export class AuthSessionsOrganizationSelectionApi {
@@ -13,8 +13,8 @@ export class AuthSessionsOrganizationSelectionApi {
 
 
 /** Sessions organization Selection create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(appApiPath(`/auth/sessions/organization_selection`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/sessions/organization_selection`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
 
@@ -27,8 +27,8 @@ export class AuthSessionsLoginContextSelectionApi {
 
 
 /** Sessions login Context Selection create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(appApiPath(`/auth/sessions/login_context_selection`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/sessions/login_context_selection`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
 
@@ -41,18 +41,18 @@ export class AuthSessionsCurrentApi {
 
 
 /** Sessions current delete. */
-  async delete(): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(appApiPath(`/auth/sessions/current`));
+  async delete(): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(appApiPath(`/auth/sessions/current`));
   }
 
 /** Sessions current retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(appApiPath(`/auth/sessions/current`));
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(appApiPath(`/auth/sessions/current`));
   }
 
 /** Sessions current update. */
-  async update(body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(appApiPath(`/auth/sessions/current`), body, undefined, undefined, 'application/json');
+  async update(body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(appApiPath(`/auth/sessions/current`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
 
@@ -71,13 +71,13 @@ export class AuthSessionsApi {
 
 
 /** Sessions create. */
-  async create(body: AppbaseSessionCreateCommand): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(appApiPath(`/auth/sessions`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(body: AppbaseSessionCreateCommand): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/sessions`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 
 /** Sessions refresh. */
-  async refresh(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(appApiPath(`/auth/sessions/refresh`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+  async refresh(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/sessions/refresh`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
   }
 }
 
@@ -90,8 +90,8 @@ export class AuthRegistrationsApi {
 
 
 /** Registrations create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(appApiPath(`/auth/registrations`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/registrations`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
 
@@ -104,8 +104,8 @@ export class AuthPasswordResetsApi {
 
 
 /** Password Resets create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(appApiPath(`/auth/password_resets`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/password_resets`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
 
@@ -118,8 +118,8 @@ export class AuthPasswordResetRequestsApi {
 
 
 /** Password Reset Requests create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(appApiPath(`/auth/password_reset_requests`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/password_reset_requests`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
 

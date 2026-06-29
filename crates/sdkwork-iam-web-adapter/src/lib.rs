@@ -5,6 +5,7 @@ mod application_registry;
 mod authorization_policy;
 mod dev_runtime;
 mod ephemeral_rate_limit;
+mod http_responses;
 mod iam_database_env;
 mod iam_session;
 mod oauth_authorization_server;
@@ -65,6 +66,7 @@ pub use application_registry::{
 pub use authorization_policy::IamAuthorizationPolicy;
 pub use dev_runtime::allows_dev_authentication_fallback;
 pub use ephemeral_rate_limit::{check_rate_limit, check_rate_limit_sqlite};
+pub use http_responses::{iam_api_error, iam_api_success, iam_wire_result_code};
 pub use iam_database_env::{bridge_iam_database_env_from_im, resolve_iam_postgres_pool_from_env};
 pub use iam_session::{
     resolve_iam_app_context_from_access_token, resolve_iam_app_context_from_auth_token,

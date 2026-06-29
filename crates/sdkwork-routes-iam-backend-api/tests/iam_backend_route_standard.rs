@@ -460,7 +460,8 @@ async fn backend_router_does_not_serve_demo_management_data_without_real_backend
             "{method} {path} must not be served by appbase demo backend: {body_text}"
         );
         assert_ne!(
-            "2000", payload["code"],
+            Some(0),
+            payload["code"].as_i64(),
             "{method} {path} must not return a success envelope without a real backend"
         );
         for forbidden in [

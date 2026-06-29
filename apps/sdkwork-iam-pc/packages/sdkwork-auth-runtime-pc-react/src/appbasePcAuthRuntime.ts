@@ -281,9 +281,10 @@ function resolveSessionAuthIntegrationOptions(
   options: CreateSdkworkAppbasePcAuthRuntimeOptions,
 ): CreateSdkworkSessionAuthUnauthorizedIntegrationOptions {
   const sessionAuth = options.sessionAuth;
-  const integrationOptions = sessionAuth === true || sessionAuth === undefined
-    ? {}
-    : sessionAuth;
+  const integrationOptions =
+    sessionAuth === true || sessionAuth === undefined || sessionAuth === false
+      ? {}
+      : sessionAuth;
 
   return {
     ...integrationOptions,

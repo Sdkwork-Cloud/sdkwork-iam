@@ -16,7 +16,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
       auth: {
         sessions: {
           create: vi.fn().mockResolvedValue({
-            code: "2000",
+            code: 0,
             msg: "SUCCESS",
             data: {
               accessToken: "access",
@@ -89,7 +89,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
     function retrieve(pathParams: { deviceAuthorizationId: string }) {
       retrieveCalls.push([pathParams]);
       return Promise.resolve({
-        code: "2000",
+        code: 0,
         msg: "SUCCESS",
         data: deviceAuthorization(pathParams.deviceAuthorizationId, "pending"),
       });
@@ -97,7 +97,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
     function createScan(pathParams: { deviceAuthorizationId: string }, body: Record<string, unknown>) {
       scanCalls.push([pathParams, body]);
       return Promise.resolve({
-        code: "2000",
+        code: 0,
         msg: "SUCCESS",
         data: {
           ...deviceAuthorization(pathParams.deviceAuthorizationId, "scanned"),
@@ -109,7 +109,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
     function createPassword(pathParams: { deviceAuthorizationId: string }, body: Record<string, unknown>) {
       passwordCalls.push([pathParams, body]);
       return Promise.resolve({
-        code: "2000",
+        code: 0,
         msg: "SUCCESS",
         data: {
           ...deviceAuthorization(pathParams.deviceAuthorizationId, "completed"),
@@ -129,7 +129,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
       oauth: {
         deviceAuthorizations: {
           create: vi.fn().mockResolvedValue({
-            code: "2000",
+            code: 0,
             msg: "SUCCESS",
             data: deviceAuthorization("device-authorization-1", "pending"),
           }),
@@ -208,13 +208,13 @@ describe("SDKWork IAM generated SDK adapters", () => {
       oauth: {
         deviceAuthorizations: {
           retrieve: vi.fn().mockImplementation((deviceAuthorizationId: string) => Promise.resolve({
-            code: "2000",
+            code: 0,
             msg: "SUCCESS",
             data: deviceAuthorization(deviceAuthorizationId, "pending"),
           })),
           scans: {
             create: vi.fn().mockImplementation((deviceAuthorizationId: string, body: Record<string, unknown>) => Promise.resolve({
-              code: "2000",
+              code: 0,
               msg: "SUCCESS",
               data: {
                 ...deviceAuthorization(deviceAuthorizationId, "scanned"),
@@ -225,7 +225,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
           },
           passwordCompletions: {
             create: vi.fn().mockImplementation((deviceAuthorizationId: string, body: Record<string, unknown>) => Promise.resolve({
-              code: "2000",
+              code: 0,
               msg: "SUCCESS",
               data: {
                 ...deviceAuthorization(deviceAuthorizationId, "completed"),
@@ -282,7 +282,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
   it("preserves class method this-binding for generated app SDK IAM resources", async () => {
     const transport = {
       request: vi.fn().mockImplementation((operation: string, payload?: unknown) => Promise.resolve({
-        code: "2000",
+        code: 0,
         msg: "SUCCESS",
         data: {
           operation,

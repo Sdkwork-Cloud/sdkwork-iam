@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@sdkwork/ui-pc-react";
-import type { SdkworkSessionAuthUnauthorizedDetail } from "../../sdkwork-auth-runtime-pc-react/src/sessionAuthUnauthorized.ts";
+import type { SdkworkSessionAuthUnauthorizedDetail } from "../../../sdkwork-auth-runtime-pc-react/src/sessionAuthUnauthorized.ts";
 
 export interface SdkworkSessionAuthRequiredDialogCopy {
   businessCodeLabel: string;

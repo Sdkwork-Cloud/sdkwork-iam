@@ -334,10 +334,21 @@ test("appbase app SDK generated credential suppression stays aligned across lang
 });
 
 test("open-api generated ingress operations stay anonymous and suppress stored credentials", () => {
+  const openApiAuthority = JSON.parse(read("apis/open-api/iam/sdkwork-iam-open-api.openapi.yaml"));
   const openApi = JSON.parse(read("sdks/sdkwork-iam-open-sdk/openapi/sdkwork-iam-open-api.sdkgen.yaml"));
   const oauthApi = read(
     "sdks/sdkwork-iam-open-sdk/sdkwork-iam-open-sdk-typescript/generated/server-openapi/src/api/iam-oauth.ts",
   );
+
+  const authorityAnonymousOperations = Object.entries(openApiAuthority.paths).flatMap(([apiPath, pathItem]) => (
+    Object.entries(pathItem)
+      .filter(([, operation]) => operation["x-sdkwork-auth-mode"] === "anonymous")
+      .map(([method, operation]) => ({
+        apiPath,
+        method: method.toUpperCase(),
+        operationId: operation.operationId,
+      }))
+  ));
 
   const anonymousOperations = Object.entries(openApi.paths).flatMap(([apiPath, pathItem]) => (
     Object.entries(pathItem)
@@ -355,30 +366,40 @@ test("open-api generated ingress operations stay anonymous and suppress stored c
   const authorizationServerOperations = anonymousOperations.filter((operation) => (
     !operation.apiPath.includes("/oauth/provider_callbacks/")
   ));
+  const authorityWellKnownOperations = Object.entries(openApiAuthority.paths)
+    .filter(([apiPath]) => apiPath.startsWith("/.well-known/"))
+    .flatMap(([apiPath, pathItem]) => (
+      Object.entries(pathItem).map(([method, operation]) => ({
+        apiPath,
+        method: method.toUpperCase(),
+        operationId: operation.operationId,
+      }))
+    ));
 
   assert.equal(providerCallbackOperations.length, 2, "open-api must expose two anonymous OAuth provider callback operations");
   assert.equal(
     authorizationServerOperations.length,
-    10,
-    "open-api must expose ten anonymous SDKWork OAuth authorization-server operations including well-known discovery routes",
+    8,
+    "open-api SDK input must expose eight anonymous SDKWork OAuth authorization-server operations under /iam/v3/api",
+  );
+  assert.equal(
+    authorityWellKnownOperations.length,
+    2,
+    "open-api authority must retain well-known OAuth discovery routes for runtime ingress",
   );
   assert.ok(
-    authorizationServerOperations.some((operation) => operation.apiPath.startsWith("/.well-known/")),
-    "anonymous authorization-server operations must include well-known discovery routes",
-  );
-  assert.ok(
-    authorizationServerOperations.every((operation) => (
-      operation.apiPath.startsWith("/iam/v3/api/")
-      || operation.apiPath.startsWith("/.well-known/")
+    authorityWellKnownOperations.every((operation) => (
+      openApiAuthority.paths?.[operation.apiPath]?.get?.["x-sdkwork-wire-protocol"] === "external"
     )),
-    "anonymous authorization-server operations must stay under IAM open-api or well-known discovery routes",
+    "well-known discovery routes must declare x-sdkwork-wire-protocol: external on the API authority",
   );
   assert.ok(
-    anonymousOperations.every((operation) => (
-      operation.apiPath.startsWith("/iam/v3/api/")
-      || operation.apiPath.startsWith("/.well-known/")
-    )),
-    "anonymous open-api operations must stay under the IAM open-api prefix or well-known discovery routes",
+    authorizationServerOperations.every((operation) => operation.apiPath.startsWith("/iam/v3/api/")),
+    "anonymous authorization-server SDK operations must stay under /iam/v3/api",
+  );
+  assert.ok(
+    anonymousOperations.every((operation) => operation.apiPath.startsWith("/iam/v3/api/")),
+    "anonymous open-api SDK operations must stay under the IAM open-api prefix",
   );
   assert.match(
     oauthApi,

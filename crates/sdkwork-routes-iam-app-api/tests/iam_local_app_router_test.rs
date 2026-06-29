@@ -428,7 +428,8 @@ async fn complete_auth_session_data_with_access_token(
             .await;
             let selection_body = read_json(selection_response).await;
             assert_eq!(
-                selection_body["code"], "2000",
+                selection_body["code"].as_i64(),
+                Some(0),
                 "login context selection failed: {selection_body}"
             );
             data = selection_body["data"].clone();
@@ -458,7 +459,11 @@ async fn create_bootstrap_login_session(app: &axum::Router) -> serde_json::Value
     let status = response.status();
     let body = read_json(response).await;
     assert_eq!(status, StatusCode::OK, "password login failed: {body}");
-    assert_eq!(body["code"], "2000", "password login rejected: {body}");
+    assert_eq!(
+        body["code"].as_i64(),
+        Some(0),
+        "password login rejected: {body}"
+    );
 
     complete_auth_session_data(
         app,
@@ -578,7 +583,7 @@ async fn local_app_router_issues_tokens_from_persisted_user_without_env_runtime_
 
     assert_eq!(response.status(), StatusCode::OK);
     let body = read_json(response).await;
-    assert_eq!(body["code"], "2000");
+    assert_eq!(body["code"].as_i64(), Some(0));
     assert_eq!(body["data"]["context"]["tenantId"], seeded_tenant_id);
     assert!(body["data"]["authToken"].is_string());
     assert!(body["data"]["accessToken"].is_string());
@@ -700,18 +705,18 @@ async fn local_app_router_error_responses_emit_unique_request_ids() {
 
     let first_body = read_json(first).await;
     let second_body = read_json(second).await;
-    let first_request_id = first_body["requestId"]
+    let first_request_id = first_body["traceId"]
         .as_str()
-        .expect("first error response must include requestId");
-    let second_request_id = second_body["requestId"]
+        .expect("first error response must include traceId");
+    let second_request_id = second_body["traceId"]
         .as_str()
-        .expect("second error response must include requestId");
+        .expect("second error response must include traceId");
 
     assert!(!first_request_id.trim().is_empty());
     assert!(!second_request_id.trim().is_empty());
     assert_ne!(
         first_request_id, second_request_id,
-        "local IAM responses must emit unique requestId values instead of a fixed placeholder"
+        "local IAM responses must emit unique traceId values instead of a fixed placeholder"
     );
 }
 
@@ -729,7 +734,7 @@ async fn local_app_router_reports_deployment_runtime_without_identity_injection(
 
     assert_eq!(response.status(), StatusCode::OK);
     let body = read_json(response).await;
-    assert_eq!(body["code"], "2000");
+    assert_eq!(body["code"].as_i64(), Some(0));
     assert_eq!(body["data"]["deploymentMode"], "saas");
     assert_eq!(body["data"]["runtime"], "embedded");
     assert_eq!(body["data"]["mode"], "private");
@@ -760,7 +765,7 @@ async fn local_app_router_serves_oauth_device_authorization_creation() {
 
     assert_eq!(response.status(), StatusCode::OK);
     let body = read_json(response).await;
-    assert_eq!(body["code"], "2000");
+    assert_eq!(body["code"].as_i64(), Some(0));
     assert_eq!(body["data"]["status"], "pending");
     assert_eq!(body["data"]["type"], "login");
     let session_key = body["data"]["sessionKey"]
@@ -841,7 +846,7 @@ async fn local_app_router_does_not_emit_oauth_device_display_copy() {
 
     assert_eq!(response.status(), StatusCode::OK);
     let body = read_json(response).await;
-    assert_eq!(body["code"], "2000");
+    assert_eq!(body["code"].as_i64(), Some(0));
     assert!(body["data"]["title"].is_null());
     assert!(body["data"]["description"].is_null());
 }
@@ -909,7 +914,7 @@ async fn local_app_router_serves_password_login_with_app_context() {
 
     assert_eq!(refresh_response.status(), StatusCode::OK);
     let refresh_body = read_json(refresh_response).await;
-    assert_eq!(refresh_body["code"], "2000");
+    assert_eq!(refresh_body["code"].as_i64(), Some(0));
     let refreshed_session_id = refresh_body["data"]["sessionId"]
         .as_str()
         .expect("refresh should return a session id");
@@ -977,7 +982,7 @@ async fn local_app_router_requires_login_context_selection_for_multi_membership_
 
     assert_eq!(login_response.status(), StatusCode::OK);
     let login_body = read_json(login_response).await;
-    assert_eq!(login_body["code"], "2000");
+    assert_eq!(login_body["code"].as_i64(), Some(0));
     assert_eq!(
         login_body["data"]["challengeType"],
         "LOGIN_CONTEXT_SELECTION"
@@ -1012,7 +1017,7 @@ async fn local_app_router_requires_login_context_selection_for_multi_membership_
 
     assert_eq!(selection_response.status(), StatusCode::OK);
     let selection_body = read_json(selection_response).await;
-    assert_eq!(selection_body["code"], "2000");
+    assert_eq!(selection_body["code"].as_i64(), Some(0));
     assert_eq!(
         selection_body["data"]["context"]["organizationId"],
         "org_secondary"
@@ -1046,7 +1051,7 @@ async fn local_app_router_requires_login_context_selection_for_single_membership
 
     assert_eq!(login_response.status(), StatusCode::OK);
     let login_body = read_json(login_response).await;
-    assert_eq!(login_body["code"], "2000");
+    assert_eq!(login_body["code"].as_i64(), Some(0));
     assert_eq!(
         login_body["data"]["challengeType"],
         "LOGIN_CONTEXT_SELECTION"
@@ -1102,7 +1107,7 @@ async fn local_app_router_personal_login_via_login_context_selection() {
 
     assert_eq!(selection_response.status(), StatusCode::OK);
     let selection_body = read_json(selection_response).await;
-    assert_eq!(selection_body["code"], "2000");
+    assert_eq!(selection_body["code"].as_i64(), Some(0));
     assert_eq!(selection_body["data"]["context"]["loginScope"], "TENANT");
     assert_eq!(selection_body["data"]["context"]["organizationId"], "0");
     assert!(selection_body["data"]["authToken"].as_str().is_some());
@@ -1147,7 +1152,7 @@ async fn local_app_router_direct_tenant_login_when_only_platform_organization_me
     .await;
     assert_eq!(login_response.status(), StatusCode::OK);
     let login_body = read_json(login_response).await;
-    assert_eq!(login_body["code"], "2000");
+    assert_eq!(login_body["code"].as_i64(), Some(0));
     assert!(login_body["data"]["authToken"].as_str().is_some());
     assert!(login_body["data"]["accessToken"].as_str().is_some());
     assert_eq!(login_body["data"]["context"]["loginScope"], "TENANT");
@@ -1335,7 +1340,7 @@ async fn local_app_router_rejects_wrong_bootstrap_password() {
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     let body = read_json(response).await;
-    assert_eq!(body["code"], "iam_invalid_credentials");
+    assert_eq!(body["code"].as_i64(), Some(40103));
     assert!(body["data"].is_null());
     assert!(!body.to_string().contains("wrong-password"));
 }
@@ -1557,7 +1562,7 @@ async fn local_app_router_does_not_synthesize_missing_contact_identity() {
         StatusCode::UNAUTHORIZED
     );
     let generated_email_body = read_json(generated_email_login_response).await;
-    assert_eq!(generated_email_body["code"], "iam_invalid_credentials");
+    assert_eq!(generated_email_body["code"].as_i64(), Some(40103));
 }
 
 #[tokio::test]
@@ -1587,7 +1592,7 @@ async fn local_app_router_serves_directory_records_from_registered_local_store()
 
     assert_eq!(register_response.status(), StatusCode::OK);
     let register_body = read_json(register_response).await;
-    assert_eq!(register_body["code"], "2000");
+    assert_eq!(register_body["code"].as_i64(), Some(0));
     let session_data =
         complete_auth_session_data(&app, register_body["data"].clone(), "TENANT", None).await;
     let auth_token = session_data["authToken"]
@@ -1611,7 +1616,7 @@ async fn local_app_router_serves_directory_records_from_registered_local_store()
     .await;
     assert_eq!(organizations_response.status(), StatusCode::FORBIDDEN);
     let organizations_body = read_json(organizations_response).await;
-    assert_eq!(organizations_body["code"], "iam_permission_forbidden");
+    assert_eq!(organizations_body["code"].as_i64(), Some(40301));
 
     let memberships_response = request_json_with_auth(
         &app,
@@ -1624,7 +1629,7 @@ async fn local_app_router_serves_directory_records_from_registered_local_store()
     .await;
     assert_eq!(memberships_response.status(), StatusCode::OK);
     let memberships_body = read_json(memberships_response).await;
-    assert_eq!(memberships_body["code"], "2000");
+    assert_eq!(memberships_body["code"].as_i64(), Some(0));
     let memberships = response_items(&memberships_body);
     assert_eq!(memberships.len(), 1);
     let _organization_id = memberships[0]["organizationId"]
@@ -1646,7 +1651,7 @@ async fn local_app_router_serves_directory_records_from_registered_local_store()
     .await;
     assert_eq!(departments_response.status(), StatusCode::FORBIDDEN);
     let departments_body = read_json(departments_response).await;
-    assert_eq!(departments_body["code"], "iam_permission_forbidden");
+    assert_eq!(departments_body["code"].as_i64(), Some(40301));
 }
 
 async fn assert_database_dual_token_resolution(auth_token: &str, access_token: &str, label: &str) {
@@ -1703,7 +1708,7 @@ async fn local_app_router_owner_reads_directory_records_from_local_store() {
         StatusCode::OK,
         "organizations response: {organizations_body}"
     );
-    assert_eq!(organizations_body["code"], "2000");
+    assert_eq!(organizations_body["code"].as_i64(), Some(0));
     let organizations = response_items(&organizations_body);
     assert_eq!(organizations.len(), 1);
     assert_eq!(organizations[0]["tenantId"], tenant_id);
@@ -1723,7 +1728,7 @@ async fn local_app_router_owner_reads_directory_records_from_local_store() {
     .await;
     assert_eq!(organization_tree_response.status(), StatusCode::OK);
     let organization_tree_body = read_json(organization_tree_response).await;
-    assert_eq!(organization_tree_body["code"], "2000");
+    assert_eq!(organization_tree_body["code"].as_i64(), Some(0));
     let organization_tree = response_items(&organization_tree_body);
     assert_eq!(organization_tree.len(), 1);
     assert_eq!(organization_tree[0]["organizationId"], organization_id);
@@ -1739,7 +1744,7 @@ async fn local_app_router_owner_reads_directory_records_from_local_store() {
     .await;
     assert_eq!(memberships_response.status(), StatusCode::OK);
     let memberships_body = read_json(memberships_response).await;
-    assert_eq!(memberships_body["code"], "2000");
+    assert_eq!(memberships_body["code"].as_i64(), Some(0));
     let memberships = response_items(&memberships_body);
     assert_eq!(memberships.len(), 1);
     assert_eq!(memberships[0]["organizationId"], organization_id);
@@ -1760,7 +1765,7 @@ async fn local_app_router_owner_reads_directory_records_from_local_store() {
     .await;
     assert_eq!(departments_response.status(), StatusCode::OK);
     let departments_body = read_json(departments_response).await;
-    assert_eq!(departments_body["code"], "2000");
+    assert_eq!(departments_body["code"].as_i64(), Some(0));
     let departments = response_items(&departments_body);
     assert_eq!(departments.len(), 1);
     assert_eq!(departments[0]["organizationId"], organization_id);
@@ -1779,7 +1784,7 @@ async fn local_app_router_owner_reads_directory_records_from_local_store() {
     .await;
     assert_eq!(department_assignments_response.status(), StatusCode::OK);
     let department_assignments_body = read_json(department_assignments_response).await;
-    assert_eq!(department_assignments_body["code"], "2000");
+    assert_eq!(department_assignments_body["code"].as_i64(), Some(0));
     let department_assignments = response_items(&department_assignments_body);
     assert_eq!(department_assignments.len(), 1);
     assert_eq!(department_assignments[0]["userId"], user_id);
@@ -1798,7 +1803,7 @@ async fn local_app_router_owner_reads_directory_records_from_local_store() {
     .await;
     assert_eq!(positions_response.status(), StatusCode::OK);
     let positions_body = read_json(positions_response).await;
-    assert_eq!(positions_body["code"], "2000");
+    assert_eq!(positions_body["code"].as_i64(), Some(0));
     let positions = response_items(&positions_body);
     assert_eq!(positions.len(), 1);
     let position_id = positions[0]["positionId"]
@@ -1818,7 +1823,7 @@ async fn local_app_router_owner_reads_directory_records_from_local_store() {
     .await;
     assert_eq!(position_assignments_response.status(), StatusCode::OK);
     let position_assignments_body = read_json(position_assignments_response).await;
-    assert_eq!(position_assignments_body["code"], "2000");
+    assert_eq!(position_assignments_body["code"].as_i64(), Some(0));
     let position_assignments = response_items(&position_assignments_body);
     assert_eq!(position_assignments.len(), 1);
     assert_eq!(position_assignments[0]["positionId"], position_id);
@@ -1836,7 +1841,7 @@ async fn local_app_router_owner_reads_directory_records_from_local_store() {
     .await;
     assert_eq!(role_bindings_response.status(), StatusCode::OK);
     let role_bindings_body = read_json(role_bindings_response).await;
-    assert_eq!(role_bindings_body["code"], "2000");
+    assert_eq!(role_bindings_body["code"].as_i64(), Some(0));
     let role_bindings = response_items(&role_bindings_body);
     assert!(
         !role_bindings.is_empty(),
@@ -1878,7 +1883,7 @@ async fn local_app_router_updates_current_session_organization_context() {
     .await;
     assert_eq!(update_response.status(), StatusCode::OK);
     let update_body = read_json(update_response).await;
-    assert_eq!(update_body["code"], "2000");
+    assert_eq!(update_body["code"].as_i64(), Some(0));
     assert_eq!(update_body["data"]["sessionId"], session_id);
     assert_eq!(
         update_body["data"]["context"]["organizationId"],
@@ -1952,7 +1957,7 @@ async fn local_app_router_current_session_switches_to_personal_login_scope() {
         StatusCode::OK,
         "personal login scope switch failed: {update_body}"
     );
-    assert_eq!(update_body["code"], "2000");
+    assert_eq!(update_body["code"].as_i64(), Some(0));
     assert_eq!(update_body["data"]["context"]["loginScope"], "TENANT");
     assert_eq!(update_body["data"]["context"]["organizationId"], "0");
     let updated_auth_token = update_body["data"]["authToken"]
@@ -2681,7 +2686,7 @@ async fn local_app_router_oauth_device_password_completion_requires_organization
 
     assert_eq!(password_response.status(), StatusCode::OK);
     let password_body = read_json(password_response).await;
-    assert_eq!(password_body["code"], "2000");
+    assert_eq!(password_body["code"].as_i64(), Some(0));
     assert_eq!(
         password_body["data"]["status"],
         "login_context_selection_required"
@@ -3671,7 +3676,7 @@ async fn local_app_router_rejects_cross_tenant_duplicate_account_without_bootstr
     .await;
     assert_eq!(login_response.status(), StatusCode::UNAUTHORIZED);
     let login_body = read_json(login_response).await;
-    assert_eq!(login_body["code"], "iam_invalid_credentials");
+    assert_eq!(login_body["code"].as_i64(), Some(40103));
 
     let scoped_login_response = request_json_with_auth(
         &app,
@@ -3697,7 +3702,7 @@ async fn local_app_router_rejects_cross_tenant_duplicate_account_without_bootstr
     .await;
     assert_eq!(scoped_login_response.status(), StatusCode::OK);
     let scoped_login_body = read_json(scoped_login_response).await;
-    assert_eq!(scoped_login_body["code"], "2000");
+    assert_eq!(scoped_login_body["code"].as_i64(), Some(0));
     assert_eq!(
         scoped_login_body["data"]["context"]["tenantId"],
         SECONDARY_TENANT_ID
@@ -3884,7 +3889,7 @@ async fn local_app_router_supports_current_user_contact_binding_and_unbind() {
     .await;
     assert_eq!(current_response.status(), StatusCode::OK);
     let current_body = read_json(current_response).await;
-    assert_eq!(current_body["code"], "2000");
+    assert_eq!(current_body["code"].as_i64(), Some(0));
     assert!(current_body["data"]["emailVerified"].is_boolean());
     assert!(current_body["data"]["phoneVerified"].is_boolean());
 
@@ -3905,7 +3910,7 @@ async fn local_app_router_supports_current_user_contact_binding_and_unbind() {
     .await;
     assert_eq!(bind_email_response.status(), StatusCode::OK);
     let bind_email_body = read_json(bind_email_response).await;
-    assert_eq!(bind_email_body["code"], "2000");
+    assert_eq!(bind_email_body["code"].as_i64(), Some(0));
     assert_eq!(
         bind_email_body["data"]["email"],
         "bound-user@sdkwork-iam.test"
@@ -3929,7 +3934,7 @@ async fn local_app_router_supports_current_user_contact_binding_and_unbind() {
     .await;
     assert_eq!(bind_phone_response.status(), StatusCode::OK);
     let bind_phone_body = read_json(bind_phone_response).await;
-    assert_eq!(bind_phone_body["code"], "2000");
+    assert_eq!(bind_phone_body["code"].as_i64(), Some(0));
     assert_eq!(bind_phone_body["data"]["phone"], "13800138000");
     assert_eq!(bind_phone_body["data"]["phoneVerified"], true);
 

@@ -1,7 +1,6 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseApiResult } from '../types';
 
 
 export class SystemIamVerificationPolicyApi {
@@ -13,8 +12,8 @@ export class SystemIamVerificationPolicyApi {
 
 
 /** Iam verification Policy retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(appApiPath(`/system/iam/verification_policy`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/verification_policy`), { method: 'GET' as any, skipAuth: true });
   }
 }
 
@@ -27,8 +26,8 @@ export class SystemIamRuntimeApi {
 
 
 /** Iam runtime retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(appApiPath(`/system/iam/runtime`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/runtime`), { method: 'GET' as any, skipAuth: true });
   }
 }
 
@@ -41,8 +40,8 @@ export class SystemIamAccountBindingPolicyApi {
 
 
 /** Iam account Binding Policy retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(appApiPath(`/system/iam/account_binding_policy`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/account_binding_policy`), { method: 'GET' as any, skipAuth: true });
   }
 }
 

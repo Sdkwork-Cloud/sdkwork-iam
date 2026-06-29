@@ -14,7 +14,7 @@ describe("sdkwork-user-pc-react service", () => {
     const client = {
       notification: {
         getNotificationSettings: async () => ({
-          code: "2000",
+          code: 0,
           data: {
             enableEmail: true,
             enableInApp: true,
@@ -37,7 +37,7 @@ describe("sdkwork-user-pc-react service", () => {
         users: {
           current: {
             retrieve: async () => ({
-              code: "2000",
+              code: 0,
               data: {
                 avatar,
                 displayName: "Sdkwork Operator",

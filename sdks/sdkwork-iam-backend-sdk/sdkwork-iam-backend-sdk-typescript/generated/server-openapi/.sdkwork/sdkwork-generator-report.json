@@ -12,7 +12,7 @@
   "mode": "apply",
   "hasChanges": true,
   "hasDestructiveChanges": false,
-  "changeFingerprint": "adda14990d40daeeb4a07cbcb00af3bf0ec887bbb57b18c75a7875a3d0a3db3e",
+  "changeFingerprint": "46dfbeb4f9c0e5516cf474341f019f45a2a452c81f3cd5b4255af96e32e10142",
   "changeImpact": {
     "schemaVersion": 1,
     "areas": [
@@ -42,7 +42,6 @@
         "area": "models",
         "paths": [
           "src/types/appbase-access-credential-create-command.ts",
-          "src/types/appbase-api-result.ts",
           "src/types/appbase-application-register-command.ts",
           "src/types/appbase-operation-command.ts",
           "src/types/appbase-session-create-command.ts",
@@ -52,7 +51,16 @@
           "src/types/common.ts",
           "src/types/field-error.ts",
           "src/types/index.ts",
-          "src/types/problem-detail.ts"
+          "src/types/page-info.ts",
+          "src/types/problem-detail.ts",
+          "src/types/sdk-work-api-response.ts",
+          "src/types/sdk-work-command-data.ts",
+          "src/types/sdk-work-command-response.ts",
+          "src/types/sdk-work-list-response.ts",
+          "src/types/sdk-work-page-data.ts",
+          "src/types/sdk-work-platform-error-code.ts",
+          "src/types/sdk-work-resource-data.ts",
+          "src/types/sdk-work-resource-response.ts"
         ]
       },
       {
@@ -220,21 +228,21 @@
     "localVersions": []
   },
   "stats": {
-    "totalFiles": 35,
-    "models": 10,
+    "totalFiles": 43,
+    "models": 18,
     "apis": 2,
-    "types": 12
+    "types": 20
   },
   "warnings": [],
   "syncSummary": {
     "dryRun": false,
     "controlPlaneEnabled": true,
-    "writtenFiles": 35,
+    "writtenFiles": 43,
     "skippedScaffoldFiles": 0,
     "skippedUnchangedGeneratedFiles": 0,
     "deletedGeneratedFiles": 0,
     "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
-    "changeFingerprint": "adda14990d40daeeb4a07cbcb00af3bf0ec887bbb57b18c75a7875a3d0a3db3e",
+    "changeFingerprint": "46dfbeb4f9c0e5516cf474341f019f45a2a452c81f3cd5b4255af96e32e10142",
     "changes": {
       "createdGeneratedFiles": [
         "bin/publish-core.mjs",
@@ -258,7 +266,6 @@
         "src/index.ts",
         "src/sdk.ts",
         "src/types/appbase-access-credential-create-command.ts",
-        "src/types/appbase-api-result.ts",
         "src/types/appbase-application-register-command.ts",
         "src/types/appbase-operation-command.ts",
         "src/types/appbase-session-create-command.ts",
@@ -268,7 +275,16 @@
         "src/types/common.ts",
         "src/types/field-error.ts",
         "src/types/index.ts",
+        "src/types/page-info.ts",
         "src/types/problem-detail.ts",
+        "src/types/sdk-work-api-response.ts",
+        "src/types/sdk-work-command-data.ts",
+        "src/types/sdk-work-command-response.ts",
+        "src/types/sdk-work-list-response.ts",
+        "src/types/sdk-work-page-data.ts",
+        "src/types/sdk-work-platform-error-code.ts",
+        "src/types/sdk-work-resource-data.ts",
+        "src/types/sdk-work-resource-response.ts",
         "tsconfig.json"
       ],
       "updatedGeneratedFiles": [],
@@ -310,7 +326,6 @@
           "area": "models",
           "paths": [
             "src/types/appbase-access-credential-create-command.ts",
-            "src/types/appbase-api-result.ts",
             "src/types/appbase-application-register-command.ts",
             "src/types/appbase-operation-command.ts",
             "src/types/appbase-session-create-command.ts",
@@ -320,7 +335,16 @@
             "src/types/common.ts",
             "src/types/field-error.ts",
             "src/types/index.ts",
-            "src/types/problem-detail.ts"
+            "src/types/page-info.ts",
+            "src/types/problem-detail.ts",
+            "src/types/sdk-work-api-response.ts",
+            "src/types/sdk-work-command-data.ts",
+            "src/types/sdk-work-command-response.ts",
+            "src/types/sdk-work-list-response.ts",
+            "src/types/sdk-work-page-data.ts",
+            "src/types/sdk-work-platform-error-code.ts",
+            "src/types/sdk-work-resource-data.ts",
+            "src/types/sdk-work-resource-response.ts"
           ]
         },
         {

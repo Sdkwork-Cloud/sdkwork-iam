@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseApiResult, AppbaseOperationCommand } from '../types';
+import type { AppbaseOperationCommand, PageInfo } from '../types';
 
 
 export class IamUsersCurrentPhoneBindingsApi {
@@ -13,13 +13,13 @@ export class IamUsersCurrentPhoneBindingsApi {
 
 
 /** Users current phone Bindings delete. */
-  async delete(): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(appApiPath(`/iam/users/current/phone_bindings`));
+  async delete(): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(appApiPath(`/iam/users/current/phone_bindings`));
   }
 
 /** Users current phone Bindings create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(appApiPath(`/iam/users/current/phone_bindings`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(appApiPath(`/iam/users/current/phone_bindings`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -32,8 +32,8 @@ export class IamUsersCurrentPasswordApi {
 
 
 /** Users current password update. */
-  async update(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(appApiPath(`/iam/users/current/password`), body, undefined, undefined, 'application/json');
+  async update(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(appApiPath(`/iam/users/current/password`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -46,13 +46,13 @@ export class IamUsersCurrentEmailBindingsApi {
 
 
 /** Users current email Bindings delete. */
-  async delete(): Promise<AppbaseApiResult> {
-    return this.client.delete<AppbaseApiResult>(appApiPath(`/iam/users/current/email_bindings`));
+  async delete(): Promise<Record<string, unknown>> {
+    return this.client.delete<Record<string, unknown>>(appApiPath(`/iam/users/current/email_bindings`));
   }
 
 /** Users current email Bindings create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.post<AppbaseApiResult>(appApiPath(`/iam/users/current/email_bindings`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(appApiPath(`/iam/users/current/email_bindings`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -71,13 +71,13 @@ export class IamUsersCurrentApi {
 
 
 /** Users current retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(appApiPath(`/iam/users/current`));
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(appApiPath(`/iam/users/current`));
   }
 
 /** Users current update. */
-  async update(body?: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.patch<AppbaseApiResult>(appApiPath(`/iam/users/current`), body, undefined, undefined, 'application/json');
+  async update(body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(appApiPath(`/iam/users/current`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -109,7 +109,7 @@ export class IamRoleBindingsApi {
 
 
 /** Role Bindings list. */
-  async list(params?: IamRoleBindingsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamRoleBindingsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -117,7 +117,7 @@ export class IamRoleBindingsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(appApiPath(`/iam/role_bindings`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/role_bindings`), query));
   }
 }
 
@@ -138,7 +138,7 @@ export class IamPositionsApi {
 
 
 /** Positions list. */
-  async list(params?: IamPositionsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamPositionsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -146,7 +146,7 @@ export class IamPositionsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(appApiPath(`/iam/positions`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/positions`), query));
   }
 }
 
@@ -167,7 +167,7 @@ export class IamPositionAssignmentsApi {
 
 
 /** Position Assignments list. */
-  async list(params?: IamPositionAssignmentsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamPositionAssignmentsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -175,7 +175,7 @@ export class IamPositionAssignmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(appApiPath(`/iam/position_assignments`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/position_assignments`), query));
   }
 }
 
@@ -188,8 +188,8 @@ export class IamOrganizationsTreeApi {
 
 
 /** Organizations tree retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(appApiPath(`/iam/organizations/tree`));
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(appApiPath(`/iam/organizations/tree`));
   }
 }
 
@@ -212,7 +212,7 @@ export class IamOrganizationsApi {
 
 
 /** Organizations list. */
-  async list(params?: IamOrganizationsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamOrganizationsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -220,7 +220,7 @@ export class IamOrganizationsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(appApiPath(`/iam/organizations`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/organizations`), query));
   }
 }
 
@@ -241,7 +241,7 @@ export class IamOrganizationMembershipsApi {
 
 
 /** Organization Memberships list. */
-  async list(params?: IamOrganizationMembershipsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamOrganizationMembershipsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -249,7 +249,7 @@ export class IamOrganizationMembershipsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(appApiPath(`/iam/organization_memberships`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/organization_memberships`), query));
   }
 }
 
@@ -262,8 +262,8 @@ export class IamDepartmentsTreeApi {
 
 
 /** Departments tree retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.get<AppbaseApiResult>(appApiPath(`/iam/departments/tree`));
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(appApiPath(`/iam/departments/tree`));
   }
 }
 
@@ -286,7 +286,7 @@ export class IamDepartmentsApi {
 
 
 /** Departments list. */
-  async list(params?: IamDepartmentsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamDepartmentsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -294,7 +294,7 @@ export class IamDepartmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(appApiPath(`/iam/departments`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/departments`), query));
   }
 }
 
@@ -315,7 +315,7 @@ export class IamDepartmentAssignmentsApi {
 
 
 /** Department Assignments list. */
-  async list(params?: IamDepartmentAssignmentsListParams): Promise<AppbaseApiResult> {
+  async list(params?: IamDepartmentAssignmentsListParams): Promise<Record<string, unknown>> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -323,7 +323,7 @@ export class IamDepartmentAssignmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<AppbaseApiResult>(appendQueryString(appApiPath(`/iam/department_assignments`), query));
+    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/department_assignments`), query));
   }
 }
 

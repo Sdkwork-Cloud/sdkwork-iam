@@ -2,6 +2,11 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveIamBackendOperationPermission } from './iam-backend-operation-permissions.mjs';
+import {
+  isCreateOperation,
+  sdkWorkEnvelopeComponentSchemas,
+  successResponseSchemaRef,
+} from '../../../sdkwork-specs/tools/lib/openapi-envelope-schemas.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const iamRoot = resolve(__dirname, '../..');
@@ -94,6 +99,11 @@ const publicBackendBootstrapOperationIds = new Set([
   'accessCredentials.create',
 ]);
 
+const openApiExternalWireOperations = {
+  'iam.oauth.wellKnown.authorizationServerMetadata.retrieve': 'oauth-authorization-server-metadata',
+  'iam.oauth.wellKnown.openidConfiguration.retrieve': 'oidc-discovery',
+};
+
 const credentialHeaderForbiddenAppOperationIds = new Set([
   'sessions.create',
   'sessions.loginContextSelection.create',
@@ -132,7 +142,9 @@ export async function materializeAppbaseV3OpenApiBoundaries() {
 
   await writeSurfaceOpenApi(surfaces.app, appRoutes);
   await writeSurfaceOpenApi(surfaces.backend, backendRoutes);
-  await writeSurfaceOpenApi(surfaces.open, openRoutes);
+  await writeSurfaceOpenApi(surfaces.open, openRoutes, {
+    sdkRoutes: openRoutes.filter((route) => !openApiExternalWireOperations[route.operationId]),
+  });
 
   console.log(`Materialized ${appRoutes.length} app-api operations.`);
   console.log(`Materialized ${backendRoutes.length} backend-api operations.`);
@@ -148,7 +160,11 @@ if (isDirectExecution()) {
   const { patchIamAppSdkTypescriptCredentialEntryTransport } = await import(
     './patch-iam-app-sdk-typescript-credential-entry-transport.mjs'
   );
+  const { patchIamOpenSdkTypescriptV3Unwrap } = await import(
+    './patch-iam-open-sdk-typescript-v3-unwrap.mjs'
+  );
   patchIamAppSdkTypescriptCredentialEntryTransport();
+  patchIamOpenSdkTypescriptV3Unwrap();
 }
 
 async function collectRoutes() {
@@ -204,8 +220,10 @@ function selectOpenRoutes(routes) {
     .sort(compareRoutes);
 }
 
-async function writeSurfaceOpenApi(surface, routes) {
+async function writeSurfaceOpenApi(surface, routes, options = {}) {
+  const sdkRoutes = options.sdkRoutes ?? routes;
   const authority = buildOpenApi(surface, routes);
+  const sdkAuthority = sdkRoutes === routes ? authority : buildOpenApi(surface, sdkRoutes);
   const familyRoot = resolve(iamRoot, 'sdks', surface.familyName);
   const openapiRoot = resolve(familyRoot, 'openapi');
   const apisSurfaceRoot = resolve(
@@ -221,12 +239,13 @@ async function writeSurfaceOpenApi(surface, routes) {
   const sdkgenPath = resolve(openapiRoot, `${surface.authorityName}.sdkgen.yaml`);
   const flutterSdkgenPath = resolve(openapiRoot, `${surface.authorityName}.flutter.sdkgen.yaml`);
   const apisAuthorityPath = resolve(apisSurfaceRoot, `${surface.authorityName}.openapi.yaml`);
-  const content = `${JSON.stringify(authority, null, 2)}\n`;
+  const apisContent = `${JSON.stringify(authority, null, 2)}\n`;
+  const sdkContent = `${JSON.stringify(sdkAuthority, null, 2)}\n`;
 
-  await writeFile(authorityPath, content, 'utf8');
-  await writeFile(sdkgenPath, content, 'utf8');
-  await writeFile(flutterSdkgenPath, content, 'utf8');
-  await writeFile(apisAuthorityPath, content, 'utf8');
+  await writeFile(authorityPath, sdkContent, 'utf8');
+  await writeFile(sdkgenPath, sdkContent, 'utf8');
+  await writeFile(flutterSdkgenPath, sdkContent, 'utf8');
+  await writeFile(apisAuthorityPath, apisContent, 'utf8');
 }
 
 function buildOpenApi(surface, routes) {
@@ -348,20 +367,31 @@ function materializedFromSources(surface) {
 
 function buildOperation(surface, route) {
   const authMode = operationAuthMode(surface, route);
+  const successSchemaRef = successResponseSchemaRef(route);
+  const responses = {
+    400: problemResponse('Bad request'),
+    401: problemResponse('Unauthorized'),
+    403: problemResponse('Forbidden'),
+    404: problemResponse('Not found'),
+    409: problemResponse('Conflict'),
+    422: problemResponse('Unprocessable entity'),
+    429: problemResponse('Too many requests'),
+    500: problemResponse('Internal server error'),
+    503: problemResponse('Service unavailable'),
+  };
+
+  if (isCreateOperation(route)) {
+    responses[201] = jsonResponse('Created', successSchemaRef);
+  } else {
+    responses[200] = jsonResponse('Success', successSchemaRef);
+  }
+
   const operation = {
     tags: [route.tag],
     summary: `${toTitle(route.operationId)}.`,
     operationId: route.operationId,
     parameters: extractPathParameters(route.path),
-    responses: {
-      200: jsonResponse('Success', '#/components/schemas/AppbaseApiResult'),
-      400: problemResponse('Bad request'),
-      401: problemResponse('Unauthorized'),
-      403: problemResponse('Forbidden'),
-      404: problemResponse('Not found'),
-      409: problemResponse('Conflict'),
-      500: problemResponse('Internal server error'),
-    },
+    responses,
     security: resolveOperationSecurity(surface, route),
     'x-sdkwork-auth-mode': authMode,
     'x-sdkwork-forbid-credential-headers': operationForbidsCredentialHeaders(surface, route),
@@ -400,6 +430,18 @@ function buildOperation(surface, route) {
       queryParameter('sort', { type: 'string' }),
       queryParameter('q', { type: 'string' }),
     );
+  }
+
+  const externalProtocolId = openApiExternalWireOperations[route.operationId];
+  if (externalProtocolId) {
+    operation['x-sdkwork-wire-protocol'] = 'external';
+    operation['x-sdkwork-external-protocol-id'] = externalProtocolId;
+    operation['x-sdkwork-auth-mode'] = 'compatibility';
+    responses[200] = jsonResponse('Success', {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Upstream OAuth/OIDC discovery metadata document.',
+    });
   }
 
   return operation;
@@ -458,24 +500,7 @@ function buildSchemas() {
   const bootstrapAuth = bootstrapBodyAuthProperties();
 
   return {
-    AppbaseApiResult: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['code', 'message', 'requestId', 'data'],
-      properties: {
-        code: { type: 'string' },
-        message: { type: 'string' },
-        requestId: {
-          type: 'string',
-          format: 'uuid',
-          description: 'Server-owned request correlation id.',
-        },
-        data: {
-          type: 'object',
-          additionalProperties: true,
-        },
-      },
-    },
+    ...sdkWorkEnvelopeComponentSchemas,
     AppbaseOperationCommand: {
       type: 'object',
       additionalProperties: true,
@@ -608,39 +633,6 @@ function buildSchemas() {
         tenantApplicationId: { type: 'string' },
         appId: { type: 'string' },
         instanceKey: { type: 'string' },
-      },
-    },
-    ProblemDetail: {
-      type: 'object',
-      additionalProperties: true,
-      required: ['type', 'title', 'status'],
-      properties: {
-        type: { type: 'string', format: 'uri-reference' },
-        title: { type: 'string' },
-        status: { type: 'integer', minimum: 100, maximum: 599 },
-        detail: { type: 'string' },
-        instance: { type: 'string' },
-        code: { type: 'string' },
-        traceId: { type: 'string' },
-        requestId: {
-          type: 'string',
-          format: 'uuid',
-          description: 'Server-owned request correlation id.',
-        },
-        errors: {
-          type: 'array',
-          items: { $ref: '#/components/schemas/FieldError' },
-        },
-      },
-    },
-    FieldError: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['field', 'message'],
-      properties: {
-        field: { type: 'string' },
-        message: { type: 'string' },
-        code: { type: 'string' },
       },
     },
   };

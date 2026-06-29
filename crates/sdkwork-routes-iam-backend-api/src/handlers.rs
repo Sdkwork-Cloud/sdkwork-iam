@@ -11,7 +11,7 @@ use axum::{
 use sdkwork_iam_database_host;
 use sdkwork_iam_web_adapter::{
     account_binding_policy_to_json, enable_tenant_application, ensure_actor_tenant_scope,
-    ensure_bootstrap_permission, issue_delegated_access_credential,
+    ensure_bootstrap_permission, iam_api_error, iam_api_success, issue_delegated_access_credential,
     issued_access_credential_to_json, load_account_binding_policy,
     parse_access_credential_create_request, parse_account_binding_policy,
     parse_application_register_command, parse_tenant_application_provision_command,
@@ -756,25 +756,9 @@ fn read_required_string(body: &Value, keys: &[&str]) -> Result<String, String> {
 }
 
 pub(crate) fn appbase_ok(data: Value) -> Response {
-    (
-        StatusCode::OK,
-        Json(json!({
-            "code": 0,
-            "data": data,
-            "message": "ok",
-        })),
-    )
-        .into_response()
+    iam_api_success(data)
 }
 
 pub(crate) fn appbase_error(status: StatusCode, code: &str, message: &str) -> Response {
-    (
-        status,
-        Json(json!({
-            "code": code,
-            "data": Value::Null,
-            "message": message,
-        })),
-    )
-        .into_response()
+    iam_api_error(status, code, message)
 }

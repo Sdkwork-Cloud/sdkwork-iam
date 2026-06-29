@@ -1,7 +1,7 @@
 import { customApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseApiResult, AppbaseOperationCommand } from '../types';
+import type { AppbaseOperationCommand } from '../types';
 
 
 export class IamOauthIamOauthOpenidConfigurationApi {
@@ -13,8 +13,8 @@ export class IamOauthIamOauthOpenidConfigurationApi {
 
 
 /** Iam oauth openid Configuration retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(customApiPath(`/system/oauth/openid_configuration`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/system/oauth/openid_configuration`), { method: 'GET' as any, skipAuth: true });
   }
 }
 
@@ -27,8 +27,8 @@ export class IamOauthIamOauthAuthorizationServerMetadataApi {
 
 
 /** Iam oauth authorization Server Metadata retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(customApiPath(`/system/oauth/authorization_server_metadata`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/system/oauth/authorization_server_metadata`), { method: 'GET' as any, skipAuth: true });
   }
 }
 
@@ -41,8 +41,8 @@ export class IamOauthIamOauthUserinfoApi {
 
 
 /** Iam oauth userinfo retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(customApiPath(`/oauth/userinfo`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/userinfo`), { method: 'GET' as any, skipAuth: true });
   }
 }
 
@@ -55,8 +55,8 @@ export class IamOauthIamOauthTokenApi {
 
 
 /** Iam oauth token create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(customApiPath(`/oauth/token`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/token`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
   }
 }
 
@@ -69,8 +69,8 @@ export class IamOauthIamOauthRevokeApi {
 
 
 /** Iam oauth revoke create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(customApiPath(`/oauth/revoke`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/revoke`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
   }
 }
 
@@ -83,13 +83,13 @@ export class IamOauthIamOauthProviderCallbacksApi {
 
 
 /** Iam oauth provider Callbacks handle Get. */
-  async handleGet(callbackPublicId: string): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(customApiPath(`/oauth/provider_callbacks/${serializePathParameter(callbackPublicId, { name: 'callbackPublicId', style: 'simple', explode: false })}`), { method: 'GET' as any, skipAuth: true });
+  async handleGet(callbackPublicId: string): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/provider_callbacks/${serializePathParameter(callbackPublicId, { name: 'callbackPublicId', style: 'simple', explode: false })}`), { method: 'GET' as any, skipAuth: true });
   }
 
 /** Iam oauth provider Callbacks handle Post. */
-  async handlePost(callbackPublicId: string, body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(customApiPath(`/oauth/provider_callbacks/${serializePathParameter(callbackPublicId, { name: 'callbackPublicId', style: 'simple', explode: false })}`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+  async handlePost(callbackPublicId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/provider_callbacks/${serializePathParameter(callbackPublicId, { name: 'callbackPublicId', style: 'simple', explode: false })}`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
   }
 }
 
@@ -102,8 +102,8 @@ export class IamOauthIamOauthJwksApi {
 
 
 /** Iam oauth jwks retrieve. */
-  async retrieve(): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(customApiPath(`/oauth/jwks`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/jwks`), { method: 'GET' as any, skipAuth: true });
   }
 }
 
@@ -116,8 +116,8 @@ export class IamOauthIamOauthIntrospectApi {
 
 
 /** Iam oauth introspect create. */
-  async create(body: AppbaseOperationCommand): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(customApiPath(`/oauth/introspect`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/introspect`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
   }
 }
 
@@ -130,8 +130,8 @@ export class IamOauthIamOauthAuthorizeApi {
 
 
 /** Iam oauth authorize handle Get. */
-  async handleGet(): Promise<AppbaseApiResult> {
-    return this.client.request<AppbaseApiResult>(customApiPath(`/oauth/authorize`), { method: 'GET' as any, skipAuth: true });
+  async handleGet(): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/authorize`), { method: 'GET' as any, skipAuth: true });
   }
 }
 

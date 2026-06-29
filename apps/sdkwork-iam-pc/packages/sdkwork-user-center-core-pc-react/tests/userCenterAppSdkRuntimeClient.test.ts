@@ -11,16 +11,16 @@ describe("user-center app SDK runtime client", () => {
       auth: {
         sessions: {
           create: vi.fn().mockResolvedValue({
-            code: "2000",
+            code: 0,
             data: {
               accessToken: "access-token",
               authToken: "auth-token",
             },
           }),
-          refresh: vi.fn().mockResolvedValue({ code: "2000", data: { accessToken: "next-access" } }),
+          refresh: vi.fn().mockResolvedValue({ code: 0, data: { accessToken: "next-access" } }),
           current: {
-            delete: vi.fn().mockResolvedValue({ code: "2000", data: true }),
-            retrieve: vi.fn().mockResolvedValue({ code: "2000", data: { tenantId: "100001" } }),
+            delete: vi.fn().mockResolvedValue({ code: 0, data: true }),
+            retrieve: vi.fn().mockResolvedValue({ code: 0, data: { tenantId: "100001" } }),
             update: vi.fn(),
           },
         },
@@ -29,14 +29,14 @@ describe("user-center app SDK runtime client", () => {
         users: {
           current: {
             retrieve: vi.fn().mockResolvedValue({
-              code: "2000",
+              code: 0,
               data: {
                 displayName: "Sdkwork Operator",
                 id: "1",
               },
             }),
             update: vi.fn().mockResolvedValue({
-              code: "2000",
+              code: 0,
               data: {
                 displayName: "Updated Operator",
                 id: "1",

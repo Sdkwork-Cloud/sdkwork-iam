@@ -255,7 +255,7 @@ async fn login_oauth_e2e_session(app: &axum::Router) -> Value {
         .expect("oauth e2e login request");
     assert_eq!(response.status(), StatusCode::OK, "oauth e2e login failed");
     let body = read_json(response).await;
-    assert_eq!(body["code"], "2000");
+    assert_eq!(body["code"].as_i64(), Some(0));
     body["data"].clone()
 }
 

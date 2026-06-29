@@ -1420,7 +1420,7 @@ describe("sdkwork-auth-pc-react service", () => {
       auth: {
         sessions: {
           create: vi.fn().mockResolvedValue({
-            code: "2000",
+            code: 0,
             data: {
               accessToken: mockAccessToken("access-token-1"),
               authToken: mockAuthToken("auth-token-1"),
@@ -1437,7 +1437,7 @@ describe("sdkwork-auth-pc-react service", () => {
         users: {
           current: {
             retrieve: vi.fn().mockResolvedValue({
-              code: "2000",
+              code: 0,
               data: {
                 avatar: authAvatar,
                 email: "sdkwork@sdkwork.ai",
@@ -3648,7 +3648,7 @@ describe("sdkwork-auth-pc-react service", () => {
 
   it("accepts sdkwork-router QR password completion envelopes with completed status and embedded session", async () => {
     const create = vi.fn().mockResolvedValue({
-      code: "2000",
+      code: 0,
       msg: "SUCCESS",
       data: {
         id: "qr_auth_session_f87f5a94c62a69b471a71faaa0922b9e",
@@ -3729,7 +3729,7 @@ describe("sdkwork-auth-pc-react service", () => {
 
   it("does not treat legacy QR token field as an authenticated browser session", async () => {
     const create = vi.fn().mockResolvedValue({
-      code: "2000",
+      code: 0,
       data: {
         sessionKey: "legacy-token-session",
         status: "completed",

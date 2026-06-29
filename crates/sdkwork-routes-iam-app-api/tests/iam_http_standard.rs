@@ -839,8 +839,7 @@ async fn anonymous_login_route_does_not_require_framework_credentials() {
         status,
         "invalid login credentials should reach IAM business validation: {body_text}"
     );
-    assert_eq!(
-        payload["code"], "iam_invalid_credentials",
+    assert_eq!(payload["code"].as_i64(), Some(40103),
         "login must not fail with framework missing-credentials before IAM business validation: {body_text}"
     );
 }
@@ -918,7 +917,8 @@ async fn app_router_does_not_seed_default_local_credentials() {
         "default local credentials must not create an app IAM session: {body_text}"
     );
     assert_ne!(
-        "2000", payload["code"],
+        Some(0),
+        payload["code"].as_i64(),
         "default local credentials must not create a success envelope"
     );
 }
@@ -1046,7 +1046,7 @@ async fn app_directory_routes_require_real_session_context() {
             status,
             "{path} must not return local directory fixture data without a session: {body_text}"
         );
-        assert_ne!("2000", payload["code"], "{path}");
+        assert_ne!(Some(0), payload["code"].as_i64(), "{path}");
         assert!(
             !body_text.contains("user_local_default"),
             "{path} must not expose local directory fixture users: {body_text}"
@@ -1090,7 +1090,7 @@ async fn authenticated_app_directory_routes_read_registered_local_store() {
         registration_status,
         "registration should create a local session for auth-only IAM runtime coverage: {registration_body}"
     );
-    assert_eq!("2000", registration["code"]);
+    assert_eq!(0, registration["code"].as_i64().unwrap());
     let session_data = resolve_session_data_after_auth_response(
         router.clone(),
         registration["data"].clone(),
@@ -1126,7 +1126,8 @@ async fn authenticated_app_directory_routes_read_registered_local_store() {
             "{path} must read the registered user's local IAM directory store: {body_text}"
         );
         assert_eq!(
-            "2000", payload["code"],
+            payload["code"].as_i64(),
+            Some(0),
             "{path} must return the standard success envelope for authenticated local directory reads"
         );
         assert!(
@@ -1178,7 +1179,8 @@ async fn authenticated_app_directory_routes_read_registered_local_store() {
             "{path} must reject registered members without directory read permissions: {body_text}"
         );
         assert_eq!(
-            "iam_permission_forbidden", payload["code"],
+            Some(40301),
+            payload["code"].as_i64(),
             "{path} must return the standard permission error for registered members"
         );
     }
@@ -1236,7 +1238,8 @@ async fn resolve_session_data_after_auth_response(
                 "login context selection should complete registered member session: {body_text}"
             );
             assert_eq!(
-                "2000", payload["code"],
+                payload["code"].as_i64(),
+                Some(0),
                 "login context selection should succeed for registered member session"
             );
             data = payload["data"].clone();

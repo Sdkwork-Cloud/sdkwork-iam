@@ -20,6 +20,7 @@ export interface IamLoginContextOrganizationChoice {
   name?: string;
   organizationId: string;
   tenantId?: string;
+  [key: string]: unknown;
 }
 
 export interface IamLoginContextSelectionChallenge {

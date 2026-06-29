@@ -94,7 +94,7 @@ describe("canonical user-center runtime bridge", () => {
           refresh: vi.fn(),
           current: {
             delete: vi.fn(),
-            retrieve: vi.fn().mockResolvedValue({ code: "2000", data: { tenantId: "100001" } }),
+            retrieve: vi.fn().mockResolvedValue({ code: 0, data: { tenantId: "100001" } }),
             update: vi.fn(),
           },
         },
@@ -102,7 +102,7 @@ describe("canonical user-center runtime bridge", () => {
       iam: {
         users: {
           current: {
-            retrieve: vi.fn().mockResolvedValue({ code: "2000", data: { id: "profile-1" } }),
+            retrieve: vi.fn().mockResolvedValue({ code: 0, data: { id: "profile-1" } }),
             update: vi.fn(),
           },
         },
