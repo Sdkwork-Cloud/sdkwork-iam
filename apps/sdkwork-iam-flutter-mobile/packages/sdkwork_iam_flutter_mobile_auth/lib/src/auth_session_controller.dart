@@ -1,3 +1,5 @@
+import 'package:sdkwork_iam_flutter_mobile_core/sdkwork_iam_flutter_mobile_core.dart';
+
 import 'login_context.dart';
 
 class IamFlutterMobileAuthSession {
@@ -137,12 +139,5 @@ class IamFlutterMobileAuthSessionController {
     );
   }
 
-  static String? _optionalString(Object? value) {
-    if (value == null) {
-      return null;
-    }
-
-    final normalized = value.toString().trim();
-    return normalized.isEmpty ? null : normalized;
-  }
+  static String? _optionalString(Object? value) => sdkworkNormalizeOptionalString(value);
 }

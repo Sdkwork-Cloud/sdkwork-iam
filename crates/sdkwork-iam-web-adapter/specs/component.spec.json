@@ -9,7 +9,7 @@
     "root": "sdkwork-iam/crates/sdkwork-iam-web-adapter",
     "domain": "iam",
     "capability": "web-adapter",
-    "status": "standardizing",
+    "status": "standard",
     "languages": [
       "rust"
     ],

@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseOperationCommand, PageInfo } from '../types';
+import type { AppbaseOperationCommand, SdkWorkPageData } from '../types';
 
 
 export class IamUsersCurrentPhoneBindingsApi {
@@ -109,7 +109,7 @@ export class IamRoleBindingsApi {
 
 
 /** Role Bindings list. */
-  async list(params?: IamRoleBindingsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamRoleBindingsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -117,7 +117,7 @@ export class IamRoleBindingsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/role_bindings`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/role_bindings`), query));
   }
 }
 
@@ -138,7 +138,7 @@ export class IamPositionsApi {
 
 
 /** Positions list. */
-  async list(params?: IamPositionsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamPositionsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -146,7 +146,7 @@ export class IamPositionsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/positions`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/positions`), query));
   }
 }
 
@@ -167,7 +167,7 @@ export class IamPositionAssignmentsApi {
 
 
 /** Position Assignments list. */
-  async list(params?: IamPositionAssignmentsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamPositionAssignmentsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -175,7 +175,7 @@ export class IamPositionAssignmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/position_assignments`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/position_assignments`), query));
   }
 }
 
@@ -212,7 +212,7 @@ export class IamOrganizationsApi {
 
 
 /** Organizations list. */
-  async list(params?: IamOrganizationsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOrganizationsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -220,7 +220,7 @@ export class IamOrganizationsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/organizations`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/organizations`), query));
   }
 }
 
@@ -241,7 +241,7 @@ export class IamOrganizationMembershipsApi {
 
 
 /** Organization Memberships list. */
-  async list(params?: IamOrganizationMembershipsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOrganizationMembershipsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -249,7 +249,7 @@ export class IamOrganizationMembershipsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/organization_memberships`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/organization_memberships`), query));
   }
 }
 
@@ -286,7 +286,7 @@ export class IamDepartmentsApi {
 
 
 /** Departments list. */
-  async list(params?: IamDepartmentsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamDepartmentsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -294,7 +294,7 @@ export class IamDepartmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/departments`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/departments`), query));
   }
 }
 
@@ -315,7 +315,7 @@ export class IamDepartmentAssignmentsApi {
 
 
 /** Department Assignments list. */
-  async list(params?: IamDepartmentAssignmentsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamDepartmentAssignmentsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -323,7 +323,7 @@ export class IamDepartmentAssignmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/iam/department_assignments`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/department_assignments`), query));
   }
 }
 

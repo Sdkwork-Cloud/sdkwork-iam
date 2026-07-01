@@ -1,3 +1,5 @@
+import { isBlank, trim } from "@sdkwork/utils";
+
 export function resolveIamBackendOperationPermission(operationId: string): string | undefined {
   const explicit = explicitBootstrapPermission(operationId);
   if (explicit) {
@@ -184,9 +186,9 @@ function permissionCode(resource: IamResource, action: IamAction): string {
 }
 
 export function permissionMatches(granted: string, required: string): boolean {
-  const normalizedGranted = granted.trim().toLowerCase();
-  const normalizedRequired = required.trim().toLowerCase();
-  if (!normalizedGranted || !normalizedRequired) {
+  const normalizedGranted = trim(granted).toLowerCase();
+  const normalizedRequired = trim(required).toLowerCase();
+  if (isBlank(normalizedGranted) || isBlank(normalizedRequired)) {
     return false;
   }
   if (normalizedGranted === "*" || normalizedGranted === normalizedRequired) {

@@ -15,7 +15,7 @@
     ],
     "generated": false,
     "private": true,
-    "status": "standardizing",
+    "status": "standard",
     "manifests": [
       "packages/sdkwork-iam-h5-core/package.json"
     ]
@@ -37,7 +37,15 @@
       "purpose": "OAuth runtime discovery and auth metadata rules."
     }
   ],
-  "contracts": {
-    "dependencyComposition": "specs/dependency.composition.json"
-  }
+  "integration": {
+    "utils": "H5 controller and screen packages use @sdkwork/utils for trim and isBlank.",
+    "sdkPolicy": "Controllers consume @sdkwork/iam-service over generated app SDK clients; no raw HTTP."
+  },
+  "verification": {
+    "commands": [
+      "pnpm run typecheck",
+      "pnpm run test:iam-standard-contracts"
+    ]
+  },
+  "contracts": {}
 }

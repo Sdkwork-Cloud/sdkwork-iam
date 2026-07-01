@@ -2,14 +2,14 @@
 
 Status: active
 Owner: SDKWork maintainers
-Updated: 2026-06-25
-Specs: IAM_SPEC.md, ENGINEERING_WORKFLOW_SPEC.md, DOCUMENTATION_SPEC.md, ARCHITECTURE_DECISION_SPEC.md
+Updated: 2026-06-30
+Specs: IAM_SPEC.md, WEB_FRAMEWORK_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, API_SPEC.md
 
 ## 1. Architecture Overview
 
 `sdkwork-iam` is the authoritative IAM domain repository. It owns authentication, authorization, tenants, organizations, users, sessions, IMF module federation, IAM HTTP/RPC contracts, IAM database modules, and generated IAM SDK families.
 
-`sdkwork-appbase` retains platform foundation only. IAM consumers must depend on this repository rather than duplicated IAM sources in appbase.
+`sdkwork-appbase` retains platform foundation only. IAM consumers depend on this repository rather than duplicated IAM sources in appbase.
 
 ## 2. System Boundaries
 
@@ -25,29 +25,43 @@ Specs: IAM_SPEC.md, ENGINEERING_WORKFLOW_SPEC.md, DOCUMENTATION_SPEC.md, ARCHITE
 | H5 surface | `apps/sdkwork-iam-h5/` |
 | Flutter surface | `apps/sdkwork-iam-flutter-mobile/` |
 
-## 3. API And SDK Ownership
+## 3. Platform Integration
+
+| Framework | Integration |
+| --- | --- |
+| sdkwork-web-framework | `sdkwork-iam-web-adapter` + route crates (app/backend/open-api) |
+| sdkwork-database | `sdkwork-iam-database-host` lifecycle SPI + `database/` module |
+| sdkwork-utils | `sdkwork-utils-rust` (Rust) + `@sdkwork/utils` (TypeScript) |
+| sdkwork-discovery | Deferred until runnable IAM RPC servers ship |
+| sdkwork-drive | Required when avatar/media upload surfaces are added |
+
+## 4. API And SDK Ownership
 
 - IAM app-api, backend-api, open-api, and RPC authorities are owned here.
-- Generated SDK families include `sdkwork-iam-app-sdk`, `sdkwork-iam-backend-sdk`, and `sdkwork-iam-open-sdk`.
+- Generated SDK families: `sdkwork-iam-app-sdk`, `sdkwork-iam-backend-sdk`, `sdkwork-iam-open-sdk`.
 - Login/session creation remains app-api owned per `IAM_LOGIN_INTEGRATION_SPEC.md`.
+- Business HTTP responses use `SdkWorkApiResponse`; OAuth authorization-server wire uses `x-sdkwork-wire-protocol: external`.
 
-## 4. Security And Data
+## 5. Deployment
 
-- IAM tables use the `iam_` prefix.
-- Tenant signing secrets and credential-entry flows follow `IAM_SPEC.md` and `SECURITY_SPEC.md`.
-- IMF registry manifests live under `iam/registry/`.
+- Gateway assembly: `crates/sdkwork-iam-gateway-assembly/` (mounts `/healthz`, `/livez`, `/readyz`, `/metrics` once via `sdkwork-web-bootstrap`)
+- Deploy manifest: `deployments/deploy.yaml`
+- Topology: `specs/topology.spec.json`
+- Local runbook: `deployments/runbooks/local-iam-rust.md`
 
-## 5. Verification
+## 6. Verification
 
 ```powershell
 cd E:\sdkwork-space\sdkwork-iam
-cargo test --workspace
-pnpm install
-pnpm verify
+pnpm run verify
 ```
 
-## 6. Related Docs
+`pnpm verify` runs structure, database, composition, API envelope, gateway assembly, typecheck, API materialize, governance, and Rust workspace tests.
+
+CI (`.github/workflows/iam-quality-gate.yml`) runs `pnpm check`, `pnpm test:governance-node`, `pnpm test:iam-standard-contracts`, and `pnpm test:rust-workspace` on every push and pull request. PostgreSQL integration suites run when a profile is present locally; CI runs the governed non-Postgres Rust surface plus HTTP route standards.
+
+## 7. Related Docs
 
 - [docs/README.md](../../README.md)
+- [docs/IAM_INTEGRATION.md](../../IAM_INTEGRATION.md)
 - [../sdkwork-specs/IAM_SPEC.md](../../../sdkwork-specs/IAM_SPEC.md)
-- [../sdkwork-specs/IAM_LOGIN_INTEGRATION_SPEC.md](../../../sdkwork-specs/IAM_LOGIN_INTEGRATION_SPEC.md)

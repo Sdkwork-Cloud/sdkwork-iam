@@ -44,7 +44,7 @@ Read `../sdkwork-specs/SOUL.md` before executing tasks in this root.
 
 Run commands from this directory:
 
-- `pnpm run verify`: structure, database, IAM bootstrap, typecheck, API materialize, governance
+- `pnpm run verify`: structure, database, composition, API envelope, gateway assembly, typecheck, API materialize, governance, Rust workspace tests
 - `pnpm run test:iam-standard-contracts`: IAM contract suite
 - `cargo test --workspace`: Rust IAM crate tests
 - `pnpm run db:migrate`: IAM database migrations via `sdkwork-iam-db`
@@ -82,29 +82,3 @@ node <sdkwork-specs>/tools/check-api-response-envelope.mjs --workspace <workspac
 ```
 
 Authority: `sdkwork-specs/API_SPEC.md` section 4.5 and sections 14–16, `SDK_SPEC.md` section 4.2, `FRONTEND_SPEC.md`, `MIGRATION_SPEC.md` section 4.2.
-
-## HTTP API Response Envelope
-
-All L2+ `app-api`, `backend-api`, and SDKWork-owned `open-api` success JSON bodies `MUST` use `SdkWorkResponse` from `API_SPEC.md` §15:
-
-- Envelope: `{ "data": <payload>, "requestId": "<server-uuid>" }`
-- Single resource: `data.item`
-- Lists: `data.items` + `data.pageInfo` (`PageInfo.mode` is `offset` or `cursor`)
-- Commands: `data.accepted` plus optional `resourceId` / `status`
-- Async accept (`202`): `data.operationId`, `data.status`, optional `pollUrl`
-
-Errors `MUST` use HTTP 4xx/5xx with `application/problem+json` (`ProblemDetail`). Business failures `MUST NOT` use HTTP 2xx with `success`, `code`, or `message`.
-
-Forbidden legacy envelopes: `PlusApiResult`, `AppbaseApiResult`, `StoreApiResult`, per-domain `*ApiResult`, bare domain DTOs at the HTTP root, and top-level `{ items, pageInfo, requestId }` without `data`.
-
-Handlers `MUST` serialize success and map errors through `sdkwork-web-framework` response mapping. Do not hand-build envelopes in controllers or route handlers.
-
-Generated HTTP SDKs (`--standard-profile sdkwork-v3`) unwrap `data` by default; use `.raw` only when correlation headers or the full envelope are required.
-
-Before completing API contract or handler work, run:
-
-```bash
-node <sdkwork-specs>/tools/check-api-response-envelope.mjs --workspace <workspace-root>
-```
-
-Authority: `sdkwork-specs/API_SPEC.md` §15–§16, `WEB_FRAMEWORK_SPEC.md`, `SDK_SPEC.md` §4.1, `MIGRATION_SPEC.md` §API Response Envelope Migration.

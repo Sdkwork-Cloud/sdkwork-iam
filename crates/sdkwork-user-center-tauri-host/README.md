@@ -4,7 +4,7 @@ Domain: iam
 Capability: user-center
 Package type: tauri-host
 Rust crate import: `sdkwork_user_center_tauri_host`
-Status: standardizing
+Status: standard
 
 SDKWork User Center Tauri Host is an SDKWork Rust workspace crate.
 

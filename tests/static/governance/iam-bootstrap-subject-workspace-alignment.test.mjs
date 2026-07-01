@@ -239,11 +239,17 @@ test("claw web bridge maps canonical tenant id from web request context", async 
 
 test("all workspace app manifests with backend section declare canonical tenant scope", async () => {
   const { readdir, readFile: readFileFs } = await import("node:fs/promises");
-  const skipDirs = new Set(["node_modules", "dist", ".git", "target"]);
+  const skipDirs = new Set(["node_modules", "dist", ".git", "target", ".runtime", "external"]);
   const violations = [];
 
   async function walk(dir) {
-    const entries = await readdir(dir, { withFileTypes: true });
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch (error) {
+      if (error?.code === "ENOENT" || error?.code === "ENOTDIR") return;
+      throw error;
+    }
     for (const entry of entries) {
       if (skipDirs.has(entry.name)) continue;
       const fullPath = path.join(dir, entry.name);

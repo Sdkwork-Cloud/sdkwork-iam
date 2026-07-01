@@ -100,6 +100,7 @@ test("IAM standard contracts plan runs governed app-api HTTP and OAuth AS integr
   assert.ok(appRouterPlans.some((command) => command.args.includes("iam_http_standard")));
   if (iamPostgresProfileAvailable(appbaseRoot)) {
     assert.ok(appRouterPlans.some((command) => command.args.includes("oauth_authorization_server_integration")));
+    assert.ok(appRouterPlans.some((command) => command.args.includes("iam_local_app_router_test")));
   } else {
     assert.equal(appRouterPlans.length, 1);
   }

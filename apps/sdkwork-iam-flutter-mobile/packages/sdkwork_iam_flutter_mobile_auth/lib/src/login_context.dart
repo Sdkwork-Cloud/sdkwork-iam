@@ -1,17 +1,19 @@
+import 'package:sdkwork_iam_flutter_mobile_core/sdkwork_iam_flutter_mobile_core.dart';
+
 const String iamPlatformOrganizationId = '0';
 
 bool isIamPlatformOrganizationId(String value) {
-  return value.trim() == iamPlatformOrganizationId;
+  return sdkworkTrim(value) == iamPlatformOrganizationId;
 }
 
 bool isIamLoginEligibleOrganizationId(String value) {
-  final normalized = value.trim();
+  final normalized = sdkworkTrim(value);
   return normalized.isNotEmpty && !isIamPlatformOrganizationId(normalized);
 }
 
 Map<String, String> buildPersonalLoginContextSelectionBody(String continuationToken) {
   return {
-    'continuationToken': continuationToken.trim(),
+    'continuationToken': sdkworkTrim(continuationToken),
     'loginScope': 'TENANT',
     'organizationId': iamPlatformOrganizationId,
   };
@@ -21,13 +23,13 @@ Map<String, String> buildOrganizationLoginContextSelectionBody(
   String continuationToken,
   String organizationId,
 ) {
-  final normalizedOrganizationId = organizationId.trim();
+  final normalizedOrganizationId = sdkworkTrim(organizationId);
   if (!isIamLoginEligibleOrganizationId(normalizedOrganizationId)) {
     throw ArgumentError('organization id is required for organization login');
   }
 
   return {
-    'continuationToken': continuationToken.trim(),
+    'continuationToken': sdkworkTrim(continuationToken),
     'loginScope': 'ORGANIZATION',
     'organizationId': normalizedOrganizationId,
   };
@@ -129,11 +131,4 @@ bool isIamLoginContextSelectionPayload(Map<String, dynamic> payload) {
   return parseIamLoginContextSelectionChallenge(payload) != null;
 }
 
-String? _optionalString(Object? value) {
-  if (value == null) {
-    return null;
-  }
-
-  final normalized = value.toString().trim();
-  return normalized.isEmpty ? null : normalized;
-}
+String? _optionalString(Object? value) => sdkworkNormalizeOptionalString(value);

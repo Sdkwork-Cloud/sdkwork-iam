@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseOperationCommand, AppbaseSessionCreateCommand } from '../types';
+import type { AppbaseOperationCommand, AppbaseSessionCreateCommand, SdkWorkCommandData } from '../types';
 
 
 export class AuthSessionsOrganizationSelectionApi {
@@ -76,8 +76,8 @@ export class AuthSessionsApi {
   }
 
 /** Sessions refresh. */
-  async refresh(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/sessions/refresh`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+  async refresh(body: AppbaseOperationCommand): Promise<SdkWorkCommandData> {
+    return this.client.request<SdkWorkCommandData>(appApiPath(`/auth/sessions/refresh`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
   }
 }
 

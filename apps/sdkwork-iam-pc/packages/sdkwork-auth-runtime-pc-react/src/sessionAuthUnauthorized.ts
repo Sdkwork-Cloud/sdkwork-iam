@@ -1,12 +1,5 @@
 export type SdkworkSessionAuthUnauthorizedMode = "redirect" | "modal" | "debug";
 
-export const SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE_ENV_KEY =
-  "VITE_SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE";
-
-/** @deprecated Use `VITE_SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE=debug` instead. */
-export const SDKWORK_SESSION_AUTH_REDIRECT_BYPASS_ENV_KEY =
-  "VITE_SDKWORK_CLAWROUTER_DEV_SESSION_AUTH_REDIRECT_BYPASS";
-
 export const SDKWORK_SESSION_AUTH_UNAUTHORIZED_EVENT =
   "sdkwork:session-auth-unauthorized";
 
@@ -36,6 +29,7 @@ export {
   readSdkworkRuntimeEnvFromWindow,
   resolveSdkworkSessionAuthUnauthorizedMode,
   SDKWORK_RUNTIME_ENV_GLOBAL_KEY,
+  SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE_ENV_KEY,
 } from "./sessionAuthUnauthorizedEnv.ts";
 
 export function defaultSdkworkSessionAuthEnvReader(name: string): string | undefined {

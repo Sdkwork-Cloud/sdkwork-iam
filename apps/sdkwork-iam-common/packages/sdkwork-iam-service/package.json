@@ -25,7 +25,8 @@
   "dependencies": {
     "@sdkwork/iam-contracts": "workspace:*",
     "@sdkwork/iam-sdk-ports": "workspace:*",
-    "@sdkwork/runtime-bootstrap": "workspace:*"
+    "@sdkwork/runtime-bootstrap": "workspace:*",
+    "@sdkwork/utils": "workspace:*"
   },
   "sdkwork": {
     "architecture": "common",

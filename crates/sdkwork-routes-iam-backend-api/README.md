@@ -4,7 +4,7 @@ Domain: iam
 Capability: iam
 Package type: rust-route-crate
 Rust crate import: `sdkwork_routes_iam_backend_api`
-Status: standardizing
+Status: standard
 
 SDKWork IAM backend-api route metadata and fail-closed router for Rust local/private deployments.
 
@@ -40,8 +40,16 @@ Extension points are limited to public exports, runtime entrypoints, SDK clients
 
 ## Verification
 
+Component verification (manifest and fail-closed route surface):
+
 ```bash
 cargo test -p sdkwork-routes-iam-backend-api
+```
+
+PostgreSQL integration (requires `.env.postgres` or `../sdkwork-clawrouter/.env.postgres`, always use `--test-threads 1`):
+
+```bash
+cargo test -j 1 -p sdkwork-routes-iam-backend-api --test iam_backend_postgres_integration -- --test-threads 1
 ```
 
 ## Owner And Status

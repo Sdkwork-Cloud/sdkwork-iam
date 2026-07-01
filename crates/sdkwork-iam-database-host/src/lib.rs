@@ -2,7 +2,7 @@ mod iam_database_module;
 pub mod unified_postgres_env;
 
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 pub use iam_database_module::IamDatabaseModule;
 use sdkwork_database_lifecycle::{lifecycle_options_from_env, LifecycleOrchestrator};
@@ -11,6 +11,9 @@ use sdkwork_database_sqlx::DatabasePool;
 use sqlx::PgPool;
 use unified_postgres_env::apply_unified_claw_postgres_env;
 
+static IAM_DATABASE_HOST: OnceLock<Arc<IamDatabaseHost>> = OnceLock::new();
+
+#[derive(Clone)]
 pub struct IamDatabaseHost {
     pool: DatabasePool,
     module: Arc<IamDatabaseModule>,
@@ -30,6 +33,14 @@ impl IamDatabaseHost {
             .as_postgres()
             .ok_or_else(|| "IAM database pool must provide a PostgreSQL connection.".to_string())
     }
+}
+
+pub fn installed_iam_database_host() -> Option<Arc<IamDatabaseHost>> {
+    IAM_DATABASE_HOST.get().cloned()
+}
+
+pub fn ensure_iam_database_host_installed(host: IamDatabaseHost) -> Arc<IamDatabaseHost> {
+    IAM_DATABASE_HOST.get_or_init(|| Arc::new(host)).clone()
 }
 
 pub fn resolve_iam_app_root() -> PathBuf {
@@ -71,10 +82,24 @@ pub async fn bootstrap_iam_database(pool: DatabasePool) -> Result<IamDatabaseHos
 
     run_post_bootstrap_hooks(&pool).await?;
 
-    Ok(IamDatabaseHost { pool, module })
+    if let Some(pg_pool) = pool.as_postgres() {
+        let _ = sdkwork_iam_web_adapter::install_iam_postgres_pool_for_process(Arc::new(
+            pg_pool.clone(),
+        ));
+    }
+
+    Ok(
+        ensure_iam_database_host_installed(IamDatabaseHost { pool, module })
+            .as_ref()
+            .clone(),
+    )
 }
 
 pub async fn bootstrap_iam_database_from_env() -> Result<IamDatabaseHost, String> {
+    if let Some(host) = installed_iam_database_host() {
+        return Ok(host.as_ref().clone());
+    }
+
     let app_root = resolve_iam_app_root();
     apply_unified_claw_postgres_env(&app_root);
     let pool = sdkwork_database_sqlx::create_pool_from_env("IAM")

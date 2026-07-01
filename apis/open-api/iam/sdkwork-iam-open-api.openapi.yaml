@@ -398,7 +398,9 @@
         "x-sdkwork-resource": "iam.oauth.authorize",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.oauth.manage"
+        "x-sdkwork-permission": "iam.oauth.manage",
+        "x-sdkwork-wire-protocol": "external",
+        "x-sdkwork-external-protocol-id": "oauth-authorization-code"
       }
     },
     "/iam/v3/api/oauth/introspect": {
@@ -530,7 +532,9 @@
               }
             }
           }
-        }
+        },
+        "x-sdkwork-wire-protocol": "external",
+        "x-sdkwork-external-protocol-id": "oauth-introspect"
       }
     },
     "/iam/v3/api/oauth/jwks": {
@@ -652,7 +656,9 @@
         "x-sdkwork-resource": "iam.oauth.jwks",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.oauth.read"
+        "x-sdkwork-permission": "iam.oauth.read",
+        "x-sdkwork-wire-protocol": "external",
+        "x-sdkwork-external-protocol-id": "oauth-jwks"
       }
     },
     "/iam/v3/api/oauth/provider_callbacks/{callbackPublicId}": {
@@ -1054,7 +1060,9 @@
               }
             }
           }
-        }
+        },
+        "x-sdkwork-wire-protocol": "external",
+        "x-sdkwork-external-protocol-id": "oauth-revoke"
       }
     },
     "/iam/v3/api/oauth/token": {
@@ -1186,7 +1194,9 @@
               }
             }
           }
-        }
+        },
+        "x-sdkwork-wire-protocol": "external",
+        "x-sdkwork-external-protocol-id": "oauth-token"
       }
     },
     "/iam/v3/api/oauth/userinfo": {
@@ -1308,7 +1318,9 @@
         "x-sdkwork-resource": "iam.oauth.userinfo",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.oauth.read"
+        "x-sdkwork-permission": "iam.oauth.read",
+        "x-sdkwork-wire-protocol": "external",
+        "x-sdkwork-external-protocol-id": "oidc-userinfo"
       }
     },
     "/iam/v3/api/system/oauth/authorization_server_metadata": {
@@ -1430,7 +1442,9 @@
         "x-sdkwork-resource": "iam.oauth.authorizationServerMetadata",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.oauth.read"
+        "x-sdkwork-permission": "iam.oauth.read",
+        "x-sdkwork-wire-protocol": "external",
+        "x-sdkwork-external-protocol-id": "oauth-authorization-server-metadata"
       }
     },
     "/iam/v3/api/system/oauth/openid_configuration": {
@@ -1552,7 +1566,9 @@
         "x-sdkwork-resource": "iam.oauth.openidConfiguration",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.oauth.read"
+        "x-sdkwork-permission": "iam.oauth.read",
+        "x-sdkwork-wire-protocol": "external",
+        "x-sdkwork-external-protocol-id": "oidc-discovery"
       }
     }
   },

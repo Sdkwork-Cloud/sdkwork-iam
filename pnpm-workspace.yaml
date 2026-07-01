@@ -1,4 +1,9 @@
 packages:
+  - "apps/sdkwork-iam-common"
+  - "apps/sdkwork-iam-pc"
+  - "apps/sdkwork-iam-h5"
+  - "apps/sdkwork-iam-flutter-mobile"
+  - "apps/sdkwork-iam-flutter-mobile/packages/*"
   - "sdks/*"
   - "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-typescript/generated/server-openapi"
   - "sdks/sdkwork-iam-backend-sdk/sdkwork-iam-backend-sdk-typescript/generated/server-openapi"
@@ -6,31 +11,43 @@ packages:
   - "apps/sdkwork-iam-common/packages/*"
   - "apps/sdkwork-iam-pc/packages/*"
   - "apps/sdkwork-iam-h5/packages/*"
+  - "../sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-contracts"
+  - "../sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-runtime"
+  - "../sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-sdk-ports"
+  - "../sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-sdk-adapter"
+  - "../sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-service"
+  - "../sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-application-bootstrap"
+  - "../sdkwork-iam/apps/sdkwork-iam-pc/packages/sdkwork-auth-pc-react"
+  - "../sdkwork-iam/apps/sdkwork-iam-pc/packages/sdkwork-auth-runtime-pc-react"
+  - "../sdkwork-iam/apps/sdkwork-iam-pc/packages/sdkwork-iam-react"
+  - "../sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-credential-entry"
+  - "../sdkwork-iam/sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-typescript/generated/server-openapi"
+  - "../sdkwork-iam/sdks/sdkwork-iam-backend-sdk/sdkwork-iam-backend-sdk-typescript/generated/server-openapi"
   - "../sdkwork-appbase/packages/common/foundation/sdkwork-runtime-bootstrap"
-  - "../sdkwork-appbase/packages/common/foundation/sdkwork-cache-core"
-  - "../sdkwork-appbase/packages/common/integration/sdkwork-platform"
-  - "../sdkwork-appbase/packages/common/intelligence/sdkwork-agent-contracts"
   - "../sdkwork-appbase/packages/pc-react/foundation/sdkwork-appbase-pc-react"
-  - "../sdkwork-appbase/packages/pc-react/foundation/sdkwork-shell-pc-react"
   - "../sdkwork-appbase/packages/pc-react/foundation/sdkwork-i18n-pc-react"
-  - "../sdkwork-search/packages/common/search/sdkwork-search-contracts"
-  - "../sdkwork-search/packages/pc-react/foundation/sdkwork-search-pc-react"
   - "../sdkwork-core/sdkwork-core-pc-react"
   - "../sdkwork-ui/sdkwork-ui-pc-react"
   - "../sdkwork-sdk-commons/sdkwork-sdk-common-typescript"
   - "../sdkwork-utils/packages/sdkwork-utils-typescript"
+  - "../sdkwork-appbase/packages/common/foundation/sdkwork-cache-core"
+  - "../sdkwork-appbase/packages/common/integration/sdkwork-platform"
+  - "../sdkwork-appbase/packages/common/intelligence/sdkwork-agent-contracts"
+  - "../sdkwork-appbase/packages/pc-react/foundation/sdkwork-shell-pc-react"
+  - "../sdkwork-search/packages/common/search/sdkwork-search-contracts"
+  - "../sdkwork-search/packages/pc-react/foundation/sdkwork-search-pc-react"
 
 catalog:
+  react: ^19.2.4
+  react-dom: ^19.2.4
+  typescript: ~6.0.2
+  vite: ^8.0.3
   "@types/react": ^19.2.14
   "@types/react-dom": ^19.2.3
   "@vitejs/plugin-react": ^6.0.1
   lucide-react: ^1.7.0
   i18next: ^26.1.0
   qrcode: ^1.5.4
-  react: ^19.2.4
-  react-dom: ^19.2.4
   react-i18next: ^17.0.7
   react-hook-form: ^7.72.1
-  typescript: ~6.0.2
-  vite: ^8.0.3
   vite-plugin-dts: ^4.5.4

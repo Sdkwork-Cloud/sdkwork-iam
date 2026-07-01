@@ -81,6 +81,19 @@ export function createAppApiRustTestCommands(cwd = sdkworkAppbaseRoot) {
         ...threadArgs,
       ],
     },
+    {
+      command: "cargo",
+      args: [
+        "test",
+        "-j",
+        "1",
+        "-p",
+        "sdkwork-routes-iam-app-api",
+        "--test",
+        "iam_local_app_router_test",
+        ...threadArgs,
+      ],
+    },
   ];
 }
 

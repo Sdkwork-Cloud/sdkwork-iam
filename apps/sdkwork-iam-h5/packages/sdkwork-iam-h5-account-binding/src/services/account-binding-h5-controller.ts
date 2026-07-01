@@ -1,4 +1,5 @@
 import type { SdkworkIamService } from "@sdkwork/iam-service";
+import { isBlank, trim } from "@sdkwork/utils";
 
 import type {
   CreateSdkworkIamH5AccountBindingControllerInput,
@@ -137,7 +138,7 @@ function readBoolean(value: unknown, fallback: boolean): boolean {
     return value;
   }
   if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
+    const normalized = trim(value).toLowerCase();
     if (normalized === "true" || normalized === "1") {
       return true;
     }
@@ -153,6 +154,9 @@ function toRecord(value: unknown): Record<string, unknown> {
 }
 
 function optionalString(value: unknown): string | undefined {
-  const normalized = typeof value === "string" ? value.trim() : value === undefined || value === null ? "" : String(value).trim();
-  return normalized || undefined;
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const normalized = trim(String(value));
+  return isBlank(normalized) ? undefined : normalized;
 }

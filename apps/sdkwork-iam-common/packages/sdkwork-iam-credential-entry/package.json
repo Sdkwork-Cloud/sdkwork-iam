@@ -25,7 +25,8 @@
   "dependencies": {
     "@sdkwork/iam-app-sdk": "workspace:*",
     "@sdkwork/runtime-bootstrap": "workspace:*",
-    "@sdkwork/sdk-common": "^1.0.2"
+    "@sdkwork/sdk-common": "^1.0.2",
+    "@sdkwork/utils": "workspace:*"
   },
   "sdkwork": {
     "architecture": "common",

@@ -18,6 +18,8 @@ pub use paths::BACKEND_API_PREFIX;
 pub use routes::build_sdkwork_iam_backend_api_router;
 pub use sdkwork_web_contract::{HttpMethod, HttpRoute, HttpRoute as IamHttpRoute};
 
+pub(crate) use sdkwork_utils_rust::is_blank;
+
 use axum::Router;
 use sdkwork_web_core::HttpRouteManifest;
 

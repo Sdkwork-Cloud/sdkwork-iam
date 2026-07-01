@@ -25,8 +25,8 @@ pub(crate) use sdkwork_utils_rust::is_blank;
 
 use sdkwork_iam_context_service::IamAppContext;
 use sdkwork_web_core::{
-    HttpRouteManifest, WebAuthLevel, WebDeploymentMode, WebEnvironment, WebRequestContext,
-    WebRequestContextProfile, WebRequestPrincipal,
+    HttpRouteManifest, SecurityPolicy, WebAuthLevel, WebDeploymentMode, WebEnvironment,
+    WebRequestContext, WebRequestContextProfile, WebRequestPrincipal,
 };
 
 pub use access_token_issue::{
@@ -67,7 +67,10 @@ pub use authorization_policy::IamAuthorizationPolicy;
 pub use dev_runtime::allows_dev_authentication_fallback;
 pub use ephemeral_rate_limit::{check_rate_limit, check_rate_limit_sqlite};
 pub use http_responses::{iam_api_error, iam_api_success, iam_wire_result_code};
-pub use iam_database_env::{bridge_iam_database_env_from_im, resolve_iam_postgres_pool_from_env};
+pub use iam_database_env::{
+    bridge_iam_database_env_from_im, install_iam_postgres_pool_for_process,
+    installed_iam_postgres_pool_for_process, resolve_iam_postgres_pool_from_env,
+};
 pub use iam_session::{
     resolve_iam_app_context_from_access_token, resolve_iam_app_context_from_auth_token,
     resolve_iam_app_context_from_dual_tokens, resolve_iam_app_context_from_oauth_bearer,
@@ -183,6 +186,37 @@ impl sdkwork_web_core::DomainContextInjector for IamAppContextInjector {
 ///
 /// Public routes are resolved from `route_manifest` (`RouteAuth::Public`).
 /// `extra_public_path_prefixes` is for product infra paths only (`/health`, system metadata, etc.).
+fn resolve_web_environment_from_process_env() -> WebEnvironment {
+    match std::env::var("SDKWORK_IM_ENVIRONMENT")
+        .ok()
+        .as_deref()
+        .map(str::trim)
+        .unwrap_or("prod")
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "dev" | "development" => WebEnvironment::Dev,
+        "test" | "testing" => WebEnvironment::Test,
+        _ => WebEnvironment::Prod,
+    }
+}
+
+fn iam_web_security_policy(environment: &WebEnvironment) -> SecurityPolicy {
+    let mut security_policy = if matches!(environment, WebEnvironment::Dev | WebEnvironment::Test) {
+        SecurityPolicy::default()
+    } else {
+        SecurityPolicy::production()
+    };
+    if matches!(environment, WebEnvironment::Dev | WebEnvironment::Test) {
+        security_policy.cors.allow_all_origins = true;
+        security_policy
+            .cross_site
+            .reject_untrusted_state_changing_origins = false;
+        security_policy.cross_site.reject_cookie_auth_without_origin = false;
+    }
+    security_policy
+}
+
 pub fn build_web_framework_layer<R>(
     resolver: R,
     route_manifest: HttpRouteManifest,
@@ -191,12 +225,16 @@ pub fn build_web_framework_layer<R>(
 where
     R: sdkwork_web_core::WebRequestContextResolver + Clone,
 {
+    let environment = resolve_web_environment_from_process_env();
+    let security_policy = iam_web_security_policy(&environment);
     let authorization_policy = std::sync::Arc::new(IamAuthorizationPolicy::new(route_manifest));
     sdkwork_web_axum::WebFrameworkLayer::new(resolver)
         .with_profile(WebRequestContextProfile {
             public_path_prefixes: extra_public_path_prefixes,
+            environment,
             ..WebRequestContextProfile::default()
         })
+        .with_security_policy(security_policy)
         .with_route_manifest(route_manifest)
         .with_authorization_policy(authorization_policy)
         .with_domain_injector(std::sync::Arc::new(IamAppContextInjector))
@@ -252,13 +290,17 @@ pub fn build_iam_open_api_web_framework_layer(
     resolver: IamWebRequestContextResolver,
     route_manifest: HttpRouteManifest,
 ) -> sdkwork_web_axum::WebFrameworkLayer<IamWebRequestContextResolver> {
+    let environment = resolve_web_environment_from_process_env();
+    let security_policy = iam_web_security_policy(&environment);
     let authorization_policy = std::sync::Arc::new(IamAuthorizationPolicy::new(route_manifest));
     sdkwork_web_axum::WebFrameworkLayer::new(resolver)
         .with_profile(WebRequestContextProfile {
             open_api_prefixes: vec!["/iam/v3/api".to_owned()],
             public_path_prefixes: Vec::new(),
+            environment,
             ..WebRequestContextProfile::default()
         })
+        .with_security_policy(security_policy)
         .with_route_manifest(route_manifest)
         .with_authorization_policy(authorization_policy)
         .with_domain_injector(std::sync::Arc::new(IamAppContextInjector))
@@ -289,13 +331,4 @@ pub fn wrap_router_with_iam_open_api_web_framework(
 pub async fn iam_web_request_context_resolver_from_env() -> IamWebRequestContextResolver {
     let iam_pool = resolve_iam_postgres_pool_from_env().await;
     IamWebRequestContextResolver::new(iam_pool)
-}
-
-/// Compatibility alias for repositories that have not migrated to the canonical resolver factory.
-#[deprecated(
-    since = "0.1.0",
-    note = "Use iam_web_request_context_resolver_from_env for application integration."
-)]
-pub async fn iam_database_resolver_from_env() -> IamWebRequestContextResolver {
-    iam_web_request_context_resolver_from_env().await
 }

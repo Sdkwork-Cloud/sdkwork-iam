@@ -1,3 +1,4 @@
+import { isBlank } from "@sdkwork/utils";
 import { useState } from "react";
 
 import type { SdkworkIamH5AuthLoginScreenProps } from "../types/auth-h5-types";
@@ -58,7 +59,7 @@ export function SdkworkIamH5AuthLoginScreen({
       </label>
       <button
         className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
-        disabled={busy || !username.trim() || !password}
+        disabled={busy || isBlank(username) || isBlank(password)}
         onClick={() => {
           setBusy(true);
           setError(undefined);

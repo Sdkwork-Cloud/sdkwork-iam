@@ -35,6 +35,6 @@
     "capability": "iam-h5-core",
     "domain": "iam",
     "packageType": "runtime",
-    "status": "standardizing"
+    "status": "standard"
   }
 }

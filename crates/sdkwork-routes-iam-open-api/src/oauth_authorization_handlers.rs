@@ -332,7 +332,7 @@ fn read_query(query: &HashMap<String, String>, key: &str) -> Result<String, Stri
     query
         .get(key)
         .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
+        .filter(|value| !crate::is_blank(Some(value.as_str())))
         .ok_or_else(|| format!("{key} is required"))
 }
 
@@ -341,7 +341,7 @@ fn read_string(body: &Value, keys: &[&str]) -> Option<String> {
         body.get(*key)
             .and_then(Value::as_str)
             .map(str::trim)
-            .filter(|value| !value.is_empty())
+            .filter(|value| !crate::is_blank(Some(value)))
             .map(str::to_owned)
     })
 }

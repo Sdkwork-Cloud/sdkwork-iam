@@ -111,20 +111,16 @@ test("iam domain workspace uses multi-surface apps layout and removes legacy pac
       `${appRoot.relativePath}/.sdkwork/skills/README.md`,
       `${appRoot.relativePath}/.sdkwork/plugins/README.md`,
       `${appRoot.relativePath}/specs/component.spec.json`,
-      `${appRoot.relativePath}/specs/dependency.composition.json`,
     ]) {
       if (!exists(requiredRelative)) {
         errors.push(`missing required app-root path: ${requiredRelative}`);
       }
     }
 
-    const composition = JSON.parse(
-      fs.readFileSync(path.join(root, appRoot.relativePath, "specs/dependency.composition.json"), "utf8"),
-    );
-    if (composition.clientArchitecture !== appRoot.architecture) {
-      errors.push(
-        `${appRoot.relativePath}/specs/dependency.composition.json clientArchitecture must be ${appRoot.architecture}`,
-      );
+    const componentSpecPath = path.join(appRoot.relativePath, "specs/component.spec.json");
+    const componentSpec = JSON.parse(fs.readFileSync(path.join(root, componentSpecPath), "utf8"));
+    if (componentSpec.contracts?.dependencyComposition) {
+      errors.push(`${componentSpecPath} must not declare contracts.dependencyComposition`);
     }
 
     for (const requiredPackage of appRoot.requiredPackages) {

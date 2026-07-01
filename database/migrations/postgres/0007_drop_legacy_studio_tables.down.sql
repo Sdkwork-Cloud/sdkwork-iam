@@ -1,1 +1,0 @@
--- Legacy studio tables were removed from IAM. Do not recreate them in this module.

@@ -15,6 +15,7 @@
     ],
     "generated": false,
     "private": true,
+    "status": "standard",
     "manifests": [
       "packages/sdkwork-iam-pc-core/package.json"
     ]
@@ -31,9 +32,9 @@
       "purpose": "PC React package UI and SDK integration rules."
     },
     {
-      "file": "APP_DEPENDENCY_COMPOSITION_SPEC.md",
-      "path": "../../../sdkwork-specs/APP_DEPENDENCY_COMPOSITION_SPEC.md",
-      "purpose": "Semantic dependency manifest and core composition entry."
+      "file": "APP_COMPOSITION_SPEC.md",
+      "path": "../../../sdkwork-specs/APP_COMPOSITION_SPEC.md",
+      "purpose": "Native-authority application composition and core-package import entrypoints."
     },
     {
       "file": "IAM_SPEC.md",
@@ -46,8 +47,17 @@
       "purpose": "Login, session, and IAM runtime integration rules."
     }
   ],
+  "integration": {
+    "utils": "PC React packages use @sdkwork/utils for trim, isBlank, coalesce, and defaultIfBlank.",
+    "sdkPolicy": "Packages consume generated app/backend SDK clients through @sdkwork/iam-service; no raw HTTP."
+  },
+  "verification": {
+    "commands": [
+      "pnpm run typecheck",
+      "pnpm run test:iam-standard-contracts"
+    ]
+  },
   "contracts": {
-    "dependencyComposition": "specs/dependency.composition.json",
     "publicExports": [],
     "sdkClients": [
       "@sdkwork/iam-app-sdk",

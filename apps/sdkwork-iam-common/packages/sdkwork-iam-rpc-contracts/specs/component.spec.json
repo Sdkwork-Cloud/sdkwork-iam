@@ -10,7 +10,7 @@
     "domain": "iam",
     "declaredDomain": null,
     "capability": "app",
-    "status": "standardizing",
+    "status": "standard",
     "languages": [
       "javascript",
       "typescript"

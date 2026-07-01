@@ -15,7 +15,7 @@
     ],
     "generated": false,
     "private": true,
-    "status": "standardizing",
+    "status": "standard",
     "manifests": []
   },
   "canonicalSpecs": [
@@ -35,7 +35,14 @@
       "purpose": "OAuth runtime discovery and auth metadata rules."
     }
   ],
-  "contracts": {
-    "dependencyComposition": "specs/dependency.composition.json"
-  }
+  "integration": {
+    "utils": "Flutter packages use sdkwork_iam_flutter_mobile_core string helpers aligned with @sdkwork/utils semantics.",
+    "sdkPolicy": "Controllers consume generated Dart app SDK clients; no raw HTTP."
+  },
+  "verification": {
+    "commands": [
+      "pnpm run test:iam-standard-contracts"
+    ]
+  },
+  "contracts": {}
 }

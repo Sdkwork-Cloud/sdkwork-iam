@@ -14,7 +14,7 @@ this package by `tools/generators/materialize-iam-rpc-proto-boundaries.mjs`.
 Domain: iam
 Capability: app
 Package type: node-package
-Status: standardizing
+Status: standard
 
 ### Public API
 

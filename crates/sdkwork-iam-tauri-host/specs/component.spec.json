@@ -10,7 +10,7 @@
     "domain": "iam",
     "capability": "tauri-host",
     "surface": "host/native",
-    "status": "standardizing",
+    "status": "standard",
     "languages": [
       "rust"
     ],

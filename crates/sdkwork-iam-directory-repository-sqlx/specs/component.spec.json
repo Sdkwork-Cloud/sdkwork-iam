@@ -9,7 +9,7 @@
     "root": "sdkwork-iam/crates/sdkwork-iam-directory-repository-sqlx",
     "domain": "iam",
     "capability": "directory",
-    "status": "standardizing",
+    "status": "standard",
     "languages": [
       "rust"
     ],

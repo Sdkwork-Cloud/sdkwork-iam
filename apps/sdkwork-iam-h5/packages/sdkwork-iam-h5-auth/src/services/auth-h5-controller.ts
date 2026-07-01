@@ -4,6 +4,7 @@ import {
   normalizeIamLoginContextSelectionChallenge,
 } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
+import { isBlank, trim } from "@sdkwork/utils";
 
 import type {
   CreateSdkworkIamH5AuthControllerInput,
@@ -119,6 +120,9 @@ function toSession(value: unknown): SdkworkIamH5AuthSession {
 }
 
 function optionalString(value: unknown): string | undefined {
-  const normalized = typeof value === "string" ? value.trim() : value === undefined || value === null ? "" : String(value).trim();
-  return normalized || undefined;
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const normalized = trim(String(value));
+  return isBlank(normalized) ? undefined : normalized;
 }

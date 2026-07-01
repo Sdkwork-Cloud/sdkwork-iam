@@ -23,6 +23,7 @@ version = "0.1.0"
 license = "Apache-2.0"
 
 [workspace.dependencies]
+sdkwork-database-config = { path = "../sdkwork-database/crates/sdkwork-database-config" }
 async-trait = "0.1"
 axum = { version = "0.8", features = ["ws"] }
 getrandom = "0.2"
@@ -40,6 +41,7 @@ sdkwork-web-contract = { path = "../sdkwork-web-framework/crates/sdkwork-web-con
 sdkwork-web-core = { path = "../sdkwork-web-framework/crates/sdkwork-web-core" }
 sdkwork-web-axum = { path = "../sdkwork-web-framework/crates/sdkwork-web-axum" }
 sdkwork-web-bootstrap = { path = "../sdkwork-web-framework/crates/sdkwork-web-bootstrap" }
+sdkwork_web_bootstrap = { package = "sdkwork-web-bootstrap", path = "../sdkwork-web-framework/crates/sdkwork-web-bootstrap" }
 sdkwork-id-core = { path = "../sdkwork-id/crates/sdkwork-id-core" }
 sdkwork-database-id = { path = "../sdkwork-database/crates/sdkwork-database-id", package = "sdkwork-database-id" }
 sdkwork_rpc_core = { package = "sdkwork-rpc-core-rust", path = "../sdkwork-appbase/crates/sdkwork-rpc-core-rust" }

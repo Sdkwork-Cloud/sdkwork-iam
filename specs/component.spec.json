@@ -10,7 +10,7 @@
     "domain": "iam",
     "declaredDomain": "iam",
     "capability": "iam",
-    "status": "standardizing",
+    "status": "standard",
     "languages": [
       "typescript",
       "react",
@@ -192,12 +192,16 @@
   },
   "integration": {
     "authority": "Root SDKWork specs remain authoritative. Local specs may extend but must not contradict them.",
+    "defaultConnectivityPlane": "platform",
+    "defaultRuntimeMode": "platform-gateway",
+    "permissionManifest": "iam/modules/iam-kernel/iam.module.manifest.json",
+    "mountExport": "crates/sdkwork-routes-iam-app-api::gateway_mount",
     "dependencyPolicy": "Consumers integrate through public package exports, declared runtime entrypoints, generated SDK clients, or documented adapters only.",
     "sdkPolicy": "Generated SDK clients are injected through service/runtime boundaries; reusable UI must not create raw HTTP clients or manual auth headers.",
     "languagePolicy": "Language-specific packages follow their native manifest and build tools while preserving the same component contract.",
     "webFramework": "IAM HTTP route crates integrate sdkwork-web-framework through sdkwork-web-axum and sdkwork-iam-web-adapter.",
     "database": "IAM database module uses sdkwork-database lifecycle SPI via sdkwork-iam-database-host and sdkwork-iam-directory-repository-sqlx.",
-    "utils": "Rust IAM crates and PC React IAM packages use sdkwork-utils-rust and @sdkwork/utils for shared text helpers.",
+    "utils": "Rust IAM crates and all IAM TypeScript packages use sdkwork-utils-rust and @sdkwork/utils for shared text, envelope, and validation helpers.",
     "discovery": "Deferred until runnable IAM RPC servers register with sdkwork-discovery.",
     "drive": "Not required; IAM has no file-upload surfaces. Avatar/media upload must use sdkwork-drive when added."
   },
@@ -207,9 +211,13 @@
       "pnpm run check:structure",
       "pnpm run check:database",
       "pnpm run check:iam-application-bootstrap",
+      "pnpm run check:app-composition",
+      "pnpm run check:api-envelope",
+      "pnpm run check:gateway-assembly",
       "pnpm run typecheck",
       "pnpm run api:materialize",
-      "pnpm run test:governance-node"
+      "pnpm run test:governance-node",
+      "pnpm run test:rust-workspace"
     ]
   },
   "exceptions": [

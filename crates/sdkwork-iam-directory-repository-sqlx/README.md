@@ -4,7 +4,7 @@ Domain: iam
 Capability: directory
 Package type: rust-crate
 Rust crate import: `sdkwork_iam_directory_repository_sqlx`
-Status: standardizing
+Status: standard
 
 SDKWork IAM SQL table catalog and baseline DDL binding for Rust local/private deployments.
 

@@ -97,12 +97,14 @@ async fn repair_sqlite_iam_user_id_references(
     tx.commit().await
 }
 
-fn postgres_user_id_reference_updates() -> [&'static str; 8] {
+fn postgres_user_id_reference_updates() -> [&'static str; 10] {
     [
         "UPDATE iam_session SET user_id = $1 WHERE tenant_id = $2 AND user_id = $3",
         "UPDATE iam_credential SET user_id = $1 WHERE tenant_id = $2 AND user_id = $3",
         "UPDATE iam_user_identity SET user_id = $1 WHERE tenant_id = $2 AND user_id = $3",
         "UPDATE iam_organization_membership SET user_id = $1 WHERE tenant_id = $2 AND user_id = $3",
+        "UPDATE iam_department_assignment SET user_id = $1 WHERE tenant_id = $2 AND user_id = $3",
+        "UPDATE iam_position_assignment SET user_id = $1 WHERE tenant_id = $2 AND user_id = $3",
         "UPDATE iam_tenant_member SET user_id = $1 WHERE tenant_id = $2 AND user_id = $3",
         "UPDATE iam_group_member SET principal_id = $1 WHERE tenant_id = $2 AND principal_kind = 'user' AND principal_id = $3",
         "UPDATE iam_role_binding SET principal_id = $1 WHERE tenant_id = $2 AND principal_kind = 'user' AND principal_id = $3",
@@ -110,15 +112,46 @@ fn postgres_user_id_reference_updates() -> [&'static str; 8] {
     ]
 }
 
-fn sqlite_user_id_reference_updates() -> [&'static str; 8] {
+fn sqlite_user_id_reference_updates() -> [&'static str; 10] {
     [
         "UPDATE iam_session SET user_id = ?1 WHERE tenant_id = ?2 AND user_id = ?3",
         "UPDATE iam_credential SET user_id = ?1 WHERE tenant_id = ?2 AND user_id = ?3",
         "UPDATE iam_user_identity SET user_id = ?1 WHERE tenant_id = ?2 AND user_id = ?3",
         "UPDATE iam_organization_membership SET user_id = ?1 WHERE tenant_id = ?2 AND user_id = ?3",
+        "UPDATE iam_department_assignment SET user_id = ?1 WHERE tenant_id = ?2 AND user_id = ?3",
+        "UPDATE iam_position_assignment SET user_id = ?1 WHERE tenant_id = ?2 AND user_id = ?3",
         "UPDATE iam_tenant_member SET user_id = ?1 WHERE tenant_id = ?2 AND user_id = ?3",
         "UPDATE iam_group_member SET principal_id = ?1 WHERE tenant_id = ?2 AND principal_kind = 'user' AND principal_id = ?3",
         "UPDATE iam_role_binding SET principal_id = ?1 WHERE tenant_id = ?2 AND principal_kind = 'user' AND principal_id = ?3",
         "UPDATE iam_user SET id = ?1 WHERE tenant_id = ?2 AND id = ?3",
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{postgres_user_id_reference_updates, sqlite_user_id_reference_updates};
+
+    #[test]
+    fn reference_updates_cover_directory_assignment_tables() {
+        for updates in [
+            postgres_user_id_reference_updates(),
+            sqlite_user_id_reference_updates(),
+        ] {
+            let joined = updates.join("\n");
+            assert!(
+                joined.contains("iam_department_assignment"),
+                "directory department assignments must follow user id migration"
+            );
+            assert!(
+                joined.contains("iam_position_assignment"),
+                "directory position assignments must follow user id migration"
+            );
+            assert!(
+                updates
+                    .last()
+                    .is_some_and(|sql| sql.contains("iam_user SET id")),
+                "user row must be updated last"
+            );
+        }
+    }
 }

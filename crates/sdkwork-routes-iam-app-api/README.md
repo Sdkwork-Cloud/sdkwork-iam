@@ -4,7 +4,7 @@ Domain: iam
 Capability: iam
 Package type: rust-route-crate
 Rust crate import: `sdkwork_routes_iam_app_api`
-Status: standardizing
+Status: standard
 
 SDKWork canonical IAM HTTP route contracts for Rust local/private deployments.
 

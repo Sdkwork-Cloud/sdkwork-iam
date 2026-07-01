@@ -1,14 +1,14 @@
-import {
-  SDKWORK_SESSION_AUTH_REDIRECT_BYPASS_ENV_KEY,
-  SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE_ENV_KEY,
-  type SdkworkSessionAuthEnvReader,
-  type SdkworkSessionAuthUnauthorizedMode,
+import type {
+  SdkworkSessionAuthEnvReader,
+  SdkworkSessionAuthUnauthorizedMode,
 } from "./sessionAuthUnauthorized.ts";
+
+export const SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE_ENV_KEY =
+  "VITE_SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE";
 
 export const SDKWORK_RUNTIME_ENV_GLOBAL_KEY = "__SDKWORK_RUNTIME_ENV__";
 
 type RuntimeEnvWindow = Window & {
-  __CLAWROUTER_ENV__?: Record<string, unknown>;
   __SDKWORK_RUNTIME_ENV__?: Record<string, unknown>;
 };
 
@@ -44,10 +44,7 @@ export function readSdkworkRuntimeEnvFromWindow(name: string): string | undefine
   }
 
   const runtimeWindow = window as RuntimeEnvWindow;
-  return (
-    readRuntimeEnvBag(runtimeWindow.__SDKWORK_RUNTIME_ENV__, name)
-    ?? readRuntimeEnvBag(runtimeWindow.__CLAWROUTER_ENV__, name)
-  );
+  return readRuntimeEnvBag(runtimeWindow.__SDKWORK_RUNTIME_ENV__, name);
 }
 
 export function createSdkworkSessionAuthEnvReader(
@@ -62,14 +59,6 @@ export function createSdkworkSessionAuthEnvReader(
     ?? readViteImportMetaEnv(name);
 }
 
-function readTruthyEnvValue(
-  readEnv: SdkworkSessionAuthEnvReader,
-  name: string,
-): boolean {
-  const value = readEnv(name)?.trim().toLowerCase();
-  return value === "1" || value === "true" || value === "yes" || value === "on";
-}
-
 function isLocalDevelopmentHost(hostname: string | undefined): boolean {
   const normalized = hostname?.trim().toLowerCase() ?? "";
   return normalized === "localhost" || normalized === "127.0.0.1";
@@ -82,10 +71,6 @@ export function resolveSdkworkSessionAuthUnauthorizedMode({
   hostname?: string;
   readEnv?: SdkworkSessionAuthEnvReader;
 } = {}): SdkworkSessionAuthUnauthorizedMode {
-  if (readTruthyEnvValue(readEnv, SDKWORK_SESSION_AUTH_REDIRECT_BYPASS_ENV_KEY)) {
-    return "debug";
-  }
-
   const configured = readEnv(SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE_ENV_KEY)
     ?.trim()
     .toLowerCase();

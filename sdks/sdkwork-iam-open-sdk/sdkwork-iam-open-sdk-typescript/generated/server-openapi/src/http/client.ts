@@ -179,6 +179,9 @@ export class HttpClient extends BaseHttpClient {
     }
     params.append(key, String(value));
   }
+  setApiKey(apiKey: string): void {
+    this.getInternalAuthConfig().apiKey = apiKey;
+  }
   private unwrapSdkworkV3Payload<T>(payload: unknown): T {
     if (!HttpClient.SDKWORK_V3_UNWRAP || payload == null || typeof payload !== 'object') {
       return payload as T;
@@ -208,9 +211,6 @@ export class HttpClient extends BaseHttpClient {
     return data as T;
   }
 
-  setApiKey(apiKey: string): void {
-    this.getInternalAuthConfig().apiKey = apiKey;
-  }
   async request<T>(path: string, options: HttpRequestOptions = {}): Promise<T> {
     const execute = (this as any).execute;
     if (typeof execute !== 'function') {

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use sqlx::PgPool;
+use sqlx::{types::Json as SqlxJson, PgPool};
 
 pub const IAM_ACCOUNT_BINDING_POLICY_CODE: &str = "iam.account_binding";
 
@@ -126,7 +126,7 @@ pub async fn load_account_binding_policy(
     pg: &PgPool,
     tenant_id: &str,
 ) -> Result<AccountBindingPolicyDocument, String> {
-    let row = sqlx::query_scalar::<_, String>(
+    let row = sqlx::query_scalar::<_, SqlxJson<Value>>(
         "SELECT policy_json FROM iam_policy \
          WHERE tenant_id = $1 AND code = $2 AND status = 'active' \
          LIMIT 1",
@@ -138,7 +138,7 @@ pub async fn load_account_binding_policy(
     .map_err(|error| format!("load account binding policy failed: {error}"))?;
 
     Ok(row
-        .map(|raw| parse_account_binding_policy(&serde_json::from_str(&raw).unwrap_or(json!({}))))
+        .map(|SqlxJson(raw)| parse_account_binding_policy(&raw))
         .unwrap_or_else(default_account_binding_policy))
 }
 
@@ -147,14 +147,14 @@ pub async fn save_account_binding_policy(
     tenant_id: &str,
     policy: &AccountBindingPolicyDocument,
 ) -> Result<(), String> {
-    let now = chrono::Utc::now().to_rfc3339();
-    let policy_json = serde_json::to_string(policy)
+    let now = chrono::Utc::now();
+    let policy_json = serde_json::to_value(policy)
         .map_err(|error| format!("serialize account binding policy failed: {error}"))?;
     let policy_id = format!("{tenant_id}:account_binding");
 
     sqlx::query(
         "INSERT INTO iam_policy (id, tenant_id, code, name, policy_json, status, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, 'active', $6, $7) \
+         VALUES ($1, $2, $3, $4, $5, 'active', $6, $6) \
          ON CONFLICT (tenant_id, code) DO UPDATE SET \
            policy_json = EXCLUDED.policy_json, \
            name = EXCLUDED.name, \
@@ -165,9 +165,8 @@ pub async fn save_account_binding_policy(
     .bind(tenant_id)
     .bind(IAM_ACCOUNT_BINDING_POLICY_CODE)
     .bind("Account binding policy")
-    .bind(&policy_json)
-    .bind(&now)
-    .bind(&now)
+    .bind(SqlxJson(policy_json))
+    .bind(now)
     .execute(pg)
     .await
     .map_err(|error| format!("save account binding policy failed: {error}"))?;

@@ -23,7 +23,8 @@
     "typescript": "^6.0.2"
   },
   "dependencies": {
-    "@sdkwork/iam-sdk-ports": "workspace:*"
+    "@sdkwork/iam-sdk-ports": "workspace:*",
+    "@sdkwork/utils": "workspace:*"
   },
   "sdkwork": {
     "architecture": "common",

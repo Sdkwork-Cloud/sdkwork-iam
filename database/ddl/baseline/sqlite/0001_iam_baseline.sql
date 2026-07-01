@@ -1235,11 +1235,6 @@ ALTER TABLE iam_organization ADD COLUMN IF NOT EXISTS app_boundary_enabled INTEG
 ALTER TABLE iam_organization ADD COLUMN IF NOT EXISTS verification_status TEXT;
 
 UPDATE iam_organization
-SET parent_organization_id = parent_id
-WHERE parent_organization_id IS NULL
-  AND parent_id IS NOT NULL;
-
-UPDATE iam_organization
 SET organization_kind = 'team'
 WHERE organization_kind IS NULL OR organization_kind = '';
 

@@ -2933,7 +2933,7 @@
         "x-sdkwork-resource": "users.current",
         "x-sdkwork-request-context": "AppRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.users.read"
+        "x-sdkwork-permission": "iam:self"
       },
       "patch": {
         "tags": [
@@ -3058,7 +3058,7 @@
         "x-sdkwork-resource": "users.current",
         "x-sdkwork-request-context": "AppRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.users.update",
+        "x-sdkwork-permission": "iam.profile.update",
         "requestBody": {
           "required": false,
           "content": {
@@ -3195,7 +3195,7 @@
         "x-sdkwork-resource": "users.current.emailBindings",
         "x-sdkwork-request-context": "AppRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.users.delete"
+        "x-sdkwork-permission": "iam.profile.update"
       },
       "post": {
         "tags": [
@@ -3320,7 +3320,7 @@
         "x-sdkwork-resource": "users.current.emailBindings",
         "x-sdkwork-request-context": "AppRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.users.create",
+        "x-sdkwork-permission": "iam.profile.update",
         "requestBody": {
           "required": true,
           "content": {
@@ -3457,7 +3457,7 @@
         "x-sdkwork-resource": "users.current.password",
         "x-sdkwork-request-context": "AppRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.users.update",
+        "x-sdkwork-permission": "iam.profile.update",
         "requestBody": {
           "required": true,
           "content": {
@@ -3594,7 +3594,7 @@
         "x-sdkwork-resource": "users.current.phoneBindings",
         "x-sdkwork-request-context": "AppRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.users.delete"
+        "x-sdkwork-permission": "iam.profile.update"
       },
       "post": {
         "tags": [
@@ -3719,7 +3719,7 @@
         "x-sdkwork-resource": "users.current.phoneBindings",
         "x-sdkwork-request-context": "AppRequestContext",
         "x-sdkwork-server-request-id": true,
-        "x-sdkwork-permission": "iam.users.create",
+        "x-sdkwork-permission": "iam.profile.update",
         "requestBody": {
           "required": true,
           "content": {

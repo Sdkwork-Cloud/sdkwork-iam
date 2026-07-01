@@ -1,8 +1,22 @@
 //! IAM PostgreSQL pool resolution shared by application integration and realtime auth.
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use sqlx::PgPool;
+
+static IAM_POSTGRES_POOL: OnceLock<Arc<PgPool>> = OnceLock::new();
+
+/// Registers the process-wide IAM PostgreSQL pool after lifecycle bootstrap.
+pub fn install_iam_postgres_pool_for_process(pool: Arc<PgPool>) -> Result<(), String> {
+    IAM_POSTGRES_POOL
+        .set(pool)
+        .map_err(|_| "IAM postgres pool is already installed for this process".to_owned())
+}
+
+/// Returns the installed IAM PostgreSQL pool when lifecycle bootstrap already ran.
+pub fn installed_iam_postgres_pool_for_process() -> Option<Arc<PgPool>> {
+    IAM_POSTGRES_POOL.get().cloned()
+}
 
 /// Bridges `SDKWORK_IM_DATABASE_URL` into `SDKWORK_IAM_DATABASE_URL` for PostgreSQL dev topologies.
 pub fn bridge_iam_database_env_from_im() {
@@ -27,6 +41,9 @@ pub fn bridge_iam_database_env_from_im() {
 
 /// Resolves the IAM PostgreSQL pool from environment variables.
 pub async fn resolve_iam_postgres_pool_from_env() -> Option<Arc<PgPool>> {
+    if let Some(pool) = installed_iam_postgres_pool_for_process() {
+        return Some(pool);
+    }
     bridge_iam_database_env_from_im();
     sdkwork_database_sqlx::create_pool_from_env("IAM")
         .await

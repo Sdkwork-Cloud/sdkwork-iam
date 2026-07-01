@@ -1,2 +1,2 @@
 export * from "../index.js";
-export { sdkworkIamPcAdminDependencyCompositionManifestPath } from "./dependency-manifest.js";
+export { sdkworkComponentSpecPath } from "./dependency-manifest.js";

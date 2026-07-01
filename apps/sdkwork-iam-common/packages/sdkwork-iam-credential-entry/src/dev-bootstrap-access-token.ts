@@ -1,3 +1,4 @@
+import { coalesce, trim } from '@sdkwork/utils';
 import { createTestJwt } from '@sdkwork/runtime-bootstrap';
 
 import { SDKWORK_ACCESS_TOKEN_ENV_KEY } from './constants.ts';
@@ -61,10 +62,10 @@ export function buildBootstrapAccessTokenEnvRecord(
   existingAccessToken?: string,
   options?: CreateDevBootstrapAccessTokenOptions,
 ): Record<string, string> {
-  const normalized = existingAccessToken?.trim();
+  const normalized = coalesce(existingAccessToken);
   return {
     [SDKWORK_ACCESS_TOKEN_ENV_KEY]:
-      normalized || createDevBootstrapAccessTokenJwt(options),
+      normalized ?? createDevBootstrapAccessTokenJwt(options),
   };
 }
 

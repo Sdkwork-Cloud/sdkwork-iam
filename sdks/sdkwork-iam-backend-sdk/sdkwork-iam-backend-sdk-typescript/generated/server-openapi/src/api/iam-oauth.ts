@@ -1,7 +1,7 @@
 import { backendApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseOperationCommand, PageInfo } from '../types';
+import type { AppbaseOperationCommand, SdkWorkPageData } from '../types';
 
 
 export class IamOauthIamOauthWebhookConfigsVerificationsApi {
@@ -37,7 +37,7 @@ export class IamOauthIamOauthWebhookConfigsApi {
 
 
 /** Iam oauth webhook Configs list. */
-  async list(params?: IamOauthIamOauthWebhookConfigsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthWebhookConfigsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -45,7 +45,7 @@ export class IamOauthIamOauthWebhookConfigsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/webhook_configs`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/webhook_configs`), query));
   }
 
 /** Iam oauth webhook Configs create. */
@@ -76,7 +76,7 @@ export class IamOauthIamOauthTenantBindingsApi {
 
 
 /** Iam oauth tenant Bindings list. */
-  async list(params?: IamOauthIamOauthTenantBindingsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthTenantBindingsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -84,7 +84,7 @@ export class IamOauthIamOauthTenantBindingsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/tenant_bindings`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/tenant_bindings`), query));
   }
 
 /** Iam oauth tenant Bindings create. */
@@ -115,7 +115,7 @@ export class IamOauthIamOauthSurfacesApi {
 
 
 /** Iam oauth surfaces list. */
-  async list(params?: IamOauthIamOauthSurfacesListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthSurfacesListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -123,7 +123,7 @@ export class IamOauthIamOauthSurfacesApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/surfaces`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/surfaces`), query));
   }
 
 /** Iam oauth surfaces create. */
@@ -159,7 +159,7 @@ export class IamOauthIamOauthSecretsApi {
 
 
 /** Iam oauth secrets list. */
-  async list(params?: IamOauthIamOauthSecretsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthSecretsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -167,7 +167,7 @@ export class IamOauthIamOauthSecretsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/secrets`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/secrets`), query));
   }
 
 /** Iam oauth secrets create. */
@@ -198,7 +198,7 @@ export class IamOauthIamOauthScopeProfilesApi {
 
 
 /** Iam oauth scope Profiles list. */
-  async list(params?: IamOauthIamOauthScopeProfilesListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthScopeProfilesListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -206,7 +206,7 @@ export class IamOauthIamOauthScopeProfilesApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/scope_profiles`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/scope_profiles`), query));
   }
 
 /** Iam oauth scope Profiles create. */
@@ -237,7 +237,7 @@ export class IamOauthIamOauthResourceAuthorizationsApi {
 
 
 /** Iam oauth resource Authorizations list. */
-  async list(params?: IamOauthIamOauthResourceAuthorizationsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthResourceAuthorizationsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -245,7 +245,7 @@ export class IamOauthIamOauthResourceAuthorizationsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/resource_authorizations`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/resource_authorizations`), query));
   }
 
 /** Iam oauth resource Authorizations create. */
@@ -324,7 +324,7 @@ export class IamOauthIamOauthResourceAccountsApi {
 
 
 /** Iam oauth resource Accounts list. */
-  async list(params?: IamOauthIamOauthResourceAccountsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthResourceAccountsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -332,7 +332,7 @@ export class IamOauthIamOauthResourceAccountsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/resource_accounts`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/resource_accounts`), query));
   }
 
 /** Iam oauth resource Accounts create. */
@@ -363,7 +363,7 @@ export class IamOauthIamOauthProviderCatalogApi {
 
 
 /** Iam oauth provider Catalog list. */
-  async list(params?: IamOauthIamOauthProviderCatalogListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthProviderCatalogListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -371,7 +371,7 @@ export class IamOauthIamOauthProviderCatalogApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/provider_catalog`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/provider_catalog`), query));
   }
 
 /** Iam oauth provider Catalog create. */
@@ -407,7 +407,7 @@ export class IamOauthIamOauthPoliciesApi {
 
 
 /** Iam oauth policies list. */
-  async list(params?: IamOauthIamOauthPoliciesListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthPoliciesListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -415,7 +415,7 @@ export class IamOauthIamOauthPoliciesApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/policies`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/policies`), query));
   }
 
 /** Iam oauth policies create. */
@@ -462,7 +462,7 @@ export class IamOauthIamOauthOperatorPlatformsApi {
 
 
 /** Iam oauth operator Platforms list. */
-  async list(params?: IamOauthIamOauthOperatorPlatformsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthOperatorPlatformsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -470,7 +470,7 @@ export class IamOauthIamOauthOperatorPlatformsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/operator_platforms`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/operator_platforms`), query));
   }
 
 /** Iam oauth operator Platforms create. */
@@ -517,7 +517,7 @@ export class IamOauthIamOauthOperationalResourcesApi {
 
 
 /** Iam oauth operational Resources list. */
-  async list(params?: IamOauthIamOauthOperationalResourcesListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthOperationalResourcesListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -525,7 +525,7 @@ export class IamOauthIamOauthOperationalResourcesApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/operational_resources`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/operational_resources`), query));
   }
 
 /** Iam oauth operational Resources create. */
@@ -561,7 +561,7 @@ export class IamOauthIamOauthIntegrationsApi {
 
 
 /** Iam oauth integrations list. */
-  async list(params?: IamOauthIamOauthIntegrationsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthIntegrationsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -569,7 +569,7 @@ export class IamOauthIamOauthIntegrationsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/integrations`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/integrations`), query));
   }
 
 /** Iam oauth integrations create. */
@@ -610,7 +610,7 @@ export class IamOauthIamOauthGrantsApi {
 
 
 /** Iam oauth grants list. */
-  async list(params?: IamOauthIamOauthGrantsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthGrantsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -618,7 +618,7 @@ export class IamOauthIamOauthGrantsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/grants`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/grants`), query));
   }
 
 /** Iam oauth grants delete. */
@@ -644,7 +644,7 @@ export class IamOauthIamOauthFlowConfigsApi {
 
 
 /** Iam oauth flow Configs list. */
-  async list(params?: IamOauthIamOauthFlowConfigsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthFlowConfigsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -652,7 +652,7 @@ export class IamOauthIamOauthFlowConfigsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/flow_configs`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/flow_configs`), query));
   }
 
 /** Iam oauth flow Configs create. */
@@ -683,7 +683,7 @@ export class IamOauthIamOauthDiagnosticRunsApi {
 
 
 /** Iam oauth diagnostic Runs list. */
-  async list(params?: IamOauthIamOauthDiagnosticRunsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthDiagnosticRunsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -691,7 +691,7 @@ export class IamOauthIamOauthDiagnosticRunsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/diagnostic_runs`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/diagnostic_runs`), query));
   }
 
 /** Iam oauth diagnostic Runs create. */
@@ -722,7 +722,7 @@ export class IamOauthIamOauthClientsApi {
 
 
 /** Iam oauth clients list. */
-  async list(params?: IamOauthIamOauthClientsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthClientsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -730,7 +730,7 @@ export class IamOauthIamOauthClientsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/clients`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/clients`), query));
   }
 
 /** Iam oauth clients create. */
@@ -771,7 +771,7 @@ export class IamOauthIamOauthClaimMappingsApi {
 
 
 /** Iam oauth claim Mappings list. */
-  async list(params?: IamOauthIamOauthClaimMappingsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthClaimMappingsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -779,7 +779,7 @@ export class IamOauthIamOauthClaimMappingsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/claim_mappings`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/claim_mappings`), query));
   }
 
 /** Iam oauth claim Mappings create. */
@@ -810,7 +810,7 @@ export class IamOauthIamOauthCallbackEventsApi {
 
 
 /** Iam oauth callback Events list. */
-  async list(params?: IamOauthIamOauthCallbackEventsListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthCallbackEventsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -818,7 +818,7 @@ export class IamOauthIamOauthCallbackEventsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/callback_events`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/callback_events`), query));
   }
 }
 
@@ -839,7 +839,7 @@ export class IamOauthIamOauthAccountLinksApi {
 
 
 /** Iam oauth account Links list. */
-  async list(params?: IamOauthIamOauthAccountLinksListParams): Promise<Record<string, unknown>> {
+  async list(params?: IamOauthIamOauthAccountLinksListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -847,7 +847,7 @@ export class IamOauthIamOauthAccountLinksApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(backendApiPath(`/iam/oauth/account_links`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/account_links`), query));
   }
 
 /** Iam oauth account Links update. */

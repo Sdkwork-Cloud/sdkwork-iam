@@ -1,3 +1,5 @@
+import 'package:sdkwork_iam_flutter_mobile_core/sdkwork_iam_flutter_mobile_core.dart';
+
 class IamFlutterMobileUserProfile {
   const IamFlutterMobileUserProfile({
     required this.userId,
@@ -142,7 +144,7 @@ class IamFlutterMobileUserProfileController {
       return value;
     }
     if (value is String) {
-      final normalized = value.trim().toLowerCase();
+      final normalized = sdkworkNormalizeLowercase(value);
       if (normalized == 'true' || normalized == '1') {
         return true;
       }
@@ -153,11 +155,5 @@ class IamFlutterMobileUserProfileController {
     return null;
   }
 
-  static String? _optionalString(Object? value) {
-    if (value == null) {
-      return null;
-    }
-    final normalized = value.toString().trim();
-    return normalized.isEmpty ? null : normalized;
-  }
+  static String? _optionalString(Object? value) => sdkworkNormalizeOptionalString(value);
 }

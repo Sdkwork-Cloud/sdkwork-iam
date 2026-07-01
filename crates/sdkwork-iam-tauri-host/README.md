@@ -4,7 +4,7 @@ Domain: iam
 Capability: tauri-host
 Package type: tauri-host
 Rust crate import: `sdkwork_iam_tauri_host`
-Status: standardizing
+Status: standard
 
 SDKWork IAM Tauri host adapter contract for local/private deployments.
 

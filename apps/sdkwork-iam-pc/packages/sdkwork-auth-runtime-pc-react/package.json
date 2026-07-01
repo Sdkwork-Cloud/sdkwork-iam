@@ -9,6 +9,21 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./handleSdkworkSessionAuthUnauthorizedError": {
+      "types": "./src/handleSdkworkSessionAuthUnauthorizedError.ts",
+      "import": "./src/handleSdkworkSessionAuthUnauthorizedError.ts",
+      "default": "./src/handleSdkworkSessionAuthUnauthorizedError.ts"
+    },
+    "./sdkSessionAuthError": {
+      "types": "./src/sdkSessionAuthError.ts",
+      "import": "./src/sdkSessionAuthError.ts",
+      "default": "./src/sdkSessionAuthError.ts"
+    },
+    "./appbasePcAuthRuntime": {
+      "types": "./src/appbasePcAuthRuntime.ts",
+      "import": "./src/appbasePcAuthRuntime.ts",
+      "default": "./src/appbasePcAuthRuntime.ts"
     }
   },
   "files": [

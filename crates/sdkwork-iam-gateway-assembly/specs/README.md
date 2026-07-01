@@ -12,7 +12,7 @@ Local standards index for `sdkwork-iam-gateway-assembly`. Root SDKWork standards
 | Domain | `iam` |
 | Capability | `gateway` |
 | Languages | `rust` |
-| Status | `standardizing` |
+| Status | `standard` |
 
 ## Canonical Specs
 

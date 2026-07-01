@@ -4,7 +4,7 @@ Domain: iam
 Capability: context
 Package type: rust-crate
 Rust crate import: `sdkwork_iam_context_service`
-Status: standardizing
+Status: standard
 
 SDKWork canonical IAM domain, context, and dual-token contracts for local/private Rust deployments.
 

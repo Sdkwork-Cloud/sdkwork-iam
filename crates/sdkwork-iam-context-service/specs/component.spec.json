@@ -9,7 +9,7 @@
     "root": "sdkwork-iam/crates/sdkwork-iam-context-service",
     "domain": "iam",
     "capability": "context",
-    "status": "standardizing",
+    "status": "standard",
     "languages": [
       "rust"
     ],

@@ -31,8 +31,18 @@
       "purpose": "OAuth runtime discovery and auth metadata rules."
     }
   ],
+  "integration": {
+    "utils": "Exports sdkwork_string_utils.dart aligned with @sdkwork/utils and sdkwork-utils-rust semantics.",
+    "sdkPolicy": "Re-exports auth runtime metadata and shared IAM mobile runtime helpers."
+  },
   "contracts": {
-    "dependencyComposition": "../../../specs/dependency.composition.json"
+    "sdkDependencies": [
+      {
+        "workspace": "@sdkwork/iam-app-sdk",
+        "surface": "app-api",
+        "credentialMode": "authenticated-app-api"
+      }
+    ]
   },
   "verification": {
     "commands": [

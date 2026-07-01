@@ -49,3 +49,23 @@ __pycache__/
 # SDKWork local runtime state
 .runtime/
 **/.runtime/
+**/node_modules/
+!.env.*.example
+!.env.postgres.example
+**/dist/
+**/.pnpm-store/
+**/.sdkwork/local/
+**/.sdkwork/secrets/
+**/.sdkwork/cache/
+**/.sdkwork/tmp/
+**/.sdkwork/dart/pub-cache/
+**/.sdkwork/manual-backups/
+**/.sdkwork/sdkwork-generator-changes.json
+**/.sdkwork/sdkwork-generator-manifest.json
+**/.sdkwork/sdkwork-generator-report.json
+
+# Dart / Flutter local tooling
+.dart_tool/
+**/.dart_tool/
+*.snapshot
+**/incremental_kernel.*

@@ -52,7 +52,7 @@
     },
     {
       "path": "src/api/auth.ts",
-      "sha256": "3fcac9f08568b60d3fad1bb319018a0319f69b7864cdda7eecba525c1c12a1db"
+      "sha256": "7c6c49c3fe8eee24cd9dbe219e450bec1625403e3bdae21ee7167eba1cfa3214"
     },
     {
       "path": "src/api/base.ts",
@@ -60,7 +60,7 @@
     },
     {
       "path": "src/api/iam.ts",
-      "sha256": "a022bdf52dde5f14c84214614541b611d57c88bdb443836d06828bc4918e5dc6"
+      "sha256": "1ecd96f33c5cbe42748b416ebd0aef3d09593d60c1ef2d025d226ec0828f94f5"
     },
     {
       "path": "src/api/index.ts",
@@ -68,7 +68,7 @@
     },
     {
       "path": "src/api/oauth.ts",
-      "sha256": "5b4f2751f96a42ad2dbd4c0e7e57c5a674756b025f6783f5d2d5954e927250a7"
+      "sha256": "342e3ca62d0f3c8c647801472d5c16a2f22d53b46616a14142c2adb774aa5b99"
     },
     {
       "path": "src/api/paths.ts",

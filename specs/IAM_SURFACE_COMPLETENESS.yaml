@@ -1,6 +1,6 @@
 schemaVersion: 1
 kind: sdkwork.iam.surface.completeness
-standardVersion: 2026-06-24
+standardVersion: 2026-06-29
 purpose: >
   Living completeness matrix for sdkwork-iam across database, API, SDK, and client
   surfaces. Status values: complete, partial, scaffold, missing.
@@ -28,6 +28,9 @@ api:
     status: complete
     authority: apis/app-api/iam/sdkwork-iam-app-api.openapi.yaml
     router: crates/sdkwork-routes-iam-app-api/
+    postgresIntegrationTests:
+      - crates/sdkwork-routes-iam-app-api/tests/iam_local_app_router_test.rs
+      - crates/sdkwork-routes-iam-app-api/tests/oauth_authorization_server_integration.rs
   open-api:
     status: complete
     scope: oauth-authorization-server

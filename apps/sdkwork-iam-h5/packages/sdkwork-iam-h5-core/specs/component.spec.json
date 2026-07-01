@@ -14,12 +14,18 @@
     ],
     "generated": false,
     "private": true,
-    "status": "standardizing",
+    "status": "standard",
     "manifests": [
       "package.json"
     ]
   },
   "contracts": {
-    "dependencyComposition": "../../../specs/dependency.composition.json"
+    "sdkDependencies": [
+      {
+        "workspace": "@sdkwork/iam-app-sdk",
+        "surface": "app-api",
+        "credentialMode": "authenticated-app-api"
+      }
+    ]
   }
 }

@@ -1,4 +1,5 @@
 # SDKWORK IAM
+repository-kind: application
 
 `sdkwork-iam` is the canonical IAM domain repository for SDKWork. It owns
 identity, access management, OAuth/SSO, user-center, IMF registry, database module,
@@ -53,9 +54,11 @@ See `../sdkwork-specs/IAM_OAUTH_SPEC.md` for the full contract.
 
 ## Verification
 
-- `pnpm run verify`: structure, database, IAM bootstrap, typecheck, API materialize, governance, IAM standard contracts
-- `pnpm run test:iam-standard-contracts`: TypeScript contracts, IAM adapter parity, PC/H5/Flutter surfaces; Rust HTTP and PostgreSQL integration when `.env.postgres` is present in the workspace database profile
-- `cargo test --workspace`: Rust IAM crate tests (app-api PostgreSQL integration suites require `.env.postgres` and `--test-threads 1`)
+- `pnpm run verify`: structure, database, composition, API envelope, gateway assembly, typecheck, API materialize, governance, governed Rust workspace tests (PostgreSQL integration when profile present)
+- `pnpm run test:iam-standard-contracts`: TypeScript contracts, IAM adapter parity, PC/H5/Flutter surfaces; Rust HTTP and PostgreSQL integration when `.env.postgres` is present
+- `pnpm run check:api-envelope`: v3 `SdkWorkApiResponse` / `ProblemDetail` alignment per `API_SPEC.md`
+- `.github/workflows/iam-quality-gate.yml`: CI entrypoint that mirrors the governed workspace quality gate
+- `deployments/runbooks/local-iam-rust.md`: local Rust verification runbook for gateway assembly, app-api, and backend-api PostgreSQL integration
 
 ## Related specs
 

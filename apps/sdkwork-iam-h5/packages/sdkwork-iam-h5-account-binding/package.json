@@ -17,7 +17,8 @@
   },
   "dependencies": {
     "@sdkwork/iam-h5-core": "workspace:*",
-    "@sdkwork/iam-service": "workspace:*"
+    "@sdkwork/iam-service": "workspace:*",
+    "@sdkwork/utils": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18.2.0 <20.0.0",
@@ -35,6 +36,6 @@
     "surface": "app",
     "domain": "iam",
     "capability": "account-binding",
-    "status": "standardizing"
+    "status": "standard"
   }
 }

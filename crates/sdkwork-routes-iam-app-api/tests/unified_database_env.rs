@@ -1,4 +1,7 @@
 use std::path::{Path, PathBuf};
+use tokio::sync::OnceCell;
+
+static INTEGRATION_PG_POOL: OnceCell<sqlx::PgPool> = OnceCell::const_new();
 
 /// Load the unified claw-router PostgreSQL profile for integration tests.
 ///
@@ -11,9 +14,45 @@ pub fn apply_unified_claw_postgres_env() {
         if path.is_file() {
             apply_env_file(&path);
             materialize_iam_database_url_from_unified_profile();
+            configure_integration_test_database_pool();
             return;
         }
     }
+}
+
+/// Cap IAM SQLx pool size for sequential integration suites so router rebuilds do not exhaust PostgreSQL.
+pub fn configure_integration_test_database_pool() {
+    // SAFETY: test setup runs single-threaded under the IAM env mutex.
+    unsafe {
+        std::env::set_var("SDKWORK_IAM_DATABASE_MAX_CONNECTIONS", "2");
+        std::env::set_var("SDKWORK_IAM_DATABASE_MIN_CONNECTIONS", "0");
+        std::env::set_var("SDKWORK_IAM_DATABASE_ACQUIRE_TIMEOUT", "60");
+    }
+}
+
+/// Shared PostgreSQL pool for integration test seeding helpers (one pool per test binary).
+pub async fn postgres_pool_for_integration_tests() -> sqlx::PgPool {
+    INTEGRATION_PG_POOL
+        .get_or_init(|| async {
+            let database_url =
+                sdkwork_database_config::claw_database::resolve_unified_database_url("SDKWORK_IAM")
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "resolve IAM database URL from unified postgres profile failed: {error}"
+                        )
+                    });
+            sqlx::postgres::PgPoolOptions::new()
+                .max_connections(2)
+                .min_connections(0)
+                .acquire_timeout(std::time::Duration::from_secs(60))
+                .connect(&database_url)
+                .await
+                .expect(
+                    "connect IAM integration test pool failed; on PoolTimedOut restart PostgreSQL or release idle dev-database connections (see deployments/runbooks/local-iam-rust.md)",
+                )
+        })
+        .await
+        .clone()
 }
 
 /// Pin the IAM service database URL after loading the claw-router profile so
@@ -75,4 +114,45 @@ fn strip_optional_quotes(value: &str) -> String {
     } else {
         value.to_string()
     }
+}
+
+/// True when a unified PostgreSQL profile file exists for local integration suites.
+pub fn iam_postgres_profile_configured() -> bool {
+    unified_database_env_candidates()
+        .iter()
+        .any(|path| path.is_file())
+}
+
+/// Tenants that must stay active across open-registration HTTP standard tests so
+/// PostgreSQL integration suites in the same crate are not polluted.
+#[allow(dead_code)]
+pub const OPEN_REGISTRATION_TENANT_ID: &str = "100001";
+
+#[allow(dead_code)]
+pub const INTEGRATION_FIXTURE_TENANT_IDS: &[&str] = &[
+    OPEN_REGISTRATION_TENANT_ID,
+    "tenant_configured",
+    "tenant_secondary_login",
+    "tenant_tertiary_login",
+    "tenant_oauth_pkce_e2e",
+];
+
+/// Deactivate every active tenant except canonical open registration and governed
+/// integration fixture tenants used by `iam_local_app_router_test` / OAuth AS tests.
+#[allow(dead_code)]
+pub async fn deactivate_non_fixture_tenants_for_open_registration(
+    pg: &sqlx::PgPool,
+) -> Result<(), sqlx::Error> {
+    let preserve: Vec<String> = INTEGRATION_FIXTURE_TENANT_IDS
+        .iter()
+        .map(|tenant_id| (*tenant_id).to_string())
+        .collect();
+    sqlx::query(
+        "UPDATE iam_tenant SET status = 'inactive', updated_at = CURRENT_TIMESTAMP \
+         WHERE status = 'active' AND NOT (id = ANY($1))",
+    )
+    .bind(&preserve)
+    .execute(pg)
+    .await?;
+    Ok(())
 }

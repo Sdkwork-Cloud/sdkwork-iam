@@ -10,7 +10,7 @@
     "domain": "iam",
     "capability": "gateway",
     "surface": "gateway/assembly",
-    "status": "standardizing",
+    "status": "standard",
     "languages": [
       "rust"
     ],
@@ -73,7 +73,9 @@
   },
   "verification": {
     "commands": [
-      "cargo test -p sdkwork-iam-gateway-assembly"
+      "cargo test -p sdkwork-iam-gateway-assembly",
+      "cargo test -p sdkwork-iam-gateway-assembly --test infra_routes",
+      "pnpm run check:gateway-assembly"
     ]
   },
   "metadata": {

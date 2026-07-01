@@ -9,7 +9,7 @@
     "root": "sdkwork-iam/crates/sdkwork-iam-embedded-application-bootstrap",
     "domain": "iam",
     "capability": "embedded-application-bootstrap",
-    "status": "standardizing",
+    "status": "standard",
     "languages": ["rust"],
     "generated": false,
     "private": false,

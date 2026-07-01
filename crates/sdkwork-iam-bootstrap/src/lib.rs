@@ -468,5 +468,5 @@ pub fn iam_baseline_postgres_sql() -> &'static str {
 }
 
 pub fn iam_rbac_federation_postgres_sql() -> &'static str {
-    include_str!("../../../database/migrations/postgres/0008_iam_rbac_federation.up.sql")
+    include_str!("../../../database/ddl/baseline/postgres/0001_iam_baseline.sql")
 }

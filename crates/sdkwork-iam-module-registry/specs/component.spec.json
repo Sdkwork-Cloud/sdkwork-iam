@@ -9,7 +9,7 @@
     "root": "sdkwork-iam/crates/sdkwork-iam-module-registry",
     "domain": "iam",
     "capability": "rbac-federation",
-    "status": "standardizing",
+    "status": "standard",
     "languages": ["rust"],
     "generated": false,
     "private": false,

@@ -1,3 +1,4 @@
+import { trim } from "@sdkwork/utils";
 import { createClient, type SdkworkBackendConfig } from "@sdkwork/iam-backend-sdk";
 import { createIamBackendSdkAdapter, unwrapIamSdkResponse } from "@sdkwork/iam-sdk-adapter";
 import type { IamBackendSdkClient } from "@sdkwork/iam-sdk-ports";
@@ -13,7 +14,7 @@ import type {
 } from "./types.ts";
 
 function resolveBackendOrigin(baseUrl: string): string {
-  const trimmed = baseUrl.trim().replace(/\/+$/u, "");
+  const trimmed = trim(baseUrl).replace(/\/+$/u, "");
   if (trimmed.endsWith("/backend/v3/api")) {
     return trimmed.slice(0, -"/backend/v3/api".length);
   }

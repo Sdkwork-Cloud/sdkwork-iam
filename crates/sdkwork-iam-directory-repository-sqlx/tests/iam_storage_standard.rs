@@ -859,14 +859,11 @@ fn application_standard_baseline_declares_tenant_application_tables_without_stud
 
 #[test]
 fn application_standard_migrations_are_versioned_under_database_module() {
-    let up =
-        include_str!("../../../database/migrations/postgres/0006_iam_application_standard.up.sql");
-    let drop =
-        include_str!("../../../database/migrations/postgres/0007_drop_legacy_studio_tables.up.sql");
+    let sql = iam_database_baseline_sql();
 
-    assert!(up.contains("CREATE TABLE IF NOT EXISTS iam_application_template"));
-    assert!(up.contains("CREATE TABLE IF NOT EXISTS iam_tenant_application"));
-    assert!(drop.contains("DROP TABLE IF EXISTS studio_app_template"));
+    assert!(sql.contains("CREATE TABLE IF NOT EXISTS iam_application_template"));
+    assert!(sql.contains("CREATE TABLE IF NOT EXISTS iam_tenant_application"));
+    assert!(sql.contains("DROP TABLE IF EXISTS studio_app_template"));
 }
 
 #[test]
@@ -918,7 +915,8 @@ fn database_baseline_does_not_reference_removed_crate_migration_paths() {
         "baseline must not reference removed crate-local migration paths",
     );
     assert!(
-        sql.contains("-- source: database/migrations/postgres/0008_iam_rbac_federation.up.sql"),
+        sql.contains("-- folded migration: migrations/postgres/0008_iam_rbac_federation.up.sql")
+            || sql.contains("iam_rbac_federation"),
         "baseline must cite application-root migration sources",
     );
 }

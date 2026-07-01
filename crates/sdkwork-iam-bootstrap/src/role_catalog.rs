@@ -24,6 +24,10 @@ pub const IAM_STANDARD_ROLE_GRANTS: &[StandardRoleGrant] = &[
             "iam.profile.read",
             "iam.profile.update",
             "iam.sessions.read",
+            "iam.organizations.read",
+            "iam.memberships.read",
+            "iam.departments.read",
+            "iam.assignments.read",
             "apps.app_center.read",
             "courses.catalog.read",
             "courses.content.read",
@@ -35,6 +39,22 @@ pub const IAM_STANDARD_ROLE_GRANTS: &[StandardRoleGrant] = &[
             "messaging.requests.read",
             "ai.agents.read",
             "ai.skills.read",
+            "knowledge.spaces.read",
+            "knowledge.spaces.write",
+            "knowledge.documents.read",
+            "knowledge.documents.write",
+            "knowledge.ingests.read",
+            "knowledge.ingests.write",
+            "knowledge.imports.write",
+            "knowledge.okf.read",
+            "knowledge.okf.write",
+            "mail.accounts.read",
+            "mail.folders.read",
+            "mail.threads.read",
+            "mail.messages.read",
+            "mail.messages.write",
+            "mail.verification.write",
+            "mail.transactional.write",
         ],
     },
     StandardRoleGrant {
@@ -166,5 +186,37 @@ mod tests {
     fn app_user_does_not_receive_iam_admin_permissions() {
         let expanded = expanded_role_permission_codes(APP_USER_ROLE_CODE);
         assert!(!expanded.iter().any(|code| code.starts_with("iam.users")));
+    }
+
+    #[test]
+    fn app_user_receives_directory_browse_permissions() {
+        let expanded = expanded_role_permission_codes(APP_USER_ROLE_CODE);
+        for permission in [
+            "iam.organizations.read",
+            "iam.memberships.read",
+            "iam.departments.read",
+            "iam.assignments.read",
+        ] {
+            assert!(
+                expanded.iter().any(|code| code == permission),
+                "app_user should include {permission}, got: {expanded:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn app_user_receives_embedded_member_capabilities() {
+        let expanded = expanded_role_permission_codes(APP_USER_ROLE_CODE);
+        for permission in [
+            "knowledge.spaces.read",
+            "knowledge.spaces.write",
+            "mail.messages.read",
+            "mail.messages.write",
+        ] {
+            assert!(
+                expanded.iter().any(|code| code == permission),
+                "app_user should include {permission}, got: {expanded:?}"
+            );
+        }
     }
 }

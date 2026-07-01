@@ -19,6 +19,6 @@ This root follows `APP_PC_ARCHITECTURE_SPEC.md` and `APP_PC_REACT_UI_SPEC.md`. P
 
 - Package surface naming (app / console / admin): `docs/PACKAGE_SURFACES.md`
 - Repository specs: `../../specs/README.md`
-- Dependency composition: `specs/dependency.composition.json`
+- Composition authority: `specs/component.spec.json` and `*-core/specs/component.spec.json#contracts.sdkDependencies`
 - IAM domain: `../../sdkwork-specs/IAM_SPEC.md`
 - IAM login integration: `../../sdkwork-specs/IAM_LOGIN_INTEGRATION_SPEC.md`

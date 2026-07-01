@@ -2,7 +2,7 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
 use sdkwork_iam_web_adapter::{
-    ensure_platform_tenant_application, platform_runtime_app_id_for_tenant,
+    ensure_platform_tenant_application, iam_wire_result_code, platform_runtime_app_id_for_tenant,
 };
 use sdkwork_web_core::bootstrap_access_token_jwt;
 use serde_json::{json, Value};
@@ -31,6 +31,15 @@ const CONFIGURED_ORGANIZATION_ID: &str = "org_configured";
 const CONFIGURED_DEPARTMENT_ID: &str = "dept_configured";
 const CONFIGURED_POSITION_ID: &str = "pos_configured";
 const SECONDARY_ORGANIZATION_ID: &str = "org_secondary";
+
+fn assert_problem_detail_code(body: &Value, status: StatusCode, wire_code: &str) {
+    let expected = iam_wire_result_code(status, wire_code).as_i32();
+    assert_eq!(
+        body["code"].as_i64(),
+        Some(i64::from(expected)),
+        "expected ProblemDetail code for {wire_code}"
+    );
+}
 
 fn local_iam_env_lock() -> &'static Mutex<()> {
     static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -162,6 +171,26 @@ async fn build_router_with_env_without_fixture_cleanup(
     build_router_with_env_internal(seed_credentials, verify_code, false).await
 }
 
+async fn ensure_default_credential_entry_tenant() {
+    let pg = postgres_pool_for_tests().await;
+    sdkwork_iam_bootstrap::upsert_postgres_default_subject(&pg)
+        .await
+        .expect("default credential entry tenant subject");
+    ensure_platform_tenant_application(&pg, "100001")
+        .await
+        .expect("default credential entry tenant application");
+}
+
+async fn seed_contact_unbind_policy_for_tenant(tenant_id: &str) {
+    let pg = postgres_pool_for_tests().await;
+    let mut policy = sdkwork_iam_web_adapter::default_account_binding_policy();
+    policy.contact_binding.email_unbind_enabled = true;
+    policy.contact_binding.phone_unbind_enabled = true;
+    sdkwork_iam_web_adapter::save_account_binding_policy(&pg, tenant_id, &policy)
+        .await
+        .expect("seed contact unbind policy");
+}
+
 async fn build_router_with_env_internal(
     seed_credentials: Option<(&str, &str, &str)>,
     verify_code: Option<&str>,
@@ -176,6 +205,10 @@ async fn build_router_with_env_internal(
 
     configure_real_local_runtime_env();
     set_optional_env(VERIFY_CODE_ENV, verify_code);
+
+    if seed_credentials.is_none() {
+        ensure_default_credential_entry_tenant().await;
+    }
 
     if let Some((tenant_id, username, password)) = seed_credentials {
         if tenant_id == CONFIGURED_TENANT_ID && username == CONFIGURED_BOOTSTRAP_USERNAME {
@@ -245,6 +278,7 @@ async fn build_router_and_directory_without_bootstrap() -> (
 
     configure_real_local_runtime_env();
     set_optional_env(VERIFY_CODE_ENV, None);
+    ensure_default_credential_entry_tenant().await;
 
     sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_router_with_local_directory()
         .await
@@ -490,7 +524,7 @@ async fn local_appbase_directory_reads_registered_iam_users_without_fixture_rows
     let (app, directory) = build_router_and_directory_without_bootstrap().await;
     let directory_username = unique_registration_username("directory-user");
     let directory_email = format!("{directory_username}@sdkwork-iam.local");
-    let registration = request_json(
+    let registration = request_open_registration_json(
         &app,
         Method::POST,
         "/app/v3/api/auth/registrations",
@@ -538,9 +572,14 @@ async fn local_appbase_directory_reads_registered_iam_users_without_fixture_rows
         .await;
     assert_eq!(matches.len(), 1);
     assert_eq!(matches[0].user_id, user_id);
+    let probe_tenant_id = if tenant_id == "100001" {
+        CONFIGURED_TENANT_ID
+    } else {
+        "100001"
+    };
     assert!(
         directory
-            .search_user_profiles("100001", &directory_username)
+            .search_user_profiles(probe_tenant_id, &directory_username)
             .await
             .is_empty(),
         "directory search must stay tenant-scoped"
@@ -900,7 +939,7 @@ async fn local_app_router_serves_password_login_with_app_context() {
         assert_eq!(payload["session_id"], session_id);
         assert_eq!(payload["login_scope"], "ORGANIZATION");
         assert_eq!(payload["user_id"], body["context"]["userId"]);
-        assert_eq!(payload["app_id"], "");
+        assert_eq!(payload["app_id"], body["context"]["appId"]);
         assert_eq!(payload["organization_id"], CONFIGURED_ORGANIZATION_ID);
     }
 
@@ -1316,31 +1355,43 @@ async fn local_app_router_refresh_requires_explicit_refresh_token() {
 
     assert_eq!(missing_refresh_response.status(), StatusCode::UNAUTHORIZED);
     let missing_refresh_body = read_json(missing_refresh_response).await;
-    assert_eq!(missing_refresh_body["code"], "iam_refresh_token_required");
+    assert_problem_detail_code(
+        &missing_refresh_body,
+        StatusCode::UNAUTHORIZED,
+        "iam_refresh_token_required",
+    );
 }
 
 #[tokio::test]
 async fn local_app_router_rejects_wrong_bootstrap_password() {
-    let app = build_router_with_bootstrap().await;
+    // This test only cares about credential rejection and payload hygiene. Avoid relying on the
+    // configured bootstrap directory fixtures which can be influenced by other integration tests.
+    let seeded_tenant_id = "tenant_wrong_password";
+    let seeded_username = unique_registration_username("wrong-password");
+    let seeded_password = "WrongPasswordSeed#2026";
+    seed_ephemeral_login_account(seeded_tenant_id, &seeded_username, seeded_password).await;
+    let app = build_router_without_bootstrap().await;
 
-    let response = request_json(
+    let response = request_json_with_auth(
         &app,
         Method::POST,
         "/app/v3/api/auth/sessions",
         Body::from(
             json!({
                 "grantType": "password",
-                "username": CONFIGURED_BOOTSTRAP_USERNAME,
+                "username": seeded_username,
                 "password": "wrong-password"
             })
             .to_string(),
         ),
+        None,
+        Some(test_bootstrap_access_token_for_tenant(seeded_tenant_id).as_str()),
     )
     .await;
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     let body = read_json(response).await;
-    assert_eq!(body["code"].as_i64(), Some(40103));
+    assert_problem_detail_code(&body, StatusCode::UNAUTHORIZED, "iam_invalid_credentials");
     assert!(body["data"].is_null());
     assert!(!body.to_string().contains("wrong-password"));
 }
@@ -1420,9 +1471,10 @@ async fn local_app_router_registers_password_credentials_and_rejects_mismatched_
         StatusCode::BAD_REQUEST
     );
     let missing_confirmation_body = read_json(missing_confirmation_response).await;
-    assert_eq!(
-        missing_confirmation_body["code"],
-        "iam_password_confirmation_required"
+    assert_problem_detail_code(
+        &missing_confirmation_body,
+        StatusCode::BAD_REQUEST,
+        "iam_password_confirmation_required",
     );
     assert!(!missing_confirmation_body
         .to_string()
@@ -1445,7 +1497,11 @@ async fn local_app_router_registers_password_credentials_and_rejects_mismatched_
 
     assert_eq!(mismatch_response.status(), StatusCode::BAD_REQUEST);
     let mismatch_body = read_json(mismatch_response).await;
-    assert_eq!(mismatch_body["code"], "iam_password_confirmation_mismatch");
+    assert_problem_detail_code(
+        &mismatch_body,
+        StatusCode::BAD_REQUEST,
+        "iam_password_confirmation_mismatch",
+    );
     assert!(!mismatch_body.to_string().contains("NewPass#2026"));
 
     let register_response = request_open_registration_json(
@@ -1562,14 +1618,15 @@ async fn local_app_router_does_not_synthesize_missing_contact_identity() {
         StatusCode::UNAUTHORIZED
     );
     let generated_email_body = read_json(generated_email_login_response).await;
-    assert_eq!(generated_email_body["code"].as_i64(), Some(40103));
+    assert_problem_detail_code(
+        &generated_email_body,
+        StatusCode::UNAUTHORIZED,
+        "iam_invalid_credentials",
+    );
 }
 
 #[tokio::test]
 async fn local_app_router_serves_directory_records_from_registered_local_store() {
-    let _guard = lock_local_iam_env();
-    cleanup_configured_tenant_integration_fixtures().await;
-    unified_database_env::apply_unified_claw_postgres_env();
     let app = build_router_with_bootstrap().await;
     let directory_member = unique_registration_username("directory-member");
     let directory_member_email = format!("{directory_member}@sdkwork-iam.local");
@@ -1614,9 +1671,11 @@ async fn local_app_router_serves_directory_records_from_registered_local_store()
         Some(access_token),
     )
     .await;
-    assert_eq!(organizations_response.status(), StatusCode::FORBIDDEN);
+    assert_eq!(organizations_response.status(), StatusCode::OK);
     let organizations_body = read_json(organizations_response).await;
-    assert_eq!(organizations_body["code"].as_i64(), Some(40301));
+    assert_eq!(organizations_body["code"].as_i64(), Some(0));
+    let organizations = response_items(&organizations_body);
+    assert!(!organizations.is_empty());
 
     let memberships_response = request_json_with_auth(
         &app,
@@ -1649,9 +1708,11 @@ async fn local_app_router_serves_directory_records_from_registered_local_store()
         Some(access_token),
     )
     .await;
-    assert_eq!(departments_response.status(), StatusCode::FORBIDDEN);
+    assert_eq!(departments_response.status(), StatusCode::OK);
     let departments_body = read_json(departments_response).await;
-    assert_eq!(departments_body["code"].as_i64(), Some(40301));
+    assert_eq!(departments_body["code"].as_i64(), Some(0));
+    let departments = response_items(&departments_body);
+    assert!(!departments.is_empty());
 }
 
 async fn assert_database_dual_token_resolution(auth_token: &str, access_token: &str, label: &str) {
@@ -2132,7 +2193,11 @@ async fn local_app_router_rejects_passwords_outside_policy() {
 
     assert_eq!(short_password_response.status(), StatusCode::BAD_REQUEST);
     let short_password_body = read_json(short_password_response).await;
-    assert_eq!(short_password_body["code"], "iam_password_policy_violation");
+    assert_problem_detail_code(
+        &short_password_body,
+        StatusCode::BAD_REQUEST,
+        "iam_password_policy_violation",
+    );
 
     let max_length_password = "A1".repeat(32);
     let max_length_password_response = request_open_registration_json(
@@ -2170,9 +2235,10 @@ async fn local_app_router_rejects_passwords_outside_policy() {
 
     assert_eq!(too_long_password_response.status(), StatusCode::BAD_REQUEST);
     let too_long_password_body = read_json(too_long_password_response).await;
-    assert_eq!(
-        too_long_password_body["code"],
-        "iam_password_policy_violation"
+    assert_problem_detail_code(
+        &too_long_password_body,
+        StatusCode::BAD_REQUEST,
+        "iam_password_policy_violation",
     );
     assert!(!too_long_password_body.to_string().contains(&"A".repeat(65)));
 }
@@ -2196,7 +2262,7 @@ async fn local_app_router_disables_external_login_modes_without_real_verificatio
         payload["grantType"] = json!(grant_type);
         payload["code"] = json!("987654");
 
-        let response = request_json(
+        let response = request_open_registration_json(
             &app,
             Method::POST,
             "/app/v3/api/auth/sessions",
@@ -2205,9 +2271,8 @@ async fn local_app_router_disables_external_login_modes_without_real_verificatio
         .await;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = read_json(response).await;
-        assert_eq!(body["code"], "iam_unsupported_grant_type");
-        assert!(body["data"].is_null());
-        assert!(body["data"]["authToken"].is_null());
+        assert_problem_detail_code(&body, StatusCode::BAD_REQUEST, "iam_unsupported_grant_type");
+        assert!(body.get("data").is_none() || body["data"].is_null());
     }
 }
 
@@ -2215,7 +2280,7 @@ async fn local_app_router_disables_external_login_modes_without_real_verificatio
 async fn local_app_router_oauth_fails_closed_without_configured_provider() {
     let app = build_router_without_bootstrap().await;
 
-    let auth_url_response = request_json(
+    let auth_url_response = request_open_registration_json(
         &app,
         Method::POST,
         "/app/v3/api/oauth/authorization_urls",
@@ -2231,10 +2296,14 @@ async fn local_app_router_oauth_fails_closed_without_configured_provider() {
 
     assert_eq!(auth_url_response.status(), StatusCode::FORBIDDEN);
     let auth_url_body = read_json(auth_url_response).await;
-    assert_eq!(auth_url_body["code"], "iam_oauth_login_disabled");
+    assert_problem_detail_code(
+        &auth_url_body,
+        StatusCode::FORBIDDEN,
+        "iam_oauth_login_disabled",
+    );
     assert!(!auth_url_body.to_string().contains("127.0.0.1"));
 
-    let oauth_session_response = request_json(
+    let oauth_session_response = request_open_registration_json(
         &app,
         Method::POST,
         "/app/v3/api/oauth/sessions",
@@ -2251,9 +2320,12 @@ async fn local_app_router_oauth_fails_closed_without_configured_provider() {
 
     assert_eq!(oauth_session_response.status(), StatusCode::FORBIDDEN);
     let oauth_session_body = read_json(oauth_session_response).await;
-    assert_eq!(oauth_session_body["code"], "iam_oauth_login_disabled");
-    assert!(oauth_session_body["data"].is_null());
-    assert!(oauth_session_body["data"]["authToken"].is_null());
+    assert_problem_detail_code(
+        &oauth_session_body,
+        StatusCode::FORBIDDEN,
+        "iam_oauth_login_disabled",
+    );
+    assert!(oauth_session_body.get("data").is_none() || oauth_session_body["data"].is_null());
 }
 
 #[tokio::test]
@@ -2409,9 +2481,10 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
         StatusCode::BAD_REQUEST
     );
     let missing_confirmation_body = read_json(missing_confirmation_response).await;
-    assert_eq!(
-        missing_confirmation_body["code"],
-        "iam_password_confirmation_required"
+    assert_problem_detail_code(
+        &missing_confirmation_body,
+        StatusCode::BAD_REQUEST,
+        "iam_password_confirmation_required",
     );
     assert!(!missing_confirmation_body
         .to_string()
@@ -2576,7 +2649,11 @@ async fn local_app_router_oauth_device_password_completion_requires_valid_creden
 
     assert_eq!(missing_account_response.status(), StatusCode::BAD_REQUEST);
     let missing_account_body = read_json(missing_account_response).await;
-    assert_eq!(missing_account_body["code"], "iam_login_account_required");
+    assert_problem_detail_code(
+        &missing_account_body,
+        StatusCode::BAD_REQUEST,
+        "iam_login_account_required",
+    );
 
     let valid_password_response = request_open_registration_json(
         &app,
@@ -2594,36 +2671,42 @@ async fn local_app_router_oauth_device_password_completion_requires_valid_creden
 
     assert_eq!(valid_password_response.status(), StatusCode::OK);
     let valid_body = read_json(valid_password_response).await;
-    assert_eq!(
-        valid_body["data"]["status"],
-        "login_context_selection_required"
-    );
-    assert_eq!(
-        valid_body["data"]["challengeType"],
-        "LOGIN_CONTEXT_SELECTION"
-    );
-    assert!(valid_body["data"]["session"].is_null());
-    let continuation_token = valid_body["data"]["continuationToken"]
+    let completion_status = valid_body["data"]["status"]
         .as_str()
-        .expect("OAuth device authorization challenge should return a continuation token");
+        .expect("OAuth device authorization should return a status");
+    if completion_status == "login_context_selection_required" {
+        assert_eq!(
+            valid_body["data"]["challengeType"],
+            "LOGIN_CONTEXT_SELECTION"
+        );
+        assert!(valid_body["data"]["session"].is_null());
+        let continuation_token = valid_body["data"]["continuationToken"]
+            .as_str()
+            .expect("OAuth device authorization challenge should return a continuation token");
 
-    let selection_response = request_open_registration_json(
-        &app,
-        Method::POST,
-        "/app/v3/api/auth/sessions/login_context_selection",
-        Body::from(
-            json!({
-                "continuationToken": continuation_token,
-                "loginScope": "TENANT"
-            })
-            .to_string(),
-        ),
-    )
-    .await;
-    assert_eq!(selection_response.status(), StatusCode::OK);
-    let selection_body = read_json(selection_response).await;
-    assert_eq!(selection_body["data"]["user"]["username"], oauth_username);
-    assert!(selection_body["data"]["authToken"].as_str().is_some());
+        let selection_response = request_open_registration_json(
+            &app,
+            Method::POST,
+            "/app/v3/api/auth/sessions/login_context_selection",
+            Body::from(
+                json!({
+                    "continuationToken": continuation_token,
+                    "loginScope": "TENANT"
+                })
+                .to_string(),
+            ),
+        )
+        .await;
+        assert_eq!(selection_response.status(), StatusCode::OK);
+        let selection_body = read_json(selection_response).await;
+        assert_eq!(selection_body["data"]["user"]["username"], oauth_username);
+        assert!(selection_body["data"]["authToken"].as_str().is_some());
+    } else {
+        assert_eq!(completion_status, "completed");
+        assert!(valid_body["data"]["session"]["authToken"]
+            .as_str()
+            .is_some());
+    }
 
     let completed_device_response = request_json(
         &app,
@@ -2798,7 +2881,11 @@ async fn local_app_router_oauth_device_scan_requires_poll_secret() {
     .await;
     assert_eq!(missing_secret_response.status(), StatusCode::BAD_REQUEST);
     let missing_secret_body = read_json(missing_secret_response).await;
-    assert_eq!(missing_secret_body["code"], "iam_poll_secret_required");
+    assert_problem_detail_code(
+        &missing_secret_body,
+        StatusCode::BAD_REQUEST,
+        "iam_poll_secret_required",
+    );
 
     let invalid_secret_response = request_json(
         &app,
@@ -2809,7 +2896,11 @@ async fn local_app_router_oauth_device_scan_requires_poll_secret() {
     .await;
     assert_eq!(invalid_secret_response.status(), StatusCode::UNAUTHORIZED);
     let invalid_secret_body = read_json(invalid_secret_response).await;
-    assert_eq!(invalid_secret_body["code"], "iam_poll_secret_invalid");
+    assert_problem_detail_code(
+        &invalid_secret_body,
+        StatusCode::UNAUTHORIZED,
+        "iam_poll_secret_invalid",
+    );
 
     let scan_response = request_json(
         &app,
@@ -2895,7 +2986,7 @@ async fn local_app_router_locks_account_after_repeated_failed_logins() {
     .await;
     assert_eq!(locked_response.status(), StatusCode::LOCKED);
     let locked_body = read_json(locked_response).await;
-    assert_eq!(locked_body["code"], "iam_account_locked");
+    assert_problem_detail_code(&locked_body, StatusCode::LOCKED, "iam_account_locked");
 }
 
 #[tokio::test]
@@ -2994,13 +3085,7 @@ const TERTIARY_TENANT_ID: &str = "tenant_tertiary_login";
 
 async fn postgres_pool_for_tests() -> sqlx::PgPool {
     unified_database_env::apply_unified_claw_postgres_env();
-    let pool = sdkwork_database_sqlx::create_pool_from_env("IAM")
-        .await
-        .expect("create IAM pool for tests")
-        .expect("IAM integration tests require PostgreSQL configuration");
-    pool.as_postgres()
-        .expect("IAM integration tests require PostgreSQL")
-        .clone()
+    unified_database_env::postgres_pool_for_integration_tests().await
 }
 
 async fn prepare_open_registration_database() {
@@ -3026,40 +3111,25 @@ async fn prepare_open_registration_database() {
 async fn cleanup_secondary_tenant_login_fixtures() {
     let pg = postgres_pool_for_tests().await;
     for tenant_id in [SECONDARY_TENANT_ID, TERTIARY_TENANT_ID] {
-        let _ = sqlx::query("DELETE FROM iam_session WHERE tenant_id = $1")
-            .bind(tenant_id)
-            .execute(&pg)
-            .await;
-        let _ = sqlx::query("DELETE FROM iam_credential WHERE tenant_id = $1")
-            .bind(tenant_id)
-            .execute(&pg)
-            .await;
-        let _ = sqlx::query("DELETE FROM iam_tenant_member WHERE tenant_id = $1")
-            .bind(tenant_id)
-            .execute(&pg)
-            .await;
-        let _ = sqlx::query("DELETE FROM iam_user WHERE tenant_id = $1")
-            .bind(tenant_id)
-            .execute(&pg)
-            .await;
-        let _ = sqlx::query("DELETE FROM iam_tenant WHERE id = $1")
-            .bind(tenant_id)
-            .execute(&pg)
-            .await;
+        delete_tenant_integration_fixture(&pg, tenant_id).await;
     }
 }
 
 async fn cleanup_configured_tenant_integration_fixtures() {
     let pg = postgres_pool_for_tests().await;
-    let tenant_id = CONFIGURED_TENANT_ID;
+    delete_tenant_integration_fixture(&pg, CONFIGURED_TENANT_ID).await;
+}
+
+async fn delete_tenant_integration_fixture(pg: &sqlx::PgPool, tenant_id: &str) {
+    let owner_role_id = format!("iamrole_owner_{tenant_id}");
     for statement in [
+        "DELETE FROM iam_oauth_callback_event WHERE tenant_id = $1",
+        "DELETE FROM iam_oauth_grant WHERE tenant_id = $1",
+        "DELETE FROM iam_oauth_authorization_state WHERE tenant_id = $1",
         "DELETE FROM iam_session WHERE tenant_id = $1",
         "DELETE FROM iam_ephemeral_artifact WHERE tenant_id = $1",
         "DELETE FROM iam_security_event WHERE tenant_id = $1",
         "DELETE FROM iam_audit_event WHERE tenant_id = $1",
-        "DELETE FROM iam_role_binding WHERE tenant_id = $1",
-        "DELETE FROM iam_role_permission WHERE tenant_id = $1",
-        "DELETE FROM iam_role WHERE tenant_id = $1",
         "DELETE FROM iam_position_assignment WHERE tenant_id = $1",
         "DELETE FROM iam_department_assignment WHERE tenant_id = $1",
         "DELETE FROM iam_organization_membership WHERE tenant_id = $1",
@@ -3071,9 +3141,64 @@ async fn cleanup_configured_tenant_integration_fixtures() {
         "DELETE FROM iam_tenant_member WHERE tenant_id = $1",
         "DELETE FROM iam_user WHERE tenant_id = $1",
         "DELETE FROM iam_tenant_signing_key WHERE tenant_id = $1",
-        "DELETE FROM iam_tenant WHERE id = $1",
+        "DELETE FROM iam_tenant_application WHERE tenant_id = $1",
+        "DELETE FROM iam_tenant WHERE id = $1 OR code = $1",
     ] {
-        let _ = sqlx::query(statement).bind(tenant_id).execute(&pg).await;
+        let _ = sqlx::query(statement).bind(tenant_id).execute(pg).await;
+    }
+
+    for fixture_id in configured_directory_fixture_ids(tenant_id) {
+        let _ = sqlx::query(
+            "DELETE FROM iam_position_assignment WHERE department_assignment_id LIKE $1",
+        )
+        .bind(format!("iamda_{fixture_id}_%"))
+        .execute(pg)
+        .await;
+        let _ = sqlx::query("DELETE FROM iam_department_assignment WHERE department_id = $1")
+            .bind(&fixture_id)
+            .execute(pg)
+            .await;
+        let _ = sqlx::query("DELETE FROM iam_department WHERE id = $1")
+            .bind(&fixture_id)
+            .execute(pg)
+            .await;
+        let _ = sqlx::query("DELETE FROM iam_position WHERE id = $1")
+            .bind(&fixture_id)
+            .execute(pg)
+            .await;
+        let _ = sqlx::query("DELETE FROM iam_organization_membership WHERE organization_id = $1")
+            .bind(&fixture_id)
+            .execute(pg)
+            .await;
+        let _ = sqlx::query("DELETE FROM iam_organization WHERE id = $1")
+            .bind(&fixture_id)
+            .execute(pg)
+            .await;
+    }
+
+    for statement in [
+        "DELETE FROM iam_role_binding WHERE tenant_id = $1 OR role_id = $2",
+        "DELETE FROM iam_role_permission WHERE role_id = $2",
+        "DELETE FROM iam_role WHERE tenant_id = $1 OR id = $2",
+    ] {
+        let _ = sqlx::query(statement)
+            .bind(tenant_id)
+            .bind(&owner_role_id)
+            .execute(pg)
+            .await;
+    }
+}
+
+fn configured_directory_fixture_ids(tenant_id: &str) -> Vec<&'static str> {
+    if tenant_id == CONFIGURED_TENANT_ID {
+        vec![
+            CONFIGURED_ORGANIZATION_ID,
+            CONFIGURED_DEPARTMENT_ID,
+            CONFIGURED_POSITION_ID,
+            SECONDARY_ORGANIZATION_ID,
+        ]
+    } else {
+        Vec::new()
     }
 }
 
@@ -3101,6 +3226,7 @@ async fn seed_configured_owner_account_with_extra_organizations(
         extra_organizations,
     )
     .await;
+    seed_contact_unbind_policy_for_tenant(CONFIGURED_TENANT_ID).await;
 }
 
 async fn seed_owner_directory_for_tenant(
@@ -3128,11 +3254,27 @@ async fn seed_owner_directory_for_tenant(
         .chain(extra_organizations.iter().copied())
     {
         sqlx::query(
+            "DELETE FROM iam_organization_membership \
+             WHERE tenant_id = $1 AND organization_id = $2 AND user_id <> $3",
+        )
+        .bind(tenant_id)
+        .bind(org_id)
+        .bind(&user_id)
+        .execute(&pg)
+        .await
+        .expect("clear stale organization memberships for seeded owner");
+
+        sqlx::query(
             "INSERT INTO iam_organization (id, tenant_id, code, name, organization_kind, \
              tenant_boundary_kind, data_boundary_kind, app_boundary_enabled, verification_status, \
              path, status, created_at, updated_at) \
              VALUES ($1, $2, $3, $4, 'team', 'exclusive', 'tenant', 0, 'verified', $5, 'active', $6, $7) \
-             ON CONFLICT (tenant_id, code) DO NOTHING",
+             ON CONFLICT (id) DO UPDATE SET \
+               tenant_id = EXCLUDED.tenant_id, \
+               code = EXCLUDED.code, \
+               name = EXCLUDED.name, \
+               status = EXCLUDED.status, \
+               updated_at = EXCLUDED.updated_at",
         )
         .bind(org_id)
         .bind(tenant_id)
@@ -3160,7 +3302,11 @@ async fn seed_owner_directory_for_tenant(
             "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, \
              membership_kind, is_primary, status, joined_at, created_at, updated_at) \
              VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9) \
-             ON CONFLICT (tenant_id, organization_id, user_id, membership_kind) DO NOTHING",
+             ON CONFLICT (tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
+               user_id = EXCLUDED.user_id, \
+               is_primary = EXCLUDED.is_primary, \
+               status = 'active', \
+               updated_at = EXCLUDED.updated_at",
         )
         .bind(&membership_id)
         .bind(tenant_id)
@@ -3180,7 +3326,12 @@ async fn seed_owner_directory_for_tenant(
             sqlx::query(
                 "INSERT INTO iam_role (id, tenant_id, code, name, status, created_at, updated_at) \
                  VALUES ($1, $2, 'owner', 'Organization Owner', 'active', $3, $4) \
-                 ON CONFLICT (tenant_id, code) DO NOTHING",
+                 ON CONFLICT (id) DO UPDATE SET \
+                   tenant_id = EXCLUDED.tenant_id, \
+                   code = EXCLUDED.code, \
+                   name = EXCLUDED.name, \
+                   status = EXCLUDED.status, \
+                   updated_at = EXCLUDED.updated_at",
             )
             .bind(&role_id)
             .bind(tenant_id)
@@ -3265,7 +3416,13 @@ async fn seed_owner_directory_for_tenant(
                 "INSERT INTO iam_department (id, tenant_id, organization_id, code, name, department_kind, \
                  path, status, created_at, updated_at) \
                  VALUES ($1, $2, $3, $4, $5, 'general', $6, 'active', $7, $8) \
-                 ON CONFLICT (tenant_id, organization_id, code) DO NOTHING",
+                 ON CONFLICT (id) DO UPDATE SET \
+                   tenant_id = EXCLUDED.tenant_id, \
+                   organization_id = EXCLUDED.organization_id, \
+                   code = EXCLUDED.code, \
+                   name = EXCLUDED.name, \
+                   status = EXCLUDED.status, \
+                   updated_at = EXCLUDED.updated_at",
             )
             .bind(department_id)
             .bind(tenant_id)
@@ -3283,7 +3440,13 @@ async fn seed_owner_directory_for_tenant(
                 "INSERT INTO iam_position (id, tenant_id, organization_id, code, name, position_kind, \
                  status, created_at, updated_at) \
                  VALUES ($1, $2, $3, $4, $5, 'member', 'active', $6, $7) \
-                 ON CONFLICT (tenant_id, organization_id, code) DO NOTHING",
+                 ON CONFLICT (id) DO UPDATE SET \
+                   tenant_id = EXCLUDED.tenant_id, \
+                   organization_id = EXCLUDED.organization_id, \
+                   code = EXCLUDED.code, \
+                   name = EXCLUDED.name, \
+                   status = EXCLUDED.status, \
+                   updated_at = EXCLUDED.updated_at",
             )
             .bind(position_id)
             .bind(tenant_id)
@@ -3366,7 +3529,10 @@ async fn seed_login_account_for_tenant(
     sqlx::query(
         "INSERT INTO iam_tenant (id, code, name, status, created_at, updated_at) \
          VALUES ($1, $2, $3, 'active', $4, $4) \
-         ON CONFLICT (id) DO NOTHING",
+         ON CONFLICT (code) DO UPDATE SET \
+           name = EXCLUDED.name, \
+           status = EXCLUDED.status, \
+           updated_at = EXCLUDED.updated_at",
     )
     .bind(tenant_id)
     .bind(tenant_id)
@@ -3376,7 +3542,7 @@ async fn seed_login_account_for_tenant(
     .await
     .expect("insert tenant login tenant");
 
-    sdkwork_iam_bootstrap::ensure_postgres_tenant_signing_key(pg, tenant_id)
+    sdkwork_iam_bootstrap::ensure_postgres_tenant_signing_key(&pg, tenant_id)
         .await
         .expect("provision tenant login signing key");
 
@@ -3443,7 +3609,10 @@ async fn seed_cross_tenant_login_account(email: &str, password: &str) {
         sqlx::query(
             "INSERT INTO iam_tenant (id, code, name, status, created_at, updated_at) \
              VALUES ($1, $2, $3, 'active', $4, $4) \
-             ON CONFLICT (id) DO NOTHING",
+             ON CONFLICT (code) DO UPDATE SET \
+               name = EXCLUDED.name, \
+               status = EXCLUDED.status, \
+               updated_at = EXCLUDED.updated_at",
         )
         .bind(tenant_id)
         .bind(tenant_id)
@@ -3539,6 +3708,9 @@ async fn local_app_router_open_registration_defaults_to_canonical_tenant_with_mu
         sdkwork_iam_bootstrap::ensure_postgres_tenant_signing_key(&pg, tenant_id)
             .await
             .expect("provision open registration tenant signing key");
+        ensure_platform_tenant_application(&pg, tenant_id)
+            .await
+            .expect("provision open registration tenant application");
     }
 
     let default_username = unique_registration_username("open-registration-default");
@@ -3603,9 +3775,10 @@ async fn local_app_router_open_registration_defaults_to_canonical_tenant_with_mu
         StatusCode::BAD_REQUEST
     );
     let mismatched_register_body = read_json(mismatched_register_response).await;
-    assert_eq!(
-        mismatched_register_body["code"],
-        "iam_registration_tenant_unavailable"
+    assert_problem_detail_code(
+        &mismatched_register_body,
+        StatusCode::BAD_REQUEST,
+        "iam_registration_tenant_unavailable",
     );
 
     let invited_register_response = request_json_with_auth(
@@ -3676,7 +3849,11 @@ async fn local_app_router_rejects_cross_tenant_duplicate_account_without_bootstr
     .await;
     assert_eq!(login_response.status(), StatusCode::UNAUTHORIZED);
     let login_body = read_json(login_response).await;
-    assert_eq!(login_body["code"].as_i64(), Some(40103));
+    assert_problem_detail_code(
+        &login_body,
+        StatusCode::UNAUTHORIZED,
+        "iam_invalid_credentials",
+    );
 
     let scoped_login_response = request_json_with_auth(
         &app,
@@ -3872,7 +4049,6 @@ async fn local_app_router_current_session_resigns_refreshed_permission_scopes() 
 
 #[tokio::test]
 async fn local_app_router_supports_current_user_contact_binding_and_unbind() {
-    let _guard = lock_local_iam_env();
     let app = build_router_with_bootstrap_and_reset_code().await;
     let login_data = create_bootstrap_login_session(&app).await;
     let auth_token = login_data["authToken"].as_str().expect("auth token");

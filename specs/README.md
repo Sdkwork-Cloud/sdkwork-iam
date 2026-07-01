@@ -9,16 +9,17 @@ Root SDKWork standards remain authoritative. Local component specs can narrow or
 | Field | Value |
 | --- | --- |
 | Name | `@sdkwork/iam-workspace` |
-| Type | `multi-surface-workspace` |
+| Type | `domain-workspace` |
 | Root | `sdkwork-iam` |
 | Domain | `iam` |
-| Capability | `workspace` |
+| Capability | `iam` |
 | Languages | `typescript`, `react`, `rust` |
-| Status | `standardizing` |
+| Status | `standard` |
 
 ## Contract Manifest
 
 - [component.spec.json](./component.spec.json) is the machine-readable component contract.
+- [topology.spec.json](./topology.spec.json) defines IAM gateway deployment topology.
 - Consumers integrate through public exports, runtime entrypoints, SDK clients, or adapters declared in the manifest.
 
 ## Surface completeness
@@ -31,10 +32,16 @@ Root SDKWork standards remain authoritative. Local component specs can narrow or
 - `pnpm run check:structure`
 - `pnpm run check:database`
 - `pnpm run check:iam-application-bootstrap`
+- `pnpm run check:app-composition`
+- `pnpm run check:api-envelope`
+- `pnpm run check:gateway-assembly`
 - `pnpm run typecheck`
 - `pnpm run api:materialize`
 - `pnpm run test:governance-node`
-- `pnpm run test:iam-standard-contracts` for IAM TypeScript and Rust integration parity (PostgreSQL integration tests require `.env.postgres`; without it, HTTP standard tests still run for app-api and backend-api route contracts)
+- `pnpm run test:rust-workspace` for governed Rust workspace tests (PostgreSQL integration suites run only when `.env.postgres` or claw-router profile is present)
+- `pnpm run verify` runs the merge-ready aggregate above
+- `.github/workflows/iam-quality-gate.yml` runs `pnpm check`, `pnpm test:governance-node`, `pnpm test:iam-standard-contracts`, and `pnpm test:rust-workspace` on push and pull request
+- `pnpm run test:iam-standard-contracts` for IAM TypeScript and Rust integration parity (PostgreSQL integration tests require `.env.postgres`; includes `iam_local_app_router_test`)
 - `pnpm run test:iam-standard-governance` for IAM governance contract coverage
 - `pnpm run test:user-center-standard-contracts` for user-center upstream dispatch parity
 - `pnpm run test:workspace-vitest` for package-level Vitest coverage

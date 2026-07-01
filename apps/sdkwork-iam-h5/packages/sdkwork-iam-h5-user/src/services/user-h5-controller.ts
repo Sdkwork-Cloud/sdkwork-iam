@@ -1,4 +1,5 @@
 import type { SdkworkIamService } from "@sdkwork/iam-service";
+import { isBlank, trim } from "@sdkwork/utils";
 
 import type {
   CreateSdkworkIamH5UserControllerInput,
@@ -94,7 +95,7 @@ function readBoolean(value: unknown): boolean | undefined {
     return value;
   }
   if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
+    const normalized = trim(value).toLowerCase();
     if (normalized === "true" || normalized === "1") {
       return true;
     }
@@ -124,6 +125,9 @@ function toProfile(value: unknown): SdkworkIamH5UserProfile | undefined {
 }
 
 function optionalString(value: unknown): string | undefined {
-  const normalized = typeof value === "string" ? value.trim() : value === undefined || value === null ? "" : String(value).trim();
-  return normalized || undefined;
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const normalized = trim(String(value));
+  return isBlank(normalized) ? undefined : normalized;
 }

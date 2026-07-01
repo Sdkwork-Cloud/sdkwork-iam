@@ -8,6 +8,7 @@ use sdkwork_iam_bootstrap::{
 };
 use sdkwork_iam_web_adapter::{
     ensure_platform_tenant_application, platform_runtime_app_id_for_tenant,
+    tenant_application_row_id, PLATFORM_APPLICATION_TEMPLATE_ID,
     SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV,
 };
 use sqlx::PgPool;
@@ -17,7 +18,6 @@ pub const INTEGRATION_BOOTSTRAP_PASSWORD: &str = "BackendIntegration#2026";
 pub const INTEGRATION_BOOTSTRAP_EMAIL: &str = "backend-integration-owner@sdkwork-iam.test";
 pub const INTEGRATION_ORGANIZATION_ID: &str = "iamorg_backend_integration";
 const INTEGRATION_ORGANIZATION_CODE: &str = "backend-integration";
-const SIGNING_MASTER_SECRET_ENV: &str = "SDKWORK_IAM_TENANT_SIGNING_MASTER_SECRET";
 
 pub fn configure_backend_integration_runtime_env() {
     // SAFETY: backend integration tests run single-threaded under the IAM env mutex.
@@ -206,6 +206,16 @@ async fn ensure_integration_organization_and_tenant_application(
     runtime_app_id: &str,
 ) -> Result<(), String> {
     let now = chrono::Utc::now();
+    sqlx::query("DELETE FROM iam_organization WHERE tenant_id = $1 AND code = $2 AND id <> $3")
+        .bind(DEFAULT_IAM_TENANT_ID)
+        .bind(INTEGRATION_ORGANIZATION_CODE)
+        .bind(INTEGRATION_ORGANIZATION_ID)
+        .execute(pg)
+        .await
+        .map_err(|error| {
+            format!("clear stale integration organization tenant/code rows failed: {error}")
+        })?;
+
     sqlx::query(
         "INSERT INTO iam_organization (id, tenant_id, parent_organization_id, code, name, path, status, \
          organization_kind, tenant_boundary_kind, data_boundary_kind, app_boundary_enabled, verification_status, \
@@ -224,7 +234,8 @@ async fn ensure_integration_organization_and_tenant_application(
     .await
     .map_err(|error| format!("ensure integration organization failed: {error}"))?;
 
-    let tenant_application_id = format!("tapp_{DEFAULT_IAM_TENANT_ID}_default");
+    let tenant_application_id =
+        tenant_application_row_id(DEFAULT_IAM_TENANT_ID, "0", PLATFORM_APPLICATION_TEMPLATE_ID);
     sqlx::query(
         "UPDATE iam_tenant_application \
          SET organization_id = $1, status = 'enabled', updated_at = $2 \

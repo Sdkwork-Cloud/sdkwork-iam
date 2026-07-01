@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::is_blank;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::Response,
     routing::{get, post},
     Json, Router,
 };
@@ -148,7 +149,7 @@ pub(crate) fn tenant_id_from_context(ctx: &WebRequestContext) -> Result<String, 
 pub(crate) fn organization_id_from_context(ctx: &WebRequestContext) -> Option<String> {
     ctx.organization_id()
         .map(str::trim)
-        .filter(|value| !value.is_empty())
+        .filter(|value| !is_blank(Some(value)))
         .map(str::to_owned)
 }
 
@@ -532,7 +533,7 @@ async fn retrieve_tenant_application_handler(
         .get("tenantId")
         .or_else(|| query.get("tenant_id"))
         .cloned()
-        .filter(|value| !value.trim().is_empty())
+        .filter(|value| !is_blank(Some(value.as_str())))
         .unwrap_or(context_tenant_id.clone());
     if tenant_id != context_tenant_id {
         return appbase_error(
@@ -749,7 +750,7 @@ fn read_required_string(body: &Value, keys: &[&str]) -> Result<String, String> {
             body.get(*key)
                 .and_then(Value::as_str)
                 .map(str::trim)
-                .filter(|value| !value.is_empty())
+                .filter(|value| !is_blank(Some(value)))
                 .map(str::to_owned)
         })
         .ok_or_else(|| format!("{} is required", keys[0]))

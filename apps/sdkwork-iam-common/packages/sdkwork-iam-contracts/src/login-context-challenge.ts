@@ -1,3 +1,4 @@
+import { isBlank, trim } from '@sdkwork/utils';
 import {
   isLoginEligibleOrganizationId,
   PLATFORM_ORGANIZATION_ID,
@@ -32,8 +33,8 @@ export interface IamLoginContextSelectionChallenge {
 }
 
 function optionalString(value: unknown): string | undefined {
-  const normalized = typeof value === 'string' ? value.trim() : '';
-  return normalized || undefined;
+  const normalized = typeof value === 'string' ? trim(value) : '';
+  return isBlank(normalized) ? undefined : normalized;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -156,7 +157,7 @@ export function buildPersonalLoginContextSelectionBody(
   continuationToken: string,
 ): Record<string, string> {
   return {
-    continuationToken: continuationToken.trim(),
+    continuationToken: trim(continuationToken),
     loginScope: 'TENANT',
     organizationId: PLATFORM_ORGANIZATION_ID,
   };
@@ -166,13 +167,13 @@ export function buildOrganizationLoginContextSelectionBody(
   continuationToken: string,
   organizationId: string,
 ): Record<string, string> {
-  const normalizedOrganizationId = organizationId.trim();
+  const normalizedOrganizationId = trim(organizationId);
   if (!isLoginEligibleOrganizationId(normalizedOrganizationId)) {
     throw new Error('organization id is required for organization login');
   }
 
   return {
-    continuationToken: continuationToken.trim(),
+    continuationToken: trim(continuationToken),
     loginScope: 'ORGANIZATION',
     organizationId: normalizedOrganizationId,
   };

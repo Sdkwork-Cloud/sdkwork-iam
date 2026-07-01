@@ -10,7 +10,7 @@
     "domain": "iam",
     "capability": "iam",
     "surface": "app-api",
-    "status": "standardizing",
+    "status": "standard",
     "languages": [
       "rust"
     ],

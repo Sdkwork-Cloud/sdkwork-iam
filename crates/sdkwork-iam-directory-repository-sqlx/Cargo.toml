@@ -10,5 +10,5 @@ name = "sdkwork_iam_directory_repository_sqlx"
 path = "src/lib.rs"
 
 [dependencies]
-sdkwork-database-config = { path = "../../../sdkwork-database/crates/sdkwork-database-config" }
+sdkwork-database-config = { workspace = true }
 sdkwork_iam_context_service.workspace = true

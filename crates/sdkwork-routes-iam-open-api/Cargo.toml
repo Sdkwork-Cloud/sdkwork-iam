@@ -17,6 +17,7 @@ sdkwork-web-contract.workspace = true
 sdkwork-web-core.workspace = true
 sdkwork_database_sqlx.workspace = true
 sdkwork_iam_web_adapter.workspace = true
+sdkwork_utils_rust.workspace = true
 sqlx.workspace = true
 
 [dev-dependencies]

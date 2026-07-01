@@ -1,3 +1,5 @@
+import 'package:sdkwork_iam_flutter_mobile_core/sdkwork_iam_flutter_mobile_core.dart';
+
 class IamFlutterMobileAccountBindingPolicy {
   const IamFlutterMobileAccountBindingPolicy({
     required this.contactBindingEnabled,
@@ -89,7 +91,7 @@ class IamFlutterMobileAccountBindingController {
       return value;
     }
     if (value is String) {
-      final normalized = value.trim().toLowerCase();
+      final normalized = sdkworkNormalizeLowercase(value);
       if (normalized == 'true' || normalized == '1') {
         return true;
       }
@@ -100,11 +102,5 @@ class IamFlutterMobileAccountBindingController {
     return fallback;
   }
 
-  static String? _optionalString(Object? value) {
-    if (value == null) {
-      return null;
-    }
-    final normalized = value.toString().trim();
-    return normalized.isEmpty ? null : normalized;
-  }
+  static String? _optionalString(Object? value) => sdkworkNormalizeOptionalString(value);
 }

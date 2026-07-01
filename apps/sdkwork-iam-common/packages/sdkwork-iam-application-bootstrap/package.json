@@ -27,7 +27,8 @@
     "@sdkwork/iam-sdk-adapter": "workspace:*",
     "@sdkwork/iam-sdk-ports": "workspace:*",
     "@sdkwork/iam-service": "workspace:*",
-    "@sdkwork/runtime-bootstrap": "workspace:*"
+    "@sdkwork/runtime-bootstrap": "workspace:*",
+    "@sdkwork/utils": "workspace:*"
   },
   "sdkwork": {
     "architecture": "common",

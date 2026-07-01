@@ -1,2 +1,1 @@
-export const sdkworkIamPcAdminDependencyCompositionManifestPath =
-  "../../../specs/dependency.composition.json" as const;
+export const sdkworkComponentSpecPath = "../../../specs/component.spec.json" as const;

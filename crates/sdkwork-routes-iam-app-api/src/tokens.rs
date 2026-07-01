@@ -605,10 +605,10 @@ pub(crate) async fn handle_refresh_token_reuse(pg: &PgPool, refresh_token: &str)
     let row = match sqlx::query(
         "SELECT s.tenant_id, s.organization_id, s.user_id, s.id \
          FROM iam_session s \
-         JOIN iam_user u ON u.id = s.user_id \
-         WHERE s.refresh_token_hash = $1 AND s.revoked_at IS NOT NULL \
+         JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
+         WHERE s.refresh_token_hash = $1 \
            AND u.status = 'active' AND u.is_deleted = 0 \
-         ORDER BY s.revoked_at DESC \
+         ORDER BY s.revoked_at DESC NULLS LAST, s.created_at DESC \
          LIMIT 1",
     )
     .bind(&refresh_hash)
@@ -630,11 +630,12 @@ pub(crate) async fn handle_refresh_token_reuse(pg: &PgPool, refresh_token: &str)
     let now = current_timestamp_utc();
     let _ = sqlx::query(
         "UPDATE iam_session SET revoked_at = $2, updated_at = $3 \
-         WHERE user_id = $1 AND revoked_at IS NULL",
+         WHERE tenant_id = $1 AND user_id = $4 AND revoked_at IS NULL",
     )
+    .bind(&tenant_id)
+    .bind(&now)
+    .bind(&now)
     .bind(&user_id)
-    .bind(&now)
-    .bind(&now)
     .execute(pg)
     .await;
 

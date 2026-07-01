@@ -104,6 +104,18 @@ const openApiExternalWireOperations = {
   'iam.oauth.wellKnown.openidConfiguration.retrieve': 'oidc-discovery',
 };
 
+const openApiAuthorityExternalWireOperations = {
+  ...openApiExternalWireOperations,
+  'iam.oauth.authorizationServerMetadata.retrieve': 'oauth-authorization-server-metadata',
+  'iam.oauth.openidConfiguration.retrieve': 'oidc-discovery',
+  'iam.oauth.authorize.handleGet': 'oauth-authorization-code',
+  'iam.oauth.token.create': 'oauth-token',
+  'iam.oauth.revoke.create': 'oauth-revoke',
+  'iam.oauth.introspect.create': 'oauth-introspect',
+  'iam.oauth.jwks.retrieve': 'oauth-jwks',
+  'iam.oauth.userinfo.retrieve': 'oidc-userinfo',
+};
+
 const credentialHeaderForbiddenAppOperationIds = new Set([
   'sessions.create',
   'sessions.loginContextSelection.create',
@@ -432,16 +444,20 @@ function buildOperation(surface, route) {
     );
   }
 
-  const externalProtocolId = openApiExternalWireOperations[route.operationId];
+  const externalProtocolId =
+    openApiExternalWireOperations[route.operationId]
+    ?? openApiAuthorityExternalWireOperations[route.operationId];
   if (externalProtocolId) {
     operation['x-sdkwork-wire-protocol'] = 'external';
     operation['x-sdkwork-external-protocol-id'] = externalProtocolId;
-    operation['x-sdkwork-auth-mode'] = 'compatibility';
-    responses[200] = jsonResponse('Success', {
-      type: 'object',
-      additionalProperties: true,
-      description: 'Upstream OAuth/OIDC discovery metadata document.',
-    });
+    if (openApiExternalWireOperations[route.operationId]) {
+      operation['x-sdkwork-auth-mode'] = 'compatibility';
+      responses[200] = jsonResponse('Success', {
+        type: 'object',
+        additionalProperties: true,
+        description: 'Upstream OAuth/OIDC discovery metadata document.',
+      });
+    }
   }
 
   return operation;

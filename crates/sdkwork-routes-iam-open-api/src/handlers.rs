@@ -1,5 +1,3 @@
-#[cfg(test)]
-use axum::http::Method;
 use axum::{
     extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode},
@@ -9,12 +7,13 @@ use axum::{
 };
 use sdkwork_iam_web_adapter::{
     handle_provider_callback_get as process_provider_callback_get,
-    handle_provider_callback_post as process_provider_callback_post, ProviderCallbackHttpResponse,
-    ProviderCallbackRequestMeta,
+    handle_provider_callback_post as process_provider_callback_post, iam_api_error,
+    ProviderCallbackHttpResponse, ProviderCallbackRequestMeta,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::collections::HashMap;
 
+use crate::is_blank;
 use crate::oauth_authorization_handlers::{
     handle_oauth_authorize, handle_oauth_introspect, handle_oauth_revoke, handle_oauth_token,
     handle_oauth_userinfo, retrieve_oauth_jwks, retrieve_openid_configuration,
@@ -106,13 +105,13 @@ fn provider_callback_request_meta(headers: &HeaderMap) -> ProviderCallbackReques
             .or_else(|| headers.get("x-real-ip"))
             .and_then(|value| value.to_str().ok())
             .map(str::trim)
-            .filter(|value| !value.is_empty())
+            .filter(|value| !is_blank(Some(value)))
             .map(str::to_owned),
         user_agent: headers
             .get(header::USER_AGENT)
             .and_then(|value| value.to_str().ok())
             .map(str::trim)
-            .filter(|value| !value.is_empty())
+            .filter(|value| !is_blank(Some(value)))
             .map(str::to_owned),
     }
 }
@@ -152,30 +151,13 @@ fn provider_callback_error(message: String) -> Response {
         )
     };
 
-    (
-        status,
-        Json(json!({
-            "code": code,
-            "data": Value::Null,
-            "message": message,
-        })),
-    )
-        .into_response()
+    iam_api_error(status, code, &message)
 }
 
 fn oauth_provider_callback_unavailable_error() -> Response {
-    (
+    iam_api_error(
         StatusCode::SERVICE_UNAVAILABLE,
-        Json(json!({
-            "code": "iam_oauth_provider_callback_unavailable",
-            "data": Value::Null,
-            "message": "OAuth provider callback processing is not configured"
-        })),
+        "iam_oauth_provider_callback_unavailable",
+        "OAuth provider callback processing is not configured",
     )
-        .into_response()
-}
-
-#[cfg(test)]
-pub(crate) fn method_not_allowed() -> Method {
-    Method::OPTIONS
 }

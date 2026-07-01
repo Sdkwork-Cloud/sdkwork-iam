@@ -156,7 +156,22 @@ pub async fn ensure_platform_tenant_application(
     .await
     .map_err(|error| format!("ensure platform application template failed: {error}"))?;
 
-    let tenant_application_id = format!("tapp_{tenant_id}_default");
+    let tenant_application_id =
+        tenant_application_row_id(tenant_id, "0", PLATFORM_APPLICATION_TEMPLATE_ID);
+    sqlx::query("DELETE FROM iam_tenant_application WHERE app_id = $1")
+        .bind(&runtime_app_id)
+        .execute(pg)
+        .await
+        .map_err(|error| format!("reset platform tenant application app_id failed: {error}"))?;
+    sqlx::query(
+        "DELETE FROM iam_tenant_application \
+         WHERE tenant_id = $1 AND organization_id = '0' AND template_id = $2",
+    )
+    .bind(tenant_id)
+    .bind(PLATFORM_APPLICATION_TEMPLATE_ID)
+    .execute(pg)
+    .await
+    .map_err(|error| format!("reset platform tenant application rows failed: {error}"))?;
     sqlx::query(
         "INSERT INTO iam_tenant_application (id, app_id, tenant_id, organization_id, template_id, \
          template_version, instance_key, display_name, environment, status, primary_domain, \
@@ -175,6 +190,8 @@ pub async fn ensure_platform_tenant_application(
     .execute(pg)
     .await
     .map_err(|error| format!("ensure platform tenant application failed: {error}"))?;
+
+    reconcile_postgres_tenant_application_org_template_rows(pg).await?;
 
     Ok(runtime_app_id)
 }
@@ -1735,6 +1752,10 @@ mod tests {
         assert_eq!(
             "tapp_100001_0_sdkwork_clawrouter",
             tenant_application_row_id("100001", "0", "tmpl_sdkwork_clawrouter")
+        );
+        assert_eq!(
+            "tapp_tenant_configured_0_sdkwork_platform",
+            tenant_application_row_id("tenant_configured", "0", PLATFORM_APPLICATION_TEMPLATE_ID)
         );
     }
 

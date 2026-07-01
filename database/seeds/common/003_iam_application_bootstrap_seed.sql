@@ -66,7 +66,7 @@ INSERT INTO iam_tenant_application (
 )
 VALUES
   (
-    'tapp_100001_default',
+    'tapp_100001_0_sdkwork_platform',
     'app_100001',
     '100001',
     '0',

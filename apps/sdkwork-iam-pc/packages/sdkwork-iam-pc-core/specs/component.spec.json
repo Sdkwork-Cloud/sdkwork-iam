@@ -20,9 +20,9 @@
   },
   "canonicalSpecs": [
     {
-      "file": "APP_DEPENDENCY_COMPOSITION_SPEC.md",
-      "path": "../../../../../../sdkwork-specs/APP_DEPENDENCY_COMPOSITION_SPEC.md",
-      "purpose": "Semantic dependency manifest and core composition entry."
+      "file": "APP_COMPOSITION_SPEC.md",
+      "path": "../../../../../../sdkwork-specs/APP_COMPOSITION_SPEC.md",
+      "purpose": "Native-authority application composition and core-package import entrypoints."
     },
     {
       "file": "IAM_SPEC.md",
@@ -31,6 +31,12 @@
     }
   ],
   "contracts": {
-    "dependencyComposition": "../../../specs/dependency.composition.json"
+    "sdkDependencies": [
+      {
+        "workspace": "@sdkwork/iam-app-sdk",
+        "surface": "app-api",
+        "credentialMode": "authenticated-app-api"
+      }
+    ]
   }
 }

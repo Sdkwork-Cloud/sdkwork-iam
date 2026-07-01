@@ -47,9 +47,12 @@ pub fn iam_wire_result_code(status: StatusCode, wire_code: &str) -> SdkWorkResul
         "iam_session_required" | "iam_access_token_required" | "iam_runtime_app_id_required" => {
             SdkWorkResultCode::AuthenticationRequired
         }
-        "iam_invalid_credentials"
-        | "iam_runtime_app_id_invalid"
-        | "iam_invalid_password_reset_challenge" => SdkWorkResultCode::InvalidToken,
+        "iam_invalid_credentials" => SdkWorkResultCode::AuthenticationRequired,
+        "iam_runtime_app_id_invalid"
+        | "iam_invalid_password_reset_challenge"
+        | "iam_refresh_token_invalid"
+        | "iam_poll_secret_invalid"
+        | "iam_current_password_invalid" => SdkWorkResultCode::InvalidToken,
         "iam_permission_forbidden" | "iam_login_credential_headers_forbidden" => {
             SdkWorkResultCode::PermissionRequired
         }
@@ -58,12 +61,27 @@ pub fn iam_wire_result_code(status: StatusCode, wire_code: &str) -> SdkWorkResul
         | "iam_password_reused"
         | "iam_password_unchanged"
         | "iam_email_invalid"
-        | "iam_phone_invalid" => SdkWorkResultCode::ValidationError,
+        | "iam_phone_invalid"
+        | "iam_unsupported_grant_type"
+        | "iam_password_confirmation_mismatch"
+        | "iam_registration_tenant_unavailable" => SdkWorkResultCode::ValidationError,
+        "iam_password_confirmation_required"
+        | "iam_login_account_required"
+        | "iam_poll_secret_required"
+        | "iam_invalid_login"
+        | "iam_password_required" => SdkWorkResultCode::MissingRequiredField,
+        "iam_refresh_token_required" => SdkWorkResultCode::AuthenticationRequired,
+        "iam_oauth_login_disabled" => SdkWorkResultCode::PermissionRequired,
         "iam_oauth_unavailable" => SdkWorkResultCode::ServiceUnavailable,
         "iam_contact_already_bound" => SdkWorkResultCode::Conflict,
+        "iam_contact_binding_unbind_disabled" => SdkWorkResultCode::PermissionRequired,
+        "iam_contact_unbind_forbidden" => SdkWorkResultCode::ValidationError,
+        "iam_current_password_required" => SdkWorkResultCode::MissingRequiredField,
         code if code.ends_with("_not_found") => SdkWorkResultCode::NotFound,
         code if code.contains("forbidden") => SdkWorkResultCode::PermissionRequired,
-        code if code.contains("invalid") => SdkWorkResultCode::ValidationError,
+        code if code.contains("invalid") && !code.contains("token") => {
+            SdkWorkResultCode::ValidationError
+        }
         _ => result_code_from_status(status),
     }
 }

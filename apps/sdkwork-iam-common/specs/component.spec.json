@@ -14,9 +14,14 @@
     ],
     "generated": false,
     "private": true,
+    "status": "standard",
     "manifests": [
       "packages/sdkwork-iam-contracts/package.json",
-      "packages/sdkwork-iam-runtime/package.json"
+      "packages/sdkwork-iam-runtime/package.json",
+      "packages/sdkwork-iam-service/package.json",
+      "packages/sdkwork-iam-sdk-adapter/package.json",
+      "packages/sdkwork-iam-credential-entry/package.json",
+      "packages/sdkwork-iam-application-bootstrap/package.json"
     ]
   },
   "canonicalSpecs": [
@@ -36,7 +41,24 @@
       "purpose": "IAM domain boundary and package layering."
     }
   ],
+  "integration": {
+    "utils": "All common packages depend on @sdkwork/utils for trim, isBlank, coalesce, and defaultIfBlank.",
+    "sdkPolicy": "Services consume generated SDK clients through sdk-adapter ports; no raw HTTP."
+  },
   "contracts": {
-    "dependencyComposition": "specs/dependency.composition.json"
+    "publicExports": [
+      "@sdkwork/iam-contracts",
+      "@sdkwork/iam-runtime",
+      "@sdkwork/iam-service",
+      "@sdkwork/iam-sdk-adapter",
+      "@sdkwork/iam-credential-entry",
+      "@sdkwork/iam-application-bootstrap"
+    ]
+  },
+  "verification": {
+    "commands": [
+      "pnpm run typecheck",
+      "pnpm run test:iam-standard-contracts"
+    ]
   }
 }

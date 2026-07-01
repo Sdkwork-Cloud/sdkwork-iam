@@ -4,7 +4,7 @@ Domain: iam
 Capability: web-adapter
 Package type: rust-crate
 Rust crate import: `sdkwork_iam_web_adapter`
-Status: standardizing
+Status: standard
 
 IAM adapters for `sdkwork-web-framework` request context pipeline. Bridges IAM
 `AppContext`, dual-token session resolution, and open-api credential resolution
@@ -24,14 +24,12 @@ and route manifest integration.
 - `resolve_iam_app_context_from_oauth_bearer`
 
 `IamWebRequestContextResolver` is the canonical resolver name for application integration.
-`IamDatabaseWebRequestContextResolver` remains the concrete implementation struct and
-compatibility alias target for advanced or legacy references.
+`IamDatabaseWebRequestContextResolver` is the concrete implementation struct used internally by the resolver factory.
 
 ## Framework Integration
 
 This crate depends on `sdkwork-web-framework` (`sdkwork-web-core`,
-`sdkwork-web-axum`) and `sdkwork-database-sqlx`. It replaces the deprecated
-`sdkwork-platform-http-context-service` crate per `WEB_FRAMEWORK_SPEC.md`.
+`sdkwork-web-axum`) and `sdkwork-database-sqlx` per `WEB_FRAMEWORK_SPEC.md`.
 
 ## Verification
 

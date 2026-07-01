@@ -181,43 +181,50 @@ const IAM_APP_API_ROUTES: &[HttpRoute] = &[
         "/app/v3/api/iam/users/current",
         "iam",
         "users.current.retrieve",
-    ),
+    )
+    .with_required_permission("iam:self"),
     HttpRoute::dual_token(
         HttpMethod::Patch,
         "/app/v3/api/iam/users/current",
         "iam",
         "users.current.update",
-    ),
+    )
+    .with_required_permission("iam.profile.update"),
     HttpRoute::dual_token(
         HttpMethod::Post,
         "/app/v3/api/iam/users/current/password",
         "iam",
         "users.current.password.update",
-    ),
+    )
+    .with_required_permission("iam.profile.update"),
     HttpRoute::dual_token(
         HttpMethod::Post,
         "/app/v3/api/iam/users/current/email_bindings",
         "iam",
         "users.current.emailBindings.create",
-    ),
+    )
+    .with_required_permission("iam.profile.update"),
     HttpRoute::dual_token(
         HttpMethod::Delete,
         "/app/v3/api/iam/users/current/email_bindings",
         "iam",
         "users.current.emailBindings.delete",
-    ),
+    )
+    .with_required_permission("iam.profile.update"),
     HttpRoute::dual_token(
         HttpMethod::Post,
         "/app/v3/api/iam/users/current/phone_bindings",
         "iam",
         "users.current.phoneBindings.create",
-    ),
+    )
+    .with_required_permission("iam.profile.update"),
     HttpRoute::dual_token(
         HttpMethod::Delete,
         "/app/v3/api/iam/users/current/phone_bindings",
         "iam",
         "users.current.phoneBindings.delete",
-    ),
+    )
+    .with_required_permission("iam.profile.update"),
     HttpRoute::dual_token(
         HttpMethod::Get,
         "/app/v3/api/iam/organizations",

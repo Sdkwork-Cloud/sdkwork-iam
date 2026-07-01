@@ -1,3 +1,4 @@
+import { trim } from "@sdkwork/utils";
 import type { IamAppSdkClient, IamBackendSdkClient, IamSdkMethod } from "@sdkwork/iam-sdk-ports";
 import {
   SDKWORK_IAM_BACKEND_SDK_FORBIDDEN_LEGACY_NAMESPACES,
@@ -49,7 +50,7 @@ export function unwrapIamSdkResponse<T = unknown>(
 
   const envelope = value as IamSdkResponseEnvelope<T>;
   if (!isSuccessCode(envelope.code)) {
-    throw new Error(String(envelope.message || envelope.msg || fallbackMessage).trim());
+    throw new Error(trim(String(envelope.message || envelope.msg || fallbackMessage)));
   }
 
   return (envelope.data ?? null) as T;
@@ -598,7 +599,7 @@ function isSuccessCode(code: number | string | undefined): boolean {
     return true;
   }
 
-  const normalized = String(code).trim();
+  const normalized = trim(String(code));
   return normalized === "0" || normalized === "200" || normalized === "2000";
 }
 

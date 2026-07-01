@@ -1,3 +1,4 @@
+import { isBlank, trim } from "@sdkwork/utils";
 import { createIamAppContext, type IamAppContext } from "@sdkwork/iam-contracts";
 import {
   buildTenantCurrentSessionUpdateBody,
@@ -774,7 +775,7 @@ function isSuccessCode(code: number | string | undefined): boolean {
     return true;
   }
 
-  const normalized = String(code).trim();
+  const normalized = trim(String(code));
   return normalized === "0" || normalized === "200" || normalized === "2000";
 }
 
@@ -822,8 +823,8 @@ function toUser(value: unknown): IamUser {
 }
 
 function optionalString(value: unknown): string | undefined {
-  const normalized = typeof value === "string" ? value.trim() : "";
-  return normalized || undefined;
+  const normalized = typeof value === "string" ? trim(value) : "";
+  return isBlank(normalized) ? undefined : normalized;
 }
 
 function normalizeCurrentSessionUpdateBody(

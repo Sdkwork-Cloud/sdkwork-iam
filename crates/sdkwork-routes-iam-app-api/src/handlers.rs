@@ -27,7 +27,7 @@ use crate::{
 /// Builds the executable local/private `sdkwork-iam-app-api` router.
 ///
 /// This router is owned by `sdkwork-iam` so product runtimes can compose
-/// appbase IAM in embedded mode without copying appbase routes.
+/// IAM app-api in embedded mode without duplicating route crates.
 pub(crate) async fn build_sdkwork_iam_app_api_router() -> Result<Router, String> {
     LocalIamState::from_env()
         .await
@@ -65,7 +65,7 @@ pub(crate) async fn build_sdkwork_iam_app_api_router_with_pool(
         .map(build_sdkwork_iam_app_api_router_with_state)
 }
 
-/// OAuth device-authorization (QR login) routes owned by appbase IAM.
+/// OAuth device-authorization (QR login) routes owned by IAM app-api.
 pub fn oauth_device_authorization_routes() -> Router<LocalIamState> {
     Router::new()
         .route(

@@ -123,7 +123,7 @@ Set `VITE_SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE` in browser runtime env:
 - `redirect`: clear session and navigate to `/auth/login`
 - `debug`: keep page and session untouched for investigation
 
-Runtime env is read from `window.__SDKWORK_RUNTIME_ENV__`, legacy `window.__CLAWROUTER_ENV__`, and Vite `import.meta.env`.
+Runtime env is read from `window.__SDKWORK_RUNTIME_ENV__` and Vite `import.meta.env`.
 
 ### Runtime factory
 

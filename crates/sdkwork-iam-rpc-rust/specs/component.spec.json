@@ -3,7 +3,7 @@
   "kind": "sdkwork.component.spec",
   "component": {
     "name": "sdkwork-iam-rpc-rust",
-    "displayName": "SDKWork Iam Rpc Rust",
+    "displayName": "SDKWork IAM RPC Rust",
     "version": "0.1.0",
     "type": "rust-crate",
     "root": "sdkwork-iam/crates/sdkwork-iam-rpc-rust",
@@ -81,7 +81,8 @@
     "authority": "Root SDKWork specs remain authoritative. Local specs may narrow this component but must not contradict them.",
     "dependencyPolicy": "Consumers integrate through package-root public exports, declared runtime entrypoints, generated SDK clients, or documented adapters only.",
     "sdkPolicy": "Dependency-owned APIs remain in dependency SDKs or approved composed wrappers; generated SDK output is not hand-edited.",
-    "languagePolicy": "Rust code follows Cargo workspace dependencies and the SDKWork Rust crate responsibility split."
+    "languagePolicy": "Rust code follows Cargo workspace dependencies and the SDKWork Rust crate responsibility split.",
+    "discovery": "RPC service manifests and proto authorities are complete; sdkwork-discovery registration is deferred until a runnable IAM RPC server ships."
   },
   "verification": {
     "commands": [

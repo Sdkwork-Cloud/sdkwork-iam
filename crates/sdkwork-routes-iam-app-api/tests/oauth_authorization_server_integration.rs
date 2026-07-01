@@ -29,7 +29,6 @@ const OAUTH_E2E_USERNAME: &str = "oauth-pkce-e2e@sdkwork-iam.test";
 const OAUTH_E2E_PASSWORD: &str = "OAuthPkce#2026";
 const OAUTH_E2E_REDIRECT_URI: &str = "https://partner.sdkwork.test/oauth/callback";
 const OAUTH_E2E_PARTNER_TEMPLATE_ID: &str = "tmpl_oauth_partner_e2e";
-const SIGNING_MASTER_SECRET_ENV: &str = "SDKWORK_IAM_TENANT_SIGNING_MASTER_SECRET";
 
 fn local_iam_env_lock() -> &'static Mutex<()> {
     static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -111,7 +110,11 @@ async fn seed_oauth_e2e_fixtures() {
 
     sqlx::query(
         "INSERT INTO iam_tenant (id, code, name, status, created_at, updated_at) \
-         VALUES ($1, $2, $3, 'active', $4, $4)",
+         VALUES ($1, $2, $3, 'active', $4, $4) \
+         ON CONFLICT (code) DO UPDATE SET \
+           name = EXCLUDED.name, \
+           status = EXCLUDED.status, \
+           updated_at = EXCLUDED.updated_at",
     )
     .bind(OAUTH_E2E_TENANT_ID)
     .bind(OAUTH_E2E_TENANT_ID)

@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseOperationCommand, PageInfo } from '../types';
+import type { AppbaseOperationCommand, SdkWorkPageData } from '../types';
 
 
 export class OauthSessionsApi {
@@ -35,7 +35,7 @@ export class OauthProvidersApi {
 
 
 /** Oauth providers list. */
-  async list(params?: OauthProvidersListParams): Promise<Record<string, unknown>> {
+  async list(params?: OauthProvidersListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -43,7 +43,7 @@ export class OauthProvidersApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/oauth/providers`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/oauth/providers`), query));
   }
 }
 
@@ -78,7 +78,7 @@ export class OauthGrantsApi {
 
 
 /** Oauth grants list. */
-  async list(params?: OauthGrantsListParams): Promise<Record<string, unknown>> {
+  async list(params?: OauthGrantsListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -86,7 +86,7 @@ export class OauthGrantsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/oauth/grants`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/oauth/grants`), query));
   }
 
 /** Oauth grants delete. */
@@ -237,7 +237,7 @@ export class OauthAccountLinksApi {
 
 
 /** Oauth account Links list. */
-  async list(params?: OauthAccountLinksListParams): Promise<Record<string, unknown>> {
+  async list(params?: OauthAccountLinksListParams): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -245,7 +245,7 @@ export class OauthAccountLinksApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<Record<string, unknown>>(appendQueryString(appApiPath(`/oauth/account_links`), query));
+    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/oauth/account_links`), query));
   }
 
 /** Oauth account Links delete. */

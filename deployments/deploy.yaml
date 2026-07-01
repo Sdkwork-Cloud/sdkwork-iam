@@ -1,0 +1,18 @@
+version: 1
+profile: cloud.split-services.production
+
+install:
+  layout: binary-package
+
+expose:
+  - domain: iam.sdkwork.com
+    tls: sdkwork.com
+    mode: api
+    web: adaptive
+
+packages:
+  - id: sdkwork-iam-gateway-assembly
+    kind: rust-binary
+    crate: sdkwork-iam-gateway-assembly
+
+overrides: {}
