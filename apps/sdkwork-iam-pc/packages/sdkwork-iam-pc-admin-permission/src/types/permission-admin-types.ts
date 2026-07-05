@@ -1,6 +1,7 @@
 import type {
   IamUserSurface,
   SdkworkStandardRoleCode,
+  SdkWorkPageInfo,
 } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
@@ -83,8 +84,17 @@ export interface SdkworkAuthorizationHint {
   roleIds?: readonly string[];
 }
 
+export interface SdkworkIamPermissionListPageInfo {
+  permissions?: SdkWorkPageInfo;
+  policies?: SdkWorkPageInfo;
+  roleBindings?: SdkWorkPageInfo;
+  rolePermissions?: Readonly<Record<string, SdkWorkPageInfo | undefined>>;
+  roles?: SdkWorkPageInfo;
+}
+
 export interface SdkworkIamPermissionState {
   lastPrincipalId?: string;
+  listPageInfo?: SdkworkIamPermissionListPageInfo;
   permissionScope: readonly string[];
   permissions: readonly SdkworkIamPermission[];
   policies: readonly SdkworkIamPolicy[];
@@ -122,6 +132,11 @@ export interface SdkworkIamPermissionController {
   listRoleBindings(params?: Record<string, unknown>): Promise<readonly SdkworkIamRoleBinding[]>;
   listRolePermissions(roleId: string, params?: Record<string, unknown>): Promise<readonly SdkworkIamPermission[]>;
   listRoles(params?: Record<string, unknown>): Promise<readonly SdkworkIamRole[]>;
+  loadMorePermissions(): Promise<readonly SdkworkIamPermission[]>;
+  loadMorePolicies(): Promise<readonly SdkworkIamPolicy[]>;
+  loadMoreRoleBindings(): Promise<readonly SdkworkIamRoleBinding[]>;
+  loadMoreRolePermissions(roleId: string): Promise<readonly SdkworkIamPermission[]>;
+  loadMoreRoles(): Promise<readonly SdkworkIamRole[]>;
   revokeRoleBinding(roleBindingId: string): Promise<unknown>;
   revokeRolePermission(roleId: string, permissionId: string): Promise<unknown>;
   updatePermission(permissionId: string, body: Partial<SdkworkIamPermissionDraft>): Promise<SdkworkIamPermission>;

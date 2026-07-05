@@ -1609,21 +1609,6 @@ CREATE INDEX IF NOT EXISTS idx_iam_tenant_application_tenant_status
 CREATE INDEX IF NOT EXISTS idx_iam_tenant_application_template
   ON iam_tenant_application (template_id, tenant_id, status, id);
 
--- folded migration: migrations/postgres/0007_drop_legacy_studio_tables.up.sql
-DROP TABLE IF EXISTS studio_mcp_binding CASCADE;
-DROP TABLE IF EXISTS studio_mcp_tool CASCADE;
-DROP TABLE IF EXISTS studio_mcp_server_revision CASCADE;
-DROP TABLE IF EXISTS studio_mcp_server CASCADE;
-DROP TABLE IF EXISTS studio_prompt_binding CASCADE;
-DROP TABLE IF EXISTS studio_prompt_version CASCADE;
-DROP TABLE IF EXISTS studio_prompt CASCADE;
-DROP TABLE IF EXISTS studio_app_template_usage CASCADE;
-DROP TABLE IF EXISTS studio_app_template_version CASCADE;
-DROP TABLE IF EXISTS studio_app_template CASCADE;
-DROP TABLE IF EXISTS studio_catalog_artifact CASCADE;
-DROP TABLE IF EXISTS studio_catalog_asset CASCADE;
-DROP TABLE IF EXISTS studio_catalog_action CASCADE;
-
 -- folded migration: migrations/postgres/0010_iam_api_key_runtime_context.up.sql
 ALTER TABLE iam_api_key
   ADD COLUMN IF NOT EXISTS app_id TEXT NOT NULL DEFAULT '',

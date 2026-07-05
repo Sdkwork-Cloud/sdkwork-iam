@@ -6,8 +6,10 @@ mod authorization_policy;
 mod dev_runtime;
 mod ephemeral_rate_limit;
 mod http_responses;
+mod iam_audit;
 mod iam_database_env;
 mod iam_session;
+mod messaging_verification;
 mod oauth_authorization_server;
 mod oauth_integration_exchange;
 mod oauth_login_local;
@@ -15,6 +17,7 @@ mod oauth_provider_callback;
 mod oauth_provider_catalog;
 mod oauth_redirect;
 mod oauth_token_lookup;
+mod production_runtime;
 mod resolver;
 mod runtime_auth_metadata;
 mod signing_secrets;
@@ -67,6 +70,9 @@ pub use authorization_policy::IamAuthorizationPolicy;
 pub use dev_runtime::allows_dev_authentication_fallback;
 pub use ephemeral_rate_limit::{check_rate_limit, check_rate_limit_sqlite};
 pub use http_responses::{iam_api_error, iam_api_success, iam_wire_result_code};
+pub use iam_audit::{
+    backend_environment_from_context, hash_session_id, record_audit_event, record_security_event,
+};
 pub use iam_database_env::{
     bridge_iam_database_env_from_im, install_iam_postgres_pool_for_process,
     installed_iam_postgres_pool_for_process, resolve_iam_postgres_pool_from_env,
@@ -74,6 +80,13 @@ pub use iam_database_env::{
 pub use iam_session::{
     resolve_iam_app_context_from_access_token, resolve_iam_app_context_from_auth_token,
     resolve_iam_app_context_from_dual_tokens, resolve_iam_app_context_from_oauth_bearer,
+};
+pub use messaging_verification::{
+    messaging_verification_code_hash, messaging_verification_enabled,
+    messaging_verification_table_available, messaging_verification_target_hash,
+    verify_and_consume_messaging_challenge, MessagingVerificationRequest,
+    MESSAGING_VERIFICATION_SCENE_BIND_EMAIL, MESSAGING_VERIFICATION_SCENE_BIND_PHONE,
+    MESSAGING_VERIFICATION_SCENE_RESET_PASSWORD,
 };
 pub use oauth_authorization_server::{
     build_oauth_jwks_document, build_openid_configuration_document, build_userinfo_claims,
@@ -104,6 +117,7 @@ pub use oauth_redirect::{
     validate_oauth_redirect_uri_for_provider,
 };
 pub use oauth_token_lookup::IamOAuthTokenLookupService;
+pub use production_runtime::{assert_production_hardening, is_production_iam_deployment};
 pub use resolver::{
     web_request_principal_from_iam, IamDatabaseWebRequestContextResolver,
     IamOpenApiWebRequestContextResolver, IamWebRequestContextResolver,

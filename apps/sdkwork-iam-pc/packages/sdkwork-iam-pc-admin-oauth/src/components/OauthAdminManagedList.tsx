@@ -1,4 +1,6 @@
 import { Button } from "@sdkwork/ui-pc-react";
+import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
+import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
 
 import {
   formatResourceLabel,
@@ -19,6 +21,8 @@ export interface ManagedOAuthResourceListProps {
   emptyLabel: string;
   items: unknown[];
   onChanged: () => void;
+  onLoadMore?: () => void | Promise<void>;
+  pageInfo?: SdkWorkPageInfo;
   readId: (item: unknown) => string;
   actions?: ManagedOAuthResourceAction[];
   onDelete?: (resourceId: string) => Promise<unknown>;
@@ -38,15 +42,27 @@ export function ManagedOAuthResourceList({
   items,
   onChanged,
   onDelete,
+  onLoadMore,
+  pageInfo,
   readId,
   toggleEnabled,
   toggleStatus,
 }: ManagedOAuthResourceListProps) {
   if (items.length === 0) {
-    return <p className="text-sm text-[var(--sdk-color-text-muted)]">{emptyLabel}</p>;
+    return (
+      <>
+        <p className="text-sm text-[var(--sdk-color-text-muted)]">{emptyLabel}</p>
+        <SdkworkIamListPaginationControls
+          busy={disabled}
+          onLoadMore={onLoadMore}
+          pageInfo={pageInfo}
+        />
+      </>
+    );
   }
 
   return (
+    <>
     <ul className="space-y-2">
       {items.map((item, index) => {
         const resourceId = readId(item);
@@ -137,5 +153,11 @@ export function ManagedOAuthResourceList({
         );
       })}
     </ul>
+    <SdkworkIamListPaginationControls
+      busy={disabled}
+      onLoadMore={onLoadMore}
+      pageInfo={pageInfo}
+    />
+  </>
   );
 }

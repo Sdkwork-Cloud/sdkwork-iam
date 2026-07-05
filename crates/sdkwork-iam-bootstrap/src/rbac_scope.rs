@@ -268,15 +268,24 @@ pub async fn load_binding_permission_rows(
            AND b.effect IN ('allow', 'deny') \
            AND {PRINCIPAL_MATCH_SQL} \
            {BINDING_SCOPE_SQL} \
-         ORDER BY r.code, b.effect, p.code"
+         ORDER BY r.code, b.effect, p.code \
+         LIMIT $4"
     );
     let rows = sqlx::query(&sql)
         .bind(tenant_id)
         .bind(user_id)
         .bind(organization_id.unwrap_or(""))
+        .bind(crate::limits::IAM_RBAC_BINDING_ROW_LIMIT + 1)
         .fetch_all(pg)
         .await
         .map_err(|error| format!("load binding permission rows failed: {error}"))?;
+
+    if rows.len() > crate::limits::IAM_RBAC_BINDING_ROW_LIMIT as usize {
+        return Err(format!(
+            "RBAC binding permission rows exceed limit of {}",
+            crate::limits::IAM_RBAC_BINDING_ROW_LIMIT
+        ));
+    }
 
     Ok(rows
         .into_iter()

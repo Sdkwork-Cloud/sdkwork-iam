@@ -1716,6 +1716,13 @@ export function createSdkworkAuthService(
   async function requestPasswordReset(
     input: SdkworkAuthPasswordResetRequestInput,
   ): Promise<void> {
+    const verifyType = input.channel === "SMS" ? "PHONE" : "EMAIL";
+    await sendVerifyCode({
+      scene: "RESET_PASSWORD",
+      target: input.account.trim(),
+      verifyType,
+    });
+
     const client = getClient();
     const createPasswordResetRequest = callRequiredMethod(
       client.auth.passwordResetRequests?.create,

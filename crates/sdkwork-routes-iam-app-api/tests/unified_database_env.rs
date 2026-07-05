@@ -1,7 +1,11 @@
 use std::path::{Path, PathBuf};
 use tokio::sync::OnceCell;
 
+use sdkwork_database_config::{DatabaseConfig, DatabaseEngine, DeploymentMode};
+use sdkwork_database_sqlx::{DatabasePool, PoolContext};
+
 static INTEGRATION_PG_POOL: OnceCell<sqlx::PgPool> = OnceCell::const_new();
+static INTEGRATION_ROUTER_DATABASE_POOL: OnceCell<DatabasePool> = OnceCell::const_new();
 
 /// Load the unified claw-router PostgreSQL profile for integration tests.
 ///
@@ -50,6 +54,34 @@ pub async fn postgres_pool_for_integration_tests() -> sqlx::PgPool {
                 .expect(
                     "connect IAM integration test pool failed; on PoolTimedOut restart PostgreSQL or release idle dev-database connections (see deployments/runbooks/local-iam-rust.md)",
                 )
+        })
+        .await
+        .clone()
+}
+
+/// Shared `DatabasePool` for HTTP integration tests so router rebuilds do not open new PostgreSQL pools.
+pub async fn integration_database_pool_for_router() -> DatabasePool {
+    INTEGRATION_ROUTER_DATABASE_POOL
+        .get_or_init(|| async {
+            let pg = postgres_pool_for_integration_tests().await;
+            let url =
+                sdkwork_database_config::claw_database::resolve_unified_database_url("SDKWORK_IAM")
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "resolve IAM database URL from unified postgres profile failed: {error}"
+                        )
+                    });
+            let config = DatabaseConfig {
+                engine: DatabaseEngine::Postgres,
+                url,
+                mode: DeploymentMode::Integrated,
+                table_prefix: "iam_".to_owned(),
+                max_connections: 2,
+                min_connections: 0,
+                acquire_timeout_secs: 60,
+                ..DatabaseConfig::default()
+            };
+            DatabasePool::Postgres(pg, PoolContext { config })
         })
         .await
         .clone()

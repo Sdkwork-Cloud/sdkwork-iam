@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "language": "typescript",
   "sdkType": "backend",
-  "packageName": "@sdkwork/iam-backend-sdk",
+  "packageName": "sdkwork-iam-backend-sdk-generated-typescript",
+  "transportPackageName": "sdkwork-iam-backend-sdk-generated-typescript",
+  "consumerPackageName": "@sdkwork/iam-backend-sdk",
   "generator": "@sdkwork/sdk-generator",
   "capabilities": {
     "supportsGeneratedTests": true,

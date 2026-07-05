@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
 import { SettingsSection, StatusNotice } from "@sdkwork/ui-pc-react";
 
 import type { SdkworkIamConsoleTenantWorkspaceProps } from "../types/tenant-console-types";
@@ -11,6 +12,7 @@ export function SdkworkIamConsoleTenantWorkspace({
   const [runtime, setRuntime] = useState(controller.getState().runtime);
   const [organizations, setOrganizations] = useState(controller.getState().organizations);
   const [memberships, setMemberships] = useState(controller.getState().memberships);
+  const [listPageInfo, setListPageInfo] = useState(controller.getState().listPageInfo);
   const [error, setError] = useState<string | undefined>();
 
   useEffect(() => {
@@ -19,6 +21,7 @@ export function SdkworkIamConsoleTenantWorkspace({
         setRuntime(nextRuntime);
         setOrganizations(nextOrganizations);
         setMemberships(nextMemberships);
+        setListPageInfo(controller.getState().listPageInfo);
       })
       .catch((loadError) => {
         setError(loadError instanceof Error ? loadError.message : "Failed to load tenant console workspace");
@@ -46,6 +49,15 @@ export function SdkworkIamConsoleTenantWorkspace({
               </li>
             ))}
           </ul>
+          <SdkworkIamListPaginationControls
+            onLoadMore={() => controller.loadMoreOrganizations().then((items) => {
+              setOrganizations(items);
+              setListPageInfo(controller.getState().listPageInfo);
+            }).catch((loadError) => {
+              setError(loadError instanceof Error ? loadError.message : "Failed to load more organizations");
+            })}
+            pageInfo={listPageInfo?.organizations}
+          />
         </section>
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">Memberships ({memberships.length})</h3>
@@ -58,6 +70,15 @@ export function SdkworkIamConsoleTenantWorkspace({
               </li>
             ))}
           </ul>
+          <SdkworkIamListPaginationControls
+            onLoadMore={() => controller.loadMoreMemberships().then((items) => {
+              setMemberships(items);
+              setListPageInfo(controller.getState().listPageInfo);
+            }).catch((loadError) => {
+              setError(loadError instanceof Error ? loadError.message : "Failed to load more memberships");
+            })}
+            pageInfo={listPageInfo?.memberships}
+          />
         </section>
       </SettingsSection>
     </div>

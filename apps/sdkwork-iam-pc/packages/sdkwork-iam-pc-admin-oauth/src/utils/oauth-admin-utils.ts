@@ -1,3 +1,4 @@
+import { extractSdkWorkListItems } from "@sdkwork/iam-contracts";
 import type {
   SdkworkIamOauthAccountLinkUpdateDraft,
   SdkworkIamOauthClaimMappingDraft,
@@ -20,17 +21,7 @@ import type {
 } from "../types/oauth-admin-types";
 
 export function normalizeList(value: unknown): unknown[] {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  const record = toRecord(value);
-  if (Array.isArray(record.items)) {
-    return record.items;
-  }
-  if (Array.isArray(record.data)) {
-    return record.data;
-  }
-  return [];
+  return [...extractSdkWorkListItems(value)];
 }
 
 export function splitMultilineList(value: string): string[] {

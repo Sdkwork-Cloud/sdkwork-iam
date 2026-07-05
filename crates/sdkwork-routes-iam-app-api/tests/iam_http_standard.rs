@@ -3,8 +3,8 @@ use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
 use sdkwork_iam_web_adapter::{ensure_platform_tenant_application, iam_wire_result_code};
 use sdkwork_routes_iam_app_api::{
-    app_routes, build_sdkwork_iam_app_api_router, required_dual_token_headers, HttpMethod,
-    HttpRoute, APP_API_PREFIX, IAM_ANONYMOUS_BOOTSTRAP_OPERATION_IDS,
+    app_routes, build_sdkwork_iam_app_api_router_with_pool, required_dual_token_headers,
+    HttpMethod, HttpRoute, APP_API_PREFIX, IAM_ANONYMOUS_BOOTSTRAP_OPERATION_IDS,
     IAM_CREDENTIAL_ENTRY_OPERATION_IDS, IAM_HANDLER_SESSION_OPERATION_IDS,
 };
 use sdkwork_web_core::bootstrap_access_token_jwt;
@@ -345,12 +345,15 @@ fn app_routes_own_auth_sessions_and_current_user() {
         "auth",
         "sessions.current.retrieve",
     )));
-    assert!(routes.contains(&HttpRoute::dual_token(
-        HttpMethod::Get,
-        "/app/v3/api/iam/users/current",
-        "iam",
-        "users.current.retrieve",
-    )));
+    assert!(routes.contains(
+        &HttpRoute::dual_token(
+            HttpMethod::Get,
+            "/app/v3/api/iam/users/current",
+            "iam",
+            "users.current.retrieve",
+        )
+        .with_required_permission("iam:self")
+    ));
     assert!(routes.contains(&HttpRoute::public(
         HttpMethod::Get,
         "/app/v3/api/system/iam/runtime",
@@ -810,6 +813,13 @@ fn test_bootstrap_access_token() -> String {
     )
 }
 
+async fn build_postgres_integration_router() -> axum::Router {
+    let pool = unified_database_env::integration_database_pool_for_router().await;
+    build_sdkwork_iam_app_api_router_with_pool(pool)
+        .await
+        .expect("router should build")
+}
+
 #[tokio::test]
 async fn anonymous_login_route_does_not_require_framework_credentials() {
     if !postgres_integration_ready("anonymous_login_route_does_not_require_framework_credentials")
@@ -820,9 +830,7 @@ async fn anonymous_login_route_does_not_require_framework_credentials() {
     let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
     ensure_credential_entry_bootstrap_runtime_app().await;
-    let router = build_sdkwork_iam_app_api_router()
-        .await
-        .expect("router should build");
+    let router = build_postgres_integration_router().await;
     let bootstrap_access_token = test_bootstrap_access_token();
     let (status, body_text, payload) = request_app_route_with_headers(
         router,
@@ -857,9 +865,7 @@ async fn parameterized_public_oauth_device_routes_skip_framework_auth() {
     let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
     ensure_credential_entry_bootstrap_runtime_app().await;
-    let router = build_sdkwork_iam_app_api_router()
-        .await
-        .expect("router should build");
+    let router = build_postgres_integration_router().await;
     let bootstrap_access_token = test_bootstrap_access_token();
 
     let (create_status, create_body, create_payload) = request_app_route_with_headers(
@@ -909,9 +915,7 @@ async fn app_router_does_not_seed_default_local_credentials() {
     }
     let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
-    let router = build_sdkwork_iam_app_api_router()
-        .await
-        .expect("router should build");
+    let router = build_postgres_integration_router().await;
     let (status, body_text, payload) = request_app_route(
         router,
         Method::POST,
@@ -986,9 +990,7 @@ async fn anonymous_auth_entry_routes_reject_inbound_credential_headers() {
         ),
     ];
 
-    let router = build_sdkwork_iam_app_api_router()
-        .await
-        .expect("router should build");
+    let router = build_postgres_integration_router().await;
     let bootstrap_access_token = test_bootstrap_access_token();
 
     for (method, path, body) in cases {
@@ -1043,9 +1045,7 @@ async fn app_directory_routes_require_real_session_context() {
     }
     let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
-    let router = build_sdkwork_iam_app_api_router()
-        .await
-        .expect("router should build");
+    let router = build_postgres_integration_router().await;
 
     for path in [
         "/app/v3/api/iam/organizations",
@@ -1083,9 +1083,7 @@ async fn authenticated_app_directory_routes_read_registered_local_store() {
     }
     let (_guard, _snapshot) = set_real_local_iam_runtime_env();
     reset_iam_tenants_for_open_registration().await;
-    let router = build_sdkwork_iam_app_api_router()
-        .await
-        .expect("router should build");
+    let router = build_postgres_integration_router().await;
     let unique = format!(
         "{:x}",
         std::time::SystemTime::now()
@@ -1178,10 +1176,44 @@ async fn authenticated_app_directory_routes_read_registered_local_store() {
         "/app/v3/api/iam/departments",
         "/app/v3/api/iam/departments/tree",
         "/app/v3/api/iam/department_assignments",
-        "/app/v3/api/iam/positions",
         "/app/v3/api/iam/position_assignments",
-        "/app/v3/api/iam/role_bindings",
     ] {
+        let (status, body_text, payload) = request_app_route_with_auth(
+            router.clone(),
+            Method::GET,
+            path,
+            None,
+            auth_token,
+            access_token,
+        )
+        .await;
+
+        assert_eq!(
+            StatusCode::OK,
+            status,
+            "{path} must allow app_user directory browse with tenant-scoped empty results: {body_text}"
+        );
+        assert_eq!(
+            payload["code"].as_i64(),
+            Some(0),
+            "{path} must return the standard success envelope for app_user directory browse"
+        );
+        for forbidden in [
+            "t_demo",
+            "org_demo",
+            "dept_demo",
+            "membership_demo",
+            "user_local_default",
+            "role_binding_demo",
+        ] {
+            assert!(
+                !body_text.contains(forbidden),
+                "{path} must not expose demo IAM token {forbidden}: {body_text}"
+            );
+        }
+    }
+
+    for path in ["/app/v3/api/iam/positions", "/app/v3/api/iam/role_bindings"] {
         let (status, body_text, payload) = request_app_route_with_auth(
             router.clone(),
             Method::GET,
@@ -1195,12 +1227,12 @@ async fn authenticated_app_directory_routes_read_registered_local_store() {
         assert_eq!(
             StatusCode::FORBIDDEN,
             status,
-            "{path} must reject registered members without directory read permissions: {body_text}"
+            "{path} must reject app_user members without elevated directory permissions: {body_text}"
         );
         assert_eq!(
             Some(40301),
             payload["code"].as_i64(),
-            "{path} must return the standard permission error for registered members"
+            "{path} must return the standard permission error for app_user members"
         );
     }
 }

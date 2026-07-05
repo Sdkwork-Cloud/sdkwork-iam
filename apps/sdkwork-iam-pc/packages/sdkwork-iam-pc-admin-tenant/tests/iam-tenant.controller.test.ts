@@ -8,7 +8,7 @@ describe("@sdkwork/iam-pc-admin-tenant", () => {
       iam: {
         tenants: {
           list: vi.fn().mockResolvedValue({
-            records: [
+            items: [
               {
                 code: "SDKWORK",
                 name: "SDKWork",
@@ -18,7 +18,7 @@ describe("@sdkwork/iam-pc-admin-tenant", () => {
           }),
           members: {
             list: vi.fn().mockResolvedValue({
-              data: [
+              items: [
                 {
                   displayName: "Alice",
                   tenantId: "100001",
@@ -62,7 +62,7 @@ describe("@sdkwork/iam-pc-admin-tenant", () => {
     ]);
 
     expect(service.iam.tenants.list).toHaveBeenCalledWith({ page_size: 20 });
-    expect(service.iam.tenants.members.list).toHaveBeenCalledWith("100001", undefined);
+    expect(service.iam.tenants.members.list).toHaveBeenCalledWith("100001", { page_size: 20 });
     expect(controller.getSelectedTenant()).toMatchObject({
       tenantId: "100001",
     });
@@ -83,11 +83,11 @@ describe("@sdkwork/iam-pc-admin-tenant", () => {
           create: vi.fn().mockResolvedValue({ tenantId: "200001", name: "Acme", code: "ACME" }),
           update: vi.fn().mockResolvedValue({ tenantId: "200001", name: "Acme Updated", code: "ACME" }),
           delete: vi.fn().mockResolvedValue(undefined),
-          list: vi.fn().mockResolvedValue({ records: [] }),
+          list: vi.fn().mockResolvedValue({ items: [] }),
           members: {
             create: vi.fn().mockResolvedValue({ userId: "user-2", roleCode: "admin" }),
             delete: vi.fn().mockResolvedValue(undefined),
-            list: vi.fn().mockResolvedValue({ records: [] }),
+            list: vi.fn().mockResolvedValue({ items: [] }),
             update: vi.fn().mockResolvedValue({ userId: "user-2", roleCode: "member" }),
           },
         },

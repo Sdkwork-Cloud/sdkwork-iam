@@ -19,7 +19,7 @@ describe("@sdkwork/iam-pc-admin-permission", () => {
         },
         policies: {
           list: vi.fn().mockResolvedValue({
-            records: [
+            items: [
               {
                 code: "default-policy",
                 id: "policy-1",

@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS idx_iam_user_tenant_email_lower;
+DROP INDEX IF EXISTS idx_iam_user_tenant_username_lower;
+DROP INDEX IF EXISTS idx_iam_oauth_integration_tenant_status_provider;

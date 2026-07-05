@@ -664,7 +664,7 @@ describe("SDKWork IAM service", () => {
           organizations: {
             list: vi.fn().mockResolvedValue({ data: ["organization"] }),
             tree: {
-              retrieve: vi.fn().mockResolvedValue({ data: ["organization-tree"] }),
+              retrieve: vi.fn().mockResolvedValue({ data: { item: { nodes: ["organization-tree"] } } }),
             },
           },
           organizationMemberships: {
@@ -673,7 +673,7 @@ describe("SDKWork IAM service", () => {
           departments: {
             list: vi.fn().mockResolvedValue({ data: ["department"] }),
             tree: {
-              retrieve: vi.fn().mockResolvedValue({ data: ["department-tree"] }),
+              retrieve: vi.fn().mockResolvedValue({ data: { item: { nodes: ["department-tree"] } } }),
             },
           },
           departmentAssignments: {
@@ -799,7 +799,7 @@ describe("SDKWork IAM service", () => {
     expect(backendClient.iam.tenants.members.create).toHaveBeenCalledWith("t1", { userId: "u1" });
     expect(backendClient.iam.tenants.members.delete).toHaveBeenCalledWith("t1", "u1");
     expect(backendClient.iam.tenants.members.update).toHaveBeenCalledWith("t1", "u1", { status: "active" });
-    expect(backendClient.iam.tenants.members.list).toHaveBeenCalledWith("t1", undefined);
+    expect(backendClient.iam.tenants.members.list).toHaveBeenCalledWith("t1", { page_size: 20 });
     expect(backendClient.iam.users.create).toHaveBeenCalledWith({ username: "bob" });
     expect(backendClient.iam.users.delete).toHaveBeenCalledWith("u1");
     expect(backendClient.iam.users.retrieve).toHaveBeenCalledWith("u1");

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
 import { Button, SettingsSection, StatusNotice } from "@sdkwork/ui-pc-react";
 
 import type {
@@ -17,6 +18,7 @@ export function SdkworkIamTenantAdminWorkspace({
 }: SdkworkIamTenantAdminWorkspaceProps) {
   const [tenants, setTenants] = useState(controller.getState().tenants);
   const [members, setMembers] = useState(controller.getState().members);
+  const [listPageInfo, setListPageInfo] = useState(controller.getState().listPageInfo);
   const [selectedTenantId, setSelectedTenantId] = useState(controller.getSelectedTenant()?.tenantId ?? "");
   const [createDraft, setCreateDraft] = useState(emptyTenantDraft);
   const [editDraft, setEditDraft] = useState<SdkworkIamTenantDraft>(emptyTenantDraft());
@@ -30,6 +32,14 @@ export function SdkworkIamTenantAdminWorkspace({
   const refreshTenants = async () => {
     const items = await controller.listTenants();
     setTenants(items);
+    setListPageInfo(controller.getState().listPageInfo);
+    return items;
+  };
+
+  const loadMoreTenants = async () => {
+    const items = await controller.loadMoreTenants();
+    setTenants(items);
+    setListPageInfo(controller.getState().listPageInfo);
     return items;
   };
 
@@ -40,6 +50,14 @@ export function SdkworkIamTenantAdminWorkspace({
     }
     const items = await controller.listTenantMembers(tenantId);
     setMembers(items);
+    setListPageInfo(controller.getState().listPageInfo);
+    return items;
+  };
+
+  const loadMoreMembers = async (tenantId: string) => {
+    const items = await controller.loadMoreTenantMembers(tenantId);
+    setMembers(items);
+    setListPageInfo(controller.getState().listPageInfo);
     return items;
   };
 
@@ -123,6 +141,15 @@ export function SdkworkIamTenantAdminWorkspace({
                 ))}
               </select>
             </label>
+            <SdkworkIamListPaginationControls
+              busy={busy}
+              onLoadMore={() => {
+                void loadMoreTenants().catch((loadError) => {
+                  setError(loadError instanceof Error ? loadError.message : "Failed to load more tenants");
+                });
+              }}
+              pageInfo={listPageInfo?.tenants}
+            />
           </section>
         </div>
 
@@ -201,6 +228,15 @@ export function SdkworkIamTenantAdminWorkspace({
                 </li>
               ))}
             </ul>
+            <SdkworkIamListPaginationControls
+              busy={busy}
+              onLoadMore={() => {
+                void loadMoreMembers(selectedTenant.tenantId).catch((loadError) => {
+                  setError(loadError instanceof Error ? loadError.message : "Failed to load more members");
+                });
+              }}
+              pageInfo={listPageInfo?.members}
+            />
           </section>
         ) : null}
       </SettingsSection>

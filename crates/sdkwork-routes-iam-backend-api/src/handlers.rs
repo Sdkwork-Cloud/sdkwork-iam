@@ -153,6 +153,10 @@ pub(crate) fn organization_id_from_context(ctx: &WebRequestContext) -> Option<St
         .map(str::to_owned)
 }
 
+pub(crate) fn actor_user_id_from_context(ctx: &WebRequestContext) -> Option<String> {
+    ctx.user_id().map(str::to_owned)
+}
+
 pub(crate) fn assigner_permission_scope(ctx: &WebRequestContext) -> Result<Vec<String>, Response> {
     Ok(principal_from_context(ctx)?.scopes.permission_scope.clone())
 }

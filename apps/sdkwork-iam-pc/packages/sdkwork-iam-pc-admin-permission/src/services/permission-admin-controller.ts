@@ -1,5 +1,5 @@
-import type { SdkworkIamService } from "@sdkwork/iam-service";
-import {
+import { createSdkWorkPagedListSession } from "@sdkwork/iam-contracts";
+import type { SdkworkIamService } from "@sdkwork/iam-service";import {
   canAccessBackendApi,
   hasPermissionInScope,
   type IamAppContext,
@@ -26,6 +26,7 @@ export function createSdkworkIamPermissionController(
   const resolved = resolveInput(input);
   let state: SdkworkIamPermissionState = {
     lastPrincipalId: undefined,
+    listPageInfo: undefined,
     permissionScope: [...new Set((resolved.permissionScope ?? []).map(normalizeRequiredCode))],
     permissions: [],
     policies: [],
@@ -36,6 +37,46 @@ export function createSdkworkIamPermissionController(
     status: "idle",
     userSurface: resolved.userSurface ?? { app: true, organizationMember: false },
   };
+
+  const rolesSession = createSdkWorkPagedListSession({
+    fetchPage: (query) => resolved.service.iam.roles.list(query),
+    mapItem: toRole,
+  });
+  const permissionsSession = createSdkWorkPagedListSession({
+    fetchPage: (query) => resolved.service.iam.permissions.list(query),
+    mapItem: toPermission,
+  });
+  const policiesSession = createSdkWorkPagedListSession({
+    fetchPage: (query) => resolved.service.iam.policies.list(query),
+    mapItem: toPolicy,
+  });
+  const roleBindingsSession = createSdkWorkPagedListSession({
+    fetchPage: (query) => resolved.service.iam.roleBindings.list(query),
+    mapItem: toRoleBinding,
+  });
+
+  let rolePermissionsSessionRoleId = "";
+  let rolePermissionsSession = createRolePermissionsSession("");
+
+  function createRolePermissionsSession(roleId: string) {
+    return createSdkWorkPagedListSession({
+      fetchPage: (query) => resolved.service.iam.roles.permissions.list(roleId, query),
+      mapItem: toPermission,
+    });
+  }
+
+  const syncListPageInfo = (): SdkworkIamPermissionState["listPageInfo"] => ({
+    permissions: permissionsSession.getPageInfo(),
+    policies: policiesSession.getPageInfo(),
+    roleBindings: roleBindingsSession.getPageInfo(),
+    rolePermissions: {
+      ...state.listPageInfo?.rolePermissions,
+      ...(rolePermissionsSessionRoleId
+        ? { [rolePermissionsSessionRoleId]: rolePermissionsSession.getPageInfo() }
+        : {}),
+    },
+    roles: rolesSession.getPageInfo(),
+  });
 
   const setState = (patch: Partial<SdkworkIamPermissionState>) => {
     state = {
@@ -127,6 +168,20 @@ export function createSdkworkIamPermissionController(
     canAccessBackend: () => canAccessBackendApi(toIamAppContext(state)),
     getState: () => ({
       ...state,
+      listPageInfo: state.listPageInfo
+        ? {
+            permissions: state.listPageInfo.permissions ? { ...state.listPageInfo.permissions } : undefined,
+            policies: state.listPageInfo.policies ? { ...state.listPageInfo.policies } : undefined,
+            roleBindings: state.listPageInfo.roleBindings ? { ...state.listPageInfo.roleBindings } : undefined,
+            rolePermissions: Object.fromEntries(
+              Object.entries(state.listPageInfo.rolePermissions ?? {}).map(([roleId, pageInfo]) => [
+                roleId,
+                pageInfo ? { ...pageInfo } : undefined,
+              ]),
+            ),
+            roles: state.listPageInfo.roles ? { ...state.listPageInfo.roles } : undefined,
+          }
+        : undefined,
       permissionScope: [...state.permissionScope],
       permissions: [...state.permissions],
       policies: [...state.policies],
@@ -185,10 +240,8 @@ export function createSdkworkIamPermissionController(
     listPermissions: async (params) => {
       setState({ status: "loading" });
       try {
-        const permissions = extractList(await resolved.service.iam.permissions.list(params))
-          .map(toPermission)
-          .filter(Boolean) as SdkworkIamPermission[];
-        setState({ permissions, status: "ready" });
+        const permissions = await permissionsSession.list(params) as SdkworkIamPermission[];
+        setState({ listPageInfo: syncListPageInfo(), permissions, status: "ready" });
         return permissions;
       } catch (error) {
         setState({ status: "error" });
@@ -198,10 +251,8 @@ export function createSdkworkIamPermissionController(
     listPolicies: async (params) => {
       setState({ status: "loading" });
       try {
-        const policies = extractList(await resolved.service.iam.policies.list(params))
-          .map(toPolicy)
-          .filter(Boolean) as SdkworkIamPolicy[];
-        setState({ policies, status: "ready" });
+        const policies = await policiesSession.list(params) as SdkworkIamPolicy[];
+        setState({ listPageInfo: syncListPageInfo(), policies, status: "ready" });
         return policies;
       } catch (error) {
         setState({ status: "error" });
@@ -211,11 +262,10 @@ export function createSdkworkIamPermissionController(
     listRoleBindings: async (params) => {
       setState({ status: "loading" });
       try {
-        const roleBindings = extractList(await resolved.service.iam.roleBindings.list(params))
-          .map(toRoleBinding)
-          .filter(Boolean) as SdkworkIamRoleBinding[];
+        const roleBindings = await roleBindingsSession.list(params) as SdkworkIamRoleBinding[];
         setState({
           lastPrincipalId: optionalString(params?.principalId) || optionalString(params?.principal_id),
+          listPageInfo: syncListPageInfo(),
           roleBindings,
           status: "ready",
         });
@@ -227,12 +277,15 @@ export function createSdkworkIamPermissionController(
     },
     listRolePermissions: async (roleId, params) => {
       const normalizedRoleId = requireId(roleId, "roleId");
+      if (rolePermissionsSessionRoleId !== normalizedRoleId) {
+        rolePermissionsSessionRoleId = normalizedRoleId;
+        rolePermissionsSession = createRolePermissionsSession(normalizedRoleId);
+      }
       setState({ status: "loading" });
       try {
-        const permissions = extractList(await resolved.service.iam.roles.permissions.list(normalizedRoleId, params))
-          .map(toPermission)
-          .filter(Boolean) as SdkworkIamPermission[];
+        const permissions = await rolePermissionsSession.list(params) as SdkworkIamPermission[];
         setState({
+          listPageInfo: syncListPageInfo(),
           rolePermissions: {
             ...state.rolePermissions,
             [normalizedRoleId]: permissions,
@@ -248,10 +301,74 @@ export function createSdkworkIamPermissionController(
     listRoles: async (params) => {
       setState({ status: "loading" });
       try {
-        const roles = extractList(await resolved.service.iam.roles.list(params))
-          .map(toRole)
-          .filter(Boolean) as SdkworkIamRole[];
-        setState({ roles, status: "ready" });
+        const roles = await rolesSession.list(params) as SdkworkIamRole[];
+        setState({ listPageInfo: syncListPageInfo(), roles, status: "ready" });
+        return roles;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    loadMorePermissions: async () => {
+      setState({ status: "loading" });
+      try {
+        const permissions = await permissionsSession.loadMore() as SdkworkIamPermission[];
+        setState({ listPageInfo: syncListPageInfo(), permissions, status: "ready" });
+        return permissions;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    loadMorePolicies: async () => {
+      setState({ status: "loading" });
+      try {
+        const policies = await policiesSession.loadMore() as SdkworkIamPolicy[];
+        setState({ listPageInfo: syncListPageInfo(), policies, status: "ready" });
+        return policies;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    loadMoreRoleBindings: async () => {
+      setState({ status: "loading" });
+      try {
+        const roleBindings = await roleBindingsSession.loadMore() as SdkworkIamRoleBinding[];
+        setState({ listPageInfo: syncListPageInfo(), roleBindings, status: "ready" });
+        return roleBindings;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    loadMoreRolePermissions: async (roleId) => {
+      const normalizedRoleId = requireId(roleId, "roleId");
+      if (rolePermissionsSessionRoleId !== normalizedRoleId) {
+        return [];
+      }
+      setState({ status: "loading" });
+      try {
+        const permissions = await rolePermissionsSession.loadMore() as SdkworkIamPermission[];
+        setState({
+          listPageInfo: syncListPageInfo(),
+          rolePermissions: {
+            ...state.rolePermissions,
+            [normalizedRoleId]: permissions,
+          },
+          status: "ready",
+        });
+        return permissions;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    loadMoreRoles: async () => {
+      setState({ status: "loading" });
+      try {
+        const roles = await rolesSession.loadMore() as SdkworkIamRole[];
+        setState({ listPageInfo: syncListPageInfo(), roles, status: "ready" });
         return roles;
       } catch (error) {
         setState({ status: "error" });
@@ -437,26 +554,6 @@ function getRequiredPermissionCodes(
 
 function isGranted(grantedCodes: ReadonlySet<string>, requiredCode: string): boolean {
   return hasPermissionInScope([...grantedCodes], requiredCode);
-}
-
-function extractList(value: unknown): unknown[] {
-  if (Array.isArray(value)) {
-    return value;
-  }
-
-  if (!value || typeof value !== "object") {
-    return [];
-  }
-
-  const record = value as Record<string, unknown>;
-  for (const key of ["records", "items", "list", "rows", "content", "data"]) {
-    const nested = record[key];
-    if (Array.isArray(nested)) {
-      return nested;
-    }
-  }
-
-  return [];
 }
 
 function toRole(value: unknown): SdkworkIamRole | undefined {

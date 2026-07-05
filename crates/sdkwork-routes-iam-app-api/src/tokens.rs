@@ -27,6 +27,55 @@ fn hash_token(token: &str) -> String {
 
 // ── Session lifecycle (database-driven) ────────────────────────────
 
+pub(crate) async fn revoke_active_sessions_for_user(
+    pg: &PgPool,
+    tenant_id: &str,
+    user_id: &str,
+) -> Result<(), String> {
+    let rows = sqlx::query(
+        "SELECT id, organization_id \
+         FROM iam_session \
+         WHERE tenant_id = $1 AND user_id = $2 AND revoked_at IS NULL",
+    )
+    .bind(tenant_id)
+    .bind(user_id)
+    .fetch_all(pg)
+    .await
+    .map_err(|error| format!("list active sessions for revoke failed: {error}"))?;
+
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    let now = current_timestamp_utc();
+    sqlx::query(
+        "UPDATE iam_session SET revoked_at = $3, updated_at = $4 \
+         WHERE tenant_id = $1 AND user_id = $2 AND revoked_at IS NULL",
+    )
+    .bind(tenant_id)
+    .bind(user_id)
+    .bind(&now)
+    .bind(&now)
+    .execute(pg)
+    .await
+    .map_err(|error| format!("revoke active sessions for user failed: {error}"))?;
+
+    for row in rows {
+        let session_id: String = row.get(0);
+        let organization_id: Option<String> = row.get(1);
+        crate::security_events::record_session_revoked(
+            pg,
+            tenant_id,
+            organization_id.as_deref(),
+            user_id,
+            &session_id,
+        )
+        .await;
+    }
+
+    Ok(())
+}
+
 pub(crate) async fn create_session_record(
     pg: &PgPool,
     config: &LocalIamConfig,
@@ -44,6 +93,8 @@ pub(crate) async fn create_session_record(
         runtime_app_id,
     )
     .await?;
+
+    revoke_active_sessions_for_user(pg, &user.tenant_id, &user.id).await?;
 
     let app_id = runtime_app_id.trim().to_string();
     let session_id = generate_opaque_token("session");
@@ -433,6 +484,9 @@ fn build_session_from_row(
             organization_member,
         },
         standard_role_codes: Vec::new(),
+        display_name: display_name.clone(),
+        email: email.clone().unwrap_or_default(),
+        email_verified: email_verified != 0,
     };
 
     Some(LocalSession {

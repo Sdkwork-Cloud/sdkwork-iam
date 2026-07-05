@@ -179,7 +179,7 @@ function SdkworkAuthOAuthCallbackPageContent({
     if (!normalizedProvider || !isConfiguredSdkworkAuthOAuthProvider(normalizedProvider, configuredProviders)) {
       setErrorMessage(copy.callback.invalidProvider);
       setIsProcessing(false);
-      return;
+      return undefined;
     }
 
     if (providerError) {
@@ -189,13 +189,13 @@ function SdkworkAuthOAuthCallbackPageContent({
         providerDenied: copy.callback.providerDenied,
       }));
       setIsProcessing(false);
-      return;
+      return undefined;
     }
 
     if (!code) {
       setErrorMessage(copy.callback.missingCode);
       setIsProcessing(false);
-      return;
+      return undefined;
     }
 
     let disposed = false;

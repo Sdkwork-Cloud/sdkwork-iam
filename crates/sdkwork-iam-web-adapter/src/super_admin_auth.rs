@@ -139,6 +139,10 @@ async fn resolve_super_admin_credentials(
 }
 
 pub fn allows_automatic_super_admin_auth() -> bool {
+    if crate::production_runtime::is_production_iam_deployment() {
+        return false;
+    }
+
     let env = read_env_value(&["SDKWORK_ENV"]).map(|value| value.to_ascii_lowercase());
     if matches!(env.as_deref(), Some("dev") | Some("test") | Some("local")) {
         return true;

@@ -1,3 +1,4 @@
+import { extractSdkWorkListItems, resolveSdkWorkListQuery } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 import type {
@@ -36,8 +37,10 @@ export function createSdkworkIamConsoleOrganizationController(
       const normalizedOrganizationId = requireId(organizationId, "organizationId");
       setState({ status: "loading" });
       try {
-        const departments = extractList(
-          await service.iam.departments.list({ ...params, organizationId: normalizedOrganizationId }),
+        const departments = extractSdkWorkListItems(
+          await service.iam.departments.list(
+            resolveSdkWorkListQuery({ ...params, organizationId: normalizedOrganizationId }),
+          ),
         )
           .map(toDepartment)
           .filter(Boolean) as SdkworkIamConsoleDepartmentRecord[];
@@ -51,7 +54,9 @@ export function createSdkworkIamConsoleOrganizationController(
     listMemberships: async (params) => {
       setState({ status: "loading" });
       try {
-        const memberships = extractList(await service.iam.organizationMemberships.list(params))
+        const memberships = extractSdkWorkListItems(
+          await service.iam.organizationMemberships.list(resolveSdkWorkListQuery(params)),
+        )
           .map(toMembership)
           .filter(Boolean) as SdkworkIamConsoleOrganizationMembership[];
         setState({ memberships, status: "ready" });
@@ -64,7 +69,9 @@ export function createSdkworkIamConsoleOrganizationController(
     listOrganizations: async (params) => {
       setState({ status: "loading" });
       try {
-        const organizations = extractList(await service.iam.organizations.list(params))
+        const organizations = extractSdkWorkListItems(
+          await service.iam.organizations.list(resolveSdkWorkListQuery(params)),
+        )
           .map(toOrganization)
           .filter(Boolean) as SdkworkIamConsoleOrganizationRecord[];
         setState({ organizations, status: "ready" });
@@ -81,7 +88,9 @@ export function createSdkworkIamConsoleOrganizationController(
         await controller.selectOrganization(selectedOrganizationId);
       }
       const memberships = await controller.listMemberships(
-        selectedOrganizationId ? { ...params, organizationId: selectedOrganizationId } : params,
+        selectedOrganizationId
+          ? resolveSdkWorkListQuery({ ...params, organizationId: selectedOrganizationId })
+          : resolveSdkWorkListQuery(params),
       );
       const departments = selectedOrganizationId
         ? await controller.listDepartments(selectedOrganizationId, params)
@@ -99,30 +108,15 @@ export function createSdkworkIamConsoleOrganizationController(
       setState({ selectedOrganization });
       if (selectedOrganization) {
         await controller.listDepartments(normalizedOrganizationId);
-        await controller.listMemberships({ organizationId: normalizedOrganizationId });
+        await controller.listMemberships(
+          resolveSdkWorkListQuery({ organizationId: normalizedOrganizationId }),
+        );
       }
       return selectedOrganization;
     },
   };
 
   return controller;
-}
-
-function extractList(value: unknown): unknown[] {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  if (!value || typeof value !== "object") {
-    return [];
-  }
-  const record = value as Record<string, unknown>;
-  for (const key of ["records", "items", "list", "rows", "content", "data"]) {
-    const nested = record[key];
-    if (Array.isArray(nested)) {
-      return nested;
-    }
-  }
-  return [];
 }
 
 function toOrganization(value: unknown): SdkworkIamConsoleOrganizationRecord | undefined {

@@ -1,3 +1,4 @@
+import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 export interface SdkworkIamConsoleRuntimeContext {
@@ -23,6 +24,10 @@ export interface SdkworkIamConsoleMembership {
 }
 
 export interface SdkworkIamConsoleTenantState {
+  listPageInfo?: {
+    memberships?: SdkWorkPageInfo;
+    organizations?: SdkWorkPageInfo;
+  };
   memberships: readonly SdkworkIamConsoleMembership[];
   organizations: readonly SdkworkIamConsoleOrganization[];
   runtime?: SdkworkIamConsoleRuntimeContext;
@@ -37,6 +42,8 @@ export interface SdkworkIamConsoleTenantController {
   getState(): SdkworkIamConsoleTenantState;
   listMemberships(params?: Record<string, unknown>): Promise<readonly SdkworkIamConsoleMembership[]>;
   listOrganizations(params?: Record<string, unknown>): Promise<readonly SdkworkIamConsoleOrganization[]>;
+  loadMoreMemberships(): Promise<readonly SdkworkIamConsoleMembership[]>;
+  loadMoreOrganizations(): Promise<readonly SdkworkIamConsoleOrganization[]>;
   loadRuntimeContext(): Promise<SdkworkIamConsoleRuntimeContext>;
   refreshWorkspace(params?: Record<string, unknown>): Promise<{
     memberships: readonly SdkworkIamConsoleMembership[];

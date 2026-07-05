@@ -11,12 +11,8 @@ const LEGACY_ENCRYPTED_PREFIX: &str = "enc:v1:";
 const PRIMARY_SIGNING_KID_SUFFIX: &str = "local-hs256:primary";
 
 /// Historical deployment KEKs used only to read legacy `enc:v1:` rows during migration.
-const LEGACY_ENCRYPTED_SIGNING_MASTER_SECRETS: &[&str] = &[
-    "sdkwork-workspace-dev-tenant-signing-master-secret-v1",
-    "sdkwork-im-dev-tenant-signing-master-secret-v1",
-    "integration-test-signing-master-secret",
-    "sdkwork-knowledgebase-dev-signing-secret",
-];
+/// Configure through `SDKWORK_IAM_LEGACY_SIGNING_MASTER_SECRETS` (comma-separated) in migration jobs only.
+const LEGACY_ENCRYPTED_SIGNING_MASTER_SECRETS: &[&str] = &[];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TenantSigningKeyMaterial {
@@ -258,6 +254,31 @@ fn hash_signing_secret_ref(secret_ref: &str) -> String {
     format!("{:x}", digest)
 }
 
+/// One-way hash for OAuth secret refs, callback URLs, and other non-password identifiers.
+pub fn hash_secret_ref(value: &str) -> String {
+    hash_signing_secret_ref(value)
+}
+
+fn legacy_master_secrets() -> Vec<String> {
+    std::env::var("SDKWORK_IAM_LEGACY_SIGNING_MASTER_SECRETS")
+        .ok()
+        .map(|value| {
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|secret| !secret.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
+        .filter(|secrets: &Vec<String>| !secrets.is_empty())
+        .unwrap_or_else(|| {
+            LEGACY_ENCRYPTED_SIGNING_MASTER_SECRETS
+                .iter()
+                .map(|secret| (*secret).to_string())
+                .collect()
+        })
+}
+
 fn decode_legacy_encrypted_signing_secret_ref(encoded: &str) -> Result<Vec<u8>, String> {
     let payload = URL_SAFE_NO_PAD
         .decode(encoded)
@@ -268,8 +289,8 @@ fn decode_legacy_encrypted_signing_secret_ref(encoded: &str) -> Result<Vec<u8>, 
     let (nonce_bytes, ciphertext) = payload.split_at(12);
     let nonce = Nonce::from_slice(nonce_bytes);
     let mut last_error = "decrypt legacy signing secret failed".to_string();
-    for secret in LEGACY_ENCRYPTED_SIGNING_MASTER_SECRETS {
-        let key = derive_master_key_from_secret(secret)?;
+    for secret in legacy_master_secrets() {
+        let key = derive_master_key_from_secret(&secret)?;
         let cipher = Aes256Gcm::new(&key);
         match cipher.decrypt(nonce, ciphertext) {
             Ok(plaintext) => return Ok(plaintext),
@@ -310,6 +331,7 @@ mod tests {
         use aes_gcm::aead::{AeadCore, OsRng as AesOsRng};
         let plaintext = b"legacy-encrypted-signing-secret";
         let legacy_master = "integration-test-signing-master-secret";
+        std::env::set_var("SDKWORK_IAM_LEGACY_SIGNING_MASTER_SECRETS", legacy_master);
         let key = derive_master_key_from_secret(legacy_master).expect("derive key");
         let cipher = Aes256Gcm::new(&key);
         let nonce = Aes256Gcm::generate_nonce(&mut AesOsRng);
@@ -324,5 +346,6 @@ mod tests {
         );
         let decoded = decode_signing_secret_ref(&secret_ref).expect("decode legacy secret");
         assert_eq!(decoded, plaintext);
+        std::env::remove_var("SDKWORK_IAM_LEGACY_SIGNING_MASTER_SECRETS");
     }
 }

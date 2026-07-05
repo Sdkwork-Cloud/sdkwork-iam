@@ -4,18 +4,41 @@
 //! Multi-surface merges mount shared infrastructure routes once at the assembly layer
 //! so `/healthz`, `/livez`, `/readyz`, and `/metrics` are not duplicated per surface.
 
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use axum::Router;
+use sdkwork_iam_web_adapter::{assert_production_hardening, is_production_iam_deployment};
 use sdkwork_web_bootstrap::{
-    assemble_multi_surface_router, PgPoolReadinessCheck, ServiceRouterConfig, SqliteReadinessCheck,
+    assemble_multi_surface_router, PgPoolReadinessCheck, ReadinessCheck, ServiceRouterConfig,
+    SqliteReadinessCheck,
 };
 
 pub struct ApplicationAssembly {
     pub router: Router,
 }
 
+struct DependencyUnavailableReadiness {
+    detail: String,
+}
+
+impl ReadinessCheck for DependencyUnavailableReadiness {
+    fn check(&self) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send + '_>> {
+        let detail = self.detail.clone();
+        Box::pin(async move { Err(detail) })
+    }
+}
+
 async fn service_router_config() -> ServiceRouterConfig {
+    if let Err(error) = assert_production_hardening() {
+        if is_production_iam_deployment() {
+            tracing::error!(%error, "IAM production hardening check failed");
+            return ServiceRouterConfig::default()
+                .with_readiness_check(Arc::new(DependencyUnavailableReadiness { detail: error }));
+        }
+    }
+
     match sdkwork_iam_database_host::bootstrap_iam_database_from_env().await {
         Ok(host) => {
             if let Some(pool) = host.pool().as_postgres() {
@@ -27,19 +50,32 @@ async fn service_router_config() -> ServiceRouterConfig {
                     .with_readiness_check(Arc::new(SqliteReadinessCheck::new(pool.clone())));
             }
         }
-        Err(_) => {}
+        Err(error) => {
+            if is_production_iam_deployment() {
+                tracing::error!(%error, "IAM database bootstrap failed in production");
+                return ServiceRouterConfig::default().with_readiness_check(Arc::new(
+                    DependencyUnavailableReadiness {
+                        detail: "iam database is unavailable".to_string(),
+                    },
+                ));
+            }
+        }
     }
 
     ServiceRouterConfig::default().with_always_ready()
 }
 
-pub async fn assemble_application_router() -> ApplicationAssembly {
-    let config = service_router_config().await;
+pub async fn assemble_application_business_router() -> ApplicationAssembly {
     let app = sdkwork_routes_iam_app_api::gateway_mount().await;
     let backend = sdkwork_routes_iam_backend_api::gateway_mount();
     let open = sdkwork_routes_iam_open_api::gateway_mount().await;
+    let router = app.merge(backend).merge(open);
+    ApplicationAssembly { router }
+}
 
-    let router = assemble_multi_surface_router([app, backend, open], config);
-
+pub async fn assemble_application_router() -> ApplicationAssembly {
+    let business = assemble_application_business_router().await;
+    let router =
+        assemble_multi_surface_router(vec![business.router], service_router_config().await);
     ApplicationAssembly { router }
 }

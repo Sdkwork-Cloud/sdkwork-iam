@@ -29,7 +29,7 @@ uuid = { version = "1", features = ["v4"] }
 argon2 = "0.5"
 chrono = { workspace = true }
 http-body-util = "0.1"
-sdkwork_database_config = { workspace = true }
+sdkwork-database-config = { workspace = true }
 sdkwork_iam_bootstrap = { workspace = true }
 sdkwork_iam_web_adapter = { workspace = true }
 sqlx = { workspace = true, features = ["postgres", "runtime-tokio"] }

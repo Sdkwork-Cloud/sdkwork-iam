@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
+import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import { Button, SettingsSection, StatusNotice } from "@sdkwork/ui-pc-react";
 
 import type {
@@ -29,6 +31,7 @@ export function SdkworkIamPermissionAdminWorkspace({
   const [permissions, setPermissions] = useState(controller.getState().permissions);
   const [policies, setPolicies] = useState(controller.getState().policies);
   const [roleBindings, setRoleBindings] = useState(controller.getState().roleBindings);
+  const [listPageInfo, setListPageInfo] = useState(controller.getState().listPageInfo);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [rolePermissions, setRolePermissions] = useState(controller.getState().rolePermissions[selectedRoleId] ?? []);
   const [roleDraft, setRoleDraft] = useState(emptyRoleDraft);
@@ -49,7 +52,12 @@ export function SdkworkIamPermissionAdminWorkspace({
     setRoles(nextRoles);
     setPermissions(nextPermissions);
     setPolicies(nextPolicies);
+    setListPageInfo(controller.getState().listPageInfo);
     return { nextPermissions, nextRoles, nextPolicies };
+  };
+
+  const syncListPageInfo = () => {
+    setListPageInfo(controller.getState().listPageInfo);
   };
 
   useEffect(() => {
@@ -69,6 +77,7 @@ export function SdkworkIamPermissionAdminWorkspace({
     ]).then(([nextRolePermissions, nextBindings]) => {
       setRolePermissions(nextRolePermissions);
       setRoleBindings(nextBindings);
+      syncListPageInfo();
     }).catch((loadError) => {
       setError(loadError instanceof Error ? loadError.message : "Failed to load role details");
     });
@@ -119,6 +128,13 @@ export function SdkworkIamPermissionAdminWorkspace({
               }
               await refreshCatalog();
             }, "Role deleted")}
+            onLoadMore={() => controller.loadMoreRoles().then((items) => {
+              setRoles(items);
+              syncListPageInfo();
+            }).catch((loadError) => {
+              setError(loadError instanceof Error ? loadError.message : "Failed to load more roles");
+            })}
+            pageInfo={listPageInfo?.roles}
             title={`Roles (${roles.length})`}
           />
 
@@ -147,6 +163,13 @@ export function SdkworkIamPermissionAdminWorkspace({
               await controller.deletePermission(permissionId);
               await refreshCatalog();
             }, "Permission deleted")}
+            onLoadMore={() => controller.loadMorePermissions().then((items) => {
+              setPermissions(items);
+              syncListPageInfo();
+            }).catch((loadError) => {
+              setError(loadError instanceof Error ? loadError.message : "Failed to load more permissions");
+            })}
+            pageInfo={listPageInfo?.permissions}
             title={`Permissions (${permissions.length})`}
           />
 
@@ -170,6 +193,13 @@ export function SdkworkIamPermissionAdminWorkspace({
               await controller.deletePolicy(policyId);
               await refreshCatalog();
             }, "Policy deleted")}
+            onLoadMore={() => controller.loadMorePolicies().then((items) => {
+              setPolicies(items);
+              syncListPageInfo();
+            }).catch((loadError) => {
+              setError(loadError instanceof Error ? loadError.message : "Failed to load more policies");
+            })}
+            pageInfo={listPageInfo?.policies}
             title={`Policies (${policies.length})`}
           />
         </div>
@@ -247,6 +277,16 @@ export function SdkworkIamPermissionAdminWorkspace({
                   </li>
                 ))}
               </ul>
+              <SdkworkIamListPaginationControls
+                busy={busy}
+                onLoadMore={() => controller.loadMoreRolePermissions(selectedRoleId).then((items) => {
+                  setRolePermissions(items);
+                  syncListPageInfo();
+                }).catch((loadError) => {
+                  setError(loadError instanceof Error ? loadError.message : "Failed to load more role permissions");
+                })}
+                pageInfo={listPageInfo?.rolePermissions?.[selectedRoleId]}
+              />
 
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                 <Field label="Principal ID" onChange={(principalId) => setBindingDraft((current) => ({ ...current, principalId }))} value={bindingDraft.principalId} />
@@ -293,6 +333,16 @@ export function SdkworkIamPermissionAdminWorkspace({
                   </li>
                 ))}
               </ul>
+              <SdkworkIamListPaginationControls
+                busy={busy}
+                onLoadMore={() => controller.loadMoreRoleBindings().then((items) => {
+                  setRoleBindings(items);
+                  syncListPageInfo();
+                }).catch((loadError) => {
+                  setError(loadError instanceof Error ? loadError.message : "Failed to load more role bindings");
+                })}
+                pageInfo={listPageInfo?.roleBindings}
+              />
             </>
           ) : null}
         </section>
@@ -308,7 +358,9 @@ function CatalogPanel({
   draftFields,
   items,
   onCreate,
+  onLoadMore,
   onRemove,
+  pageInfo,
   title,
 }: {
   busy: boolean;
@@ -317,7 +369,9 @@ function CatalogPanel({
   draftFields: ReactNode;
   items: readonly { id: string; label: string }[];
   onCreate: () => void;
+  onLoadMore?: () => void | Promise<void>;
   onRemove: (id: string) => void;
+  pageInfo?: SdkWorkPageInfo;
   title: string;
 }) {
   return (
@@ -340,6 +394,7 @@ function CatalogPanel({
           </li>
         ))}
       </ul>
+      <SdkworkIamListPaginationControls busy={busy} onLoadMore={onLoadMore} pageInfo={pageInfo} />
     </section>
   );
 }

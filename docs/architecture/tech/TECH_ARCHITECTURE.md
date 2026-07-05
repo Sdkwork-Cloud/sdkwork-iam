@@ -2,7 +2,7 @@
 
 Status: active
 Owner: SDKWork maintainers
-Updated: 2026-06-30
+Updated: 2026-07-05
 Specs: IAM_SPEC.md, WEB_FRAMEWORK_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, API_SPEC.md
 
 ## 1. Architecture Overview
@@ -45,11 +45,21 @@ Specs: IAM_SPEC.md, WEB_FRAMEWORK_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, API_SPEC.
 ## 5. Deployment
 
 - Gateway assembly: `crates/sdkwork-iam-gateway-assembly/` (mounts `/healthz`, `/livez`, `/readyz`, `/metrics` once via `sdkwork-web-bootstrap`)
-- Deploy manifest: `deployments/deploy.yaml`
+- Deploy manifest: `deployments/deploy.yaml` with package health/readiness paths and proxy upstream overrides
 - Topology: `specs/topology.spec.json`
 - Local runbook: `deployments/runbooks/local-iam-rust.md`
+- Production hardening: `sdkwork-iam-web-adapter::assert_production_hardening()` rejects dev auth fallback, fixed verify codes, bootstrap passwords, OAuth webhook env overrides, and email verification without `SDKWORK_IAM_MESSAGING_VERIFICATION_ENABLED`
 
-## 6. Verification
+## 6. Operational Limits
+
+Shared constants in `crates/sdkwork-iam-bootstrap/src/limits.rs`:
+
+| Constant | Value | Usage |
+| --- | --- | --- |
+| `IAM_TREE_MAX_NODES` | 2000 | Organization/department tree APIs (app-api and backend-api) |
+| `IAM_RBAC_BINDING_ROW_LIMIT` | 5000 | Session authorization RBAC resolution |
+
+## 7. Verification
 
 ```powershell
 cd E:\sdkwork-space\sdkwork-iam
@@ -60,7 +70,7 @@ pnpm run verify
 
 CI (`.github/workflows/iam-quality-gate.yml`) runs `pnpm check`, `pnpm test:governance-node`, `pnpm test:iam-standard-contracts`, and `pnpm test:rust-workspace` on every push and pull request. PostgreSQL integration suites run when a profile is present locally; CI runs the governed non-Postgres Rust surface plus HTTP route standards.
 
-## 7. Related Docs
+## 8. Related Docs
 
 - [docs/README.md](../../README.md)
 - [docs/IAM_INTEGRATION.md](../../IAM_INTEGRATION.md)

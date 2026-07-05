@@ -104,11 +104,16 @@ export interface SdkworkIamOrganizationNode extends SdkworkIamOrganization {
 export interface SdkworkIamOrganizationState {
   departmentAssignments: readonly SdkworkIamDepartmentAssignment[];
   departments: readonly SdkworkIamDepartment[];
+  departmentListPageInfo?: SdkWorkPageInfo;
   departmentTree: readonly SdkworkIamDepartmentNode[];
   memberships: readonly SdkworkIamOrganizationMembership[];
+  membershipListPageInfo?: SdkWorkPageInfo;
   organizations: readonly SdkworkIamOrganization[];
+  organizationListPageInfo?: SdkWorkPageInfo;
   positions: readonly SdkworkIamPosition[];
+  positionListPageInfo?: SdkWorkPageInfo;
   roleBindings: readonly SdkworkIamRoleBinding[];
+  roleBindingListPageInfo?: SdkWorkPageInfo;
   selectedOrganization?: SdkworkIamOrganization;
   status: "idle" | "loading" | "ready" | "error";
   tree: readonly SdkworkIamOrganizationNode[];
@@ -129,11 +134,16 @@ export interface SdkworkIamOrganizationController {
   deleteOrganization(organizationId: string): Promise<void>;
   getState(): SdkworkIamOrganizationState;
   listDepartmentAssignments(departmentId: string, params?: Record<string, unknown>): Promise<readonly SdkworkIamDepartmentAssignment[]>;
-  listDepartments(organizationId: string, params?: Record<string, unknown>): Promise<readonly SdkworkIamDepartment[]>;
-  listMemberships(organizationId: string, params?: Record<string, unknown>): Promise<readonly SdkworkIamOrganizationMembership[]>;
-  listOrganizations(params?: Record<string, unknown>): Promise<readonly SdkworkIamOrganization[]>;
-  listPositions(params?: Record<string, unknown>): Promise<readonly SdkworkIamPosition[]>;
-  listRoleBindings(params?: Record<string, unknown>): Promise<readonly SdkworkIamRoleBinding[]>;
+  listOrganizations(params?: Record<string, unknown>, options?: { append?: boolean }): Promise<readonly SdkworkIamOrganization[]>;
+  loadMoreOrganizations(): Promise<readonly SdkworkIamOrganization[]>;
+  listPositions(params?: Record<string, unknown>, options?: { append?: boolean }): Promise<readonly SdkworkIamPosition[]>;
+  loadMorePositions(): Promise<readonly SdkworkIamPosition[]>;
+  listRoleBindings(params?: Record<string, unknown>, options?: { append?: boolean }): Promise<readonly SdkworkIamRoleBinding[]>;
+  loadMoreRoleBindings(): Promise<readonly SdkworkIamRoleBinding[]>;
+  listDepartments(organizationId: string, params?: Record<string, unknown>, options?: { append?: boolean }): Promise<readonly SdkworkIamDepartment[]>;
+  loadMoreDepartments(organizationId: string): Promise<readonly SdkworkIamDepartment[]>;
+  listMemberships(organizationId: string, params?: Record<string, unknown>, options?: { append?: boolean }): Promise<readonly SdkworkIamOrganizationMembership[]>;
+  loadMoreMemberships(organizationId: string): Promise<readonly SdkworkIamOrganizationMembership[]>;
   selectOrganization(organizationId: string, params?: Record<string, unknown>): Promise<SdkworkIamOrganization | undefined>;
   updateDepartment(departmentId: string, body: Partial<SdkworkIamDepartmentDraft>): Promise<SdkworkIamDepartment>;
   updateMembership(membershipId: string, body: Partial<SdkworkIamOrganizationMembershipDraft>): Promise<SdkworkIamOrganizationMembership>;

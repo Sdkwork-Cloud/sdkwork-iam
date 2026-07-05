@@ -1,13 +1,16 @@
 use sqlx::{PgPool, Row};
 
+use sdkwork_iam_web_adapter::{
+    messaging_verification_enabled, verify_and_consume_messaging_challenge,
+    MessagingVerificationRequest, MESSAGING_VERIFICATION_SCENE_BIND_EMAIL,
+    MESSAGING_VERIFICATION_SCENE_BIND_PHONE,
+};
+
 use crate::{
-    ephemeral,
     passwords::{password_is_within_policy, replace_user_password, verify_password},
     state::*,
     utils::*,
 };
-
-const CONTACT_BIND_TTL_MILLIS: u128 = 600_000;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ContactBindingKind {
@@ -18,8 +21,15 @@ pub(crate) enum ContactBindingKind {
 impl ContactBindingKind {
     fn scene(self) -> &'static str {
         match self {
-            Self::Email => "BIND_EMAIL",
-            Self::Phone => "BIND_PHONE",
+            Self::Email => MESSAGING_VERIFICATION_SCENE_BIND_EMAIL,
+            Self::Phone => MESSAGING_VERIFICATION_SCENE_BIND_PHONE,
+        }
+    }
+
+    fn channel(self) -> &'static str {
+        match self {
+            Self::Email => "email",
+            Self::Phone => "sms",
         }
     }
 
@@ -29,30 +39,6 @@ impl ContactBindingKind {
             Self::Phone => format!("iam:contact_bind:phone:{user_id}"),
         }
     }
-}
-
-pub(crate) struct LocalContactBindVerification {
-    pub(crate) code: String,
-    pub(crate) expire_time: u128,
-    pub(crate) target: String,
-}
-
-#[allow(dead_code)]
-pub(crate) async fn upsert_contact_bind_verification(
-    pg: &PgPool,
-    tenant_id: &str,
-    user_id: &str,
-    kind: ContactBindingKind,
-    target: &str,
-    code: &str,
-) -> Result<(), String> {
-    let verification = LocalContactBindVerification {
-        code: code.to_string(),
-        expire_time: current_millis() + CONTACT_BIND_TTL_MILLIS,
-        target: canonical_identity(target),
-    };
-    ephemeral::upsert_contact_bind_verification(pg, tenant_id, user_id, kind.scene(), &verification)
-        .await
 }
 
 pub(crate) async fn bind_contact_for_user(
@@ -68,7 +54,7 @@ pub(crate) async fn bind_contact_for_user(
         pg,
         config,
         &user.tenant_id,
-        &user.id,
+        None,
         kind,
         &normalized_target,
         verification_code,
@@ -118,9 +104,6 @@ pub(crate) async fn bind_contact_for_user(
     .execute(pg)
     .await
     .map_err(|error| format!("update contact binding failed: {error}"))?;
-
-    ephemeral::delete_contact_bind_verification(pg, &user.tenant_id, &user.id, kind.scene())
-        .await?;
 
     load_user_by_id(pg, &user.tenant_id, &user.id)
         .await?
@@ -223,7 +206,7 @@ async fn validate_bind_verification_code(
     pg: &PgPool,
     config: &LocalIamConfig,
     tenant_id: &str,
-    user_id: &str,
+    organization_id: Option<&str>,
     kind: ContactBindingKind,
     target: &str,
     verification_code: &str,
@@ -236,15 +219,19 @@ async fn validate_bind_verification_code(
         }
     }
 
-    if let Some(stored) =
-        ephemeral::get_contact_bind_verification(pg, tenant_id, user_id, kind.scene()).await?
-    {
-        if stored.expire_time >= current_millis()
-            && canonical_identity(&stored.target) == canonical_identity(target)
-            && stored.code == verification_code
-        {
-            return Ok(());
-        }
+    if messaging_verification_enabled() {
+        return verify_and_consume_messaging_challenge(
+            pg,
+            &MessagingVerificationRequest {
+                tenant_id,
+                organization_id: organization_id.unwrap_or("0"),
+                scene_code: kind.scene(),
+                channel: kind.channel(),
+                target,
+                code: verification_code,
+            },
+        )
+        .await;
     }
 
     if fixed_verification_code_allowed(config) {

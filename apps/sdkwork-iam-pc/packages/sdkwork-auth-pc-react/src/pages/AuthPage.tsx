@@ -751,7 +751,7 @@ function SdkworkAuthPageContent({
 
   useEffect(() => {
     if (!qrEntryKey) {
-      return;
+      return undefined;
     }
 
     let disposed = false;
@@ -877,7 +877,7 @@ function SdkworkAuthPageContent({
       setQrImageSrc("");
       setQrState("idle");
       qrPollSecretRef.current = "";
-      return;
+      return undefined;
     }
 
     let disposed = false;
@@ -1489,7 +1489,7 @@ function SdkworkAuthPageContent({
                     const result = await completeQrEntryWithPassword("bindRequired", payload);
                     clearQrEntryError();
                     if (handleQrCompletionResult(result)) {
-                      return;
+                      return undefined;
                     }
                   } catch (error) {
                     setQrEntryError(error);
@@ -1498,7 +1498,7 @@ function SdkworkAuthPageContent({
                   startTransition(() => {
                     navigate(redirectTarget, { replace: true });
                   });
-                  return;
+                  return undefined;
                 }
 
                 await ensureQrEntryCanContinue();
@@ -1506,6 +1506,7 @@ function SdkworkAuthPageContent({
                 if (!success) {
                   return false;
                 }
+                return undefined;
               }}
               verificationPolicy={verificationPolicy}
             />

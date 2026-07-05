@@ -3,6 +3,7 @@ pub mod iam_entity_ids;
 pub mod iam_scope_resolver;
 pub mod iam_sql_subject;
 pub mod legacy_subject_repair;
+pub mod limits;
 pub mod permission_catalog;
 pub mod rbac_scope;
 pub mod role_catalog;
@@ -24,6 +25,7 @@ pub use legacy_subject_repair::{
     repair_postgres_legacy_opaque_iam_user_ids, repair_sqlite_legacy_opaque_iam_user_ids,
     LegacyIamSubjectRepairReport,
 };
+pub use limits::{IAM_RBAC_BINDING_ROW_LIMIT, IAM_TREE_MAX_NODES};
 pub use rbac_scope::{
     ensure_assigner_covers_role_permissions, ensure_permission_grant_within_assigner_scope,
     ensure_role_assignment_allowed, ensure_role_grant_within_assigner_scope,
@@ -36,7 +38,7 @@ pub use role_catalog::{
 };
 pub use tenant_signing_key::{
     decode_signing_secret_ref, encode_signing_secret_ref, ensure_postgres_tenant_signing_key,
-    ensure_sqlite_tenant_signing_key, load_postgres_active_tenant_signing_key,
+    ensure_sqlite_tenant_signing_key, hash_secret_ref, load_postgres_active_tenant_signing_key,
     load_sqlite_active_tenant_signing_key, resolve_postgres_tenant_signing_key_by_kid,
     resolve_sqlite_tenant_signing_key_by_kid, tenant_primary_signing_kid, TenantSigningKeyMaterial,
 };

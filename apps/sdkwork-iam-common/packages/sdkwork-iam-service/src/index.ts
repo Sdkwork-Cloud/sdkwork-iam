@@ -1,5 +1,5 @@
 import { isBlank, trim } from "@sdkwork/utils";
-import { createIamAppContext, type IamAppContext } from "@sdkwork/iam-contracts";
+import { createIamAppContext, type IamAppContext, extractSdkWorkTreeNodes, resolveSdkWorkListQuery } from "@sdkwork/iam-contracts";
 import {
   buildTenantCurrentSessionUpdateBody,
   isIamLoginContextSelectionChallenge,
@@ -12,6 +12,10 @@ import {
   readSdkworkMediaResource,
   type SdkworkMediaResource,
 } from "@sdkwork/runtime-bootstrap";
+
+function iamListQuery(params?: Record<string, unknown>): Record<string, string | number> {
+  return resolveSdkWorkListQuery(params);
+}
 
 export interface IamUser {
   avatar?: SdkworkMediaResource;
@@ -424,7 +428,7 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
     },
     oauth: {
       providers: {
-        list: (params) => callRaw(appOauth?.providers, "list", "appbaseAppClient.oauth.providers.list", params),
+        list: (params) => callRaw(appOauth?.providers, "list", "appbaseAppClient.oauth.providers.list", iamListQuery(params)),
       },
       authorizationUrls: {
         create: (params) =>
@@ -496,11 +500,11 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
       },
       accountLinks: {
         delete: (accountLinkId) => callRaw(appOauth?.accountLinks, "delete", "appbaseAppClient.oauth.accountLinks.delete", accountLinkId),
-        list: (params) => callRaw(appOauth?.accountLinks, "list", "appbaseAppClient.oauth.accountLinks.list", params),
+        list: (params) => callRaw(appOauth?.accountLinks, "list", "appbaseAppClient.oauth.accountLinks.list", iamListQuery(params)),
       },
       grants: {
         delete: (grantId) => callRaw(appOauth?.grants, "delete", "appbaseAppClient.oauth.grants.delete", grantId),
-        list: (params) => callRaw(appOauth?.grants, "list", "appbaseAppClient.oauth.grants.list", params),
+        list: (params) => callRaw(appOauth?.grants, "list", "appbaseAppClient.oauth.grants.list", iamListQuery(params)),
       },
     },
     system: {
@@ -518,64 +522,80 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
     },
     iam: {
       apiKeys: {
-        list: (params) => callBackendIam(backendIam, (iam) => iam.apiKeys, "list", "iam.apiKeys.list", params),
+        list: (params) => callBackendIam(backendIam, (iam) => iam.apiKeys, "list", "iam.apiKeys.list", iamListQuery(params)),
         revoke: (apiKeyId) => callBackendIam(backendIam, (iam) => iam.apiKeys, "revoke", "iam.apiKeys.revoke", apiKeyId),
       },
       auditEvents: {
-        list: (params) => callBackendIam(backendIam, (iam) => iam.auditEvents, "list", "iam.auditEvents.list", params),
+        list: (params) => callBackendIam(backendIam, (iam) => iam.auditEvents, "list", "iam.auditEvents.list", iamListQuery(params)),
       },
       organizations: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.organizations, "create", "iam.organizations.create", body),
         delete: (organizationId) => callBackendIam(backendIam, (iam) => iam.organizations, "delete", "iam.organizations.delete", organizationId),
-        list: (params) => callRaw(appIam?.organizations, "list", "appbaseAppClient.iam.organizations.list", params),
+        list: (params) => callRaw(appIam?.organizations, "list", "appbaseAppClient.iam.organizations.list", iamListQuery(params)),
         retrieve: (organizationId) => callBackendIam(backendIam, (iam) => iam.organizations, "retrieve", "iam.organizations.retrieve", organizationId),
         tree: {
-          retrieve: (params) => callRaw(appIam?.organizations?.tree, "retrieve", "appbaseAppClient.iam.organizations.tree.retrieve", params),
+          retrieve: async (params) =>
+            extractSdkWorkTreeNodes(
+              await callRaw(
+                appIam?.organizations?.tree,
+                "retrieve",
+                "appbaseAppClient.iam.organizations.tree.retrieve",
+                params,
+              ),
+            ),
         },
         update: (organizationId, body) => callBackendIam(backendIam, (iam) => iam.organizations, "update", "iam.organizations.update", organizationId, body),
       },
       organizationMemberships: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.organizationMemberships, "create", "iam.organizationMemberships.create", body),
-        list: (params) => callRaw(appIam?.organizationMemberships, "list", "appbaseAppClient.iam.organizationMemberships.list", params),
+        list: (params) => callRaw(appIam?.organizationMemberships, "list", "appbaseAppClient.iam.organizationMemberships.list", iamListQuery(params)),
         update: (membershipId, body) => callBackendIam(backendIam, (iam) => iam.organizationMemberships, "update", "iam.organizationMemberships.update", membershipId, body),
       },
       departments: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.departments, "create", "iam.departments.create", body),
         delete: (departmentId) => callBackendIam(backendIam, (iam) => iam.departments, "delete", "iam.departments.delete", departmentId),
-        list: (params) => callRaw(appIam?.departments, "list", "appbaseAppClient.iam.departments.list", params),
+        list: (params) => callRaw(appIam?.departments, "list", "appbaseAppClient.iam.departments.list", iamListQuery(params)),
         retrieve: (departmentId) => callBackendIam(backendIam, (iam) => iam.departments, "retrieve", "iam.departments.retrieve", departmentId),
         tree: {
-          retrieve: (params) => callRaw(appIam?.departments?.tree, "retrieve", "appbaseAppClient.iam.departments.tree.retrieve", params),
+          retrieve: async (params) =>
+            extractSdkWorkTreeNodes(
+              await callRaw(
+                appIam?.departments?.tree,
+                "retrieve",
+                "appbaseAppClient.iam.departments.tree.retrieve",
+                params,
+              ),
+            ),
         },
         update: (departmentId, body) => callBackendIam(backendIam, (iam) => iam.departments, "update", "iam.departments.update", departmentId, body),
       },
       departmentAssignments: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.departmentAssignments, "create", "iam.departmentAssignments.create", body),
-        list: (params) => callRaw(appIam?.departmentAssignments, "list", "appbaseAppClient.iam.departmentAssignments.list", params),
+        list: (params) => callRaw(appIam?.departmentAssignments, "list", "appbaseAppClient.iam.departmentAssignments.list", iamListQuery(params)),
         update: (assignmentId, body) => callBackendIam(backendIam, (iam) => iam.departmentAssignments, "update", "iam.departmentAssignments.update", assignmentId, body),
       },
       permissions: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.permissions, "create", "iam.permissions.create", body),
         delete: (permissionId) => callBackendIam(backendIam, (iam) => iam.permissions, "delete", "iam.permissions.delete", permissionId),
-        list: (params) => callBackendIam(backendIam, (iam) => iam.permissions, "list", "iam.permissions.list", params),
+        list: (params) => callBackendIam(backendIam, (iam) => iam.permissions, "list", "iam.permissions.list", iamListQuery(params)),
         retrieve: (permissionId) => callBackendIam(backendIam, (iam) => iam.permissions, "retrieve", "iam.permissions.retrieve", permissionId),
         update: (permissionId, body) => callBackendIam(backendIam, (iam) => iam.permissions, "update", "iam.permissions.update", permissionId, body),
       },
       positions: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.positions, "create", "iam.positions.create", body),
         delete: (positionId) => callBackendIam(backendIam, (iam) => iam.positions, "delete", "iam.positions.delete", positionId),
-        list: (params) => callRaw(appIam?.positions, "list", "appbaseAppClient.iam.positions.list", params),
+        list: (params) => callRaw(appIam?.positions, "list", "appbaseAppClient.iam.positions.list", iamListQuery(params)),
         update: (positionId, body) => callBackendIam(backendIam, (iam) => iam.positions, "update", "iam.positions.update", positionId, body),
       },
       positionAssignments: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.positionAssignments, "create", "iam.positionAssignments.create", body),
-        list: (params) => callRaw(appIam?.positionAssignments, "list", "appbaseAppClient.iam.positionAssignments.list", params),
+        list: (params) => callRaw(appIam?.positionAssignments, "list", "appbaseAppClient.iam.positionAssignments.list", iamListQuery(params)),
         update: (assignmentId, body) => callBackendIam(backendIam, (iam) => iam.positionAssignments, "update", "iam.positionAssignments.update", assignmentId, body),
       },
       policies: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.policies, "create", "iam.policies.create", body),
         delete: (policyId) => callBackendIam(backendIam, (iam) => iam.policies, "delete", "iam.policies.delete", policyId),
-        list: (params) => callBackendIam(backendIam, (iam) => iam.policies, "list", "iam.policies.list", params),
+        list: (params) => callBackendIam(backendIam, (iam) => iam.policies, "list", "iam.policies.list", iamListQuery(params)),
         retrieve: (policyId) => callBackendIam(backendIam, (iam) => iam.policies, "retrieve", "iam.policies.retrieve", policyId),
         update: (policyId, body) => callBackendIam(backendIam, (iam) => iam.policies, "update", "iam.policies.update", policyId, body),
       },
@@ -587,22 +607,22 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
       roles: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.roles, "create", "iam.roles.create", body),
         delete: (roleId) => callBackendIam(backendIam, (iam) => iam.roles, "delete", "iam.roles.delete", roleId),
-        list: (params) => callBackendIam(backendIam, (iam) => iam.roles, "list", "iam.roles.list", params),
+        list: (params) => callBackendIam(backendIam, (iam) => iam.roles, "list", "iam.roles.list", iamListQuery(params)),
         retrieve: (roleId) => callBackendIam(backendIam, (iam) => iam.roles, "retrieve", "iam.roles.retrieve", roleId),
         update: (roleId, body) => callBackendIam(backendIam, (iam) => iam.roles, "update", "iam.roles.update", roleId, body),
         permissions: {
           create: (roleId, permissionId) => callBackendIam(backendIam, (iam) => iam.roles?.permissions, "create", "iam.roles.permissions.create", roleId, permissionId),
           delete: (roleId, permissionId) => callBackendIam(backendIam, (iam) => iam.roles?.permissions, "delete", "iam.roles.permissions.delete", roleId, permissionId),
-          list: (roleId, params) => callBackendIam(backendIam, (iam) => iam.roles?.permissions, "list", "iam.roles.permissions.list", roleId, params),
+          list: (roleId, params) => callBackendIam(backendIam, (iam) => iam.roles?.permissions, "list", "iam.roles.permissions.list", roleId, iamListQuery(params)),
         },
       },
       roleBindings: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.roleBindings, "create", "iam.roleBindings.create", body),
         delete: (roleBindingId) => callBackendIam(backendIam, (iam) => iam.roleBindings, "delete", "iam.roleBindings.delete", roleBindingId),
-        list: (params) => callRaw(appIam?.roleBindings, "list", "appbaseAppClient.iam.roleBindings.list", params),
+        list: (params) => callRaw(appIam?.roleBindings, "list", "appbaseAppClient.iam.roleBindings.list", iamListQuery(params)),
       },
       securityEvents: {
-        list: (params) => callBackendIam(backendIam, (iam) => iam.securityEvents, "list", "iam.securityEvents.list", params),
+        list: (params) => callBackendIam(backendIam, (iam) => iam.securityEvents, "list", "iam.securityEvents.list", iamListQuery(params)),
       },
       accessCredentials: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.accessCredentials, "create", "iam.accessCredentials.create", body),
@@ -619,13 +639,13 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
       tenants: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.tenants, "create", "iam.tenants.create", body),
         delete: (tenantId) => callBackendIam(backendIam, (iam) => iam.tenants, "delete", "iam.tenants.delete", tenantId),
-        list: (params) => callBackendIam(backendIam, (iam) => iam.tenants, "list", "iam.tenants.list", params),
+        list: (params) => callBackendIam(backendIam, (iam) => iam.tenants, "list", "iam.tenants.list", iamListQuery(params)),
         retrieve: (tenantId) => callBackendIam(backendIam, (iam) => iam.tenants, "retrieve", "iam.tenants.retrieve", tenantId),
         update: (tenantId, body) => callBackendIam(backendIam, (iam) => iam.tenants, "update", "iam.tenants.update", tenantId, body),
         members: {
           create: (tenantId, body) => callBackendIam(backendIam, (iam) => iam.tenants?.members, "create", "iam.tenants.members.create", tenantId, body),
           delete: (tenantId, userId) => callBackendIam(backendIam, (iam) => iam.tenants?.members, "delete", "iam.tenants.members.delete", tenantId, userId),
-          list: (tenantId, params) => callBackendIam(backendIam, (iam) => iam.tenants?.members, "list", "iam.tenants.members.list", tenantId, params),
+          list: (tenantId, params) => callBackendIam(backendIam, (iam) => iam.tenants?.members, "list", "iam.tenants.members.list", tenantId, iamListQuery(params)),
           update: (tenantId, userId, body) => callBackendIam(backendIam, (iam) => iam.tenants?.members, "update", "iam.tenants.members.update", tenantId, userId, body),
         },
       },
@@ -649,7 +669,7 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
         },
         create: (body) => callBackendIam(backendIam, (iam) => iam.users, "create", "iam.users.create", body),
         delete: (userId) => callBackendIam(backendIam, (iam) => iam.users, "delete", "iam.users.delete", userId),
-        list: (params) => callBackendIam(backendIam, (iam) => iam.users, "list", "iam.users.list", params),
+        list: (params) => callBackendIam(backendIam, (iam) => iam.users, "list", "iam.users.list", iamListQuery(params)),
         retrieve: async (userId) => toUser(unwrap(await callBackendIam(backendIam, (iam) => iam.users, "retrieve", "iam.users.retrieve", userId), "iam.users.retrieve")),
         update: (userId, body) => callBackendIam(backendIam, (iam) => iam.users, "update", "iam.users.update", userId, body),
       },

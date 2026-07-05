@@ -212,8 +212,6 @@ async fn backend_postgres_authenticated_user_list_roundtrip() {
 
     let items = list_payload["data"]["items"]
         .as_array()
-        .or_else(|| list_payload["data"]["records"].as_array())
-        .or_else(|| list_payload["data"].as_array())
         .expect("authenticated backend user list must return page items");
 
     assert!(

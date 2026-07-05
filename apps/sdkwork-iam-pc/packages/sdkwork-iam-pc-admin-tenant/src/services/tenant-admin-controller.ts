@@ -1,3 +1,4 @@
+import { createSdkWorkPagedListSession } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 import type {
@@ -15,11 +16,35 @@ export function createSdkworkIamTenantController(
 ): SdkworkIamTenantController {
   const resolved = resolveInput(input);
   let state: SdkworkIamTenantState = {
+    listPageInfo: undefined,
     members: [],
     selectedTenant: undefined,
     status: "idle",
     tenants: [],
   };
+
+  const tenantsSession = createSdkWorkPagedListSession({
+    fetchPage: (query) => resolved.service.iam.tenants.list(query),
+    mapItem: toTenant,
+  });
+
+  let membersSessionTenantId = "";
+  let membersSession = createMembersSession("");
+
+  function createMembersSession(tenantId: string) {
+    return createSdkWorkPagedListSession({
+      fetchPage: (query) => resolved.service.iam.tenants.members.list(tenantId, query),
+      mapItem: toTenantMember,
+    });
+  }
+
+  function syncTenantsListPageInfo() {
+    return { tenants: tenantsSession.getPageInfo() };
+  }
+
+  function syncMembersListPageInfo() {
+    return { members: membersSession.getPageInfo() };
+  }
 
   const setState = (patch: Partial<SdkworkIamTenantState>) => {
     state = {
@@ -38,6 +63,7 @@ export function createSdkworkIamTenantController(
           throw new Error("SDKWork IAM tenant create response is missing tenantId");
         }
         const tenants = [...state.tenants.filter((item) => item.tenantId !== tenant.tenantId), tenant];
+        tenantsSession.setItems(tenants);
         setState({ selectedTenant: tenant, status: "ready", tenants });
         return tenant;
       } catch (error) {
@@ -57,6 +83,7 @@ export function createSdkworkIamTenantController(
           throw new Error("SDKWork IAM tenant member create response is missing userId");
         }
         const members = [...state.members.filter((item) => item.userId !== member.userId), member];
+        membersSession.setItems(members);
         setState({ members, status: "ready" });
         return member;
       } catch (error) {
@@ -70,6 +97,7 @@ export function createSdkworkIamTenantController(
       try {
         await resolved.service.iam.tenants.delete(normalizedTenantId);
         const tenants = state.tenants.filter((tenant) => tenant.tenantId !== normalizedTenantId);
+        tenantsSession.setItems(tenants);
         const selectedTenant = state.selectedTenant?.tenantId === normalizedTenantId ? undefined : state.selectedTenant;
         setState({ members: selectedTenant ? state.members : [], selectedTenant, status: "ready", tenants });
       } catch (error) {
@@ -80,18 +108,30 @@ export function createSdkworkIamTenantController(
     getSelectedTenant: () => state.selectedTenant,
     getState: () => ({
       ...state,
+      listPageInfo: state.listPageInfo
+        ? {
+            members: state.listPageInfo.members ? { ...state.listPageInfo.members } : undefined,
+            tenants: state.listPageInfo.tenants ? { ...state.listPageInfo.tenants } : undefined,
+          }
+        : undefined,
       members: [...state.members],
       selectedTenant: state.selectedTenant ? { ...state.selectedTenant } : undefined,
       tenants: [...state.tenants],
     }),
     listTenantMembers: async (tenantId, params) => {
       const normalizedTenantId = requireId(tenantId, "tenantId");
+      if (membersSessionTenantId !== normalizedTenantId) {
+        membersSessionTenantId = normalizedTenantId;
+        membersSession = createMembersSession(normalizedTenantId);
+      }
       setState({ status: "loading" });
       try {
-        const members = extractList(await resolved.service.iam.tenants.members.list(normalizedTenantId, params))
-          .map(toTenantMember)
-          .filter(Boolean) as SdkworkIamTenantMember[];
-        setState({ members, status: "ready" });
+        const members = await membersSession.list(params) as SdkworkIamTenantMember[];
+        setState({
+          listPageInfo: { ...state.listPageInfo, ...syncMembersListPageInfo() },
+          members,
+          status: "ready",
+        });
         return members;
       } catch (error) {
         setState({ status: "error" });
@@ -101,13 +141,54 @@ export function createSdkworkIamTenantController(
     listTenants: async (params) => {
       setState({ status: "loading" });
       try {
-        const tenants = extractList(await resolved.service.iam.tenants.list(params))
-          .map(toTenant)
-          .filter(Boolean) as SdkworkIamTenant[];
+        const tenants = await tenantsSession.list(params) as SdkworkIamTenant[];
         const selectedTenant = state.selectedTenant
           ? tenants.find((tenant) => tenant.tenantId === state.selectedTenant?.tenantId) ?? state.selectedTenant
           : tenants.find((tenant) => tenant.tenantId === resolved.selectedTenantId);
-        setState({ selectedTenant, status: "ready", tenants });
+        setState({
+          listPageInfo: { ...state.listPageInfo, ...syncTenantsListPageInfo() },
+          selectedTenant,
+          status: "ready",
+          tenants,
+        });
+        return tenants;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    loadMoreTenantMembers: async (tenantId) => {
+      const normalizedTenantId = requireId(tenantId, "tenantId");
+      if (membersSessionTenantId !== normalizedTenantId) {
+        return controller.listTenantMembers(normalizedTenantId);
+      }
+      setState({ status: "loading" });
+      try {
+        const members = await membersSession.loadMore() as SdkworkIamTenantMember[];
+        setState({
+          listPageInfo: { ...state.listPageInfo, ...syncMembersListPageInfo() },
+          members,
+          status: "ready",
+        });
+        return members;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    loadMoreTenants: async () => {
+      setState({ status: "loading" });
+      try {
+        const tenants = await tenantsSession.loadMore() as SdkworkIamTenant[];
+        const selectedTenant = state.selectedTenant
+          ? tenants.find((tenant) => tenant.tenantId === state.selectedTenant?.tenantId) ?? state.selectedTenant
+          : state.selectedTenant;
+        setState({
+          listPageInfo: { ...state.listPageInfo, ...syncTenantsListPageInfo() },
+          selectedTenant,
+          status: "ready",
+          tenants,
+        });
         return tenants;
       } catch (error) {
         setState({ status: "error" });
@@ -120,8 +201,10 @@ export function createSdkworkIamTenantController(
       setState({ status: "loading" });
       try {
         await resolved.service.iam.tenants.members.delete(normalizedTenantId, normalizedUserId);
+        const members = state.members.filter((member) => member.userId !== normalizedUserId);
+        membersSession.setItems(members);
         setState({
-          members: state.members.filter((member) => member.userId !== normalizedUserId),
+          members,
           status: "ready",
         });
       } catch (error) {
@@ -146,6 +229,7 @@ export function createSdkworkIamTenantController(
           throw new Error("SDKWork IAM tenant update response is missing tenantId");
         }
         const tenants = state.tenants.map((item) => (item.tenantId === tenant.tenantId ? tenant : item));
+        tenantsSession.setItems(tenants);
         const selectedTenant = state.selectedTenant?.tenantId === tenant.tenantId ? tenant : state.selectedTenant;
         setState({ selectedTenant, status: "ready", tenants });
         return tenant;
@@ -166,6 +250,7 @@ export function createSdkworkIamTenantController(
           throw new Error("SDKWork IAM tenant member update response is missing userId");
         }
         const members = state.members.map((item) => (item.userId === member.userId ? member : item));
+        membersSession.setItems(members);
         setState({ members, status: "ready" });
         return member;
       } catch (error) {
@@ -186,31 +271,6 @@ function resolveInput(
   }
 
   return { service: input };
-}
-
-function extractList(value: unknown): unknown[] {
-  if (Array.isArray(value)) {
-    return value;
-  }
-
-  if (!value || typeof value !== "object") {
-    return [];
-  }
-
-  const record = value as Record<string, unknown>;
-  for (const key of ["records", "items", "list", "rows", "content", "data"]) {
-    const nested = record[key];
-    if (Array.isArray(nested)) {
-      return nested;
-    }
-  }
-
-  const dataRecord = record.data;
-  if (dataRecord && typeof dataRecord === "object") {
-    return extractList(dataRecord);
-  }
-
-  return [];
 }
 
 function toTenant(value: unknown): SdkworkIamTenant | undefined {

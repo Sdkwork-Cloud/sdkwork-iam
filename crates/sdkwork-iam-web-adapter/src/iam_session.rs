@@ -13,6 +13,25 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 type HmacSha256 = Hmac<Sha256>;
 
+pub(crate) const IAM_SESSION_CONTEXT_SELECT: &str =
+    "s.id, s.tenant_id, s.organization_id, s.login_scope, s.user_id, s.app_id, \
+     s.environment, s.deployment_mode, s.auth_level, \
+     s.data_scope_json, s.permission_scope_json, \
+     COALESCE(u.display_name, '') AS user_display_name, \
+     COALESCE(u.email, '') AS user_email, \
+     COALESCE(u.email_verified, false) AS user_email_verified";
+
+pub(crate) fn user_profile_from_session_row(row: &sqlx::postgres::PgRow) -> (String, String, bool) {
+    let display_name: String = row.try_get(11).unwrap_or_default();
+    let email: String = row.try_get(12).unwrap_or_default();
+    let email_verified = row.try_get::<bool, _>(13).unwrap_or_else(|_| {
+        row.try_get::<i32, _>(13)
+            .map(|value| value != 0)
+            .unwrap_or(false)
+    });
+    (display_name, email, email_verified)
+}
+
 pub async fn resolve_iam_app_context_from_auth_token(
     pg: &PgPool,
     raw_auth_token: &str,
@@ -70,17 +89,15 @@ async fn find_iam_context_from_dual_tokens(
     let auth_hash = hash_token(auth_token);
     let access_hash = hash_token(access_token);
 
-    let row = sqlx::query(
-        "SELECT s.id, s.tenant_id, s.organization_id, s.login_scope, s.user_id, s.app_id, \
-                s.environment, s.deployment_mode, s.auth_level, \
-                s.data_scope_json, s.permission_scope_json \
+    let row = sqlx::query(&format!(
+        "SELECT {IAM_SESSION_CONTEXT_SELECT} \
          FROM iam_session s \
          JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
          WHERE s.auth_token_hash = $1 AND s.access_token_hash = $2 \
            AND s.revoked_at IS NULL AND s.expires_at::timestamptz > $3::timestamptz \
            AND u.status = 'active' AND u.is_deleted = 0 \
-         LIMIT 1",
-    )
+         LIMIT 1"
+    ))
     .bind(&auth_hash)
     .bind(&access_hash)
     .bind(current_timestamp_utc())
@@ -103,17 +120,15 @@ async fn find_iam_context_from_auth_token(pg: &PgPool, auth_token: &str) -> Opti
         return None;
     }
     let auth_hash = hash_token(auth_token);
-    let row = sqlx::query(
-        "SELECT s.id, s.tenant_id, s.organization_id, s.login_scope, s.user_id, s.app_id, \
-                s.environment, s.deployment_mode, s.auth_level, \
-                s.data_scope_json, s.permission_scope_json \
+    let row = sqlx::query(&format!(
+        "SELECT {IAM_SESSION_CONTEXT_SELECT} \
          FROM iam_session s \
          JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
          WHERE s.auth_token_hash = $1 \
            AND s.revoked_at IS NULL AND s.expires_at::timestamptz > $2::timestamptz \
            AND u.status = 'active' AND u.is_deleted = 0 \
-         LIMIT 1",
-    )
+         LIMIT 1"
+    ))
     .bind(&auth_hash)
     .bind(current_timestamp_utc())
     .fetch_optional(pg)
@@ -143,17 +158,15 @@ async fn find_iam_context_from_access_token(
         return None;
     }
     let access_hash = hash_token(access_token);
-    let row = sqlx::query(
-        "SELECT s.id, s.tenant_id, s.organization_id, s.login_scope, s.user_id, s.app_id, \
-                s.environment, s.deployment_mode, s.auth_level, \
-                s.data_scope_json, s.permission_scope_json \
+    let row = sqlx::query(&format!(
+        "SELECT {IAM_SESSION_CONTEXT_SELECT} \
          FROM iam_session s \
          JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
          WHERE s.access_token_hash = $1 \
            AND s.revoked_at IS NULL AND s.expires_at::timestamptz > $2::timestamptz \
            AND u.status = 'active' AND u.is_deleted = 0 \
-         LIMIT 1",
-    )
+         LIMIT 1"
+    ))
     .bind(&access_hash)
     .bind(current_timestamp_utc())
     .fetch_optional(pg)
@@ -359,6 +372,14 @@ fn iam_context_from_token_claims(claims: &Value) -> Option<IamAppContext> {
             organization_member: normalized_organization_id.is_some(),
         },
         standard_role_codes: Vec::new(),
+        display_name: claim_string_value(claims, &["display_name", "displayName", "name"])
+            .unwrap_or_default(),
+        email: claim_string_value(claims, &["email"]).unwrap_or_default(),
+        email_verified: claims
+            .get("email_verified")
+            .or_else(|| claims.get("emailVerified"))
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false),
     })
 }
 
@@ -456,6 +477,8 @@ fn iam_context_from_session_row(row: &sqlx::postgres::PgRow) -> Option<IamAppCon
     let permission_scope = json_string_vec_from_row(row, 10);
     let organization_member = organization_id.is_some();
 
+    let (display_name, email, email_verified) = user_profile_from_session_row(row);
+
     Some(IamAppContext {
         tenant_id,
         organization_id,
@@ -482,6 +505,9 @@ fn iam_context_from_session_row(row: &sqlx::postgres::PgRow) -> Option<IamAppCon
             organization_member,
         },
         standard_role_codes: Vec::new(),
+        display_name,
+        email,
+        email_verified,
     })
 }
 

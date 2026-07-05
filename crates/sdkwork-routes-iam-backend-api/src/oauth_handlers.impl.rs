@@ -1,3 +1,18 @@
+fn oauth_list_search_columns(table: &str) -> &'static [&'static str] {
+    match table {
+        "iam_oauth_integration" => &["provider_code", "integration_code", "display_name"],
+        "iam_oauth_client" => &["provider_code", "client_code", "display_name"],
+        "iam_oauth_secret" => &["secret_code", "display_name"],
+        "iam_oauth_surface" => &["surface_code", "display_name"],
+        "iam_oauth_account_link" => &["provider_code", "integration_id"],
+        "iam_oauth_grant" => &["provider_code", "integration_id"],
+        "iam_oauth_callback_event" => &["provider_code", "integration_id", "event_kind"],
+        "iam_oauth_diagnostic_run" => &["provider_code", "integration_id", "run_kind"],
+        _ if table.starts_with("iam_oauth_") => &["provider_code"],
+        _ => &[],
+    }
+}
+
 async fn tenant_list(
     state: &BackendIamState,
     ctx: &WebRequestContext,
@@ -13,21 +28,25 @@ async fn tenant_list(
         return tenant_id_from_context(ctx).err().expect("error response");
     };
 
-    let limit = page_limit(query);
+    let params = list_page_params(query);
+    let search_pattern = list_search_pattern(query);
+    let search_columns = oauth_list_search_columns(spec.table);
     match list_tenant_rows(
         pg,
         &tenant_id,
         spec.table,
         spec.list_select,
         spec.list_order,
-        limit,
+        &params,
+        search_pattern,
+        search_columns,
     )
     .await
     {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter()
-                .map(|row| row_to_json_with_aliases(row, spec.columns, spec.id_aliases))
-                .collect(),
+        Ok(rows) => appbase_ok(page_json_from_rows(
+            rows,
+            &params,
+            |row| row_to_json_with_aliases(row, spec.columns, spec.id_aliases),
         )),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -166,39 +185,45 @@ async fn list_provider_catalog(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let limit = page_limit(&query);
-    let rows = sqlx::query(
-        "SELECT id, owner_tenant_id, provider_code, provider_name, provider_display_name, status, created_at, updated_at \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    let rows = sqlx::query(&format!(
+        "SELECT id, owner_tenant_id, provider_code, provider_name, provider_display_name, status, created_at, updated_at, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_oauth_provider_catalog \
-         WHERE owner_tenant_id = $1 OR owner_tenant_id = '0' \
+         WHERE (owner_tenant_id = $1 OR owner_tenant_id = '0') \
+           AND ($4::text IS NULL OR LOWER(provider_code) LIKE $4 OR LOWER(provider_name) LIKE $4 \
+                OR LOWER(provider_display_name) LIKE $4) \
          ORDER BY sort_order, provider_code \
-         LIMIT $2",
-    )
+         LIMIT $2 OFFSET $3"
+    ))
     .bind(&tenant_id)
-    .bind(limit)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await;
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter()
-                .map(|row| {
-                    row_to_json_with_aliases(
-                        row,
-                        &[
-                            "id",
-                            "owner_tenant_id",
-                            "provider_code",
-                            "provider_name",
-                            "provider_display_name",
-                            "status",
-                            "created_at",
-                            "updated_at",
-                        ],
-                        &[("providerCatalogId", "id")],
-                    )
-                })
-                .collect(),
+        Ok(rows) => appbase_ok(page_json_from_rows(
+            rows,
+            &params,
+            |row| {
+                row_to_json_with_aliases(
+                    row,
+                    &[
+                        "id",
+                        "owner_tenant_id",
+                        "provider_code",
+                        "provider_name",
+                        "provider_display_name",
+                        "status",
+                        "created_at",
+                        "updated_at",
+                    ],
+                    &[("providerCatalogId", "id")],
+                )
+            },
         )),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -675,7 +700,7 @@ async fn create_secret(
     let id = format!("iamos-{}", Uuid::new_v4());
     let now = Utc::now().to_rfc3339();
     let secret_ref = secret_ref.expect("validated");
-    let secret_hash = format!("hash:{secret_ref}");
+    let secret_hash = sdkwork_iam_bootstrap::hash_secret_ref(&secret_ref);
 
     let result = sqlx::query(
         "INSERT INTO iam_oauth_secret \
@@ -807,6 +832,161 @@ async fn create_operational_resource_publish(
     insert_diagnostic_run(&state, &ctx, &payload, "operational_resource_publish").await
 }
 
+async fn execute_oauth_diagnostic(
+    pg: &PgPool,
+    tenant_id: &str,
+    run_kind: &str,
+    body: &Value,
+) -> Result<String, String> {
+    match run_kind {
+        "webhook_verification" => verify_oauth_webhook_diagnostic(pg, tenant_id, body).await,
+        "pre_authorization" | "authorization_refresh" => {
+            verify_oauth_integration_diagnostic(pg, tenant_id, body).await
+        }
+        "resource_account_verification" => {
+            verify_oauth_resource_account_diagnostic(pg, tenant_id, body).await
+        }
+        "mini_program_login_check" => verify_oauth_surface_diagnostic(pg, tenant_id, body).await,
+        "operational_resource_publish" => {
+            verify_oauth_operational_resource_diagnostic(pg, tenant_id, body).await
+        }
+        "manual" => Ok("manual diagnostic completed".to_owned()),
+        other => Err(format!("unsupported oauth diagnostic run kind: {other}")),
+    }
+}
+
+async fn verify_oauth_integration_diagnostic(
+    pg: &PgPool,
+    tenant_id: &str,
+    body: &Value,
+) -> Result<String, String> {
+    let integration_id = read_string_field(body, &["integrationId", "integration_id"])
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "integrationId is required".to_string())?;
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(1)::bigint FROM iam_oauth_integration \
+         WHERE tenant_id = $1 AND id = $2 AND enabled = 1 AND status = 'active'",
+    )
+    .bind(tenant_id)
+    .bind(&integration_id)
+    .fetch_one(pg)
+    .await
+    .map_err(|error| format!("oauth integration diagnostic failed: {error}"))?;
+    if count != 1 {
+        return Err("oauth integration is not active for this tenant".to_string());
+    }
+    Ok(format!("integration {integration_id} is active"))
+}
+
+async fn verify_oauth_webhook_diagnostic(
+    pg: &PgPool,
+    tenant_id: &str,
+    body: &Value,
+) -> Result<String, String> {
+    let webhook_config_id = read_string_field(body, &["webhookConfigId", "webhook_config_id"])
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "webhookConfigId is required".to_string())?;
+    let row = sqlx::query(
+        "SELECT callback_public_id, verification_token_status \
+         FROM iam_oauth_webhook_config \
+         WHERE tenant_id = $1 AND id = $2 AND enabled = 1 AND status = 'active' \
+         LIMIT 1",
+    )
+    .bind(tenant_id)
+    .bind(&webhook_config_id)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("oauth webhook diagnostic failed: {error}"))?
+    .ok_or_else(|| "oauth webhook configuration was not found".to_string())?;
+    let callback_public_id: String = row.get(0);
+    let verification_status: String = row.get(1);
+    if callback_public_id.trim().is_empty() {
+        return Err("oauth webhook callback public id is not configured".to_string());
+    }
+    if verification_status != "verified" {
+        return Err("oauth webhook verification token is not verified".to_string());
+    }
+    Ok(format!(
+        "webhook {webhook_config_id} is active and verified"
+    ))
+}
+
+async fn verify_oauth_resource_account_diagnostic(
+    pg: &PgPool,
+    tenant_id: &str,
+    body: &Value,
+) -> Result<String, String> {
+    let resource_account_id =
+        read_string_field(body, &["resourceAccountId", "resource_account_id"])
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| "resourceAccountId is required".to_string())?;
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(1)::bigint FROM iam_oauth_resource_account \
+         WHERE tenant_id = $1 AND id = $2 AND status = 'active'",
+    )
+    .bind(tenant_id)
+    .bind(&resource_account_id)
+    .fetch_one(pg)
+    .await
+    .map_err(|error| format!("oauth resource account diagnostic failed: {error}"))?;
+    if count != 1 {
+        return Err("oauth resource account is not active for this tenant".to_string());
+    }
+    Ok(format!("resource account {resource_account_id} is active"))
+}
+
+async fn verify_oauth_surface_diagnostic(
+    pg: &PgPool,
+    tenant_id: &str,
+    body: &Value,
+) -> Result<String, String> {
+    let surface_id = read_string_field(body, &["surfaceId", "surface_id"])
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "surfaceId is required".to_string())?;
+    let row = sqlx::query(
+        "SELECT surface_kind, status FROM iam_oauth_surface \
+         WHERE tenant_id = $1 AND id = $2 LIMIT 1",
+    )
+    .bind(tenant_id)
+    .bind(&surface_id)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("oauth surface diagnostic failed: {error}"))?
+    .ok_or_else(|| "oauth surface was not found".to_string())?;
+    let surface_kind: String = row.get(0);
+    let status: String = row.get(1);
+    if status != "active" {
+        return Err("oauth surface is not active".to_string());
+    }
+    if surface_kind != "mini_program" {
+        return Err("oauth surface is not configured for mini program login".to_string());
+    }
+    Ok(format!("surface {surface_id} is active for mini program login"))
+}
+
+async fn verify_oauth_operational_resource_diagnostic(
+    pg: &PgPool,
+    tenant_id: &str,
+    body: &Value,
+) -> Result<String, String> {
+    let resource_id = read_string_field(body, &["resourceId", "resource_id"])
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "resourceId is required".to_string())?;
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(1)::bigint FROM iam_oauth_operational_resource \
+         WHERE tenant_id = $1 AND id = $2 AND status = 'active'",
+    )
+    .bind(tenant_id)
+    .bind(&resource_id)
+    .fetch_one(pg)
+    .await
+    .map_err(|error| format!("oauth operational resource diagnostic failed: {error}"))?;
+    if count != 1 {
+        return Err("oauth operational resource is not active for this tenant".to_string());
+    }
+    Ok(format!("operational resource {resource_id} is active"))
+}
+
 async fn insert_diagnostic_run(
     state: &BackendIamState,
     ctx: &WebRequestContext,
@@ -833,11 +1013,27 @@ async fn insert_diagnostic_run(
     let id = format!("iamodr-{}", Uuid::new_v4());
     let now = Utc::now().to_rfc3339();
 
+    let diagnostic_result = execute_oauth_diagnostic(pg, &tenant_id, &run_kind, body).await;
+    let (status, result_code, result_summary, redacted_result_json) = match diagnostic_result {
+        Ok(summary) => (
+            "succeeded",
+            "succeeded",
+            summary,
+            json!({ "runKind": run_kind, "outcome": "succeeded" }),
+        ),
+        Err(error) => (
+            "failed",
+            "failed",
+            error.clone(),
+            json!({ "runKind": run_kind, "outcome": "failed", "error": error }),
+        ),
+    };
+
     let result = sqlx::query(
         "INSERT INTO iam_oauth_diagnostic_run \
             (id, uuid, tenant_id, organization_id, integration_id, oauth_client_id, surface_id, provider_code, \
-             run_kind, status, started_at, result_code, result_summary, redacted_result_json, created_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'accepted', $10, 'accepted', 'queued', $11, $10)",
+             run_kind, status, started_at, finished_at, result_code, result_summary, redacted_result_json, created_at) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11, $12, $13, $14, $11)",
     )
     .bind(&id)
     .bind(Uuid::new_v4().to_string())
@@ -848,8 +1044,11 @@ async fn insert_diagnostic_run(
     .bind(surface_id)
     .bind(&provider_code)
     .bind(&run_kind)
+    .bind(status)
     .bind(&now)
-    .bind(body.to_string())
+    .bind(result_code)
+    .bind(&result_summary)
+    .bind(redacted_result_json.to_string())
     .execute(pg)
     .await;
 
@@ -1322,7 +1521,7 @@ async fn create_webhook_config(
     let id = format!("iamowh-{}", Uuid::new_v4());
     let now = Utc::now().to_rfc3339();
     let callback_url = callback_url.expect("validated");
-    let callback_url_hash = format!("hash:{callback_url}");
+    let callback_url_hash = sdkwork_iam_bootstrap::hash_secret_ref(&callback_url);
     let callback_public_id = format!("cb-{}", Uuid::new_v4());
 
     let result = sqlx::query(

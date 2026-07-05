@@ -20,6 +20,21 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
               tenantBoundaryKind: "sub_tenant",
             },
           ]),
+          tree: {
+            retrieve: vi.fn().mockResolvedValue([
+              {
+                name: "Headquarters",
+                organizationId: "org-root",
+                children: [
+                  {
+                    name: "Research",
+                    organizationId: "org-child",
+                    parentOrganizationId: "org-root",
+                  },
+                ],
+              },
+            ]),
+          },
         },
         organizationMemberships: {
           create: vi.fn().mockResolvedValue({
@@ -58,27 +73,26 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
             ],
           }),
           tree: {
-            retrieve: vi.fn().mockResolvedValue({
-              items: [
-                {
-                  children: [
-                    {
-                      departmentId: "dept-platform",
-                      name: "Platform",
-                      organizationId: "org-child",
-                    },
-                  ],
-                  departmentId: "dept-root",
-                  name: "Research Center",
-                  organizationId: "org-child",
-                },
-              ],
-            }),
+            retrieve: vi.fn().mockResolvedValue([
+              {
+                children: [
+                  {
+                    departmentId: "dept-platform",
+                    name: "Platform",
+                    organizationId: "org-child",
+                    parentDepartmentId: "dept-root",
+                  },
+                ],
+                departmentId: "dept-root",
+                name: "Research Center",
+                organizationId: "org-child",
+              },
+            ]),
           },
         },
         departmentAssignments: {
           list: vi.fn().mockResolvedValue({
-            records: [
+            items: [
               {
                 departmentAssignmentId: "assignment-1",
                 departmentId: "dept-platform",
@@ -201,16 +215,22 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
       },
     ]);
 
-    expect(service.iam.organizations.list).toHaveBeenCalledWith({ tenantId: "100001" });
-    expect(service.iam.organizationMemberships.list).toHaveBeenCalledWith({ organizationId: "org-child" });
+    expect(service.iam.organizations.list).toHaveBeenCalledWith({ page_size: 20, tenantId: "100001" });
+    expect(service.iam.organizationMemberships.list).toHaveBeenCalledWith({
+      page_size: 20,
+      organizationId: "org-child",
+    });
     expect(service.iam.organizationMemberships.create).toHaveBeenCalledWith({
       organizationId: "org-child",
       userId: "user-2",
     });
-    expect(service.iam.departments.list).toHaveBeenCalledWith({ organizationId: "org-child" });
-    expect(service.iam.departmentAssignments.list).toHaveBeenCalledWith({ departmentId: "dept-platform" });
-    expect(service.iam.positions.list).toHaveBeenCalledWith({ departmentId: "dept-platform" });
-    expect(service.iam.roleBindings.list).toHaveBeenCalledWith({ scopeId: "org-child" });
+    expect(service.iam.departments.list).toHaveBeenCalledWith({ page_size: 20, organizationId: "org-child" });
+    expect(service.iam.departmentAssignments.list).toHaveBeenCalledWith({
+      page_size: 20,
+      departmentId: "dept-platform",
+    });
+    expect(service.iam.positions.list).toHaveBeenCalledWith({ page_size: 20, departmentId: "dept-platform" });
+    expect(service.iam.roleBindings.list).toHaveBeenCalledWith({ page_size: 20, scopeId: "org-child" });
     expect(Object.prototype.hasOwnProperty.call(service.iam.organizations, "members")).toBe(false);
     expect(Object.prototype.hasOwnProperty.call(controller, "listMembers")).toBe(false);
     expect(Object.prototype.hasOwnProperty.call(controller, "addMember")).toBe(false);
@@ -258,12 +278,12 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
         organizationMemberships: {
           create: vi.fn().mockResolvedValue({ membershipId: "m-1", userId: "1", organizationId: "org-new" }),
           update: vi.fn().mockResolvedValue({ membershipId: "m-1", userId: "1", status: "inactive" }),
-          list: vi.fn().mockResolvedValue({ records: [] }),
+          list: vi.fn().mockResolvedValue({ items: [] }),
         },
         departments: {
           create: vi.fn().mockResolvedValue({ departmentId: "dept-1", name: "Engineering", organizationId: "org-new" }),
           delete: vi.fn().mockResolvedValue(undefined),
-          list: vi.fn().mockResolvedValue({ records: [] }),
+          list: vi.fn().mockResolvedValue({ items: [] }),
         },
       },
     };

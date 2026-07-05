@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "language": "typescript",
   "sdkType": "app",
-  "packageName": "@sdkwork/iam-app-sdk",
+  "packageName": "sdkwork-iam-app-sdk-generated-typescript",
+  "transportPackageName": "sdkwork-iam-app-sdk-generated-typescript",
+  "consumerPackageName": "@sdkwork/iam-app-sdk",
   "generator": "@sdkwork/sdk-generator",
   "capabilities": {
     "supportsGeneratedTests": true,

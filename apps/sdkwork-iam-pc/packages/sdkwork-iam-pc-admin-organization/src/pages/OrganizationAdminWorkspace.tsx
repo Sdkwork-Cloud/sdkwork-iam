@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
 import { Button, SettingsSection, StatusNotice } from "@sdkwork/ui-pc-react";
 
 import type {
@@ -156,6 +157,14 @@ export function SdkworkIamOrganizationAdminWorkspace({
                 ))}
               </select>
             </label>
+            <SdkworkIamListPaginationControls
+              busy={busy}
+              onLoadMore={() => void runAction(async () => {
+                const items = await controller.loadMoreOrganizations();
+                setOrganizations(items);
+              }, "Loaded more organizations")}
+              pageInfo={controller.getState().organizationListPageInfo}
+            />
           </section>
         </div>
 

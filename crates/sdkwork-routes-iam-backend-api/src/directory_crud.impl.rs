@@ -114,7 +114,25 @@ async fn soft_delete(
         .execute(pg)
         .await
     {
-        Ok(result) if result.rows_affected() > 0 => appbase_ok(json!({ "deleted": true, "id": id })),
+        Ok(result) if result.rows_affected() > 0 => {
+            let organization_id = organization_id_from_context(ctx);
+            let actor_user_id = actor_user_id_from_context(ctx);
+            let environment = sdkwork_iam_web_adapter::backend_environment_from_context(None);
+            let _ = sdkwork_iam_web_adapter::record_audit_event(
+                pg,
+                &tenant_id,
+                organization_id.as_deref(),
+                actor_user_id.as_deref(),
+                &format!("{table}.delete"),
+                table,
+                Some(id),
+                None,
+                &environment,
+                json!({ "deleted": true }),
+            )
+            .await;
+            appbase_ok(json!({ "deleted": true, "id": id }))
+        }
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, not_found_code, "resource not found"),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -658,17 +676,20 @@ async fn list_policies(
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
+    let params = list_page_params(&query);
     match list_tenant_rows(
         pg,
         &tenant_id,
         "iam_policy",
         "id, tenant_id, code, name, policy_json, status, created_at, updated_at",
         "name, id",
-        page_limit(&query),
+        &params,
+        list_search_pattern(&query),
+        &["code", "name"],
     )
     .await
     {
-        Ok(rows) => appbase_ok(page_json(rows.iter().map(policy_row_to_json).collect())),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, policy_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_policies_list_failed",
@@ -867,8 +888,14 @@ async fn delete_organization(State(state): State<BackendIamState>, ctx: WebReque
 async fn organizations_tree(State(state): State<BackendIamState>, ctx: WebRequestContext) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    match sqlx::query("SELECT id, tenant_id, code, name, status, organization_kind, parent_organization_id FROM iam_organization WHERE tenant_id = $1 AND status = 'active' ORDER BY name, id").bind(&tenant_id).fetch_all(pg).await {
-        Ok(rows) => appbase_ok(json!({ "nodes": nest_tree(rows.iter().map(organization_row_to_json).collect(), "id", "parentOrganizationId") })),
+    let tree_limit = sdkwork_iam_bootstrap::IAM_TREE_MAX_NODES + 1;
+    match sqlx::query("SELECT id, tenant_id, code, name, status, organization_kind, parent_organization_id FROM iam_organization WHERE tenant_id = $1 AND status = 'active' ORDER BY name, id LIMIT $2").bind(&tenant_id).bind(tree_limit).fetch_all(pg).await {
+        Ok(rows) => {
+            if rows.len() > sdkwork_iam_bootstrap::IAM_TREE_MAX_NODES as usize {
+                return appbase_error(StatusCode::BAD_REQUEST, "iam_organizations_tree_too_large", "organization tree exceeds configured node limit");
+            }
+            appbase_ok(tree_resource_json(nest_tree(rows.iter().map(organization_row_to_json).collect(), "id", "parentOrganizationId")))
+        },
         Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_organizations_tree_failed", &error.to_string()),
     }
 }
@@ -975,13 +1002,19 @@ async fn departments_tree(State(state): State<BackendIamState>, ctx: WebRequestC
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
     let organization_id = organization_id_from_context(&ctx);
+    let tree_limit = sdkwork_iam_bootstrap::IAM_TREE_MAX_NODES + 1;
     let rows = if let Some(organization_id) = organization_id.as_deref() {
-        sqlx::query("SELECT id, tenant_id, organization_id, code, name, status, parent_department_id FROM iam_department WHERE tenant_id = $1 AND organization_id = $2 AND status = 'active' ORDER BY name, id").bind(&tenant_id).bind(organization_id).fetch_all(pg).await
+        sqlx::query("SELECT id, tenant_id, organization_id, code, name, status, parent_department_id FROM iam_department WHERE tenant_id = $1 AND organization_id = $2 AND status = 'active' ORDER BY name, id LIMIT $3").bind(&tenant_id).bind(organization_id).bind(tree_limit).fetch_all(pg).await
     } else {
-        sqlx::query("SELECT id, tenant_id, organization_id, code, name, status, parent_department_id FROM iam_department WHERE tenant_id = $1 AND status = 'active' ORDER BY name, id").bind(&tenant_id).fetch_all(pg).await
+        sqlx::query("SELECT id, tenant_id, organization_id, code, name, status, parent_department_id FROM iam_department WHERE tenant_id = $1 AND status = 'active' ORDER BY name, id LIMIT $2").bind(&tenant_id).bind(tree_limit).fetch_all(pg).await
     };
     match rows {
-        Ok(rows) => appbase_ok(json!({ "nodes": nest_tree(rows.iter().map(department_row_to_json).collect(), "id", "parentDepartmentId") })),
+        Ok(rows) => {
+            if rows.len() > sdkwork_iam_bootstrap::IAM_TREE_MAX_NODES as usize {
+                return appbase_error(StatusCode::BAD_REQUEST, "iam_departments_tree_too_large", "department tree exceeds configured node limit");
+            }
+            appbase_ok(tree_resource_json(nest_tree(rows.iter().map(department_row_to_json).collect(), "id", "parentDepartmentId")))
+        },
         Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_departments_tree_failed", &error.to_string()),
     }
 }
@@ -989,8 +1022,25 @@ async fn departments_tree(State(state): State<BackendIamState>, ctx: WebRequestC
 async fn list_department_assignments(State(state): State<BackendIamState>, ctx: WebRequestContext, Query(query): Query<HashMap<String, String>>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    match sqlx::query("SELECT id, tenant_id, organization_id, organization_membership_id, user_id, department_id, assignment_kind, is_primary, effective_from, status FROM iam_department_assignment WHERE tenant_id = $1 AND status = 'active' ORDER BY id LIMIT $2").bind(&tenant_id).bind(page_limit(&query)).fetch_all(pg).await {
-        Ok(rows) => appbase_ok(page_json(rows.iter().map(|row| json!({"assignmentId": row.get::<String,_>(0), "departmentId": row.get::<String,_>(5), "id": row.get::<String,_>(0), "organizationId": row.get::<String,_>(2), "status": row.get::<String,_>(9), "tenantId": row.get::<String,_>(1), "userId": row.get::<String,_>(4)})).collect())),
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    match sqlx::query(&format!(
+        "SELECT id, tenant_id, organization_id, organization_membership_id, user_id, department_id, assignment_kind, is_primary, effective_from, status, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+         FROM iam_department_assignment \
+         WHERE tenant_id = $1 AND status = 'active' \
+           AND ($4::text IS NULL OR LOWER(user_id) LIKE $4 OR LOWER(organization_id) LIKE $4 \
+                OR LOWER(department_id) LIKE $4) \
+         ORDER BY id \
+         LIMIT $2 OFFSET $3"
+    ))
+    .bind(&tenant_id)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
+    .fetch_all(pg)
+    .await {
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| json!({"assignmentId": row.get::<String,_>(0), "departmentId": row.get::<String,_>(5), "id": row.get::<String,_>(0), "organizationId": row.get::<String,_>(2), "status": row.get::<String,_>(9), "tenantId": row.get::<String,_>(1), "userId": row.get::<String,_>(4)}))),
         Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_department_assignments_list_failed", &error.to_string()),
     }
 }
@@ -1028,8 +1078,9 @@ async fn update_department_assignment(State(state): State<BackendIamState>, ctx:
 async fn list_positions(State(state): State<BackendIamState>, ctx: WebRequestContext, Query(query): Query<HashMap<String, String>>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    match list_tenant_rows(pg, &tenant_id, "iam_position", "id, tenant_id, organization_id, code, name, position_kind, status, created_at, updated_at", "name, id", page_limit(&query)).await {
-        Ok(rows) => appbase_ok(page_json(rows.iter().map(|row| json!({"code": row.get::<String,_>(3), "id": row.get::<String,_>(0), "name": row.get::<String,_>(4), "organizationId": row.get::<String,_>(2), "positionId": row.get::<String,_>(0), "positionKind": row.get::<String,_>(5), "status": row.get::<String,_>(6), "tenantId": row.get::<String,_>(1)})).collect())),
+    let params = list_page_params(&query);
+    match list_tenant_rows(pg, &tenant_id, "iam_position", "id, tenant_id, organization_id, code, name, position_kind, status, created_at, updated_at", "name, id", &params, list_search_pattern(&query), &["code", "name"]).await {
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| json!({"code": row.get::<String,_>(3), "id": row.get::<String,_>(0), "name": row.get::<String,_>(4), "organizationId": row.get::<String,_>(2), "positionId": row.get::<String,_>(0), "positionKind": row.get::<String,_>(5), "status": row.get::<String,_>(6), "tenantId": row.get::<String,_>(1)}))),
         Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_positions_list_failed", &error.to_string()),
     }
 }
@@ -1069,8 +1120,24 @@ async fn delete_position(State(state): State<BackendIamState>, ctx: WebRequestCo
 async fn list_position_assignments(State(state): State<BackendIamState>, ctx: WebRequestContext, Query(query): Query<HashMap<String, String>>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    match sqlx::query("SELECT id, tenant_id, organization_id, department_assignment_id, position_id, user_id, is_primary, effective_from, status FROM iam_position_assignment WHERE tenant_id = $1 AND status = 'active' ORDER BY id LIMIT $2").bind(&tenant_id).bind(page_limit(&query)).fetch_all(pg).await {
-        Ok(rows) => appbase_ok(page_json(rows.iter().map(|row| json!({"assignmentId": row.get::<String,_>(0), "departmentAssignmentId": row.get::<String,_>(3), "id": row.get::<String,_>(0), "organizationId": row.get::<String,_>(2), "positionId": row.get::<String,_>(4), "status": row.get::<String,_>(8), "tenantId": row.get::<String,_>(1), "userId": row.get::<String,_>(5)})).collect())),
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    match sqlx::query(&format!(
+        "SELECT id, tenant_id, organization_id, department_assignment_id, position_id, user_id, is_primary, effective_from, status, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+         FROM iam_position_assignment \
+         WHERE tenant_id = $1 AND status = 'active' \
+           AND ($4::text IS NULL OR LOWER(user_id) LIKE $4 OR LOWER(organization_id) LIKE $4 \
+                OR LOWER(position_id) LIKE $4) \
+         ORDER BY id \
+         LIMIT $2 OFFSET $3"
+    ))
+    .bind(&tenant_id)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
+    .fetch_all(pg).await {
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| json!({"assignmentId": row.get::<String,_>(0), "departmentAssignmentId": row.get::<String,_>(3), "id": row.get::<String,_>(0), "organizationId": row.get::<String,_>(2), "positionId": row.get::<String,_>(4), "status": row.get::<String,_>(8), "tenantId": row.get::<String,_>(1), "userId": row.get::<String,_>(5)}))),
         Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_position_assignments_list_failed", &error.to_string()),
     }
 }
@@ -1111,8 +1178,22 @@ fn tenant_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
 async fn list_tenants(State(state): State<BackendIamState>, ctx: WebRequestContext, Query(query): Query<HashMap<String, String>>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    match sqlx::query("SELECT id, code, name, status, created_at, updated_at FROM iam_tenant WHERE id = $1 LIMIT $2").bind(&tenant_id).bind(page_limit(&query)).fetch_all(pg).await {
-        Ok(rows) => appbase_ok(page_json(rows.iter().map(tenant_row_to_json).collect())),
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    match sqlx::query(&format!(
+        "SELECT id, code, name, status, created_at, updated_at, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+         FROM iam_tenant \
+         WHERE id = $1 \
+           AND ($4::text IS NULL OR LOWER(code) LIKE $4 OR LOWER(name) LIKE $4) \
+         LIMIT $2 OFFSET $3"
+    ))
+    .bind(&tenant_id)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
+    .fetch_all(pg).await {
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, tenant_row_to_json)),
         Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenants_list_failed", &error.to_string()),
     }
 }
@@ -1169,8 +1250,23 @@ async fn delete_tenant(State(state): State<BackendIamState>, _ctx: WebRequestCon
 
 async fn list_tenant_members(State(state): State<BackendIamState>, _ctx: WebRequestContext, Path(tenant_id): Path<String>, Query(query): Query<HashMap<String, String>>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
-    match sqlx::query("SELECT id, tenant_id, user_id, member_kind, status, joined_at, created_at, updated_at FROM iam_tenant_member WHERE tenant_id = $1 AND status = 'active' ORDER BY joined_at DESC LIMIT $2").bind(&tenant_id).bind(page_limit(&query)).fetch_all(pg).await {
-        Ok(rows) => appbase_ok(page_json(rows.iter().map(|row| json!({"id": row.get::<String,_>(0), "memberKind": row.get::<String,_>(3), "status": row.get::<String,_>(4), "tenantId": row.get::<String,_>(1), "userId": row.get::<String,_>(2)})).collect())),
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    match sqlx::query(&format!(
+        "SELECT id, tenant_id, user_id, member_kind, status, joined_at, created_at, updated_at, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+         FROM iam_tenant_member \
+         WHERE tenant_id = $1 AND status = 'active' \
+           AND ($4::text IS NULL OR LOWER(user_id) LIKE $4) \
+         ORDER BY joined_at DESC \
+         LIMIT $2 OFFSET $3"
+    ))
+    .bind(&tenant_id)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
+    .fetch_all(pg).await {
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| json!({"id": row.get::<String,_>(0), "memberKind": row.get::<String,_>(3), "status": row.get::<String,_>(4), "tenantId": row.get::<String,_>(1), "userId": row.get::<String,_>(2)}))),
         Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_members_list_failed", &error.to_string()),
     }
 }
@@ -1282,22 +1378,25 @@ async fn list_groups(
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
-    let limit = page_limit(&query);
-    match sqlx::query(
-        "SELECT id, tenant_id, organization_id, code, name, group_kind, status \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    match sqlx::query(&format!(
+        "SELECT id, tenant_id, organization_id, code, name, group_kind, status, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_group \
          WHERE tenant_id = $1 AND status <> 'disabled' \
+           AND ($4::text IS NULL OR LOWER(code) LIKE $4 OR LOWER(name) LIKE $4) \
          ORDER BY code, id \
-         LIMIT $2",
-    )
+         LIMIT $2 OFFSET $3"
+    ))
     .bind(&tenant_id)
-    .bind(limit)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await
     {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter().map(group_row_to_json).collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, group_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_groups_list_failed",
@@ -1453,23 +1552,26 @@ async fn list_group_members(
     let Some(group_id) = resolve_group_id(pg, &tenant_id, &group_id).await else {
         return appbase_error(StatusCode::NOT_FOUND, "iam_group_not_found", "group not found");
     };
-    let limit = page_limit(&query);
-    match sqlx::query(
-        "SELECT id, tenant_id, group_id, principal_kind, principal_id, joined_at, status \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    match sqlx::query(&format!(
+        "SELECT id, tenant_id, group_id, principal_kind, principal_id, joined_at, status, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_group_member \
          WHERE tenant_id = $1 AND group_id = $2 AND status <> 'disabled' \
+           AND ($5::text IS NULL OR LOWER(principal_id) LIKE $5) \
          ORDER BY joined_at, id \
-         LIMIT $3",
-    )
+         LIMIT $3 OFFSET $4"
+    ))
     .bind(&tenant_id)
     .bind(&group_id)
-    .bind(limit)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await
     {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter().map(group_member_row_to_json).collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, group_member_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_group_members_list_failed",
@@ -1610,24 +1712,25 @@ async fn list_service_accounts(
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
-    let limit = page_limit(&query);
-    match sqlx::query(
-        "SELECT id, tenant_id, organization_id, code, name, status, credential_kind \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    match sqlx::query(&format!(
+        "SELECT id, tenant_id, organization_id, code, name, status, credential_kind, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_service_account \
          WHERE tenant_id = $1 AND status <> 'disabled' \
+           AND ($4::text IS NULL OR LOWER(code) LIKE $4 OR LOWER(name) LIKE $4) \
          ORDER BY code, id \
-         LIMIT $2",
-    )
+         LIMIT $2 OFFSET $3"
+    ))
     .bind(&tenant_id)
-    .bind(limit)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await
     {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter()
-                .map(service_account_row_to_json)
-                .collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, service_account_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_service_accounts_list_failed",

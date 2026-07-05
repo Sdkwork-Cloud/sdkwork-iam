@@ -10,7 +10,7 @@ name = "sdkwork_iam_embedded_application_bootstrap"
 path = "src/lib.rs"
 
 [dependencies]
-sdkwork_database_config = { workspace = true }
+sdkwork-database-config = { workspace = true }
 sdkwork_iam_bootstrap = { workspace = true }
 sdkwork_iam_web_adapter = { workspace = true }
 serde = { workspace = true }

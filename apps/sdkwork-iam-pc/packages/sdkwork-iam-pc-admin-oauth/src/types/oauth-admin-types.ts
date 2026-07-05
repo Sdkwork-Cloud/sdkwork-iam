@@ -1,3 +1,4 @@
+import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 export interface SdkworkIamOauthIntegrationDraft {
@@ -159,6 +160,7 @@ export interface SdkworkIamOauthAdminResourceSnapshot {
 }
 
 export interface SdkworkIamOauthAdminState extends SdkworkIamOauthAdminResourceSnapshot {
+  listPageInfo?: Partial<Record<keyof SdkworkIamOauthAdminResourceSnapshot, SdkWorkPageInfo>>;
   status: "idle" | "loading" | "ready" | "saving" | "error";
   lastError?: string;
   lastDiagnosticRunDetail?: unknown;
@@ -177,6 +179,7 @@ export type SdkworkIamOauthAdminTab = "inbound" | "provider" | "extended" | "aud
 export interface SdkworkIamOauthAdminController {
   getState(): SdkworkIamOauthAdminState;
   load(): Promise<SdkworkIamOauthAdminResourceSnapshot>;
+  loadMoreResource(resourceKey: keyof SdkworkIamOauthAdminResourceSnapshot): Promise<unknown[]>;
   createIntegration(body: SdkworkIamOauthIntegrationDraft): Promise<unknown>;
   createClient(body: SdkworkIamOauthClientDraft): Promise<unknown>;
   createSecret(body: SdkworkIamOauthSecretDraft): Promise<unknown>;

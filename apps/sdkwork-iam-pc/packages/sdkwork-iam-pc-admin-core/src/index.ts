@@ -69,3 +69,8 @@ export function createSdkworkIamPcAdminModuleRegistry(): readonly IamPcAdminModu
     },
   ] as const;
 }
+
+export {
+  SdkworkIamListPaginationControls,
+  type SdkworkIamListPaginationControlsProps,
+} from "./components/SdkworkIamListPaginationControls.js";

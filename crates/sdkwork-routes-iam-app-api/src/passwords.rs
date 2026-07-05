@@ -4,6 +4,11 @@ use rand_core::OsRng;
 use serde_json::Value;
 use sqlx::{PgPool, Row};
 
+use sdkwork_iam_web_adapter::{
+    messaging_verification_enabled, verify_and_consume_messaging_challenge,
+    MessagingVerificationRequest, MESSAGING_VERIFICATION_SCENE_RESET_PASSWORD,
+};
+
 use crate::state::*;
 use crate::utils::*;
 
@@ -486,4 +491,81 @@ pub(crate) fn read_password(value: Option<&Value>) -> Option<String> {
         .and_then(Value::as_str)
         .filter(|value| !value.is_empty())
         .map(str::to_string)
+}
+
+pub(crate) fn password_reset_channel_for_account(
+    account: &str,
+    user: &LocalIamUser,
+) -> (&'static str, String) {
+    let normalized = canonical_identity(account);
+    if user
+        .email
+        .as_ref()
+        .is_some_and(|email| canonical_identity(email) == normalized)
+    {
+        return ("email", normalized);
+    }
+    if user
+        .phone
+        .as_ref()
+        .is_some_and(|phone| canonical_identity(phone) == normalized)
+    {
+        return ("sms", normalized);
+    }
+    if normalized.contains('@') {
+        ("email", normalized)
+    } else {
+        ("sms", normalized)
+    }
+}
+
+pub(crate) async fn validate_password_reset_verification(
+    pg: &PgPool,
+    config: &LocalIamConfig,
+    user: &LocalIamUser,
+    account: &str,
+    code: &str,
+) -> Result<(), String> {
+    if fixed_verification_code_allowed(config) {
+        if let Some(expected) = &config.dev_fixed_verify_code {
+            if code == expected {
+                return Ok(());
+            }
+        }
+    }
+
+    if messaging_verification_enabled() {
+        let (channel, target) = password_reset_channel_for_account(account, user);
+        return verify_and_consume_messaging_challenge(
+            pg,
+            &MessagingVerificationRequest {
+                tenant_id: &user.tenant_id,
+                organization_id: "0",
+                scene_code: MESSAGING_VERIFICATION_SCENE_RESET_PASSWORD,
+                channel,
+                target: &target,
+                code,
+            },
+        )
+        .await;
+    }
+
+    if fixed_verification_code_allowed(config) {
+        let reset_key = canonical_identity(&user.username);
+        let reset_request =
+            crate::ephemeral::get_password_reset_request(pg, &user.tenant_id, &reset_key).await?;
+        let Some(reset_request) = reset_request else {
+            return Err("verification code is invalid".to_string());
+        };
+        if reset_request.expire_time < current_millis()
+            || reset_request.username != user.username
+            || reset_request.code != code
+        {
+            return Err("verification code is invalid".to_string());
+        }
+        crate::ephemeral::delete_password_reset_request(pg, &user.tenant_id, &reset_key).await?;
+        return Ok(());
+    }
+
+    Err("password reset verification is not configured for this environment".to_string())
 }

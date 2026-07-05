@@ -2082,12 +2082,14 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "sdkwork-iam-database-host",
+ "sdkwork-iam-web-adapter",
  "sdkwork-routes-iam-app-api",
  "sdkwork-routes-iam-backend-api",
  "sdkwork-routes-iam-open-api",
  "sdkwork-web-bootstrap",
  "tokio",
  "tower",
+ "tracing",
 ]
 
 [[package]]

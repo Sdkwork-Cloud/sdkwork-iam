@@ -473,6 +473,12 @@ export function createSdkworkIamRuntimeAuthService(
     input: SdkworkAuthPasswordResetRequestInput,
   ): Promise<void> {
     const runtime = await readRuntime();
+    const verifyType = input.channel === "SMS" ? "PHONE" : "EMAIL";
+    await sendVerifyCode({
+      scene: "RESET_PASSWORD",
+      target: input.account.trim(),
+      verifyType,
+    });
     await runtime.service.auth.passwordResetRequests.create({
       account: input.account.trim(),
       channel: input.channel,

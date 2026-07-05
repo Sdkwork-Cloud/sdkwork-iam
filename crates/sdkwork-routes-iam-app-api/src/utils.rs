@@ -1,15 +1,103 @@
 use rand_core::{OsRng, RngCore};
 use sdkwork_iam_context_service::{AuthLevel, DeploymentMode, Environment};
-use serde_json::Value;
+use sdkwork_utils_rust::{
+    offset_list_page_data, offset_list_page_params_from_map, sdkwork_tree_resource_json,
+    OffsetListPageParams, LIST_TOTAL_SQL_COLUMN,
+};
+use serde_json::{json, Value};
 use sqlx::Row;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::state::LocalConfiguredOrganization;
 
+pub(crate) use sdkwork_utils_rust::LIST_TOTAL_SQL_COLUMN as LIST_TOTAL_COLUMN;
+
+pub(crate) type ListPageParams = OffsetListPageParams;
+
 pub(crate) const PASSWORD_RESET_TTL_MILLIS: u128 = 10 * 60 * 1000;
 
 pub(crate) const LOGIN_CONTINUATION_TTL_MILLIS: u128 = 5 * 60 * 1000;
+
+pub(crate) fn list_page_params(query: &HashMap<String, String>) -> ListPageParams {
+    offset_list_page_params_from_map(query)
+}
+
+pub(crate) fn total_from_rows(rows: &[sqlx::postgres::PgRow]) -> i64 {
+    rows.first()
+        .and_then(|row| row.try_get::<i64, _>(LIST_TOTAL_SQL_COLUMN).ok())
+        .unwrap_or(0)
+}
+
+pub(crate) fn list_page_json(
+    items: Vec<Value>,
+    total_items: i64,
+    params: &ListPageParams,
+) -> Value {
+    let page = offset_list_page_data(items, total_items, *params);
+    serde_json::to_value(page).unwrap_or_else(|_| json!({ "items": [], "pageInfo": {} }))
+}
+
+pub(crate) fn list_search_pattern(query: &HashMap<String, String>) -> Option<String> {
+    query
+        .get("q")
+        .map(String::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .map(|value| format!("%{}%", value.trim().to_ascii_lowercase()))
+}
+
+/// SQL fragment: `AND ($N::text IS NULL OR LOWER(col) LIKE $N OR ...)`.
+pub(crate) fn list_search_sql_clause(columns: &[&str], bind: &str) -> String {
+    if columns.is_empty() {
+        return String::new();
+    }
+    let conditions = columns
+        .iter()
+        .map(|column| format!("LOWER({column}) LIKE {bind}"))
+        .collect::<Vec<_>>()
+        .join(" OR ");
+    format!("AND ({bind}::text IS NULL OR {conditions})")
+}
+
+/// Paginate a bounded catalog (cardinality ≤ 100) with standard `SdkWorkPageData`.
+pub(crate) fn paginate_bounded_json_values(
+    items: Vec<Value>,
+    query: &HashMap<String, String>,
+) -> Value {
+    let params = list_page_params(query);
+    let search = list_search_pattern(query);
+    let filtered = if let Some(pattern) = search {
+        items
+            .into_iter()
+            .filter(|item| {
+                let haystack = item.to_string().to_ascii_lowercase();
+                haystack.contains(pattern.trim_matches('%'))
+            })
+            .collect::<Vec<_>>()
+    } else {
+        items
+    };
+    let total_items = filtered.len() as i64;
+    let start = params.offset.max(0) as usize;
+    let end = (start + params.page_size.max(0) as usize).min(filtered.len());
+    let page_items = if start >= filtered.len() {
+        Vec::new()
+    } else {
+        filtered[start..end].to_vec()
+    };
+    list_page_json(page_items, total_items, &params)
+}
+
+pub(crate) fn tree_resource_json(nodes: Vec<Value>) -> Value {
+    sdkwork_tree_resource_json(nodes)
+}
+
+pub(crate) fn optional_query_string(
+    query: &HashMap<String, String>,
+    keys: &[&str],
+) -> Option<String> {
+    query_value(query, keys).map(str::to_owned)
+}
 
 pub(crate) fn query_value<'a>(
     query: &'a HashMap<String, String>,

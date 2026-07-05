@@ -172,13 +172,21 @@ pub async fn ensure_platform_tenant_application(
     .execute(pg)
     .await
     .map_err(|error| format!("reset platform tenant application rows failed: {error}"))?;
+    let primary_domain = resolve_tenant_application_primary_domain(
+        pg,
+        tenant_id,
+        &tenant_application_id,
+        "localhost",
+        &runtime_app_id,
+    )
+    .await?;
     sqlx::query(
         "INSERT INTO iam_tenant_application (id, app_id, tenant_id, organization_id, template_id, \
          template_version, instance_key, display_name, environment, status, primary_domain, \
          domain_config_json, access_permissions_json, runtime_config_json, provisioned_at, activated_at, \
          created_at, updated_at) \
-         VALUES ($1, $2, $3, '0', $4, '1.0.0', 'default', 'SDKWork Platform', 'prod', 'enabled', 'localhost', \
-         '{}'::jsonb, '[\"iam:self\"]'::jsonb, '{}'::jsonb, $5, $5, $5, $5) \
+         VALUES ($1, $2, $3, '0', $4, '1.0.0', 'default', 'SDKWork Platform', 'prod', 'enabled', $5, \
+         '{}'::jsonb, '[\"iam:self\"]'::jsonb, '{}'::jsonb, $6, $6, $6, $6) \
          ON CONFLICT (id) DO UPDATE SET app_id = EXCLUDED.app_id, status = 'enabled', primary_domain = EXCLUDED.primary_domain, \
          access_permissions_json = EXCLUDED.access_permissions_json, activated_at = EXCLUDED.activated_at, updated_at = EXCLUDED.updated_at",
     )
@@ -186,6 +194,7 @@ pub async fn ensure_platform_tenant_application(
     .bind(&runtime_app_id)
     .bind(tenant_id)
     .bind(PLATFORM_APPLICATION_TEMPLATE_ID)
+    .bind(&primary_domain)
     .bind(&now)
     .execute(pg)
     .await

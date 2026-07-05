@@ -226,15 +226,35 @@ impl SdkworkIamLocalIamDirectory {
         &self,
         tenant_id: &str,
         keyword: &str,
-    ) -> Vec<SdkworkIamLocalIamUserProfile> {
+        page_size: i64,
+        offset: i64,
+    ) -> (Vec<SdkworkIamLocalIamUserProfile>, i64) {
         let pg = match self.state.pool.as_postgres() {
             Some(p) => p,
-            None => return Vec::new(),
+            None => return (Vec::new(), 0),
         };
         let pattern = format!("%{}%", keyword.trim().to_ascii_lowercase());
-        let rows = sqlx::query("SELECT id, username, display_name, email, phone, status FROM iam_user WHERE tenant_id = $1 AND (LOWER(username) LIKE $2 OR LOWER(display_name) LIKE $2 OR LOWER(email) LIKE $2) AND is_deleted = 0 AND status = 'active' ORDER BY display_name, id")
-            .bind(tenant_id).bind(&pattern).fetch_all(pg).await.unwrap_or_default();
-        rows.into_iter()
+        let clamped_page_size = page_size.clamp(1, 200);
+        let rows = sqlx::query(&format!(
+            "SELECT id, username, display_name, email, phone, status, \
+                    COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+             FROM iam_user \
+             WHERE tenant_id = $1 \
+               AND (LOWER(username) LIKE $2 OR LOWER(display_name) LIKE $2 OR LOWER(email) LIKE $2) \
+               AND is_deleted = 0 AND status = 'active' \
+             ORDER BY display_name, id \
+             LIMIT $3 OFFSET $4"
+        ))
+        .bind(tenant_id)
+        .bind(&pattern)
+        .bind(clamped_page_size)
+        .bind(offset.max(0))
+        .fetch_all(pg)
+        .await
+        .unwrap_or_default();
+        let total = crate::utils::total_from_rows(&rows);
+        let profiles = rows
+            .into_iter()
             .map(|r| SdkworkIamLocalIamUserProfile {
                 tenant_id: tenant_id.to_string(),
                 user_id: r.get(0),
@@ -244,7 +264,8 @@ impl SdkworkIamLocalIamDirectory {
                 phone: r.get(4),
                 inactive: r.get::<String, _>(5) != "active",
             })
-            .collect()
+            .collect();
+        (profiles, total)
     }
 }
 

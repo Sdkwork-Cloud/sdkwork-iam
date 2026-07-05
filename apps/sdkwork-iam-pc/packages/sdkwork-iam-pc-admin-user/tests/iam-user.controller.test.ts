@@ -8,7 +8,7 @@ describe("@sdkwork/iam-pc-admin-user", () => {
       iam: {
         users: {
           list: vi.fn().mockResolvedValue({
-            records: [
+            items: [
               {
                 displayName: "Alice",
                 email: "alice@example.com",
@@ -32,7 +32,7 @@ describe("@sdkwork/iam-pc-admin-user", () => {
       service: service as never,
     });
 
-    await expect(controller.listUsers({ page_size: 20 })).resolves.toEqual([
+    await expect(controller.listUsers()).resolves.toEqual([
       {
         displayName: "Alice",
         email: "alice@example.com",
@@ -55,7 +55,7 @@ describe("@sdkwork/iam-pc-admin-user", () => {
           create: vi.fn().mockResolvedValue({ userId: "user-2", username: "bob", email: "bob@example.com" }),
           update: vi.fn().mockResolvedValue({ userId: "user-2", displayName: "Bob Updated" }),
           delete: vi.fn().mockResolvedValue(undefined),
-          list: vi.fn().mockResolvedValue({ records: [] }),
+          list: vi.fn().mockResolvedValue({ items: [] }),
           retrieve: vi.fn().mockResolvedValue({ userId: "user-2" }),
         },
       },

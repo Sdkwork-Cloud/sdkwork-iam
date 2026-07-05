@@ -50,13 +50,8 @@ fn configure_integration_signing_env() {
 
 async fn postgres_pool_for_tests() -> PgPool {
     unified_database_env::apply_unified_claw_postgres_env();
-    let pool = sdkwork_database_sqlx::create_pool_from_env("IAM")
-        .await
-        .expect("create IAM pool for oauth integration tests")
-        .expect("OAuth integration tests require PostgreSQL configuration");
-    pool.as_postgres()
-        .expect("OAuth integration tests require PostgreSQL")
-        .clone()
+    unified_database_env::configure_integration_test_database_pool();
+    unified_database_env::postgres_pool_for_integration_tests().await
 }
 
 async fn cleanup_oauth_e2e_fixtures() {
@@ -288,15 +283,20 @@ async fn read_json(response: axum::response::Response) -> Value {
     serde_json::from_slice(&body).expect("json response")
 }
 
+async fn build_oauth_integration_app() -> axum::Router {
+    let pool = unified_database_env::integration_database_pool_for_router().await;
+    sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_router_with_pool(pool)
+        .await
+        .expect("oauth e2e router should build")
+}
+
 #[tokio::test]
 async fn oauth_authorization_code_pkce_exchange_userinfo_and_revocation() {
     let _guard = lock_local_iam_env();
     configure_integration_signing_env();
     seed_oauth_e2e_fixtures().await;
 
-    let app = sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_router()
-        .await
-        .expect("oauth e2e router should build");
+    let app = build_oauth_integration_app().await;
     let login_data = login_oauth_e2e_session(&app).await;
     let session = iam_context_from_login_data(&login_data);
     let pg = postgres_pool_for_tests().await;
@@ -408,9 +408,7 @@ async fn oauth_open_api_http_token_and_userinfo_endpoints_exchange_pkce_flow() {
     configure_integration_signing_env();
     seed_oauth_e2e_fixtures().await;
 
-    let app = sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_router()
-        .await
-        .expect("oauth e2e router should build");
+    let app = build_oauth_integration_app().await;
     let login_data = login_oauth_e2e_session(&app).await;
     let session = iam_context_from_login_data(&login_data);
     let pg = postgres_pool_for_tests().await;
@@ -499,9 +497,7 @@ async fn oauth_public_client_token_exchange_rejects_invalid_pkce_verifier() {
     configure_integration_signing_env();
     seed_oauth_e2e_fixtures().await;
 
-    let app = sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_router()
-        .await
-        .expect("oauth e2e router should build");
+    let app = build_oauth_integration_app().await;
     let login_data = login_oauth_e2e_session(&app).await;
     let session = iam_context_from_login_data(&login_data);
     let pg = postgres_pool_for_tests().await;
@@ -516,7 +512,7 @@ async fn oauth_public_client_token_exchange_rejects_invalid_pkce_verifier() {
         redirect_uri: OAUTH_E2E_REDIRECT_URI.to_string(),
         response_type: "code".to_string(),
         scope: "openid".to_string(),
-        state: None,
+        state: Some("oauth-pkce-invalid-verifier-test".to_string()),
         code_challenge: Some(code_challenge),
         code_challenge_method: Some("S256".to_string()),
         tenant_id: Some(OAUTH_E2E_TENANT_ID.to_string()),

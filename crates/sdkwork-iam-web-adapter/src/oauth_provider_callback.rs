@@ -110,6 +110,25 @@ pub async fn handle_provider_callback_post(
     meta: &ProviderCallbackRequestMeta,
 ) -> Result<ProviderCallbackHttpResponse, String> {
     let config = load_active_webhook_config(pg, callback_public_id).await?;
+    let verification_token = load_webhook_verification_token(pg, &config).await?;
+
+    if let Err(error) = verify_provider_callback_post(
+        query,
+        &verification_token,
+        config.message_handling_mode.as_str(),
+    ) {
+        record_callback_event(
+            pg,
+            &config,
+            "webhook_event",
+            "rejected",
+            Some("iam_oauth_provider_callback_signature_invalid"),
+            json!({ "reason": error }),
+            meta,
+        )
+        .await?;
+        return Err(error);
+    }
 
     let provider_event_id = read_query_or_json(body, query, &["MsgId", "msg_id", "id", "event_id"]);
     let provider_event_type =
@@ -314,8 +333,9 @@ fn try_generic_challenge_verification(
         .get("verify_token")
         .or_else(|| query.get("token"))
         .map(String::as_str)
-        .unwrap_or("");
-    if !provided_token.is_empty() && provided_token != verification_token {
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "OAuth callback verify_token is required".to_string())?;
+    if provided_token != verification_token {
         return Err("OAuth callback verify_token is invalid".to_string());
     }
 
@@ -333,6 +353,51 @@ fn verify_wechat_signature(token: &str, timestamp: &str, nonce: &str, signature:
     let digest = Sha1::digest(joined.as_bytes());
     let expected = format!("{:x}", digest);
     expected.eq_ignore_ascii_case(signature)
+}
+
+fn verify_provider_callback_post(
+    query: &HashMap<String, String>,
+    verification_token: &str,
+    message_handling_mode: &str,
+) -> Result<(), String> {
+    if matches!(
+        message_handling_mode,
+        "wechat_ack" | "wechat" | "provider_ack"
+    ) {
+        let signature = query
+            .get("signature")
+            .or_else(|| query.get("msg_signature"))
+            .map(String::as_str)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                "OAuth provider callback signature is required for signed webhook modes".to_string()
+            })?;
+        let timestamp = query
+            .get("timestamp")
+            .map(String::as_str)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| "OAuth provider callback timestamp is required".to_string())?;
+        let nonce = query
+            .get("nonce")
+            .map(String::as_str)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| "OAuth provider callback nonce is required".to_string())?;
+        if !verify_wechat_signature(verification_token, timestamp, nonce, signature) {
+            return Err("OAuth provider callback signature is invalid".to_string());
+        }
+        return Ok(());
+    }
+
+    let provided_token = query
+        .get("verify_token")
+        .or_else(|| query.get("token"))
+        .map(String::as_str)
+        .filter(|value| !value.is_empty());
+    if provided_token == Some(verification_token) {
+        return Ok(());
+    }
+
+    Err("OAuth provider callback verification token is required".to_string())
 }
 
 async fn record_callback_event(

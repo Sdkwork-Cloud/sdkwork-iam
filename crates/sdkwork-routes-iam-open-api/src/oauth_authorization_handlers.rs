@@ -15,6 +15,36 @@ use std::collections::HashMap;
 
 use crate::state::OpenIamState;
 
+const OPEN_API_RATE_LIMIT_SCOPE: &str = "iam-open-api";
+
+async fn enforce_open_api_rate_limit(
+    state: &OpenIamState,
+    pg: &sqlx::PgPool,
+    bucket: &str,
+) -> Option<Response> {
+    match sdkwork_iam_web_adapter::check_rate_limit(
+        pg,
+        OPEN_API_RATE_LIMIT_SCOPE,
+        bucket,
+        state.rate_limit_max_requests,
+        state.rate_limit_window_seconds,
+    )
+    .await
+    {
+        Ok(true) => None,
+        Ok(false) => Some(oauth_error(
+            StatusCode::TOO_MANY_REQUESTS,
+            "iam_rate_limited",
+            "too many requests — try again later",
+        )),
+        Err(message) => Some(oauth_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "iam_ephemeral_unavailable",
+            &message,
+        )),
+    }
+}
+
 pub async fn retrieve_openid_configuration() -> Json<Value> {
     Json(build_openid_configuration_document())
 }
@@ -41,6 +71,15 @@ pub async fn handle_oauth_authorize(
             );
         }
     };
+    if let Some(response) = enforce_open_api_rate_limit(
+        &state,
+        pg,
+        &format!("oauth:authorize:{}", request.client_id),
+    )
+    .await
+    {
+        return response;
+    }
 
     let client =
         match resolve_relying_party_client(pg, &request.client_id, request.tenant_id.as_deref())
@@ -103,6 +142,11 @@ pub async fn handle_oauth_token(
             );
         }
     };
+    if let Some(response) =
+        enforce_open_api_rate_limit(&state, pg, &format!("oauth:token:{client_id}")).await
+    {
+        return response;
+    }
     let tenant_id = read_string(&body, &["tenantId", "tenant_id"]);
     let client_secret = read_client_secret(&headers, &body);
 

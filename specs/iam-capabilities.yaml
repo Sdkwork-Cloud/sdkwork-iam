@@ -9,7 +9,7 @@ purpose: >
 capabilities:
   - id: iam
     domain: iam
-    status: standardizing
+    status: active
     maturity: L3
     targetMaturity: L3
     priority: P0

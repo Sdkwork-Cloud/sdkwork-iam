@@ -24,6 +24,7 @@ license = "Apache-2.0"
 
 [workspace.dependencies]
 sdkwork-database-config = { path = "../sdkwork-database/crates/sdkwork-database-config" }
+sdkwork_database_config = { package = "sdkwork-database-config", path = "../sdkwork-database/crates/sdkwork-database-config" }
 async-trait = "0.1"
 axum = { version = "0.8", features = ["ws"] }
 getrandom = "0.2"
@@ -59,7 +60,6 @@ sdkwork_iam_database_host = { package = "sdkwork-iam-database-host", path = "cra
 sdkwork_iam_bootstrap = { package = "sdkwork-iam-bootstrap", path = "crates/sdkwork-iam-bootstrap" }
 sdkwork_iam_embedded_application_bootstrap = { package = "sdkwork-iam-embedded-application-bootstrap", path = "crates/sdkwork-iam-embedded-application-bootstrap" }
 sdkwork_iam_module_registry = { package = "sdkwork-iam-module-registry", path = "crates/sdkwork-iam-module-registry" }
-sdkwork_database_config = { package = "sdkwork-database-config", path = "../sdkwork-database/crates/sdkwork-database-config" }
 sdkwork_database_lifecycle = { package = "sdkwork-database-lifecycle", path = "../sdkwork-database/crates/sdkwork-database-lifecycle" }
 sdkwork_database_drift = { package = "sdkwork-database-drift", path = "../sdkwork-database/crates/sdkwork-database-drift" }
 sdkwork_database_spi = { package = "sdkwork-database-spi", path = "../sdkwork-database/crates/sdkwork-database-spi" }

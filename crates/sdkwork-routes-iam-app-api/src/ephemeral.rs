@@ -10,7 +10,6 @@ use crate::{
 
 const KIND_LOGIN_CONTINUATION: &str = "login_continuation";
 const KIND_PASSWORD_RESET: &str = "password_reset";
-const KIND_CONTACT_BIND: &str = "contact_bind";
 const KIND_QR_SESSION: &str = "qr_session";
 const KIND_OAUTH_STATE: &str = "oauth_state";
 
@@ -110,84 +109,6 @@ pub(crate) async fn delete_password_reset_request(
         .execute(pg)
         .await
         .map_err(|error| format!("delete password reset artifact failed: {error}"))?;
-    Ok(())
-}
-
-#[allow(dead_code)]
-pub(crate) async fn upsert_contact_bind_verification(
-    pg: &PgPool,
-    tenant_id: &str,
-    user_id: &str,
-    scene: &str,
-    verification: &crate::contacts::LocalContactBindVerification,
-) -> Result<(), String> {
-    let storage_key = artifact_key(tenant_id, KIND_CONTACT_BIND, &format!("{user_id}:{scene}"));
-    let payload = json!({
-        "code": verification.code,
-        "expireTime": verification.expire_time,
-        "target": verification.target,
-    });
-    let timestamp = current_timestamp_utc();
-    sqlx::query(
-        "INSERT INTO iam_ephemeral_artifact \
-         (artifact_key, tenant_id, artifact_kind, payload_json, expires_at, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7) \
-         ON CONFLICT (artifact_key) DO UPDATE SET \
-           payload_json = EXCLUDED.payload_json, \
-           expires_at = EXCLUDED.expires_at, \
-           updated_at = EXCLUDED.updated_at",
-    )
-    .bind(&storage_key)
-    .bind(tenant_id)
-    .bind(KIND_CONTACT_BIND)
-    .bind(Json(payload))
-    .bind(millis_to_timestamp(verification.expire_time))
-    .bind(&timestamp)
-    .bind(&timestamp)
-    .execute(pg)
-    .await
-    .map_err(|error| format!("upsert contact bind artifact failed: {error}"))?;
-    Ok(())
-}
-
-pub(crate) async fn get_contact_bind_verification(
-    pg: &PgPool,
-    tenant_id: &str,
-    user_id: &str,
-    scene: &str,
-) -> Result<Option<crate::contacts::LocalContactBindVerification>, String> {
-    let storage_key = artifact_key(tenant_id, KIND_CONTACT_BIND, &format!("{user_id}:{scene}"));
-    let row = sqlx::query(
-        "SELECT payload_json FROM iam_ephemeral_artifact \
-         WHERE artifact_key = $1 AND expires_at > $2",
-    )
-    .bind(&storage_key)
-    .bind(current_timestamp_utc())
-    .fetch_optional(pg)
-    .await
-    .map_err(|error| format!("load contact bind artifact failed: {error}"))?;
-    Ok(row.and_then(|row| {
-        let payload: Json<Value> = row.get(0);
-        Some(crate::contacts::LocalContactBindVerification {
-            code: payload.0["code"].as_str()?.to_string(),
-            expire_time: payload.0["expireTime"].as_u64()? as u128,
-            target: payload.0["target"].as_str()?.to_string(),
-        })
-    }))
-}
-
-pub(crate) async fn delete_contact_bind_verification(
-    pg: &PgPool,
-    tenant_id: &str,
-    user_id: &str,
-    scene: &str,
-) -> Result<(), String> {
-    let storage_key = artifact_key(tenant_id, KIND_CONTACT_BIND, &format!("{user_id}:{scene}"));
-    sqlx::query("DELETE FROM iam_ephemeral_artifact WHERE artifact_key = $1")
-        .bind(&storage_key)
-        .execute(pg)
-        .await
-        .map_err(|error| format!("delete contact bind artifact failed: {error}"))?;
     Ok(())
 }
 
@@ -544,6 +465,9 @@ fn session_from_json(value: &Value) -> Option<LocalSession> {
                 organization_member: organization_id.is_some(),
             },
             standard_role_codes: Vec::new(),
+            display_name: user.display_name.clone(),
+            email: user.email.clone().unwrap_or_default(),
+            email_verified: user.email_verified,
         },
         refresh_token,
         session_id,

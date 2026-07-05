@@ -38,6 +38,25 @@ Do not add secrets, live tokens, manual auth headers, or app-local credential ha
 
 Extension points are limited to public exports, runtime entrypoints, SDK clients, events, and config keys declared in `specs/component.spec.json`.
 
+## List Pagination
+
+All list handlers in this crate use database-level offset pagination via `sdkwork-utils-rust`:
+
+- Query: `page`, `page_size` (default **20**, max **200**), optional `q`, `sort`, `cursor`
+- SQL: `COUNT(*) OVER() AS __list_total` with `LIMIT` / `OFFSET`
+- Response payload (inside `SdkWorkApiResponse.data`): `{ "items": [...], "pageInfo": { "mode": "offset", ... } }`
+
+Legacy `{ records, total }` envelopes and in-memory slicing are forbidden. Authority: `sdkwork-specs/API_SPEC.md` sections 14–15, `sdkwork-specs/templates/openapi/components/schemas/sdkwork-list-query.yaml`.
+
+## Tree Resources
+
+Tree endpoints (`organizations/tree`, `departments/tree`) return `SdkWorkResourceResponse` inside `SdkWorkApiResponse.data`:
+
+- Shape: `{ "item": { "nodes": [...] } }` (hierarchical, scoped fetch + in-memory nesting; not flat-paginated)
+- SDK unwrap exposes `{ nodes: [...] }`; use `extractSdkWorkTreeNodes` from `@sdkwork/iam-contracts` in TypeScript consumers
+
+Flat list handlers MUST NOT use in-memory `skip`/`take` after unbounded `fetch_all`. Tree handlers are scoped hierarchical reads (tenant/org boundary), not offset-paginated lists.
+
 ## Verification
 
 Component verification (manifest and fail-closed route surface):

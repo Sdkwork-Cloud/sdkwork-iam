@@ -1,3 +1,4 @@
+import { createSdkWorkPagedListSession } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 import type {
@@ -14,10 +15,20 @@ export function createSdkworkIamConsoleTenantController(
 ): SdkworkIamConsoleTenantController {
   const service = "service" in input ? input.service : input;
   let state: SdkworkIamConsoleTenantState = {
+    listPageInfo: undefined,
     memberships: [],
     organizations: [],
     status: "idle",
   };
+
+  const organizationsSession = createSdkWorkPagedListSession({
+    fetchPage: (query) => service.iam.organizations.list(query),
+    mapItem: toOrganization,
+  });
+  const membershipsSession = createSdkWorkPagedListSession({
+    fetchPage: (query) => service.iam.organizationMemberships.list(query),
+    mapItem: toMembership,
+  });
 
   const setState = (patch: Partial<SdkworkIamConsoleTenantState>) => {
     state = { ...state, ...patch };
@@ -26,6 +37,12 @@ export function createSdkworkIamConsoleTenantController(
   const controller: SdkworkIamConsoleTenantController = {
     getState: () => ({
       ...state,
+      listPageInfo: state.listPageInfo
+        ? {
+            memberships: state.listPageInfo.memberships ? { ...state.listPageInfo.memberships } : undefined,
+            organizations: state.listPageInfo.organizations ? { ...state.listPageInfo.organizations } : undefined,
+          }
+        : undefined,
       memberships: [...state.memberships],
       organizations: [...state.organizations],
       runtime: state.runtime ? { ...state.runtime } : undefined,
@@ -33,10 +50,15 @@ export function createSdkworkIamConsoleTenantController(
     listMemberships: async (params) => {
       setState({ status: "loading" });
       try {
-        const memberships = extractList(await service.iam.organizationMemberships.list(params))
-          .map(toMembership)
-          .filter(Boolean) as SdkworkIamConsoleMembership[];
-        setState({ memberships, status: "ready" });
+        const memberships = await membershipsSession.list(params) as SdkworkIamConsoleMembership[];
+        setState({
+          listPageInfo: {
+            ...state.listPageInfo,
+            memberships: membershipsSession.getPageInfo(),
+          },
+          memberships,
+          status: "ready",
+        });
         return memberships;
       } catch (error) {
         setState({ status: "error" });
@@ -46,10 +68,51 @@ export function createSdkworkIamConsoleTenantController(
     listOrganizations: async (params) => {
       setState({ status: "loading" });
       try {
-        const organizations = extractList(await service.iam.organizations.list(params))
-          .map(toOrganization)
-          .filter(Boolean) as SdkworkIamConsoleOrganization[];
-        setState({ organizations, status: "ready" });
+        const organizations = await organizationsSession.list(params) as SdkworkIamConsoleOrganization[];
+        setState({
+          listPageInfo: {
+            ...state.listPageInfo,
+            organizations: organizationsSession.getPageInfo(),
+          },
+          organizations,
+          status: "ready",
+        });
+        return organizations;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    loadMoreMemberships: async () => {
+      setState({ status: "loading" });
+      try {
+        const memberships = await membershipsSession.loadMore() as SdkworkIamConsoleMembership[];
+        setState({
+          listPageInfo: {
+            ...state.listPageInfo,
+            memberships: membershipsSession.getPageInfo(),
+          },
+          memberships,
+          status: "ready",
+        });
+        return memberships;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    loadMoreOrganizations: async () => {
+      setState({ status: "loading" });
+      try {
+        const organizations = await organizationsSession.loadMore() as SdkworkIamConsoleOrganization[];
+        setState({
+          listPageInfo: {
+            ...state.listPageInfo,
+            organizations: organizationsSession.getPageInfo(),
+          },
+          organizations,
+          status: "ready",
+        });
         return organizations;
       } catch (error) {
         setState({ status: "error" });
@@ -78,23 +141,6 @@ export function createSdkworkIamConsoleTenantController(
   };
 
   return controller;
-}
-
-function extractList(value: unknown): unknown[] {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  if (!value || typeof value !== "object") {
-    return [];
-  }
-  const record = value as Record<string, unknown>;
-  for (const key of ["records", "items", "list", "rows", "content", "data"]) {
-    const nested = record[key];
-    if (Array.isArray(nested)) {
-      return nested;
-    }
-  }
-  return [];
 }
 
 function toRuntime(value: unknown): SdkworkIamConsoleRuntimeContext {

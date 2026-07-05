@@ -567,8 +567,8 @@ async fn local_appbase_directory_reads_registered_iam_users_without_fixture_rows
     assert_eq!(profile.email.as_deref(), Some(directory_email.as_str()));
     assert!(profile.display_name.contains("Directory"));
 
-    let matches = directory
-        .search_user_profiles(tenant_id, &directory_username)
+    let (matches, _) = directory
+        .search_user_profiles(tenant_id, &directory_username, 50, 0)
         .await;
     assert_eq!(matches.len(), 1);
     assert_eq!(matches[0].user_id, user_id);
@@ -579,8 +579,9 @@ async fn local_appbase_directory_reads_registered_iam_users_without_fixture_rows
     };
     assert!(
         directory
-            .search_user_profiles(probe_tenant_id, &directory_username)
+            .search_user_profiles(probe_tenant_id, &directory_username, 50, 0)
             .await
+            .0
             .is_empty(),
         "directory search must stay tenant-scoped"
     );
@@ -786,6 +787,13 @@ fn response_items(payload: &Value) -> Vec<Value> {
     payload["data"]["items"]
         .as_array()
         .or_else(|| payload["data"].as_array())
+        .cloned()
+        .unwrap_or_default()
+}
+
+fn response_tree_nodes(payload: &Value) -> Vec<Value> {
+    payload["data"]["item"]["nodes"]
+        .as_array()
         .cloned()
         .unwrap_or_default()
 }
@@ -1790,7 +1798,7 @@ async fn local_app_router_owner_reads_directory_records_from_local_store() {
     assert_eq!(organization_tree_response.status(), StatusCode::OK);
     let organization_tree_body = read_json(organization_tree_response).await;
     assert_eq!(organization_tree_body["code"].as_i64(), Some(0));
-    let organization_tree = response_items(&organization_tree_body);
+    let organization_tree = response_tree_nodes(&organization_tree_body);
     assert_eq!(organization_tree.len(), 1);
     assert_eq!(organization_tree[0]["organizationId"], organization_id);
 

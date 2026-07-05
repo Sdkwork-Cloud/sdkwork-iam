@@ -288,7 +288,16 @@ fn contact_binding_action_for_user(
     }
 }
 
-async fn enforce_rate_limit(state: &LocalIamState, bucket: &str) -> Option<Response> {
+async fn enforce_rate_limit(
+    state: &LocalIamState,
+    tenant_id: &str,
+    bucket: &str,
+) -> Option<Response> {
+    let scope_tenant_id = if tenant_id.trim().is_empty() {
+        LOCAL_EPHEMERAL_SCOPE
+    } else {
+        tenant_id
+    };
     let Ok(pg) = postgres_pool_or_error(&state) else {
         return Some(
             postgres_pool_or_error(&state)
@@ -298,7 +307,7 @@ async fn enforce_rate_limit(state: &LocalIamState, bucket: &str) -> Option<Respo
     };
     match crate::ephemeral::check_rate_limit(
         pg,
-        LOCAL_EPHEMERAL_SCOPE,
+        scope_tenant_id,
         bucket,
         state.config.rate_limit_max_requests,
         state.config.rate_limit_window_seconds,
@@ -390,6 +399,7 @@ async fn create_session(
     };
     if let Some(response) = enforce_rate_limit(
         &state,
+        &tenant_id,
         &format!("auth:login:{}", canonical_identity(&username)),
     )
     .await
@@ -406,7 +416,7 @@ async fn create_session(
         PasswordAuthenticationOutcome::InvalidCredentials => {
             crate::security_events::record_login_failed(
                 pg,
-                LOCAL_EPHEMERAL_SCOPE,
+                tenant_id,
                 &canonical_identity(&username),
                 "invalid_credentials",
             )
@@ -456,6 +466,7 @@ async fn create_session_organization_selection(
     };
     if let Some(response) = enforce_rate_limit(
         &state,
+        LOCAL_EPHEMERAL_SCOPE,
         &format!(
             "auth:org_selection:{}",
             &continuation_token[..continuation_token.len().min(16)]
@@ -562,6 +573,7 @@ async fn create_session_login_context_selection(
     };
     if let Some(response) = enforce_rate_limit(
         &state,
+        LOCAL_EPHEMERAL_SCOPE,
         &format!(
             "auth:login_context:{}",
             &continuation_token[..continuation_token.len().min(16)]
@@ -948,7 +960,8 @@ async fn refresh_session(State(state): State<LocalIamState>, Json(body): Json<Va
             .err()
             .expect("error response");
     };
-    if let Some(response) = enforce_rate_limit(&state, "auth:refresh").await {
+    if let Some(response) = enforce_rate_limit(&state, LOCAL_EPHEMERAL_SCOPE, "auth:refresh").await
+    {
         return response;
     }
     match claim_session_for_refresh(pg, &refresh_token).await {
@@ -1086,7 +1099,13 @@ async fn create_registration(
             "password confirmation does not match",
         );
     }
-    if let Some(response) = enforce_rate_limit(&state, &format!("auth:register:{username}")).await {
+    if let Some(response) = enforce_rate_limit(
+        &state,
+        bootstrap_tenant_id,
+        &format!("auth:register:{username}"),
+    )
+    .await
+    {
         return response;
     }
 
@@ -1237,40 +1256,42 @@ async fn create_password_reset_request(
             .err()
             .expect("error response");
     };
-    if let Some(response) =
-        enforce_rate_limit(&state, &format!("auth:password_reset:{account}")).await
+    if let Some(response) = enforce_rate_limit(
+        &state,
+        LOCAL_EPHEMERAL_SCOPE,
+        &format!("auth:password_reset:{account}"),
+    )
+    .await
     {
         return response;
     }
 
     if let Some(user) = load_user_by_account_global(pg, &account).await {
-        let code = if fixed_verification_code_allowed(&state.config) {
-            state
+        if fixed_verification_code_allowed(&state.config) {
+            let code = state
                 .config
                 .dev_fixed_verify_code
                 .clone()
-                .unwrap_or_else(generate_verification_code)
-        } else {
-            generate_verification_code()
-        };
-        let reset_request = LocalPasswordResetRequest {
-            code,
-            expire_time: current_millis() + PASSWORD_RESET_TTL_MILLIS,
-            username: user.username.clone(),
-        };
-        if let Err(error) = crate::ephemeral::upsert_password_reset_request(
-            pg,
-            &user.tenant_id,
-            &canonical_identity(&user.username),
-            &reset_request,
-        )
-        .await
-        {
-            return appbase_error(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "iam_ephemeral_unavailable",
-                &error,
-            );
+                .unwrap_or_else(generate_verification_code);
+            let reset_request = LocalPasswordResetRequest {
+                code,
+                expire_time: current_millis() + PASSWORD_RESET_TTL_MILLIS,
+                username: user.username.clone(),
+            };
+            if let Err(error) = crate::ephemeral::upsert_password_reset_request(
+                pg,
+                &user.tenant_id,
+                &canonical_identity(&user.username),
+                &reset_request,
+            )
+            .await
+            {
+                return appbase_error(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "iam_ephemeral_unavailable",
+                    &error,
+                );
+            }
         }
     }
 
@@ -1338,6 +1359,7 @@ async fn create_password_reset(
     };
     if let Some(response) = enforce_rate_limit(
         &state,
+        LOCAL_EPHEMERAL_SCOPE,
         &format!(
             "auth:password_reset_complete:{}",
             canonical_identity(&account)
@@ -1351,34 +1373,19 @@ async fn create_password_reset(
         return invalid_password_reset_error();
     };
 
-    let reset_key = canonical_identity(&user.username);
-    let reset_request =
-        match crate::ephemeral::get_password_reset_request(pg, &user.tenant_id, &reset_key).await {
-            Ok(request) => request,
-            Err(error) => {
-                return appbase_error(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "iam_ephemeral_unavailable",
-                    &error,
-                );
-            }
-        };
-    let Some(reset_request) = reset_request else {
-        return invalid_password_reset_error();
-    };
-    if reset_request.expire_time < current_millis()
-        || reset_request.username != user.username
-        || reset_request.code != code
-    {
-        return invalid_password_reset_error();
-    }
-    if let Err(error) =
-        crate::ephemeral::delete_password_reset_request(pg, &user.tenant_id, &reset_key).await
+    if let Err(message) = crate::passwords::validate_password_reset_verification(
+        pg,
+        &state.config,
+        &user,
+        &account,
+        &code,
+    )
+    .await
     {
         return appbase_error(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "iam_ephemeral_unavailable",
-            &error,
+            StatusCode::BAD_REQUEST,
+            "iam_verification_code_invalid",
+            &message,
         );
     }
     if let Err(error) = replace_user_password(pg, &state.config, &user.id, &new_password).await {
@@ -1405,14 +1412,17 @@ async fn create_password_reset(
     appbase_ok(json!({ "completed": true }))
 }
 
-async fn list_oauth_providers(State(state): State<LocalIamState>) -> Response {
+async fn list_oauth_providers(
+    State(state): State<LocalIamState>,
+    Query(query): Query<HashMap<String, String>>,
+) -> Response {
     let policy = match postgres_pool_or_error(&state) {
         Ok(pg) => effective_public_account_binding_policy(&state, pg).await,
         Err(_) => default_account_binding_policy(),
     };
 
     if !policy.oauth_login.enabled {
-        return appbase_ok(json!({ "items": [] }));
+        return appbase_ok(paginate_bounded_json_values(Vec::new(), &query));
     }
 
     let pg = state.pool.as_postgres();
@@ -1424,7 +1434,7 @@ async fn list_oauth_providers(State(state): State<LocalIamState>) -> Response {
     )
     .await
     {
-        Ok(items) => appbase_ok(json!({ "items": items })),
+        Ok(items) => appbase_ok(paginate_bounded_json_values(items, &query)),
         Err(error) => appbase_error(
             StatusCode::SERVICE_UNAVAILABLE,
             "iam_oauth_providers_list_failed",
@@ -1478,6 +1488,7 @@ async fn create_oauth_authorization_url(
     };
     if let Some(response) = enforce_rate_limit(
         &state,
+        &tenant_id,
         &format!("oauth:authorize:{}", canonical_identity(&provider)),
     )
     .await
@@ -1601,6 +1612,7 @@ async fn create_oauth_session(
 
     if let Some(response) = enforce_rate_limit(
         &state,
+        LOCAL_EPHEMERAL_SCOPE,
         &format!("oauth:session:{}", canonical_identity(&provider)),
     )
     .await
@@ -1823,6 +1835,7 @@ async fn create_oauth_mini_program_session(
 async fn list_oauth_account_links(
     State(state): State<LocalIamState>,
     headers: HeaderMap,
+    Query(query): Query<HashMap<String, String>>,
 ) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else {
         return postgres_pool_or_error(&state)
@@ -1842,19 +1855,25 @@ async fn list_oauth_account_links(
         );
     }
 
-    let rows = sqlx::query(
-        "SELECT id, provider_code, integration_id, external_account_display_snapshot, linked_at, status \
+    let params = list_page_params(&query);
+    let rows = sqlx::query(&format!(
+        "SELECT id, provider_code, integration_id, external_account_display_snapshot, linked_at, status, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_oauth_account_link \
          WHERE tenant_id = $1 AND user_id = $2 AND status = 'active' AND unlinked_at IS NULL \
-         ORDER BY linked_at DESC",
-    )
+         ORDER BY linked_at DESC \
+         LIMIT $3 OFFSET $4"
+    ))
     .bind(&session.user.tenant_id)
     .bind(&session.user.id)
+    .bind(params.page_size)
+    .bind(params.offset)
     .fetch_all(pg)
     .await;
 
     match rows {
         Ok(rows) => {
+            let total = total_from_rows(&rows);
             let items: Vec<Value> = rows
                 .into_iter()
                 .map(|row| {
@@ -1869,7 +1888,7 @@ async fn list_oauth_account_links(
                     })
                 })
                 .collect();
-            appbase_ok(json!({ "items": items }))
+            appbase_ok(list_page_json(items, total, &params))
         }
         Err(error) => appbase_error(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -1973,31 +1992,109 @@ async fn delete_oauth_account_link(
     }
 }
 
-async fn list_oauth_grants(State(state): State<LocalIamState>, headers: HeaderMap) -> Response {
-    let Ok(pg) = postgres_pool_or_error(&state) else {
-        return postgres_pool_or_error(&state)
-            .err()
-            .expect("error response");
-    };
-    match resolve_session_from_headers(pg, &headers).await {
-        Some(_session) => appbase_ok(json!({ "items": [] })),
-        None => iam_session_required_error(),
-    }
-}
-
-async fn delete_oauth_grant(
+async fn list_oauth_grants(
     State(state): State<LocalIamState>,
     headers: HeaderMap,
-    Path(_grant_id): Path<String>,
+    Query(query): Query<HashMap<String, String>>,
 ) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else {
         return postgres_pool_or_error(&state)
             .err()
             .expect("error response");
     };
-    match resolve_session_from_headers(pg, &headers).await {
-        Some(_session) => oauth_unavailable_error(),
-        None => iam_session_required_error(),
+    let Some(session) = resolve_session_from_headers(pg, &headers).await else {
+        return iam_session_required_error();
+    };
+
+    let params = list_page_params(&query);
+    let search = list_search_pattern(&query);
+    let rows = sqlx::query(&format!(
+        "SELECT id, provider_code, integration_id, grant_owner_kind, flow_kind, status, issued_at, created_at, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+         FROM iam_oauth_grant \
+         WHERE tenant_id = $1 AND user_id = $2 AND status = 'active' \
+           AND ($5::text IS NULL OR LOWER(provider_code) LIKE $5 OR LOWER(integration_id) LIKE $5) \
+         ORDER BY created_at DESC, id \
+         LIMIT $3 OFFSET $4"
+    ))
+    .bind(&session.user.tenant_id)
+    .bind(&session.user.id)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(search)
+    .fetch_all(pg)
+    .await;
+
+    match rows {
+        Ok(rows) => {
+            let total = total_from_rows(&rows);
+            let items: Vec<Value> = rows
+                .into_iter()
+                .map(|row| {
+                    json!({
+                        "createdAt": row.get::<String, _>(7),
+                        "flowKind": row.get::<String, _>(4),
+                        "grantId": row.get::<String, _>(0),
+                        "grantOwnerKind": row.get::<String, _>(3),
+                        "id": row.get::<String, _>(0),
+                        "integrationId": row.get::<String, _>(2),
+                        "issuedAt": row.get::<Option<String>, _>(6),
+                        "providerCode": row.get::<String, _>(1),
+                        "status": row.get::<String, _>(5),
+                    })
+                })
+                .collect();
+            appbase_ok(list_page_json(items, total, &params))
+        }
+        Err(error) => appbase_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "iam_oauth_grants_list_failed",
+            &format!("list oauth grants failed: {error}"),
+        ),
+    }
+}
+
+async fn delete_oauth_grant(
+    State(state): State<LocalIamState>,
+    headers: HeaderMap,
+    Path(grant_id): Path<String>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Some(session) = resolve_session_from_headers(pg, &headers).await else {
+        return iam_session_required_error();
+    };
+
+    let now = chrono::Utc::now().to_rfc3339();
+    let updated = sqlx::query(
+        "UPDATE iam_oauth_grant \
+         SET status = 'revoked', revoked_at = $4, updated_at = $4 \
+         WHERE id = $1 AND tenant_id = $2 AND user_id = $3 AND status = 'active'",
+    )
+    .bind(&grant_id)
+    .bind(&session.user.tenant_id)
+    .bind(&session.user.id)
+    .bind(&now)
+    .execute(pg)
+    .await;
+
+    match updated {
+        Ok(result) if result.rows_affected() > 0 => {
+            appbase_ok(json!({ "grantId": grant_id, "status": "revoked" }))
+        }
+        Ok(_) => appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_oauth_grant_not_found",
+            "OAuth grant was not found",
+        ),
+        Err(error) => appbase_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "iam_oauth_grant_delete_failed",
+            &format!("revoke oauth grant failed: {error}"),
+        ),
     }
 }
 
@@ -2067,8 +2164,12 @@ async fn update_current_user_password(
         return iam_session_required_error();
     };
 
-    if let Some(response) =
-        enforce_rate_limit(&state, &format!("iam:password_update:{}", session.user.id)).await
+    if let Some(response) = enforce_rate_limit(
+        &state,
+        &session.user.tenant_id,
+        &format!("iam:password_update:{}", session.user.id),
+    )
+    .await
     {
         return response;
     }
@@ -2182,8 +2283,12 @@ async fn create_current_user_contact_binding(
         );
     }
 
-    if let Some(response) =
-        enforce_rate_limit(state, &contact_rate_limit_bucket(kind, &session.user.id)).await
+    if let Some(response) = enforce_rate_limit(
+        state,
+        &session.user.tenant_id,
+        &contact_rate_limit_bucket(kind, &session.user.id),
+    )
+    .await
     {
         return response;
     }
@@ -2292,8 +2397,12 @@ async fn delete_current_user_contact_binding(
         );
     }
 
-    if let Some(response) =
-        enforce_rate_limit(state, &contact_rate_limit_bucket(kind, &session.user.id)).await
+    if let Some(response) = enforce_rate_limit(
+        state,
+        &session.user.tenant_id,
+        &contact_rate_limit_bucket(kind, &session.user.id),
+    )
+    .await
     {
         return response;
     }
@@ -2940,9 +3049,12 @@ async fn list_organizations(
     if let Some(response) = ensure_directory_permission(&session, &["iam.organizations.read"]) {
         return response;
     }
-    let organizations = sorted_organizations_for_session(pg, &session, &query).await;
-    appbase_ok(page_json(
+    let (organizations, total, params) =
+        paged_organizations_for_session(pg, &session, &query).await;
+    appbase_ok(list_page_json(
         organizations.iter().map(organization_to_json).collect(),
+        total,
+        &params,
     ))
 }
 
@@ -2962,12 +3074,21 @@ async fn retrieve_organization_tree(
     if let Some(response) = ensure_directory_permission(&session, &["iam.organizations.read"]) {
         return response;
     }
-    let organizations = sorted_organizations_for_session(pg, &session, &query).await;
+    let organizations = match scoped_organizations_for_session(pg, &session, &query).await {
+        Ok(items) => items,
+        Err(message) => {
+            return appbase_error(
+                StatusCode::BAD_REQUEST,
+                "iam_organizations_tree_too_large",
+                &message,
+            );
+        }
+    };
     let nodes = organization_roots(&organizations, &query)
         .iter()
         .map(|organization| organization_node_to_json(organization, &organizations))
         .collect::<Vec<_>>();
-    appbase_ok(tree_json(nodes))
+    appbase_ok(tree_resource_json(nodes))
 }
 
 async fn list_organization_memberships(
@@ -2989,12 +3110,14 @@ async fn list_organization_memberships(
     ) {
         return response;
     }
-    let memberships = sorted_organization_memberships(pg, &session, &query).await;
-    appbase_ok(page_json(
+    let (memberships, total, params) = paged_organization_memberships(pg, &session, &query).await;
+    appbase_ok(list_page_json(
         memberships
             .iter()
             .map(organization_membership_to_json)
             .collect(),
+        total,
+        &params,
     ))
 }
 
@@ -3014,9 +3137,11 @@ async fn list_departments(
     if let Some(response) = ensure_directory_permission(&session, &["iam.departments.read"]) {
         return response;
     }
-    let departments = sorted_departments_for_session(pg, &session, &query).await;
-    appbase_ok(page_json(
+    let (departments, total, params) = paged_departments_for_session(pg, &session, &query).await;
+    appbase_ok(list_page_json(
         departments.iter().map(department_to_json).collect(),
+        total,
+        &params,
     ))
 }
 
@@ -3036,12 +3161,21 @@ async fn retrieve_department_tree(
     if let Some(response) = ensure_directory_permission(&session, &["iam.departments.read"]) {
         return response;
     }
-    let departments = sorted_departments_for_session(pg, &session, &query).await;
+    let departments = match scoped_departments_for_session(pg, &session, &query).await {
+        Ok(items) => items,
+        Err(message) => {
+            return appbase_error(
+                StatusCode::BAD_REQUEST,
+                "iam_departments_tree_too_large",
+                &message,
+            );
+        }
+    };
     let nodes = department_roots(&departments, &query)
         .iter()
         .map(|department| department_node_to_json(department, &departments))
         .collect::<Vec<_>>();
-    appbase_ok(tree_json(nodes))
+    appbase_ok(tree_resource_json(nodes))
 }
 
 async fn list_department_assignments(
@@ -3060,12 +3194,14 @@ async fn list_department_assignments(
     if let Some(response) = ensure_directory_permission(&session, &["iam.assignments.read"]) {
         return response;
     }
-    let assignments = sorted_department_assignments(pg, &session, &query).await;
-    appbase_ok(page_json(
+    let (assignments, total, params) = paged_department_assignments(pg, &session, &query).await;
+    appbase_ok(list_page_json(
         assignments
             .iter()
             .map(department_assignment_to_json)
             .collect(),
+        total,
+        &params,
     ))
 }
 
@@ -3085,8 +3221,12 @@ async fn list_positions(
     if let Some(response) = ensure_directory_permission(&session, &["iam.positions.read"]) {
         return response;
     }
-    let positions = sorted_positions(pg, &session, &query).await;
-    appbase_ok(page_json(positions.iter().map(position_to_json).collect()))
+    let (positions, total, params) = paged_positions(pg, &session, &query).await;
+    appbase_ok(list_page_json(
+        positions.iter().map(position_to_json).collect(),
+        total,
+        &params,
+    ))
 }
 
 async fn list_position_assignments(
@@ -3105,12 +3245,14 @@ async fn list_position_assignments(
     if let Some(response) = ensure_directory_permission(&session, &["iam.assignments.read"]) {
         return response;
     }
-    let assignments = sorted_position_assignments(pg, &session, &query).await;
-    appbase_ok(page_json(
+    let (assignments, total, params) = paged_position_assignments(pg, &session, &query).await;
+    appbase_ok(list_page_json(
         assignments
             .iter()
             .map(position_assignment_to_json)
             .collect(),
+        total,
+        &params,
     ))
 }
 
@@ -3130,9 +3272,11 @@ async fn list_role_bindings(
     if let Some(response) = ensure_directory_permission(&session, &["iam.role_bindings.read"]) {
         return response;
     }
-    let bindings = sorted_role_bindings(pg, &session, &query).await;
-    appbase_ok(page_json(
+    let (bindings, total, params) = paged_role_bindings(pg, &session, &query).await;
+    appbase_ok(list_page_json(
         bindings.iter().map(role_binding_to_json).collect(),
+        total,
+        &params,
     ))
 }
 
@@ -3389,13 +3533,39 @@ async fn organizations_by_ids(
     tenant_id: &str,
     organization_ids: &[String],
 ) -> Vec<LocalOrganization> {
-    let mut organizations = Vec::new();
-    for organization_id in organization_ids {
-        if let Some(organization) = load_organization(pg, tenant_id, organization_id).await {
-            organizations.push(organization);
-        }
+    if organization_ids.is_empty() {
+        return Vec::new();
     }
-    organizations
+
+    let rows = sqlx::query(
+        "SELECT id, tenant_id, parent_organization_id, name, organization_kind, \
+                tenant_boundary_kind, data_boundary_kind, app_boundary_enabled, \
+                verification_status, status \
+         FROM iam_organization \
+         WHERE tenant_id = $1 AND id = ANY($2) AND status = 'active' \
+         ORDER BY name, id",
+    )
+    .bind(tenant_id)
+    .bind(organization_ids)
+    .fetch_all(pg)
+    .await
+    .unwrap_or_default();
+
+    rows.into_iter()
+        .map(|row| LocalOrganization {
+            id: row.get(0),
+            tenant_id: row.get(1),
+            parent_organization_id: row.get(2),
+            name: row.get(3),
+            organization_kind: row.get(4),
+            tenant_boundary_kind: row.get(5),
+            data_boundary_kind: row.get(6),
+            app_boundary_enabled: row.get::<i32, _>(7) != 0,
+            verification_status: row.get(8),
+            status: row.get(9),
+            order: 0,
+        })
+        .collect()
 }
 
 async fn load_organization(
@@ -3452,29 +3622,50 @@ async fn accessible_organization_ids_for_session(
     .collect()
 }
 
-async fn sorted_organizations_for_session(
+async fn scoped_organizations_for_session(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> Vec<LocalOrganization> {
+) -> Result<Vec<LocalOrganization>, String> {
     let organization_ids = accessible_organization_ids_for_session(pg, session).await;
     if organization_ids.is_empty() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
-    let rows = sqlx::query(
+    let org_id = optional_query_string(query, &["organizationId", "organization_id", "id"]);
+    let parent_id = optional_query_string(
+        query,
+        &[
+            "parentOrganizationId",
+            "parent_organization_id",
+            "parentId",
+            "parent_id",
+        ],
+    );
+    let tree_limit = sdkwork_iam_bootstrap::IAM_TREE_MAX_NODES + 1;
+    let rows = sqlx::query(&format!(
         "SELECT id, tenant_id, parent_organization_id, name, organization_kind, \
                 tenant_boundary_kind, data_boundary_kind, app_boundary_enabled, \
                 verification_status, status \
          FROM iam_organization \
          WHERE tenant_id = $1 AND status = 'active' AND id = ANY($2) \
-         ORDER BY name, id",
-    )
+           AND ($3::text IS NULL OR id = $3) \
+           AND ($4::text IS NULL OR parent_organization_id = $4) \
+         ORDER BY name, id \
+         LIMIT $5"
+    ))
     .bind(&session.context.tenant_id)
     .bind(&organization_ids)
+    .bind(&org_id)
+    .bind(&parent_id)
+    .bind(tree_limit)
     .fetch_all(pg)
     .await
-    .unwrap_or_default();
-    rows.into_iter()
+    .map_err(|error| format!("load organization tree failed: {error}"))?;
+    if rows.len() > sdkwork_iam_bootstrap::IAM_TREE_MAX_NODES as usize {
+        return Err("organization tree exceeds configured node limit".to_string());
+    }
+    Ok(rows
+        .into_iter()
         .enumerate()
         .map(|(index, row)| LocalOrganization {
             id: row.get(0),
@@ -3489,48 +3680,125 @@ async fn sorted_organizations_for_session(
             status: row.get(9),
             order: index as i64,
         })
-        .filter(|organization| {
-            query_matches(
-                query,
-                &["organizationId", "organization_id", "id"],
-                &organization.id,
-            )
-        })
-        .filter(|organization| {
-            query_matches_optional(
-                query,
-                &[
-                    "parentOrganizationId",
-                    "parent_organization_id",
-                    "parentId",
-                    "parent_id",
-                ],
-                organization.parent_organization_id.as_deref(),
-            )
-        })
-        .collect()
+        .collect())
 }
 
-async fn sorted_organization_memberships(
+async fn paged_organizations_for_session(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> Vec<LocalOrganizationMembership> {
-    let rows = sqlx::query(
-        "SELECT m.id, m.tenant_id, m.organization_id, m.user_id, m.membership_kind, \
-                m.is_primary, m.status, u.username, u.display_name, u.email, u.phone, \
-                u.email_verified, u.phone_verified, u.last_login_at, u.password_changed_at \
-         FROM iam_organization_membership m \
-         JOIN iam_user u ON u.id = m.user_id \
-         WHERE m.tenant_id = $1 AND m.user_id = $2 AND m.status = 'active' \
-         ORDER BY m.is_primary DESC, u.display_name, m.id",
-    )
+) -> (Vec<LocalOrganization>, i64, ListPageParams) {
+    let params = list_page_params(query);
+    let search_pattern = list_search_pattern(query);
+    let organization_ids = accessible_organization_ids_for_session(pg, session).await;
+    if organization_ids.is_empty() {
+        return (Vec::new(), 0, params);
+    }
+    let org_id = optional_query_string(query, &["organizationId", "organization_id", "id"]);
+    let parent_id = optional_query_string(
+        query,
+        &[
+            "parentOrganizationId",
+            "parent_organization_id",
+            "parentId",
+            "parent_id",
+        ],
+    );
+    let rows = sqlx::query(&format!(
+        "SELECT id, tenant_id, parent_organization_id, name, organization_kind, \
+                tenant_boundary_kind, data_boundary_kind, app_boundary_enabled, \
+                verification_status, status, COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+         FROM iam_organization \
+         WHERE tenant_id = $1 AND status = 'active' AND id = ANY($2) \
+           AND ($3::text IS NULL OR id = $3) \
+           AND ($4::text IS NULL OR parent_organization_id = $4) \
+           AND ($5::text IS NULL OR LOWER(name) LIKE $5 OR LOWER(id) LIKE $5) \
+         ORDER BY name, id \
+         LIMIT $6 OFFSET $7"
+    ))
     .bind(&session.context.tenant_id)
-    .bind(&session.context.user_id)
+    .bind(&organization_ids)
+    .bind(&org_id)
+    .bind(&parent_id)
+    .bind(&search_pattern)
+    .bind(params.page_size)
+    .bind(params.offset)
     .fetch_all(pg)
     .await
     .unwrap_or_default();
-    rows.into_iter()
+    let total = total_from_rows(&rows);
+    let organizations = rows
+        .into_iter()
+        .enumerate()
+        .map(|(index, row)| LocalOrganization {
+            id: row.get(0),
+            tenant_id: row.get(1),
+            parent_organization_id: row.get(2),
+            name: row.get(3),
+            organization_kind: row.get(4),
+            tenant_boundary_kind: row.get(5),
+            data_boundary_kind: row.get(6),
+            app_boundary_enabled: row.get::<i32, _>(7) != 0,
+            verification_status: row.get(8),
+            status: row.get(9),
+            order: index as i64,
+        })
+        .collect();
+    (organizations, total, params)
+}
+
+async fn paged_organization_memberships(
+    pg: &PgPool,
+    session: &LocalSession,
+    query: &HashMap<String, String>,
+) -> (Vec<LocalOrganizationMembership>, i64, ListPageParams) {
+    let params = list_page_params(query);
+    let search_pattern = list_search_pattern(query);
+    let membership_id = optional_query_string(
+        query,
+        &[
+            "membershipId",
+            "membership_id",
+            "organizationMembershipId",
+            "organization_membership_id",
+            "id",
+        ],
+    );
+    let organization_id = optional_query_string(query, &["organizationId", "organization_id"]);
+    let user_id = optional_query_string(query, &["userId", "user_id"]);
+    let status = optional_query_string(query, &["status"]);
+    let rows = sqlx::query(&format!(
+        "SELECT m.id, m.tenant_id, m.organization_id, m.user_id, m.membership_kind, \
+                m.is_primary, m.status, u.username, u.display_name, u.email, u.phone, \
+                u.email_verified, u.phone_verified, u.last_login_at, u.password_changed_at, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+         FROM iam_organization_membership m \
+         JOIN iam_user u ON u.id = m.user_id \
+         WHERE m.tenant_id = $1 AND m.user_id = $2 AND m.status = 'active' \
+           AND ($3::text IS NULL OR m.id = $3) \
+           AND ($4::text IS NULL OR m.organization_id = $4) \
+           AND ($5::text IS NULL OR m.user_id = $5) \
+           AND ($6::text IS NULL OR m.status = $6) \
+           AND ($9::text IS NULL OR LOWER(u.username) LIKE $9 OR LOWER(u.display_name) LIKE $9 \
+                OR LOWER(COALESCE(u.email, '')) LIKE $9) \
+         ORDER BY m.is_primary DESC, u.display_name, m.id \
+         LIMIT $7 OFFSET $8"
+    ))
+    .bind(&session.context.tenant_id)
+    .bind(&session.context.user_id)
+    .bind(&membership_id)
+    .bind(&organization_id)
+    .bind(&user_id)
+    .bind(&status)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
+    .fetch_all(pg)
+    .await
+    .unwrap_or_default();
+    let total = total_from_rows(&rows);
+    let memberships = rows
+        .into_iter()
         .enumerate()
         .map(|(index, row)| {
             let user_id: String = row.get(3);
@@ -3547,52 +3815,55 @@ async fn sorted_organization_memberships(
                 user,
             }
         })
-        .filter(|membership| {
-            query_matches(
-                query,
-                &[
-                    "membershipId",
-                    "membership_id",
-                    "organizationMembershipId",
-                    "organization_membership_id",
-                    "id",
-                ],
-                &membership.id,
-            )
-        })
-        .filter(|membership| {
-            query_matches(
-                query,
-                &["organizationId", "organization_id"],
-                &membership.organization_id,
-            )
-        })
-        .filter(|membership| query_matches(query, &["userId", "user_id"], &membership.user_id))
-        .filter(|membership| query_matches(query, &["status"], &membership.status))
-        .collect()
+        .collect();
+    (memberships, total, params)
 }
 
-async fn sorted_departments_for_session(
+async fn scoped_departments_for_session(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> Vec<LocalDepartment> {
+) -> Result<Vec<LocalDepartment>, String> {
     let organization_ids = accessible_organization_ids_for_session(pg, session).await;
     if organization_ids.is_empty() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
+    let organization_id = optional_query_string(query, &["organizationId", "organization_id"]);
+    let department_id = optional_query_string(query, &["departmentId", "department_id", "id"]);
+    let parent_id = optional_query_string(
+        query,
+        &[
+            "parentDepartmentId",
+            "parent_department_id",
+            "parentId",
+            "parent_id",
+        ],
+    );
+    let tree_limit = sdkwork_iam_bootstrap::IAM_TREE_MAX_NODES + 1;
     let rows = sqlx::query(
         "SELECT id, tenant_id, organization_id, parent_department_id, name, status \
          FROM iam_department \
          WHERE tenant_id = $1 AND status = 'active' AND organization_id = ANY($2) \
-         ORDER BY name, id",
+           AND ($3::text IS NULL OR organization_id = $3) \
+           AND ($4::text IS NULL OR id = $4) \
+           AND ($5::text IS NULL OR parent_department_id = $5) \
+         ORDER BY name, id \
+         LIMIT $6",
     )
     .bind(&session.context.tenant_id)
     .bind(&organization_ids)
+    .bind(&organization_id)
+    .bind(&department_id)
+    .bind(&parent_id)
+    .bind(tree_limit)
     .fetch_all(pg)
     .await
-    .unwrap_or_default();
-    rows.into_iter()
+    .map_err(|error| format!("load department tree failed: {error}"))?;
+    if rows.len() > sdkwork_iam_bootstrap::IAM_TREE_MAX_NODES as usize {
+        return Err("department tree exceeds configured node limit".to_string());
+    }
+    Ok(rows
+        .into_iter()
         .enumerate()
         .map(|(index, row)| LocalDepartment {
             id: row.get(0),
@@ -3603,56 +3874,138 @@ async fn sorted_departments_for_session(
             status: row.get(5),
             order: index as i64,
         })
-        .filter(|department| {
-            query_matches(
-                query,
-                &["organizationId", "organization_id"],
-                &department.organization_id,
-            )
-        })
-        .filter(|department| {
-            query_matches(
-                query,
-                &["departmentId", "department_id", "id"],
-                &department.id,
-            )
-        })
-        .filter(|department| {
-            query_matches_optional(
-                query,
-                &[
-                    "parentDepartmentId",
-                    "parent_department_id",
-                    "parentId",
-                    "parent_id",
-                ],
-                department.parent_department_id.as_deref(),
-            )
-        })
-        .collect()
+        .collect())
 }
 
-async fn sorted_department_assignments(
+async fn paged_departments_for_session(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> Vec<LocalDepartmentAssignment> {
-    let rows = sqlx::query(
-        "SELECT a.id, a.tenant_id, a.organization_id, a.organization_membership_id, \
-                a.department_id, a.user_id, a.assignment_kind, a.status, \
-                u.username, u.display_name, u.email, u.phone, u.email_verified, \
-                u.phone_verified, u.last_login_at, u.password_changed_at \
-         FROM iam_department_assignment a \
-         JOIN iam_user u ON u.id = a.user_id \
-         WHERE a.tenant_id = $1 AND a.user_id = $2 AND a.status = 'active' \
-         ORDER BY u.display_name, a.id",
-    )
+) -> (Vec<LocalDepartment>, i64, ListPageParams) {
+    let params = list_page_params(query);
+    let search_pattern = list_search_pattern(query);
+    let organization_ids = accessible_organization_ids_for_session(pg, session).await;
+    if organization_ids.is_empty() {
+        return (Vec::new(), 0, params);
+    }
+    let organization_id = optional_query_string(query, &["organizationId", "organization_id"]);
+    let department_id = optional_query_string(query, &["departmentId", "department_id", "id"]);
+    let parent_id = optional_query_string(
+        query,
+        &[
+            "parentDepartmentId",
+            "parent_department_id",
+            "parentId",
+            "parent_id",
+        ],
+    );
+    let rows = sqlx::query(&format!(
+        "SELECT id, tenant_id, organization_id, parent_department_id, name, status, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+         FROM iam_department \
+         WHERE tenant_id = $1 AND status = 'active' AND organization_id = ANY($2) \
+           AND ($3::text IS NULL OR organization_id = $3) \
+           AND ($4::text IS NULL OR id = $4) \
+           AND ($5::text IS NULL OR parent_department_id = $5) \
+           AND ($6::text IS NULL OR LOWER(name) LIKE $6 OR LOWER(id) LIKE $6) \
+         ORDER BY name, id \
+         LIMIT $7 OFFSET $8"
+    ))
     .bind(&session.context.tenant_id)
-    .bind(&session.context.user_id)
+    .bind(&organization_ids)
+    .bind(&organization_id)
+    .bind(&department_id)
+    .bind(&parent_id)
+    .bind(&search_pattern)
+    .bind(params.page_size)
+    .bind(params.offset)
     .fetch_all(pg)
     .await
     .unwrap_or_default();
-    rows.into_iter()
+    let total = total_from_rows(&rows);
+    let departments = rows
+        .into_iter()
+        .enumerate()
+        .map(|(index, row)| LocalDepartment {
+            id: row.get(0),
+            tenant_id: row.get(1),
+            organization_id: row.get(2),
+            parent_department_id: row.get(3),
+            name: row.get(4),
+            status: row.get(5),
+            order: index as i64,
+        })
+        .collect();
+    (departments, total, params)
+}
+
+async fn paged_department_assignments(
+    pg: &PgPool,
+    session: &LocalSession,
+    query: &HashMap<String, String>,
+) -> (Vec<LocalDepartmentAssignment>, i64, ListPageParams) {
+    let params = list_page_params(query);
+    let search_pattern = list_search_pattern(query);
+    let assignment_id = optional_query_string(
+        query,
+        &[
+            "assignmentId",
+            "assignment_id",
+            "departmentAssignmentId",
+            "department_assignment_id",
+            "id",
+        ],
+    );
+    let organization_id = optional_query_string(query, &["organizationId", "organization_id"]);
+    let department_id = optional_query_string(query, &["departmentId", "department_id"]);
+    let membership_id = optional_query_string(
+        query,
+        &[
+            "membershipId",
+            "membership_id",
+            "organizationMembershipId",
+            "organization_membership_id",
+        ],
+    );
+    let user_id = optional_query_string(query, &["userId", "user_id"]);
+    let status = optional_query_string(query, &["status"]);
+    let rows = sqlx::query(&format!(
+        "SELECT a.id, a.tenant_id, a.organization_id, a.organization_membership_id, \
+                a.department_id, a.user_id, a.assignment_kind, a.status, \
+                u.username, u.display_name, u.email, u.phone, u.email_verified, \
+                u.phone_verified, u.last_login_at, u.password_changed_at, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+         FROM iam_department_assignment a \
+         JOIN iam_user u ON u.id = a.user_id \
+         WHERE a.tenant_id = $1 AND a.user_id = $2 AND a.status = 'active' \
+           AND ($3::text IS NULL OR a.id = $3) \
+           AND ($4::text IS NULL OR a.organization_id = $4) \
+           AND ($5::text IS NULL OR a.department_id = $5) \
+           AND ($6::text IS NULL OR a.organization_membership_id = $6) \
+           AND ($7::text IS NULL OR a.user_id = $7) \
+           AND ($8::text IS NULL OR a.status = $8) \
+           AND ($11::text IS NULL OR LOWER(u.username) LIKE $11 OR LOWER(u.display_name) LIKE $11 \
+                OR LOWER(COALESCE(u.email, '')) LIKE $11) \
+         ORDER BY u.display_name, a.id \
+         LIMIT $9 OFFSET $10"
+    ))
+    .bind(&session.context.tenant_id)
+    .bind(&session.context.user_id)
+    .bind(&assignment_id)
+    .bind(&organization_id)
+    .bind(&department_id)
+    .bind(&membership_id)
+    .bind(&user_id)
+    .bind(&status)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
+    .fetch_all(pg)
+    .await
+    .unwrap_or_default();
+    let total = total_from_rows(&rows);
+    let assignments = rows
+        .into_iter()
         .enumerate()
         .map(|(index, row)| {
             let user_id: String = row.get(5);
@@ -3670,71 +4023,49 @@ async fn sorted_department_assignments(
                 user,
             }
         })
-        .filter(|assignment| {
-            query_matches(
-                query,
-                &[
-                    "assignmentId",
-                    "assignment_id",
-                    "departmentAssignmentId",
-                    "department_assignment_id",
-                    "id",
-                ],
-                &assignment.id,
-            )
-        })
-        .filter(|assignment| {
-            query_matches(
-                query,
-                &["organizationId", "organization_id"],
-                &assignment.organization_id,
-            )
-        })
-        .filter(|assignment| {
-            query_matches(
-                query,
-                &["departmentId", "department_id"],
-                &assignment.department_id,
-            )
-        })
-        .filter(|assignment| {
-            query_matches(
-                query,
-                &[
-                    "membershipId",
-                    "membership_id",
-                    "organizationMembershipId",
-                    "organization_membership_id",
-                ],
-                &assignment.organization_membership_id,
-            )
-        })
-        .filter(|assignment| query_matches(query, &["userId", "user_id"], &assignment.user_id))
-        .filter(|assignment| query_matches(query, &["status"], &assignment.status))
-        .collect()
+        .collect();
+    (assignments, total, params)
 }
 
-async fn sorted_positions(
+async fn paged_positions(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> Vec<LocalPosition> {
+) -> (Vec<LocalPosition>, i64, ListPageParams) {
+    let params = list_page_params(query);
+    let search_pattern = list_search_pattern(query);
     let organization_ids = accessible_organization_ids_for_session(pg, session).await;
     if organization_ids.is_empty() {
-        return Vec::new();
+        return (Vec::new(), 0, params);
     }
-    let rows = sqlx::query(
-        "SELECT id, tenant_id, organization_id, name, status \
+    let organization_id = optional_query_string(query, &["organizationId", "organization_id"]);
+    let position_id = optional_query_string(query, &["positionId", "position_id", "id"]);
+    let status = optional_query_string(query, &["status"]);
+    let rows = sqlx::query(&format!(
+        "SELECT id, tenant_id, organization_id, name, status, COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_position \
          WHERE tenant_id = $1 AND status = 'active' AND organization_id = ANY($2) \
-         ORDER BY name, id",
-    )
+           AND ($3::text IS NULL OR organization_id = $3) \
+           AND ($4::text IS NULL OR id = $4) \
+           AND ($5::text IS NULL OR status = $5) \
+           AND ($6::text IS NULL OR LOWER(name) LIKE $6 OR LOWER(id) LIKE $6) \
+         ORDER BY name, id \
+         LIMIT $7 OFFSET $8"
+    ))
     .bind(&session.context.tenant_id)
     .bind(&organization_ids)
+    .bind(&organization_id)
+    .bind(&position_id)
+    .bind(&status)
+    .bind(&search_pattern)
+    .bind(params.page_size)
+    .bind(params.offset)
     .fetch_all(pg)
     .await
     .unwrap_or_default();
-    rows.into_iter()
+    let total = total_from_rows(&rows);
+    let positions = rows
+        .into_iter()
         .enumerate()
         .map(|(index, row)| LocalPosition {
             id: row.get(0),
@@ -3744,38 +4075,73 @@ async fn sorted_positions(
             status: row.get(4),
             order: index as i64,
         })
-        .filter(|position| {
-            query_matches(
-                query,
-                &["organizationId", "organization_id"],
-                &position.organization_id,
-            )
-        })
-        .filter(|position| query_matches(query, &["positionId", "position_id", "id"], &position.id))
-        .filter(|position| query_matches(query, &["status"], &position.status))
-        .collect()
+        .collect();
+    (positions, total, params)
 }
 
-async fn sorted_position_assignments(
+async fn paged_position_assignments(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> Vec<LocalPositionAssignment> {
-    let rows = sqlx::query(
+) -> (Vec<LocalPositionAssignment>, i64, ListPageParams) {
+    let params = list_page_params(query);
+    let search_pattern = list_search_pattern(query);
+    let assignment_id = optional_query_string(
+        query,
+        &[
+            "positionAssignmentId",
+            "position_assignment_id",
+            "assignmentId",
+            "assignment_id",
+            "id",
+        ],
+    );
+    let department_assignment_id = optional_query_string(
+        query,
+        &["departmentAssignmentId", "department_assignment_id"],
+    );
+    let organization_id = optional_query_string(query, &["organizationId", "organization_id"]);
+    let department_id = optional_query_string(query, &["departmentId", "department_id"]);
+    let position_id = optional_query_string(query, &["positionId", "position_id"]);
+    let user_id = optional_query_string(query, &["userId", "user_id"]);
+    let status = optional_query_string(query, &["status"]);
+    let rows = sqlx::query(&format!(
         "SELECT a.id, a.tenant_id, a.organization_id, a.department_assignment_id, \
-                a.position_id, a.user_id, a.status, d.department_id, p.name \
+                a.position_id, a.user_id, a.status, d.department_id, p.name, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_position_assignment a \
          LEFT JOIN iam_department_assignment d ON d.id = a.department_assignment_id \
          LEFT JOIN iam_position p ON p.id = a.position_id \
          WHERE a.tenant_id = $1 AND a.user_id = $2 AND a.status = 'active' \
-         ORDER BY p.name, a.id",
-    )
+           AND ($3::text IS NULL OR a.id = $3) \
+           AND ($4::text IS NULL OR a.department_assignment_id = $4) \
+           AND ($5::text IS NULL OR a.organization_id = $5) \
+           AND ($6::text IS NULL OR d.department_id = $6) \
+           AND ($7::text IS NULL OR a.position_id = $7) \
+           AND ($8::text IS NULL OR a.user_id = $8) \
+           AND ($9::text IS NULL OR a.status = $9) \
+           AND ($12::text IS NULL OR LOWER(COALESCE(p.name, '')) LIKE $12) \
+         ORDER BY p.name, a.id \
+         LIMIT $10 OFFSET $11"
+    ))
     .bind(&session.context.tenant_id)
     .bind(&session.context.user_id)
+    .bind(&assignment_id)
+    .bind(&department_assignment_id)
+    .bind(&organization_id)
+    .bind(&department_id)
+    .bind(&position_id)
+    .bind(&user_id)
+    .bind(&status)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await
     .unwrap_or_default();
-    rows.into_iter()
+    let total = total_from_rows(&rows);
+    let assignments = rows
+        .into_iter()
         .enumerate()
         .map(|(index, row)| LocalPositionAssignment {
             id: row.get(0),
@@ -3789,59 +4155,26 @@ async fn sorted_position_assignments(
             position_name: row.get::<Option<String>, _>(8).unwrap_or_default(),
             order: index as i64,
         })
-        .filter(|assignment| {
-            query_matches(
-                query,
-                &[
-                    "positionAssignmentId",
-                    "position_assignment_id",
-                    "assignmentId",
-                    "assignment_id",
-                    "id",
-                ],
-                &assignment.id,
-            )
-        })
-        .filter(|assignment| {
-            query_matches(
-                query,
-                &["departmentAssignmentId", "department_assignment_id"],
-                &assignment.department_assignment_id,
-            )
-        })
-        .filter(|assignment| {
-            query_matches(
-                query,
-                &["organizationId", "organization_id"],
-                &assignment.organization_id,
-            )
-        })
-        .filter(|assignment| {
-            query_matches(
-                query,
-                &["departmentId", "department_id"],
-                &assignment.department_id,
-            )
-        })
-        .filter(|assignment| {
-            query_matches(
-                query,
-                &["positionId", "position_id"],
-                &assignment.position_id,
-            )
-        })
-        .filter(|assignment| query_matches(query, &["userId", "user_id"], &assignment.user_id))
-        .filter(|assignment| query_matches(query, &["status"], &assignment.status))
-        .collect()
+        .collect();
+    (assignments, total, params)
 }
 
-async fn sorted_role_bindings(
+async fn paged_role_bindings(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> Vec<LocalRoleBinding> {
-    let rows = sqlx::query(
-        "SELECT b.id, b.tenant_id, b.principal_id, r.code, b.scope_kind, b.scope_id, b.status \
+) -> (Vec<LocalRoleBinding>, i64, ListPageParams) {
+    let params = list_page_params(query);
+    let search_pattern = list_search_pattern(query);
+    let binding_id = optional_query_string(query, &["roleBindingId", "role_binding_id", "id"]);
+    let principal_id = optional_query_string(query, &["principalId", "principal_id"]);
+    let role_code = optional_query_string(query, &["roleCode", "role_code"]);
+    let scope_kind = optional_query_string(query, &["scopeKind", "scope_kind"]);
+    let scope_id = optional_query_string(query, &["scopeId", "scope_id"]);
+    let status = optional_query_string(query, &["status"]);
+    let rows = sqlx::query(&format!(
+        "SELECT b.id, b.tenant_id, b.principal_id, r.code, b.scope_kind, b.scope_id, b.status, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_role_binding b \
          JOIN iam_role r ON r.id = b.role_id AND r.tenant_id = b.tenant_id \
          WHERE b.tenant_id = $1 AND b.status = 'active' \
@@ -3852,14 +4185,33 @@ async fn sorted_role_bindings(
              )) \
              OR (b.principal_kind = 'user' AND b.principal_id = $2) \
            ) \
-         ORDER BY r.code, b.id",
-    )
+           AND ($3::text IS NULL OR b.id = $3) \
+           AND ($4::text IS NULL OR b.principal_id = $4) \
+           AND ($5::text IS NULL OR r.code = $5) \
+           AND ($6::text IS NULL OR b.scope_kind = $6) \
+           AND ($7::text IS NULL OR b.scope_id = $7) \
+           AND ($8::text IS NULL OR b.status = $8) \
+           AND ($11::text IS NULL OR LOWER(r.code) LIKE $11 OR LOWER(b.principal_id) LIKE $11) \
+         ORDER BY r.code, b.id \
+         LIMIT $9 OFFSET $10"
+    ))
     .bind(&session.context.tenant_id)
     .bind(&session.context.user_id)
+    .bind(&binding_id)
+    .bind(&principal_id)
+    .bind(&role_code)
+    .bind(&scope_kind)
+    .bind(&scope_id)
+    .bind(&status)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await
     .unwrap_or_default();
-    rows.into_iter()
+    let total = total_from_rows(&rows);
+    let bindings = rows
+        .into_iter()
         .enumerate()
         .map(|(index, row)| LocalRoleBinding {
             id: row.get(0),
@@ -3871,25 +4223,8 @@ async fn sorted_role_bindings(
             status: row.get(6),
             order: index as i64,
         })
-        .filter(|binding| {
-            query_matches(
-                query,
-                &["roleBindingId", "role_binding_id", "id"],
-                &binding.id,
-            )
-        })
-        .filter(|binding| {
-            query_matches(
-                query,
-                &["principalId", "principal_id"],
-                &binding.principal_id,
-            )
-        })
-        .filter(|binding| query_matches(query, &["roleCode", "role_code"], &binding.role_code))
-        .filter(|binding| query_matches(query, &["scopeKind", "scope_kind"], &binding.scope_kind))
-        .filter(|binding| query_matches(query, &["scopeId", "scope_id"], &binding.scope_id))
-        .filter(|binding| query_matches(query, &["status"], &binding.status))
-        .collect()
+        .collect();
+    (bindings, total, params)
 }
 
 async fn load_user_by_account_global(pg: &PgPool, account: &str) -> Option<LocalIamUser> {
@@ -3963,24 +4298,4 @@ fn row_user_from_join(row: &sqlx::postgres::PgRow, user_id: &str, offset: usize)
         last_login_at: row.get(offset + 6),
         password_changed_at: row.get(offset + 7),
     }
-}
-
-fn page_json(items: Vec<Value>) -> Value {
-    let total_items = items.len();
-    json!({
-        "items": items,
-        "pageInfo": {
-            "cursor": Value::Null,
-            "hasNextPage": false,
-            "page": 1,
-            "pageSize": total_items,
-            "totalItems": total_items
-        }
-    })
-}
-
-fn tree_json(items: Vec<Value>) -> Value {
-    let mut value = page_json(items.clone());
-    value["nodes"] = json!(items);
-    value
 }

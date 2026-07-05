@@ -1,3 +1,4 @@
+import { extractSdkWorkListItems, resolveSdkWorkListQuery } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 import { isBlank, trim } from "@sdkwork/utils";
 
@@ -44,7 +45,9 @@ export function createSdkworkIamH5AccountBindingController(
     listAccountLinks: async (params) => {
       setState({ status: "loading" });
       try {
-        const accountLinks = extractList(await service.oauth.accountLinks.list(params))
+        const accountLinks = extractSdkWorkListItems(
+          await service.oauth.accountLinks.list(resolveSdkWorkListQuery(params)),
+        )
           .map(toAccountLink)
           .filter(Boolean) as SdkworkIamH5OAuthAccountLink[];
         setState({ accountLinks, status: "ready" });
@@ -114,23 +117,6 @@ function toAccountLink(value: unknown): SdkworkIamH5OAuthAccountLink | undefined
     provider: optionalString(record.provider),
     providerUserId: optionalString(record.providerUserId) || optionalString(record.provider_user_id),
   };
-}
-
-function extractList(value: unknown): unknown[] {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  if (!value || typeof value !== "object") {
-    return [];
-  }
-  const record = value as Record<string, unknown>;
-  for (const key of ["records", "items", "list", "rows", "content", "data"]) {
-    const nested = record[key];
-    if (Array.isArray(nested)) {
-      return nested;
-    }
-  }
-  return [];
 }
 
 function readBoolean(value: unknown, fallback: boolean): boolean {

@@ -1,3 +1,4 @@
+import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 export interface SdkworkIamTenant {
@@ -31,6 +32,10 @@ export interface SdkworkIamTenantMemberDraft {
 }
 
 export interface SdkworkIamTenantState {
+  listPageInfo?: {
+    members?: SdkWorkPageInfo;
+    tenants?: SdkWorkPageInfo;
+  };
   members: readonly SdkworkIamTenantMember[];
   selectedTenant?: SdkworkIamTenant;
   status: "idle" | "loading" | "ready" | "error";
@@ -50,6 +55,8 @@ export interface SdkworkIamTenantController {
   getState(): SdkworkIamTenantState;
   listTenantMembers(tenantId: string, params?: Record<string, unknown>): Promise<readonly SdkworkIamTenantMember[]>;
   listTenants(params?: Record<string, unknown>): Promise<readonly SdkworkIamTenant[]>;
+  loadMoreTenantMembers(tenantId: string): Promise<readonly SdkworkIamTenantMember[]>;
+  loadMoreTenants(): Promise<readonly SdkworkIamTenant[]>;
   removeTenantMember(tenantId: string, userId: string): Promise<void>;
   selectTenant(tenantId: string, params?: Record<string, unknown>): Promise<SdkworkIamTenant | undefined>;
   updateTenant(tenantId: string, body: Partial<SdkworkIamTenantDraft>): Promise<SdkworkIamTenant>;

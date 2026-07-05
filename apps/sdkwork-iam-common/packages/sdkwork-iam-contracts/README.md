@@ -47,6 +47,16 @@ Extension points are limited to declared public exports, runtime entrypoints, SD
 
 - `pnpm --filter @sdkwork/iam-contracts typecheck`
 
+### List And Tree Response Helpers
+
+TypeScript consumers MUST unwrap HTTP list/tree payloads through `@sdkwork/iam-contracts` (`list-page.ts`), not ad hoc `{ records }` parsing:
+
+- `extractSdkWorkListItems` / `extractSdkWorkListPage` — `SdkWorkListResponse` (`data.items` + `data.pageInfo`)
+- `extractSdkWorkTreeNodes` — `SdkWorkResourceResponse` tree (`data.item.nodes` or SDK-unwrapped `{ nodes }`)
+- `buildSdkWorkListQuery` / `resolveSdkWorkListQuery` — wire query map (`page`, `page_size`, `q`, …) with default `page_size` `20`
+
+Authority: `sdkwork-specs/PAGINATION_SPEC.md`, `sdkwork-specs/API_SPEC.md` sections 14–16.
+
 ### Owner And Status
 
 Owner and lifecycle status are tracked in `specs/component.spec.json`.

@@ -1,8 +1,14 @@
 //! Development-only authentication shortcuts gated by explicit environment policy.
 
+use crate::production_runtime::is_production_iam_deployment;
+
 /// Returns true only when local development shortcuts (inline open-api credentials,
 /// JWT fallback without IAM database session resolution) are explicitly allowed.
 pub fn allows_dev_authentication_fallback() -> bool {
+    if is_production_iam_deployment() {
+        return false;
+    }
+
     if matches_im_dev_or_test_environment() {
         return true;
     }
@@ -47,17 +53,31 @@ fn read_env_value(keys: &[&str]) -> Option<String> {
 mod tests {
     use super::allows_dev_authentication_fallback;
 
+    fn clear_deployment_env_keys() {
+        for key in [
+            "SDKWORK_IM_ENVIRONMENT",
+            "SDKWORK_ENV",
+            "SDKWORK_ENVIRONMENT",
+            "SDKWORK_DEPLOYMENT_MODE",
+            "SDKWORK_IM_DEPLOYMENT_MODE",
+        ] {
+            std::env::remove_var(key);
+        }
+    }
+
     #[test]
     fn im_development_environment_allows_authentication_fallback() {
+        clear_deployment_env_keys();
         std::env::set_var("SDKWORK_IM_ENVIRONMENT", "development");
         assert!(allows_dev_authentication_fallback());
-        std::env::remove_var("SDKWORK_IM_ENVIRONMENT");
+        clear_deployment_env_keys();
     }
 
     #[test]
     fn dev_environment_allows_authentication_fallback() {
+        clear_deployment_env_keys();
         std::env::set_var("SDKWORK_ENV", "dev");
         assert!(allows_dev_authentication_fallback());
-        std::env::remove_var("SDKWORK_ENV");
+        clear_deployment_env_keys();
     }
 }

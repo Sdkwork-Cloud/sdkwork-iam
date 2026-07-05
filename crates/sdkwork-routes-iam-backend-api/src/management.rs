@@ -16,12 +16,12 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::backend_sql::{
-    list_tenant_rows, page_json, page_limit, patch_tenant_row, read_i32_field, read_string_field,
-    retrieve_tenant_row,
+    list_page_params, list_search_pattern, list_tenant_rows, page_json_from_rows, patch_tenant_row,
+    read_i32_field, read_string_field, retrieve_tenant_row, tree_resource_json, LIST_TOTAL_COLUMN,
 };
 use crate::handlers::{
-    appbase_error, appbase_ok, assigner_permission_scope, organization_id_from_context,
-    postgres_pool_or_error, tenant_id_from_context, BackendIamState,
+    actor_user_id_from_context, appbase_error, appbase_ok, assigner_permission_scope,
+    organization_id_from_context, postgres_pool_or_error, tenant_id_from_context, BackendIamState,
 };
 
 pub fn apply_management_routes(router: Router<BackendIamState>) -> Router<BackendIamState> {
@@ -208,23 +208,26 @@ async fn list_users(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let limit = page_limit(&query);
-    let rows = sqlx::query(
-        "SELECT id, tenant_id, username, display_name, email, phone, status \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    let rows = sqlx::query(&format!(
+        "SELECT id, tenant_id, username, display_name, email, phone, status, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_user \
          WHERE tenant_id = $1 AND COALESCE(is_deleted, 0) = 0 \
+           AND ($4::text IS NULL OR LOWER(username) LIKE $4 OR LOWER(display_name) LIKE $4 OR LOWER(COALESCE(email, '')) LIKE $4) \
          ORDER BY username, id \
-         LIMIT $2",
-    )
+         LIMIT $2 OFFSET $3"
+    ))
     .bind(&tenant_id)
-    .bind(limit)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await;
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter().map(user_row_to_json).collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, user_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_users_list_failed",
@@ -276,23 +279,26 @@ async fn list_roles(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let limit = page_limit(&query);
-    let rows = sqlx::query(
-        "SELECT id, tenant_id, code, name, status \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    let rows = sqlx::query(&format!(
+        "SELECT id, tenant_id, code, name, status, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_role \
          WHERE tenant_id = $1 \
+           AND ($4::text IS NULL OR LOWER(code) LIKE $4 OR LOWER(name) LIKE $4) \
          ORDER BY code, id \
-         LIMIT $2",
-    )
+         LIMIT $2 OFFSET $3"
+    ))
     .bind(&tenant_id)
-    .bind(limit)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await;
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter().map(role_row_to_json).collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, role_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_roles_list_failed",
@@ -334,6 +340,7 @@ async fn list_role_permissions(
     State(state): State<BackendIamState>,
     ctx: WebRequestContext,
     Path(role_id): Path<String>,
+    Query(query): Query<HashMap<String, String>>,
 ) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else {
         return postgres_pool_or_error(&state)
@@ -344,23 +351,30 @@ async fn list_role_permissions(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let rows = sqlx::query(
-        "SELECT p.id, p.code, p.name, p.resource, p.action \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    let rows = sqlx::query(&format!(
+        "SELECT p.id, p.code, p.name, p.resource, p.action, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_role_permission rp \
          JOIN iam_permission p ON p.id = rp.permission_id \
          JOIN iam_role r ON r.id = rp.role_id AND r.tenant_id = rp.tenant_id \
          WHERE rp.tenant_id = $1 AND rp.role_id = $2 AND r.status = 'active' \
-         ORDER BY p.code",
-    )
+           AND ($5::text IS NULL OR LOWER(p.code) LIKE $5 OR LOWER(p.name) LIKE $5 \
+                OR LOWER(p.resource) LIKE $5 OR LOWER(p.action) LIKE $5) \
+         ORDER BY p.code \
+         LIMIT $3 OFFSET $4"
+    ))
     .bind(&tenant_id)
     .bind(&role_id)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await;
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter().map(permission_row_to_json).collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, permission_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_role_permissions_list_failed",
@@ -379,21 +393,25 @@ async fn list_permissions(
             .expect("error response");
     };
 
-    let limit = page_limit(&query);
-    let rows = sqlx::query(
-        "SELECT id, code, name, resource, action \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    let rows = sqlx::query(&format!(
+        "SELECT id, code, name, resource, action, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_permission \
+         WHERE ($3::text IS NULL OR LOWER(code) LIKE $3 OR LOWER(name) LIKE $3 \
+                OR LOWER(resource) LIKE $3 OR LOWER(action) LIKE $3) \
          ORDER BY code \
-         LIMIT $1",
-    )
-    .bind(limit)
+         LIMIT $1 OFFSET $2"
+    ))
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await;
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter().map(permission_row_to_json).collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, permission_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_permissions_list_failed",
@@ -452,45 +470,50 @@ async fn list_role_bindings(
     };
     let organization_id = organization_id_from_context(&ctx);
 
-    let limit = page_limit(&query);
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
     let rows = if let Some(organization_id) = organization_id.as_deref() {
-        sqlx::query(
+        sqlx::query(&format!(
             "SELECT b.id, b.tenant_id, b.organization_id, b.role_id, r.code AS role_code, \
-                    b.principal_kind, b.principal_id, b.scope_kind, b.scope_id, b.effect, b.status \
+                    b.principal_kind, b.principal_id, b.scope_kind, b.scope_id, b.effect, b.status, \
+                    COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
              FROM iam_role_binding b \
              JOIN iam_role r ON r.id = b.role_id AND r.tenant_id = b.tenant_id \
              WHERE b.tenant_id = $1 AND b.status = 'active' \
                AND (b.scope_kind = 'tenant' OR (b.scope_kind = 'organization' AND b.scope_id = $2)) \
+               AND ($5::text IS NULL OR LOWER(r.code) LIKE $5 OR LOWER(b.principal_id) LIKE $5) \
              ORDER BY r.code, b.id \
-             LIMIT $3",
-        )
+             LIMIT $3 OFFSET $4"
+        ))
         .bind(&tenant_id)
         .bind(organization_id)
-        .bind(limit)
+        .bind(params.page_size)
+        .bind(params.offset)
+        .bind(&search_pattern)
         .fetch_all(pg)
         .await
     } else {
-        sqlx::query(
+        sqlx::query(&format!(
             "SELECT b.id, b.tenant_id, b.organization_id, b.role_id, r.code AS role_code, \
-                    b.principal_kind, b.principal_id, b.scope_kind, b.scope_id, b.effect, b.status \
+                    b.principal_kind, b.principal_id, b.scope_kind, b.scope_id, b.effect, b.status, \
+                    COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
              FROM iam_role_binding b \
              JOIN iam_role r ON r.id = b.role_id AND r.tenant_id = b.tenant_id \
              WHERE b.tenant_id = $1 AND b.status = 'active' \
+               AND ($4::text IS NULL OR LOWER(r.code) LIKE $4 OR LOWER(b.principal_id) LIKE $4) \
              ORDER BY r.code, b.id \
-             LIMIT $2",
-        )
+             LIMIT $2 OFFSET $3"
+        ))
         .bind(&tenant_id)
-        .bind(limit)
+        .bind(params.page_size)
+        .bind(params.offset)
+        .bind(&search_pattern)
         .fetch_all(pg)
         .await
     };
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter()
-                .map(role_binding_row_to_json)
-                .collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, role_binding_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_role_bindings_list_failed",
@@ -714,25 +737,26 @@ async fn list_organizations(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let limit = page_limit(&query);
-    let rows = sqlx::query(
-        "SELECT id, tenant_id, code, name, status, organization_kind, parent_organization_id \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    let rows = sqlx::query(&format!(
+        "SELECT id, tenant_id, code, name, status, organization_kind, parent_organization_id, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_organization \
          WHERE tenant_id = $1 AND status = 'active' \
+           AND ($4::text IS NULL OR LOWER(name) LIKE $4 OR LOWER(code) LIKE $4) \
          ORDER BY name, id \
-         LIMIT $2",
-    )
+         LIMIT $2 OFFSET $3"
+    ))
     .bind(&tenant_id)
-    .bind(limit)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await;
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter()
-                .map(organization_row_to_json)
-                .collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, organization_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_organizations_list_failed",
@@ -756,42 +780,51 @@ async fn list_organization_memberships(
     };
     let organization_id = organization_id_from_context(&ctx);
 
-    let limit = page_limit(&query);
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
     let rows = if let Some(organization_id) = organization_id.as_deref() {
-        sqlx::query(
+        sqlx::query(&format!(
             "SELECT m.id, m.tenant_id, m.organization_id, m.user_id, m.membership_kind, m.status, \
-                    u.username, u.display_name, u.email \
+                    u.username, u.display_name, u.email, \
+                    COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
              FROM iam_organization_membership m \
              JOIN iam_user u ON u.id = m.user_id AND u.tenant_id = m.tenant_id \
              WHERE m.tenant_id = $1 AND m.organization_id = $2 AND m.status = 'active' \
+               AND ($5::text IS NULL OR LOWER(u.username) LIKE $5 OR LOWER(u.display_name) LIKE $5 \
+                    OR LOWER(COALESCE(u.email, '')) LIKE $5) \
              ORDER BY m.joined_at DESC NULLS LAST, m.id \
-             LIMIT $3",
-        )
+             LIMIT $3 OFFSET $4"
+        ))
         .bind(&tenant_id)
         .bind(organization_id)
-        .bind(limit)
+        .bind(params.page_size)
+        .bind(params.offset)
+        .bind(&search_pattern)
         .fetch_all(pg)
         .await
     } else {
-        sqlx::query(
+        sqlx::query(&format!(
             "SELECT m.id, m.tenant_id, m.organization_id, m.user_id, m.membership_kind, m.status, \
-                    u.username, u.display_name, u.email \
+                    u.username, u.display_name, u.email, \
+                    COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
              FROM iam_organization_membership m \
              JOIN iam_user u ON u.id = m.user_id AND u.tenant_id = m.tenant_id \
              WHERE m.tenant_id = $1 AND m.status = 'active' \
+               AND ($4::text IS NULL OR LOWER(u.username) LIKE $4 OR LOWER(u.display_name) LIKE $4 \
+                    OR LOWER(COALESCE(u.email, '')) LIKE $4) \
              ORDER BY m.joined_at DESC NULLS LAST, m.id \
-             LIMIT $2",
-        )
+             LIMIT $2 OFFSET $3"
+        ))
         .bind(&tenant_id)
-        .bind(limit)
+        .bind(params.page_size)
+        .bind(params.offset)
+        .bind(&search_pattern)
         .fetch_all(pg)
         .await
     };
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter().map(membership_row_to_json).collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, membership_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_memberships_list_failed",
@@ -815,38 +848,45 @@ async fn list_departments(
     };
     let organization_id = organization_id_from_context(&ctx);
 
-    let limit = page_limit(&query);
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
     let rows = if let Some(organization_id) = organization_id.as_deref() {
-        sqlx::query(
-            "SELECT id, tenant_id, organization_id, code, name, status, parent_department_id \
+        sqlx::query(&format!(
+            "SELECT id, tenant_id, organization_id, code, name, status, parent_department_id, \
+                    COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
              FROM iam_department \
              WHERE tenant_id = $1 AND organization_id = $2 AND status = 'active' \
+               AND ($5::text IS NULL OR LOWER(name) LIKE $5 OR LOWER(code) LIKE $5) \
              ORDER BY name, id \
-             LIMIT $3",
-        )
+             LIMIT $3 OFFSET $4"
+        ))
         .bind(&tenant_id)
         .bind(organization_id)
-        .bind(limit)
+        .bind(params.page_size)
+        .bind(params.offset)
+        .bind(&search_pattern)
         .fetch_all(pg)
         .await
     } else {
-        sqlx::query(
-            "SELECT id, tenant_id, organization_id, code, name, status, parent_department_id \
+        sqlx::query(&format!(
+            "SELECT id, tenant_id, organization_id, code, name, status, parent_department_id, \
+                    COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
              FROM iam_department \
              WHERE tenant_id = $1 AND status = 'active' \
+               AND ($4::text IS NULL OR LOWER(name) LIKE $4 OR LOWER(code) LIKE $4) \
              ORDER BY name, id \
-             LIMIT $2",
-        )
+             LIMIT $2 OFFSET $3"
+        ))
         .bind(&tenant_id)
-        .bind(limit)
+        .bind(params.page_size)
+        .bind(params.offset)
+        .bind(&search_pattern)
         .fetch_all(pg)
         .await
     };
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter().map(department_row_to_json).collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, department_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_departments_list_failed",
@@ -869,23 +909,26 @@ async fn list_api_keys(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let limit = page_limit(&query);
-    let rows = sqlx::query(
-        "SELECT id, tenant_id, organization_id, user_id, name, status, expires_at \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    let rows = sqlx::query(&format!(
+        "SELECT id, tenant_id, organization_id, user_id, name, status, expires_at, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_api_key \
          WHERE tenant_id = $1 \
+           AND ($4::text IS NULL OR LOWER(name) LIKE $4) \
          ORDER BY created_at DESC NULLS LAST, id \
-         LIMIT $2",
-    )
+         LIMIT $2 OFFSET $3"
+    ))
     .bind(&tenant_id)
-    .bind(limit)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await;
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter().map(api_key_row_to_json).collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, api_key_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_api_keys_list_failed",
@@ -908,24 +951,29 @@ async fn list_security_events(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let limit = page_limit(&query);
-    let rows = sqlx::query(
-        "SELECT id, tenant_id, organization_id, user_id, event_type, created_at \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    let rows = sqlx::query(&format!(
+        "SELECT id, tenant_id, organization_id, user_id, event_type, created_at, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_security_event \
          WHERE tenant_id = $1 \
+           AND ($4::text IS NULL OR LOWER(event_type) LIKE $4) \
          ORDER BY created_at DESC NULLS LAST, id \
-         LIMIT $2",
-    )
+         LIMIT $2 OFFSET $3"
+    ))
     .bind(&tenant_id)
-    .bind(limit)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await;
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter()
-                .map(security_event_row_to_json)
-                .collect::<Vec<_>>(),
+        Ok(rows) => appbase_ok(page_json_from_rows(
+            rows,
+            &params,
+            security_event_row_to_json,
         )),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -949,23 +997,26 @@ async fn list_audit_events(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let limit = page_limit(&query);
-    let rows = sqlx::query(
-        "SELECT id, tenant_id, organization_id, actor_user_id, action, created_at \
+    let params = list_page_params(&query);
+    let search_pattern = list_search_pattern(&query);
+    let rows = sqlx::query(&format!(
+        "SELECT id, tenant_id, organization_id, actor_user_id, action, created_at, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_audit_event \
          WHERE tenant_id = $1 \
+           AND ($4::text IS NULL OR LOWER(action) LIKE $4) \
          ORDER BY created_at DESC NULLS LAST, id \
-         LIMIT $2",
-    )
+         LIMIT $2 OFFSET $3"
+    ))
     .bind(&tenant_id)
-    .bind(limit)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
     .fetch_all(pg)
     .await;
 
     match rows {
-        Ok(rows) => appbase_ok(page_json(
-            rows.iter().map(audit_event_row_to_json).collect::<Vec<_>>(),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, audit_event_row_to_json)),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_audit_events_list_failed",

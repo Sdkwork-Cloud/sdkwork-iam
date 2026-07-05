@@ -89,6 +89,9 @@ pub struct IamAppContext {
     pub permission_scope: Vec<String>,
     pub user_surface: IamUserSurface,
     pub standard_role_codes: Vec<String>,
+    pub display_name: String,
+    pub email: String,
+    pub email_verified: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -148,7 +151,21 @@ impl IamAppContext {
             permission_scope,
             user_surface,
             standard_role_codes: Vec::new(),
+            display_name: String::new(),
+            email: String::new(),
+            email_verified: false,
         }
+    }
+
+    pub fn apply_user_profile(
+        &mut self,
+        display_name: impl Into<String>,
+        email: impl Into<String>,
+        email_verified: bool,
+    ) {
+        self.display_name = display_name.into();
+        self.email = email.into();
+        self.email_verified = email_verified;
     }
 
     pub fn has_permission(&self, required: &str) -> bool {

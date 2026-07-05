@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
 import { Button, SettingsSection, StatusNotice } from "@sdkwork/ui-pc-react";
 
 import type {
@@ -14,6 +15,7 @@ export function SdkworkIamUserAdminWorkspace({
   title = "User administration",
 }: SdkworkIamUserAdminWorkspaceProps) {
   const [users, setUsers] = useState(controller.getState().users);
+  const [listPageInfo, setListPageInfo] = useState(controller.getState().listPageInfo);
   const [selectedUserId, setSelectedUserId] = useState(controller.getSelectedUser()?.userId ?? "");
   const [createDraft, setCreateDraft] = useState(emptyUserDraft);
   const [editDraft, setEditDraft] = useState<SdkworkIamAdminUserDraft>(emptyUserDraft());
@@ -26,6 +28,14 @@ export function SdkworkIamUserAdminWorkspace({
   const refreshUsers = async () => {
     const items = await controller.listUsers();
     setUsers(items);
+    setListPageInfo(controller.getState().listPageInfo);
+    return items;
+  };
+
+  const loadMoreUsers = async () => {
+    const items = await controller.loadMoreUsers();
+    setUsers(items);
+    setListPageInfo(controller.getState().listPageInfo);
     return items;
   };
 
@@ -114,6 +124,15 @@ export function SdkworkIamUserAdminWorkspace({
                 ))}
               </select>
             </label>
+            <SdkworkIamListPaginationControls
+              busy={busy}
+              onLoadMore={() => {
+                void loadMoreUsers().catch((loadError) => {
+                  setError(loadError instanceof Error ? loadError.message : "Failed to load more users");
+                });
+              }}
+              pageInfo={listPageInfo}
+            />
           </section>
         </div>
 

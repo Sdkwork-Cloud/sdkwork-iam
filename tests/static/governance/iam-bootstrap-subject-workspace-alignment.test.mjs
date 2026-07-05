@@ -78,12 +78,21 @@ for (const manifestRelative of APP_MANIFEST_FIXTURES) {
   });
 }
 
-test("commerce membership seed uses canonical tenant scope", async () => {
+test("commerce membership seed uses canonical tenant scope", async (t) => {
   const seedPath = path.join(
     workspaceRoot,
     "sdkwork-membership/crates/sdkwork-membership-repository-sqlx/src/seed.rs",
   );
-  const seed = await readFile(seedPath, "utf8");
+  let seed;
+  try {
+    seed = await readFile(seedPath, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      t.skip("sdkwork-membership is not checked out in this workspace");
+      return;
+    }
+    throw error;
+  }
   assert.match(seed, /'100001',\s*'0'/);
   assert.match(seed, /tenant_id = '100001'/);
   assert.doesNotMatch(seed, /tenant_id = '0'/);

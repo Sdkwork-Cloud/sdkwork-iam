@@ -325,11 +325,12 @@ async fn backfill_tenant_members(pool: &DatabasePool) -> Result<(), String> {
 impl LocalIamConfig {
     fn from_env() -> Self {
         let environment = first_env_value(&[
+            "SDKWORK_IM_ENVIRONMENT",
             "SDKWORK_ENVIRONMENT",
             "SDKWORK_LIFECYCLE_ENVIRONMENT",
             "CRAW_CHAT_ENVIRONMENT",
         ])
-        .unwrap_or_else(|| "dev".to_string());
+        .unwrap_or_else(|| "prod".to_string());
         let dev_fixed_verify_code = first_env_value(&["SDKWORK_IAM_DEV_FIXED_VERIFY_CODE"]);
 
         Self {

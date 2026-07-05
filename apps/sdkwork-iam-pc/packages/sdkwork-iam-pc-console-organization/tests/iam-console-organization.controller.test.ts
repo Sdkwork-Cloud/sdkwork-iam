@@ -32,8 +32,8 @@ describe("@sdkwork/iam-pc-console-organization", () => {
       memberships: [{ userId: "1" }],
     });
 
-    expect(service.iam.organizations.list).toHaveBeenCalled();
-    expect(service.iam.departments.list).toHaveBeenCalledWith({ organizationId: "org-1" });
-    expect(service.iam.organizationMemberships.list).toHaveBeenCalledWith({ organizationId: "org-1" });
+    expect(service.iam.organizations.list).toHaveBeenCalledWith({ page_size: 20 });
+    expect(service.iam.departments.list).toHaveBeenCalledWith({ organizationId: "org-1", page_size: 20 });
+    expect(service.iam.organizationMemberships.list).toHaveBeenCalledWith({ organizationId: "org-1", page_size: 20 });
   });
 });

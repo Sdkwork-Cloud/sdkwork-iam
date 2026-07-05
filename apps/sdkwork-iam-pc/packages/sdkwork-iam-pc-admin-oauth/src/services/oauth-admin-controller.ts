@@ -1,3 +1,4 @@
+import { createSdkWorkPagedListSession, type SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 import type {
@@ -24,7 +25,7 @@ import type {
   SdkworkIamOauthAccountLinkUpdateDraft,
   SdkworkIamOauthOperationalResourceDraft,
 } from "../types/oauth-admin-types";
-import { normalizeList, splitMultilineList, parseRelyingPartyDraftFromTenantApplication } from "../utils/oauth-admin-utils";
+import { splitMultilineList, parseRelyingPartyDraftFromTenantApplication } from "../utils/oauth-admin-utils";
 
 function lifecycleStatus(active: boolean): { status: string } {
   return { status: active ? "active" : "inactive" };
@@ -51,6 +52,64 @@ const EMPTY_SNAPSHOT: SdkworkIamOauthAdminResourceSnapshot = {
   tenantBindings: [],
   webhookConfigs: [],
 };
+
+function cloneListPageInfo(
+  value: SdkworkIamOauthAdminState["listPageInfo"],
+): SdkworkIamOauthAdminState["listPageInfo"] {
+  if (!value) {
+    return undefined;
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([key, pageInfo]) => [
+      key,
+      pageInfo ? { ...pageInfo } : undefined,
+    ]),
+  ) as SdkworkIamOauthAdminState["listPageInfo"];
+}
+
+type OauthResourceKey = keyof SdkworkIamOauthAdminResourceSnapshot;
+
+function createOauthResourceSessions(service: SdkworkIamService) {
+  const mapItem = (value: unknown) => value;
+  return {
+    accountLinks: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.accountLinks.list(query), mapItem }),
+    callbackEvents: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.callbackEvents.list(query), mapItem }),
+    claimMappings: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.claimMappings.list(query), mapItem }),
+    clients: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.clients.list(query), mapItem }),
+    diagnosticRuns: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.diagnosticRuns.list(query), mapItem }),
+    flowConfigs: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.flowConfigs.list(query), mapItem }),
+    grants: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.grants.list(query), mapItem }),
+    integrations: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.integrations.list(query), mapItem }),
+    operationalResources: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.operationalResources.list(query), mapItem }),
+    operatorPlatforms: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.operatorPlatforms.list(query), mapItem }),
+    policies: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.policies.list(query), mapItem }),
+    providerCatalog: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.providerCatalog.list(query), mapItem }),
+    resourceAccounts: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.resourceAccounts.list(query), mapItem }),
+    resourceAuthorizations: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.resourceAuthorizations.list(query), mapItem }),
+    scopeProfiles: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.scopeProfiles.list(query), mapItem }),
+    secrets: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.secrets.list(query), mapItem }),
+    surfaces: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.surfaces.list(query), mapItem }),
+    tenantBindings: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.tenantBindings.list(query), mapItem }),
+    webhookConfigs: createSdkWorkPagedListSession({ fetchPage: (query) => service.iam.oauth.webhookConfigs.list(query), mapItem }),
+  } satisfies Record<OauthResourceKey, ReturnType<typeof createSdkWorkPagedListSession<unknown>>>;
+}
+
+const OAUTH_RESOURCE_KEYS = Object.keys(EMPTY_SNAPSHOT) as OauthResourceKey[];
+
+function snapshotFromSessions(
+  sessions: ReturnType<typeof createOauthResourceSessions>,
+): { listPageInfo: Partial<Record<OauthResourceKey, SdkWorkPageInfo>>; snapshot: SdkworkIamOauthAdminResourceSnapshot } {
+  const snapshot = cloneSnapshot(EMPTY_SNAPSHOT);
+  const listPageInfo: Partial<Record<OauthResourceKey, SdkWorkPageInfo>> = {};
+  for (const key of OAUTH_RESOURCE_KEYS) {
+    snapshot[key] = [...sessions[key].getItems()];
+    const pageInfo = sessions[key].getPageInfo();
+    if (pageInfo) {
+      listPageInfo[key] = pageInfo;
+    }
+  }
+  return { listPageInfo, snapshot };
+}
 
 function cloneSnapshot(snapshot: SdkworkIamOauthAdminResourceSnapshot): SdkworkIamOauthAdminResourceSnapshot {
   return {
@@ -80,8 +139,10 @@ export function createSdkworkIamOauthAdminController(
   input: SdkworkIamService | CreateSdkworkIamOauthAdminControllerInput,
 ): SdkworkIamOauthAdminController {
   const service = "service" in input ? input.service : input;
+  let resourceSessions = createOauthResourceSessions(service);
   let state: SdkworkIamOauthAdminState = {
     ...cloneSnapshot(EMPTY_SNAPSHOT),
+    listPageInfo: undefined,
     status: "idle",
   };
 
@@ -165,79 +226,40 @@ export function createSdkworkIamOauthAdminController(
       return {
         ...state,
         ...cloneSnapshot(state),
+        listPageInfo: cloneListPageInfo(state.listPageInfo),
       };
     },
     async load() {
       setState({ status: "loading", lastError: undefined });
       try {
-        const [
-          integrations,
-          providerCatalog,
-          surfaces,
-          clients,
-          secrets,
-          claimMappings,
-          webhookConfigs,
-          flowConfigs,
-          scopeProfiles,
-          policies,
-          tenantBindings,
-          operatorPlatforms,
-          diagnosticRuns,
-          resourceAccounts,
-          resourceAuthorizations,
-          accountLinks,
-          grants,
-          callbackEvents,
-          operationalResources,
-        ] = await Promise.all([
-          service.iam.oauth.integrations.list(),
-          service.iam.oauth.providerCatalog.list(),
-          service.iam.oauth.surfaces.list(),
-          service.iam.oauth.clients.list(),
-          service.iam.oauth.secrets.list(),
-          service.iam.oauth.claimMappings.list(),
-          service.iam.oauth.webhookConfigs.list(),
-          service.iam.oauth.flowConfigs.list(),
-          service.iam.oauth.scopeProfiles.list(),
-          service.iam.oauth.policies.list(),
-          service.iam.oauth.tenantBindings.list(),
-          service.iam.oauth.operatorPlatforms.list(),
-          service.iam.oauth.diagnosticRuns.list(),
-          service.iam.oauth.resourceAccounts.list(),
-          service.iam.oauth.resourceAuthorizations.list(),
-          service.iam.oauth.accountLinks.list(),
-          service.iam.oauth.grants.list(),
-          service.iam.oauth.callbackEvents.list(),
-          service.iam.oauth.operationalResources.list(),
-        ]);
-        const snapshot: SdkworkIamOauthAdminResourceSnapshot = {
-          integrations: normalizeList(integrations),
-          providerCatalog: normalizeList(providerCatalog),
-          surfaces: normalizeList(surfaces),
-          clients: normalizeList(clients),
-          secrets: normalizeList(secrets),
-          claimMappings: normalizeList(claimMappings),
-          webhookConfigs: normalizeList(webhookConfigs),
-          flowConfigs: normalizeList(flowConfigs),
-          scopeProfiles: normalizeList(scopeProfiles),
-          policies: normalizeList(policies),
-          tenantBindings: normalizeList(tenantBindings),
-          operatorPlatforms: normalizeList(operatorPlatforms),
-          diagnosticRuns: normalizeList(diagnosticRuns),
-          resourceAccounts: normalizeList(resourceAccounts),
-          resourceAuthorizations: normalizeList(resourceAuthorizations),
-          accountLinks: normalizeList(accountLinks),
-          grants: normalizeList(grants),
-          callbackEvents: normalizeList(callbackEvents),
-          operationalResources: normalizeList(operationalResources),
-        };
-        setState({ ...snapshot, status: "ready" });
+        resourceSessions = createOauthResourceSessions(service);
+        await Promise.all(OAUTH_RESOURCE_KEYS.map((key) => resourceSessions[key].list()));
+        const { listPageInfo, snapshot } = snapshotFromSessions(resourceSessions);
+        setState({ ...snapshot, listPageInfo, status: "ready" });
         return snapshot;
       } catch (error) {
         setState({
           status: "error",
           lastError: error instanceof Error ? error.message : "Failed to load OAuth admin resources",
+        });
+        throw error;
+      }
+    },
+    async loadMoreResource(resourceKey) {
+      setState({ status: "loading", lastError: undefined });
+      try {
+        await resourceSessions[resourceKey].loadMore();
+        const items = [...resourceSessions[resourceKey].getItems()];
+        const listPageInfo = {
+          ...state.listPageInfo,
+          [resourceKey]: resourceSessions[resourceKey].getPageInfo(),
+        };
+        setState({ [resourceKey]: items, listPageInfo, status: "ready" });
+        return items;
+      } catch (error) {
+        setState({
+          status: "error",
+          lastError: error instanceof Error ? error.message : `Failed to load more ${resourceKey}`,
         });
         throw error;
       }

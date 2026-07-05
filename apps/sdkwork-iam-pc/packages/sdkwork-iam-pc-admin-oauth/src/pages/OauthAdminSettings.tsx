@@ -95,6 +95,7 @@ export function SdkworkIamOauthAdminSettings({
   const [grants, setGrants] = useState<unknown[]>(controller.getState().grants);
   const [callbackEvents, setCallbackEvents] = useState<unknown[]>(controller.getState().callbackEvents);
   const [operationalResources, setOperationalResources] = useState<unknown[]>(controller.getState().operationalResources);
+  const [listPageInfo, setListPageInfo] = useState(controller.getState().listPageInfo);
   const [status, setStatus] = useState(controller.getState().status);
   const [error, setError] = useState<string | undefined>(controller.getState().lastError);
   const [diagnosticDetail, setDiagnosticDetail] = useState<unknown | undefined>(
@@ -238,6 +239,7 @@ export function SdkworkIamOauthAdminSettings({
       setGrants(result.grants);
       setCallbackEvents(result.callbackEvents);
       setOperationalResources(result.operationalResources);
+      setListPageInfo(controller.getState().listPageInfo);
       setStatus(controller.getState().status);
       setError(controller.getState().lastError);
       setDiagnosticDetail(controller.getState().lastDiagnosticRunDetail);
@@ -273,6 +275,7 @@ export function SdkworkIamOauthAdminSettings({
     setGrants(controller.getState().grants);
     setCallbackEvents(controller.getState().callbackEvents);
     setOperationalResources(controller.getState().operationalResources);
+    setListPageInfo(controller.getState().listPageInfo);
     setStatus(controller.getState().status);
     setError(controller.getState().lastError);
     setDiagnosticDetail(controller.getState().lastDiagnosticRunDetail);
@@ -296,6 +299,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Configured integrations ({integrations.length})</Label>
           <IntegrationResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={status === "loading" || status === "saving"}
             emptyLabel="No OAuth integrations configured yet."
             integrations={integrations}
@@ -412,6 +416,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Catalog providers ({providerCatalog.length})</Label>
           <ProviderCatalogResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No provider catalog entries returned."
             onChanged={syncLists}
@@ -694,6 +699,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Configured scope profiles ({scopeProfiles.length})</Label>
           <ScopeProfileResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth scope profiles configured yet."
             onChanged={syncLists}
@@ -792,6 +798,7 @@ export function SdkworkIamOauthAdminSettings({
           <ClaimMappingResourceList
             claimMappings={claimMappings}
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth claim mappings configured yet."
             onChanged={syncLists}
@@ -888,6 +895,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Configured webhooks ({webhookConfigs.length})</Label>
           <WebhookConfigResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth webhook configs configured yet."
             onChanged={syncLists}
@@ -997,6 +1005,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Configured flows ({flowConfigs.length})</Label>
           <FlowConfigResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth flow configs configured yet."
             flowConfigs={flowConfigs}
@@ -1082,6 +1091,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Configured surfaces ({surfaces.length})</Label>
           <SurfaceResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth surfaces configured yet."
             onChanged={syncLists}
@@ -1166,6 +1176,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Configured policies ({policies.length})</Label>
           <PolicyResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth policies configured yet."
             onChanged={syncLists}
@@ -1191,6 +1202,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Configured bindings ({tenantBindings.length})</Label>
           <TenantBindingResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth tenant bindings configured yet."
             onChanged={syncLists}
@@ -1216,6 +1228,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Registered platforms ({operatorPlatforms.length})</Label>
           <OperatorPlatformResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No operator platforms registered yet."
             onChanged={syncLists}
@@ -1247,6 +1260,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Registered resource accounts ({resourceAccounts.length})</Label>
           <ResourceAccountResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth resource accounts registered yet."
             onChanged={syncLists}
@@ -1280,6 +1294,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Configured authorizations ({resourceAuthorizations.length})</Label>
           <ResourceAuthorizationResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth resource authorizations configured yet."
             onChanged={syncLists}
@@ -1307,6 +1322,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Operational resources ({operationalResources.length})</Label>
           <OperationalResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth operational resources registered yet."
             onChanged={syncLists}
@@ -1343,6 +1359,7 @@ export function SdkworkIamOauthAdminSettings({
           <AccountLinkResourceList
             accountLinks={accountLinks}
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth account links found."
             onChanged={syncLists}
@@ -1361,6 +1378,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label>Active grants ({grants.length})</Label>
           <GrantResourceList
             controller={controller}
+            listPageInfo={listPageInfo}
             disabled={listDisabled}
             emptyLabel="No OAuth grants found."
             grants={grants}
@@ -1412,7 +1430,12 @@ export function SdkworkIamOauthAdminSettings({
       >
         <div className="space-y-3">
           <Label>Recent callback events ({callbackEvents.length})</Label>
-          <ResourceList emptyLabel="No OAuth callback events recorded yet." items={callbackEvents} />
+          <ResourceList
+            emptyLabel="No OAuth callback events recorded yet."
+            items={callbackEvents}
+            listPageInfo={listPageInfo?.callbackEvents}
+            onLoadMore={() => controller.loadMoreResource("callbackEvents").then(syncLists)}
+          />
         </div>
       </SettingsSection>
       </>

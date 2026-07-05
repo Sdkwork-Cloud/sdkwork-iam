@@ -10,9 +10,9 @@ SDKWork IAM SQL table catalog and baseline DDL binding for Rust local/private de
 
 ## Public API
 
-- `IamTables` â€?canonical IAM table name constants
-- `iam_database_tables()` â€?ordered table catalog
-- `iam_database_baseline_sql()` â€?application-root baseline DDL from `database/ddl/baseline/postgres/`
+- `IamTables` ï¿½?canonical IAM table name constants
+- `iam_database_tables()` ï¿½?ordered table catalog
+- `iam_database_baseline_sql()` ï¿½?application-root baseline DDL from `database/ddl/baseline/postgres/`
 
 Schema lifecycle assets live in application-root `database/`. This crate does not own competing migration SQL.
 

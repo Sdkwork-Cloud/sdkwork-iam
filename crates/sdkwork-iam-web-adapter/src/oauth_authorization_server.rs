@@ -6,6 +6,8 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use hmac::{Hmac, Mac};
 use rand_core::{OsRng, RngCore};
 use sdkwork_iam_context_service::{AuthLevel, DeploymentMode, Environment, IamAppContext};
+
+use crate::iam_session::{user_profile_from_session_row, IAM_SESSION_CONTEXT_SELECT};
 use sdkwork_web_core::stamp_token_version;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -200,6 +202,16 @@ pub fn validate_authorize_request(
         if challenge.len() < 43 {
             return Err("OAuth code_challenge is invalid".to_string());
         }
+    }
+
+    let state = request
+        .state
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "OAuth state is required".to_string())?;
+    if state.len() > 512 {
+        return Err("OAuth state is too long".to_string());
     }
 
     Ok(scopes)
@@ -404,17 +416,16 @@ pub async fn exchange_authorization_code(
         validate_pkce(code_verifier, &pkce_challenge, &pkce_method)?;
     }
 
-    let session_row = sqlx::query(
-        "SELECT s.id, s.tenant_id, s.organization_id, s.login_scope, s.user_id, s.app_id, \
-                s.environment, s.deployment_mode, s.auth_level, s.data_scope_json, s.permission_scope_json \
+    let session_row = sqlx::query(&format!(
+        "SELECT {IAM_SESSION_CONTEXT_SELECT} \
          FROM iam_session s \
          JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
          WHERE s.tenant_id = $1 AND s.user_id = $2 AND s.revoked_at IS NULL \
            AND s.expires_at::timestamptz > $3::timestamptz \
            AND u.status = 'active' AND u.is_deleted = 0 \
          ORDER BY s.updated_at DESC \
-         LIMIT 1",
-    )
+         LIMIT 1"
+    ))
     .bind(&tenant_id)
     .bind(&user_id)
     .bind(chrono::Utc::now().to_rfc3339())
@@ -484,19 +495,34 @@ pub async fn exchange_refresh_token(
     }
 
     let refresh_hash = hash_value(refresh_token);
+    let now = chrono::Utc::now();
+    let now_rfc3339 = now.to_rfc3339();
+
+    let mut tx = pg
+        .begin()
+        .await
+        .map_err(|error| format!("begin oauth refresh transaction failed: {error}"))?;
+
     let row = sqlx::query(
         "SELECT id, tenant_id, organization_id, user_id, oauth_client_id, authorized_scopes_json, \
                 refresh_token_expires_at, status \
          FROM iam_oauth_grant \
          WHERE refresh_token_hash = $1 AND provider_code = $2 \
+         FOR UPDATE \
          LIMIT 1",
     )
     .bind(&refresh_hash)
     .bind(SDKWORK_OAUTH_PROVIDER_CODE)
-    .fetch_optional(pg)
+    .fetch_optional(&mut *tx)
     .await
-    .map_err(|error| format!("load oauth refresh grant failed: {error}"))?
-    .ok_or_else(|| "OAuth refresh token is invalid".to_string())?;
+    .map_err(|error| format!("load oauth refresh grant failed: {error}"))?;
+
+    let Some(row) = row else {
+        tx.rollback()
+            .await
+            .map_err(|error| format!("rollback missing oauth refresh grant failed: {error}"))?;
+        return Err("OAuth refresh token is invalid".to_string());
+    };
 
     let grant_id: String = row.get(0);
     let tenant_id: String = row.get(1);
@@ -508,62 +534,84 @@ pub async fn exchange_refresh_token(
     let status: String = row.get(7);
 
     if status != "active" {
-        return Err("OAuth refresh token is revoked".to_string());
+        tx.rollback()
+            .await
+            .map_err(|error| format!("rollback revoked oauth refresh grant failed: {error}"))?;
+        revoke_oauth_grants_for_user(pg, &tenant_id, &user_id).await;
+        return Err("OAuth refresh token reuse detected".to_string());
     }
     if oauth_client_id != client.app_id {
+        tx.rollback()
+            .await
+            .map_err(|error| format!("rollback oauth refresh client mismatch failed: {error}"))?;
         return Err("OAuth refresh token client mismatch".to_string());
     }
     if refresh_expires_at
         .as_ref()
         .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
-        .is_some_and(|value| value <= chrono::Utc::now())
+        .is_some_and(|value| value <= now)
     {
+        tx.rollback()
+            .await
+            .map_err(|error| format!("rollback expired oauth refresh grant failed: {error}"))?;
         return Err("OAuth refresh token has expired".to_string());
     }
 
-    let session_row = sqlx::query(
-        "SELECT s.id, s.tenant_id, s.organization_id, s.login_scope, s.user_id, s.app_id, \
-                s.environment, s.deployment_mode, s.auth_level, s.data_scope_json, s.permission_scope_json \
+    let session_row = sqlx::query(&format!(
+        "SELECT {IAM_SESSION_CONTEXT_SELECT} \
          FROM iam_session s \
          JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
          WHERE s.tenant_id = $1 AND s.user_id = $2 AND s.revoked_at IS NULL \
            AND s.expires_at::timestamptz > $3::timestamptz \
            AND u.status = 'active' AND u.is_deleted = 0 \
          ORDER BY s.updated_at DESC \
-         LIMIT 1",
-    )
+         LIMIT 1"
+    ))
     .bind(&tenant_id)
     .bind(&user_id)
-    .bind(chrono::Utc::now().to_rfc3339())
-    .fetch_optional(pg)
+    .bind(&now_rfc3339)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|error| format!("load oauth session for refresh failed: {error}"))?
-    .ok_or_else(|| "OAuth refresh token cannot be exchanged without an active IAM session".to_string())?;
+    .ok_or_else(|| {
+        "OAuth refresh token cannot be exchanged without an active IAM session".to_string()
+    })?;
 
     let context = iam_context_from_session_row(&session_row)?;
     let access_token = sign_oauth_access_token(pg, &context, &client.app_id).await?;
     let next_refresh_token = generate_opaque_token("oauth_refresh");
     let access_hash = hash_value(&access_token);
-    let refresh_hash = hash_value(&next_refresh_token);
-    let now = chrono::Utc::now();
+    let next_refresh_hash = hash_value(&next_refresh_token);
     let access_expires = now + chrono::Duration::seconds(OAUTH_ACCESS_TOKEN_TTL_SECONDS);
     let refresh_expires = now + chrono::Duration::seconds(OAUTH_REFRESH_TOKEN_TTL_SECONDS);
 
-    sqlx::query(
+    let rotated = sqlx::query(
         "UPDATE iam_oauth_grant \
          SET access_token_hash = $2, refresh_token_hash = $3, token_expires_at = $4, \
              refresh_token_expires_at = $5, last_refreshed_at = $6, updated_at = $6 \
-         WHERE id = $1 AND status = 'active'",
+         WHERE id = $1 AND status = 'active' AND refresh_token_hash = $7",
     )
     .bind(&grant_id)
     .bind(&access_hash)
-    .bind(&refresh_hash)
+    .bind(&next_refresh_hash)
     .bind(access_expires.to_rfc3339())
     .bind(refresh_expires.to_rfc3339())
-    .bind(now.to_rfc3339())
-    .execute(pg)
+    .bind(now_rfc3339.clone())
+    .bind(&refresh_hash)
+    .execute(&mut *tx)
     .await
     .map_err(|error| format!("rotate oauth refresh token failed: {error}"))?;
+    if rotated.rows_affected() == 0 {
+        tx.rollback()
+            .await
+            .map_err(|error| format!("rollback oauth refresh race failed: {error}"))?;
+        revoke_oauth_grants_for_user(pg, &tenant_id, &user_id).await;
+        return Err("OAuth refresh token reuse detected".to_string());
+    }
+
+    tx.commit()
+        .await
+        .map_err(|error| format!("commit oauth refresh transaction failed: {error}"))?;
 
     Ok(json!({
         "access_token": access_token,
@@ -635,6 +683,20 @@ pub async fn build_userinfo_claims(
 
 pub fn build_oauth_jwks_document() -> Value {
     json!({ "keys": [] })
+}
+
+async fn revoke_oauth_grants_for_user(pg: &PgPool, tenant_id: &str, user_id: &str) {
+    let now = chrono::Utc::now().to_rfc3339();
+    let _ = sqlx::query(
+        "UPDATE iam_oauth_grant \
+         SET status = 'revoked', updated_at = $3 \
+         WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'",
+    )
+    .bind(tenant_id)
+    .bind(user_id)
+    .bind(&now)
+    .execute(pg)
+    .await;
 }
 
 pub async fn revoke_oauth_token(
@@ -907,18 +969,23 @@ fn iam_context_from_session_row(row: &sqlx::postgres::PgRow) -> Result<IamAppCon
         .map(|value| value.0)
         .unwrap_or_default();
 
-    Ok(IamAppContext::new(
-        tenant_id,
-        organization_id.as_deref(),
-        user_id,
-        session_id,
-        app_id,
-        parse_environment(&environment_raw),
-        parse_deployment_mode(&deployment_mode_raw),
-        parse_auth_level(&auth_level_raw),
-        data_scope,
-        permission_scope,
-    ))
+    Ok({
+        let mut context = IamAppContext::new(
+            tenant_id,
+            organization_id.as_deref(),
+            user_id,
+            session_id,
+            app_id,
+            parse_environment(&environment_raw),
+            parse_deployment_mode(&deployment_mode_raw),
+            parse_auth_level(&auth_level_raw),
+            data_scope,
+            permission_scope,
+        );
+        let (display_name, email, email_verified) = user_profile_from_session_row(row);
+        context.apply_user_profile(display_name, email, email_verified);
+        context
+    })
 }
 
 fn sign_jwt(secret: &[u8], header: &Value, payload: &Value) -> Result<String, String> {

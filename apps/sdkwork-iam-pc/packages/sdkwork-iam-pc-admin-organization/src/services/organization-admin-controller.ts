@@ -1,3 +1,11 @@
+import {
+  buildNextSdkWorkListQuery,
+  extractSdkWorkListItems,
+  extractSdkWorkListPage,
+  mergeSdkWorkListPage,
+  resolveSdkWorkListQuery,
+  type SdkWorkPageInfo,
+} from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 import type {
@@ -40,6 +48,12 @@ export function createSdkworkIamOrganizationController(
     };
   };
 
+  let lastOrganizationListParams: Record<string, unknown> | undefined;
+  let lastDepartmentListParams: Record<string, unknown> | undefined;
+  let lastMembershipListParams: Record<string, unknown> | undefined;
+  let lastPositionListParams: Record<string, unknown> | undefined;
+  let lastRoleBindingListParams: Record<string, unknown> | undefined;
+
   const controller: SdkworkIamOrganizationController = {
     addMembership: async (organizationId, body) => {
       const normalizedOrganizationId = requireId(organizationId, "organizationId");
@@ -72,7 +86,12 @@ export function createSdkworkIamOrganizationController(
           throw new Error("SDKWork IAM department create response is missing departmentId");
         }
         const departments = [...state.departments.filter((item) => item.departmentId !== department.departmentId), department];
-        const departmentTree = buildDepartmentTree(departments);
+        const departmentTree = await refreshDepartmentTree(
+          resolved.service,
+          department.organizationId,
+          undefined,
+          departments,
+        );
         setState({ departments, departmentTree, status: "ready" });
         return department;
       } catch (error) {
@@ -91,7 +110,7 @@ export function createSdkworkIamOrganizationController(
           throw new Error("SDKWork IAM organization create response is missing organizationId");
         }
         const organizations = [...state.organizations.filter((item) => item.organizationId !== organization.organizationId), organization];
-        const tree = buildTree(organizations);
+        const tree = await refreshOrganizationTree(resolved.service, undefined, organizations);
         setState({ organizations, selectedOrganization: organization, status: "ready", tree });
         return organization;
       } catch (error) {
@@ -105,7 +124,10 @@ export function createSdkworkIamOrganizationController(
       try {
         await resolved.service.iam.departments.delete(normalizedDepartmentId);
         const departments = state.departments.filter((department) => department.departmentId !== normalizedDepartmentId);
-        const departmentTree = buildDepartmentTree(departments);
+        const organizationId = state.selectedOrganization?.organizationId ?? departments[0]?.organizationId ?? "";
+        const departmentTree = organizationId
+          ? await refreshDepartmentTree(resolved.service, organizationId, undefined, departments)
+          : [];
         setState({ departments, departmentTree, status: "ready" });
       } catch (error) {
         setState({ status: "error" });
@@ -121,7 +143,7 @@ export function createSdkworkIamOrganizationController(
         const selectedOrganization = state.selectedOrganization?.organizationId === normalizedOrganizationId
           ? undefined
           : state.selectedOrganization;
-        const tree = buildTree(organizations);
+        const tree = await refreshOrganizationTree(resolved.service, undefined, organizations);
         setState({
           departments: selectedOrganization ? state.departments : [],
           departmentTree: selectedOrganization ? state.departmentTree : [],
@@ -154,11 +176,16 @@ export function createSdkworkIamOrganizationController(
       ...state,
       departmentAssignments: [...state.departmentAssignments],
       departments: [...state.departments],
+      departmentListPageInfo: state.departmentListPageInfo ? { ...state.departmentListPageInfo } : undefined,
       departmentTree: cloneDepartmentTree(state.departmentTree),
       memberships: [...state.memberships],
+      membershipListPageInfo: state.membershipListPageInfo ? { ...state.membershipListPageInfo } : undefined,
       organizations: [...state.organizations],
+      organizationListPageInfo: state.organizationListPageInfo ? { ...state.organizationListPageInfo } : undefined,
       positions: [...state.positions],
+      positionListPageInfo: state.positionListPageInfo ? { ...state.positionListPageInfo } : undefined,
       roleBindings: [...state.roleBindings],
+      roleBindingListPageInfo: state.roleBindingListPageInfo ? { ...state.roleBindingListPageInfo } : undefined,
       selectedOrganization: state.selectedOrganization ? { ...state.selectedOrganization } : undefined,
       tree: cloneTree(state.tree),
     }),
@@ -166,11 +193,10 @@ export function createSdkworkIamOrganizationController(
       const normalizedDepartmentId = requireId(departmentId, "departmentId");
       setState({ status: "loading" });
       try {
-        const departmentAssignments = extractList(
-          await resolved.service.iam.departmentAssignments.list({
-            ...params,
-            departmentId: normalizedDepartmentId,
-          }),
+        const departmentAssignments = extractSdkWorkListItems(
+          await resolved.service.iam.departmentAssignments.list(
+            resolveSdkWorkListQuery({ ...params, departmentId: normalizedDepartmentId }),
+          ),
         )
           .map(toDepartmentAssignment)
           .filter(Boolean) as SdkworkIamDepartmentAssignment[];
@@ -181,87 +207,163 @@ export function createSdkworkIamOrganizationController(
         throw error;
       }
     },
-    listDepartments: async (organizationId, params) => {
+    listDepartments: async (organizationId, params, options) => {
       const normalizedOrganizationId = requireId(organizationId, "organizationId");
+      const append = options?.append === true;
+      if (!append) {
+        lastDepartmentListParams = { ...params, organizationId: normalizedOrganizationId };
+      }
       setState({ status: "loading" });
       try {
-        const departments = extractList(
-          await resolved.service.iam.departments.list({
-            ...params,
-            organizationId: normalizedOrganizationId,
-          }),
-        )
-          .map(toDepartment)
-          .filter(Boolean) as SdkworkIamDepartment[];
-        const departmentTree = buildDepartmentTree(departments);
-        setState({ departments, departmentTree, status: "ready" });
-        return departments;
+        const page = extractSdkWorkListPage(
+          await resolved.service.iam.departments.list(
+            resolveSdkWorkListQuery(lastDepartmentListParams),
+          ),
+        );
+        const mapped = page.items.map(toDepartment).filter(Boolean) as SdkworkIamDepartment[];
+        const merged = mergeSdkWorkListPage(append ? state.departments : [], { ...page, items: mapped }, append ? "append" : "replace");
+        const departmentTree = await refreshDepartmentTree(
+          resolved.service,
+          normalizedOrganizationId,
+          lastDepartmentListParams,
+          merged.items,
+        );
+        setState({ departments: merged.items, departmentListPageInfo: merged.pageInfo, departmentTree, status: "ready" });
+        return merged.items;
       } catch (error) {
         setState({ status: "error" });
         throw error;
       }
     },
-    listMemberships: async (organizationId, params) => {
+    loadMoreDepartments: async (organizationId) => {
+      const nextQuery = buildNextSdkWorkListQuery(lastDepartmentListParams, state.departmentListPageInfo);
+      if (!nextQuery) {
+        return state.departments;
+      }
+      lastDepartmentListParams = { ...nextQuery };
+      return controller.listDepartments(organizationId, lastDepartmentListParams, { append: true });
+    },
+    listMemberships: async (organizationId, params, options) => {
       const normalizedOrganizationId = requireId(organizationId, "organizationId");
+      const append = options?.append === true;
+      if (!append) {
+        lastMembershipListParams = { ...params, organizationId: normalizedOrganizationId };
+      }
       setState({ status: "loading" });
       try {
-        const memberships = extractList(
-          await resolved.service.iam.organizationMemberships.list({
-            ...params,
-            organizationId: normalizedOrganizationId,
-          }),
-        )
-          .map(toOrganizationMembership)
-          .filter(Boolean) as SdkworkIamOrganizationMembership[];
-        setState({ memberships, status: "ready" });
-        return memberships;
+        const page = extractSdkWorkListPage(
+          await resolved.service.iam.organizationMemberships.list(
+            resolveSdkWorkListQuery(lastMembershipListParams),
+          ),
+        );
+        const mapped = page.items.map(toOrganizationMembership).filter(Boolean) as SdkworkIamOrganizationMembership[];
+        const merged = mergeSdkWorkListPage(append ? state.memberships : [], { ...page, items: mapped }, append ? "append" : "replace");
+        setState({ memberships: merged.items, membershipListPageInfo: merged.pageInfo, status: "ready" });
+        return merged.items;
       } catch (error) {
         setState({ status: "error" });
         throw error;
       }
     },
-    listOrganizations: async (params) => {
+    loadMoreMemberships: async (organizationId) => {
+      const nextQuery = buildNextSdkWorkListQuery(lastMembershipListParams, state.membershipListPageInfo);
+      if (!nextQuery) {
+        return state.memberships;
+      }
+      lastMembershipListParams = { ...nextQuery };
+      return controller.listMemberships(organizationId, lastMembershipListParams, { append: true });
+    },
+    listOrganizations: async (params, options) => {
+      const append = options?.append === true;
+      if (!append) {
+        lastOrganizationListParams = params ? { ...params } : undefined;
+      }
       setState({ status: "loading" });
       try {
-        const organizations = extractList(await resolved.service.iam.organizations.list(params))
-          .map(toOrganization)
-          .filter(Boolean) as SdkworkIamOrganization[];
+        const page = extractSdkWorkListPage(
+          await resolved.service.iam.organizations.list(resolveSdkWorkListQuery(lastOrganizationListParams)),
+        );
+        const mapped = page.items.map(toOrganization).filter(Boolean) as SdkworkIamOrganization[];
+        const merged = mergeSdkWorkListPage(append ? state.organizations : [], { ...page, items: mapped }, append ? "append" : "replace");
+        const organizations = merged.items;
         const selectedOrganization = state.selectedOrganization
           ? organizations.find((organization) => organization.organizationId === state.selectedOrganization?.organizationId) ?? state.selectedOrganization
           : organizations.find((organization) => organization.organizationId === resolved.selectedOrganizationId);
-        const tree = buildTree(organizations);
-        setState({ organizations, selectedOrganization, status: "ready", tree });
+        const tree = await refreshOrganizationTree(resolved.service, lastOrganizationListParams, organizations);
+        setState({
+          organizationListPageInfo: merged.pageInfo,
+          organizations,
+          selectedOrganization,
+          status: "ready",
+          tree,
+        });
         return organizations;
       } catch (error) {
         setState({ status: "error" });
         throw error;
       }
     },
-    listPositions: async (params) => {
+    loadMoreOrganizations: async () => {
+      const nextQuery = buildNextSdkWorkListQuery(lastOrganizationListParams, state.organizationListPageInfo);
+      if (!nextQuery) {
+        return state.organizations;
+      }
+      lastOrganizationListParams = { ...nextQuery };
+      return controller.listOrganizations(lastOrganizationListParams, { append: true });
+    },
+    listPositions: async (params, options) => {
+      const append = options?.append === true;
+      if (!append) {
+        lastPositionListParams = params ? { ...params } : undefined;
+      }
       setState({ status: "loading" });
       try {
-        const positions = extractList(await resolved.service.iam.positions.list(params))
-          .map(toPosition)
-          .filter(Boolean) as SdkworkIamPosition[];
-        setState({ positions, status: "ready" });
-        return positions;
+        const page = extractSdkWorkListPage(
+          await resolved.service.iam.positions.list(resolveSdkWorkListQuery(lastPositionListParams)),
+        );
+        const mapped = page.items.map(toPosition).filter(Boolean) as SdkworkIamPosition[];
+        const merged = mergeSdkWorkListPage(append ? state.positions : [], { ...page, items: mapped }, append ? "append" : "replace");
+        setState({ positionListPageInfo: merged.pageInfo, positions: merged.items, status: "ready" });
+        return merged.items;
       } catch (error) {
         setState({ status: "error" });
         throw error;
       }
     },
-    listRoleBindings: async (params) => {
+    loadMorePositions: async () => {
+      const nextQuery = buildNextSdkWorkListQuery(lastPositionListParams, state.positionListPageInfo);
+      if (!nextQuery) {
+        return state.positions;
+      }
+      lastPositionListParams = { ...nextQuery };
+      return controller.listPositions(lastPositionListParams, { append: true });
+    },
+    listRoleBindings: async (params, options) => {
+      const append = options?.append === true;
+      if (!append) {
+        lastRoleBindingListParams = params ? { ...params } : undefined;
+      }
       setState({ status: "loading" });
       try {
-        const roleBindings = extractList(await resolved.service.iam.roleBindings.list(params))
-          .map(toRoleBinding)
-          .filter(Boolean) as SdkworkIamRoleBinding[];
-        setState({ roleBindings, status: "ready" });
-        return roleBindings;
+        const page = extractSdkWorkListPage(
+          await resolved.service.iam.roleBindings.list(resolveSdkWorkListQuery(lastRoleBindingListParams)),
+        );
+        const mapped = page.items.map(toRoleBinding).filter(Boolean) as SdkworkIamRoleBinding[];
+        const merged = mergeSdkWorkListPage(append ? state.roleBindings : [], { ...page, items: mapped }, append ? "append" : "replace");
+        setState({ roleBindingListPageInfo: merged.pageInfo, roleBindings: merged.items, status: "ready" });
+        return merged.items;
       } catch (error) {
         setState({ status: "error" });
         throw error;
       }
+    },
+    loadMoreRoleBindings: async () => {
+      const nextQuery = buildNextSdkWorkListQuery(lastRoleBindingListParams, state.roleBindingListPageInfo);
+      if (!nextQuery) {
+        return state.roleBindings;
+      }
+      lastRoleBindingListParams = { ...nextQuery };
+      return controller.listRoleBindings(lastRoleBindingListParams, { append: true });
     },
     selectOrganization: async (organizationId, params) => {
       const normalizedOrganizationId = requireId(organizationId, "organizationId");
@@ -283,7 +385,12 @@ export function createSdkworkIamOrganizationController(
           throw new Error("SDKWork IAM department update response is missing departmentId");
         }
         const departments = [...state.departments.filter((item) => item.departmentId !== department.departmentId), department];
-        const departmentTree = buildDepartmentTree(departments);
+        const departmentTree = await refreshDepartmentTree(
+          resolved.service,
+          department.organizationId,
+          undefined,
+          departments,
+        );
         setState({ departments, departmentTree, status: "ready" });
         return department;
       } catch (error) {
@@ -326,7 +433,7 @@ export function createSdkworkIamOrganizationController(
         const selectedOrganization = state.selectedOrganization?.organizationId === organization.organizationId
           ? organization
           : state.selectedOrganization;
-        const tree = buildTree(organizations);
+        const tree = await refreshOrganizationTree(resolved.service, undefined, organizations);
         setState({ organizations, selectedOrganization, status: "ready", tree });
         return organization;
       } catch (error) {
@@ -359,6 +466,114 @@ function resolveInput(
   }
 
   return { service: input };
+}
+
+function treeScopeParams(params?: Record<string, unknown>): Record<string, unknown> | undefined {
+  if (!params) {
+    return undefined;
+  }
+  const scoped: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (["page", "page_size", "pageSize", "cursor", "sort", "q"].includes(key)) {
+      continue;
+    }
+    if (value !== undefined && value !== null) {
+      scoped[key] = value;
+    }
+  }
+  return Object.keys(scoped).length > 0 ? scoped : undefined;
+}
+
+async function refreshOrganizationTree(
+  service: SdkworkIamService,
+  params: Record<string, unknown> | undefined,
+  fallbackOrganizations: readonly SdkworkIamOrganization[],
+): Promise<readonly SdkworkIamOrganizationNode[]> {
+  if (service.iam.organizations.tree?.retrieve) {
+    try {
+      const nodes = await service.iam.organizations.tree.retrieve(treeScopeParams(params));
+      if (Array.isArray(nodes) && nodes.length > 0) {
+        return normalizeOrganizationTreeNodes(nodes);
+      }
+    } catch {
+      // fall back to locally materialized page data
+    }
+  }
+  return buildTree(fallbackOrganizations);
+}
+
+async function refreshDepartmentTree(
+  service: SdkworkIamService,
+  organizationId: string,
+  params: Record<string, unknown> | undefined,
+  fallbackDepartments: readonly SdkworkIamDepartment[],
+): Promise<readonly SdkworkIamDepartmentNode[]> {
+  if (service.iam.departments.tree?.retrieve) {
+    try {
+      const nodes = await service.iam.departments.tree.retrieve({
+        ...treeScopeParams(params),
+        organizationId,
+      });
+      if (Array.isArray(nodes) && nodes.length > 0) {
+        return normalizeDepartmentTreeNodes(nodes);
+      }
+    } catch {
+      // fall back to locally materialized page data
+    }
+  }
+  return buildDepartmentTree(fallbackDepartments);
+}
+
+function normalizeOrganizationTreeNodes(
+  nodes: readonly unknown[],
+  depth = 0,
+): SdkworkIamOrganizationNode[] {
+  return nodes
+    .map((node) => normalizeOrganizationTreeNode(node, depth))
+    .filter(Boolean) as SdkworkIamOrganizationNode[];
+}
+
+function normalizeOrganizationTreeNode(value: unknown, depth: number): SdkworkIamOrganizationNode | undefined {
+  const organization = toOrganization(value);
+  if (!organization) {
+    return undefined;
+  }
+  const record = toRecord(value);
+  const children = normalizeOrganizationTreeNodes(
+    Array.isArray(record.children) ? record.children : [],
+    depth + 1,
+  );
+  return {
+    ...organization,
+    children,
+    depth,
+  };
+}
+
+function normalizeDepartmentTreeNodes(
+  nodes: readonly unknown[],
+  depth = 0,
+): SdkworkIamDepartmentNode[] {
+  return nodes
+    .map((node) => normalizeDepartmentTreeNode(node, depth))
+    .filter(Boolean) as SdkworkIamDepartmentNode[];
+}
+
+function normalizeDepartmentTreeNode(value: unknown, depth: number): SdkworkIamDepartmentNode | undefined {
+  const department = toDepartment(value);
+  if (!department) {
+    return undefined;
+  }
+  const record = toRecord(value);
+  const children = normalizeDepartmentTreeNodes(
+    Array.isArray(record.children) ? record.children : [],
+    depth + 1,
+  );
+  return {
+    ...department,
+    children,
+    depth,
+  };
 }
 
 function buildTree(organizations: readonly SdkworkIamOrganization[]): SdkworkIamOrganizationNode[] {
@@ -441,26 +656,6 @@ function cloneDepartmentTree(nodes: readonly SdkworkIamDepartmentNode[]): Sdkwor
     ...node,
     children: cloneDepartmentTree(node.children),
   }));
-}
-
-function extractList(value: unknown): unknown[] {
-  if (Array.isArray(value)) {
-    return value;
-  }
-
-  if (!value || typeof value !== "object") {
-    return [];
-  }
-
-  const record = value as Record<string, unknown>;
-  for (const key of ["records", "items", "list", "rows", "content", "data"]) {
-    const nested = record[key];
-    if (Array.isArray(nested)) {
-      return nested;
-    }
-  }
-
-  return [];
 }
 
 function toOrganization(value: unknown): SdkworkIamOrganization | undefined {

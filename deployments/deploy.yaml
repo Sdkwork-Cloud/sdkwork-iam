@@ -14,5 +14,10 @@ packages:
   - id: sdkwork-iam-gateway-assembly
     kind: rust-binary
     crate: sdkwork-iam-gateway-assembly
+    healthPath: /healthz
+    readinessPath: /readyz
 
-overrides: {}
+overrides:
+  proxy:
+    upstreams:
+      application: http://127.0.0.1:8080

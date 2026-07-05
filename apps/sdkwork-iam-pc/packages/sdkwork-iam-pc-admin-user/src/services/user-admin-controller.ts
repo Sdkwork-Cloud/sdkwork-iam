@@ -1,3 +1,9 @@
+import {
+  buildNextSdkWorkListQuery,
+  extractSdkWorkListPage,
+  mergeSdkWorkListPage,
+  resolveSdkWorkListQuery,
+} from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 import type {
@@ -13,10 +19,13 @@ export function createSdkworkIamUserAdminController(
 ): SdkworkIamUserAdminController {
   const resolved = resolveInput(input);
   let state: SdkworkIamAdminUserState = {
+    listPageInfo: undefined,
     selectedUser: undefined,
     status: "idle",
     users: [],
   };
+
+  let lastListParams: Record<string, unknown> | undefined;
 
   const setState = (patch: Partial<SdkworkIamAdminUserState>) => {
     state = { ...state, ...patch };
@@ -55,24 +64,41 @@ export function createSdkworkIamUserAdminController(
     getSelectedUser: () => state.selectedUser,
     getState: () => ({
       ...state,
+      listPageInfo: state.listPageInfo ? { ...state.listPageInfo } : undefined,
       selectedUser: state.selectedUser ? { ...state.selectedUser } : undefined,
       users: [...state.users],
     }),
-    listUsers: async (params) => {
+    listUsers: async (params, options) => {
+      const append = options?.append === true;
+      if (!append) {
+        lastListParams = params ? { ...params } : undefined;
+      }
       setState({ status: "loading" });
       try {
-        const users = extractList(await resolved.service.iam.users.list(params))
-          .map(toUser)
-          .filter(Boolean) as SdkworkIamAdminUser[];
+        const query = resolveSdkWorkListQuery(append ? lastListParams : params);
+        const page = extractSdkWorkListPage(
+          await resolved.service.iam.users.list(query),
+        );
+        const mapped = page.items.map(toUser).filter(Boolean) as SdkworkIamAdminUser[];
+        const merged = mergeSdkWorkListPage(append ? state.users : [], { ...page, items: mapped }, append ? "append" : "replace");
+        const users = merged.items;
         const selectedUser = state.selectedUser
           ? users.find((user) => user.userId === state.selectedUser?.userId) ?? state.selectedUser
           : users.find((user) => user.userId === resolved.selectedUserId);
-        setState({ selectedUser, status: "ready", users });
+        setState({ listPageInfo: merged.pageInfo, selectedUser, status: "ready", users });
         return users;
       } catch (error) {
         setState({ status: "error" });
         throw error;
       }
+    },
+    loadMoreUsers: async () => {
+      const nextQuery = buildNextSdkWorkListQuery(lastListParams, state.listPageInfo);
+      if (!nextQuery) {
+        return state.users;
+      }
+      lastListParams = { ...nextQuery };
+      return controller.listUsers(lastListParams, { append: true });
     },
     retrieveUser: async (userId) => {
       const normalizedUserId = requireId(userId, "userId");
@@ -132,23 +158,6 @@ function resolveInput(
     return input;
   }
   return { service: input };
-}
-
-function extractList(value: unknown): unknown[] {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  if (!value || typeof value !== "object") {
-    return [];
-  }
-  const record = value as Record<string, unknown>;
-  for (const key of ["records", "items", "list", "rows", "content", "data"]) {
-    const nested = record[key];
-    if (Array.isArray(nested)) {
-      return nested;
-    }
-  }
-  return [];
 }
 
 function toUser(value: unknown): SdkworkIamAdminUser | undefined {

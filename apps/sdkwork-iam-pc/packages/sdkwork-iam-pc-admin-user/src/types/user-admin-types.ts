@@ -1,3 +1,4 @@
+import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 export interface SdkworkIamAdminUser {
@@ -19,6 +20,7 @@ export interface SdkworkIamAdminUserDraft {
 }
 
 export interface SdkworkIamAdminUserState {
+  listPageInfo?: SdkWorkPageInfo;
   selectedUser?: SdkworkIamAdminUser;
   status: "idle" | "loading" | "ready" | "error";
   users: readonly SdkworkIamAdminUser[];
@@ -34,7 +36,11 @@ export interface SdkworkIamUserAdminController {
   deleteUser(userId: string): Promise<void>;
   getSelectedUser(): SdkworkIamAdminUser | undefined;
   getState(): SdkworkIamAdminUserState;
-  listUsers(params?: Record<string, unknown>): Promise<readonly SdkworkIamAdminUser[]>;
+  listUsers(
+    params?: Record<string, unknown>,
+    options?: { append?: boolean },
+  ): Promise<readonly SdkworkIamAdminUser[]>;
+  loadMoreUsers(): Promise<readonly SdkworkIamAdminUser[]>;
   retrieveUser(userId: string): Promise<SdkworkIamAdminUser | undefined>;
   selectUser(userId: string): Promise<SdkworkIamAdminUser | undefined>;
   updateUser(userId: string, body: Partial<SdkworkIamAdminUserDraft>): Promise<SdkworkIamAdminUser>;

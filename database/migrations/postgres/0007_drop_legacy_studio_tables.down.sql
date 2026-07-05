@@ -1,0 +1,2 @@
+-- Irreversible: legacy Studio tables are not recreated on rollback.
+-- Fresh installs never created these tables; down migration is intentionally empty.

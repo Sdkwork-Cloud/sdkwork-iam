@@ -2,23 +2,60 @@
 
 use std::collections::HashMap;
 
+use sdkwork_utils_rust::{
+    offset_list_page_data, offset_list_page_params_from_map, sdkwork_tree_resource_json,
+    OffsetListPageParams, LIST_TOTAL_SQL_COLUMN,
+};
 use serde_json::{json, Value};
 use sqlx::{postgres::PgRow, PgPool, Row};
 
-pub(crate) fn page_limit(query: &HashMap<String, String>) -> i64 {
-    query
-        .get("page_size")
-        .or_else(|| query.get("pageSize"))
-        .and_then(|value| value.parse::<i64>().ok())
-        .unwrap_or(50)
-        .clamp(1, 200)
+pub(crate) use sdkwork_utils_rust::LIST_TOTAL_SQL_COLUMN as LIST_TOTAL_COLUMN;
+
+pub(crate) type ListPageParams = OffsetListPageParams;
+
+pub(crate) fn list_page_params(query: &HashMap<String, String>) -> ListPageParams {
+    offset_list_page_params_from_map(query)
 }
 
-pub(crate) fn page_json(records: Vec<Value>) -> Value {
-    json!({
-        "records": records,
-        "total": records.len(),
-    })
+pub(crate) fn total_from_rows(rows: &[PgRow]) -> i64 {
+    rows.first()
+        .and_then(|row| row.try_get::<i64, _>(LIST_TOTAL_SQL_COLUMN).ok())
+        .unwrap_or(0)
+}
+
+pub(crate) fn page_json(items: Vec<Value>, total_items: i64, params: &ListPageParams) -> Value {
+    let page = offset_list_page_data(items, total_items, *params);
+    serde_json::to_value(page).unwrap_or_else(|_| json!({ "items": [], "pageInfo": {} }))
+}
+
+pub(crate) fn page_json_from_rows<F>(rows: Vec<PgRow>, params: &ListPageParams, map_row: F) -> Value
+where
+    F: FnMut(&PgRow) -> Value,
+{
+    let total_items = total_from_rows(&rows);
+    let items = rows.iter().map(map_row).collect();
+    page_json(items, total_items, params)
+}
+
+pub(crate) fn list_search_pattern(query: &HashMap<String, String>) -> Option<String> {
+    query
+        .get("q")
+        .map(String::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .map(|value| format!("%{}%", value.trim().to_ascii_lowercase()))
+}
+
+/// SQL fragment: `AND ($N::text IS NULL OR LOWER(col) LIKE $N OR ...)`.
+pub(crate) fn list_search_sql_clause(columns: &[&str], bind: &str) -> String {
+    if columns.is_empty() {
+        return String::new();
+    }
+    let conditions = columns
+        .iter()
+        .map(|column| format!("LOWER({column}) LIKE {bind}"))
+        .collect::<Vec<_>>()
+        .join(" OR ");
+    format!("AND ({bind}::text IS NULL OR {conditions})")
 }
 
 pub(crate) fn read_string_field(body: &Value, keys: &[&str]) -> Option<String> {
@@ -114,15 +151,39 @@ pub(crate) async fn list_tenant_rows(
     table: &str,
     select: &str,
     order_by: &str,
-    limit: i64,
+    params: &ListPageParams,
+    search_pattern: Option<String>,
+    search_columns: &[&str],
 ) -> Result<Vec<PgRow>, sqlx::Error> {
-    let sql =
-        format!("SELECT {select} FROM {table} WHERE tenant_id = $1 ORDER BY {order_by} LIMIT $2");
+    if search_columns.is_empty() {
+        let sql = format!(
+            "SELECT {select}, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN} \
+             FROM {table} WHERE tenant_id = $1 ORDER BY {order_by} LIMIT $2 OFFSET $3"
+        );
+        return sqlx::query(&sql)
+            .bind(tenant_id)
+            .bind(params.page_size)
+            .bind(params.offset)
+            .fetch_all(pg)
+            .await;
+    }
+
+    let search_clause = list_search_sql_clause(search_columns, "$2");
+    let sql = format!(
+        "SELECT {select}, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN} \
+         FROM {table} WHERE tenant_id = $1 {search_clause} ORDER BY {order_by} LIMIT $3 OFFSET $4"
+    );
     sqlx::query(&sql)
         .bind(tenant_id)
-        .bind(limit)
+        .bind(search_pattern)
+        .bind(params.page_size)
+        .bind(params.offset)
         .fetch_all(pg)
         .await
+}
+
+pub(crate) fn tree_resource_json(nodes: Vec<Value>) -> Value {
+    sdkwork_tree_resource_json(nodes)
 }
 
 pub(crate) async fn retrieve_tenant_row(
@@ -184,4 +245,39 @@ pub(crate) async fn patch_tenant_row(
 
     let result = query.execute(pg).await?;
     Ok(result.rows_affected() > 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn list_page_params_default_matches_spec() {
+        let params = list_page_params(&HashMap::new());
+        assert_eq!(1, params.page);
+        assert_eq!(20, params.page_size);
+    }
+
+    #[test]
+    fn page_json_uses_standard_page_info_fields() {
+        let params = ListPageParams::parse(Some(2), Some(10));
+        let payload = page_json(vec![json!({"id": "1"})], 25, &params);
+        assert_eq!(
+            payload["items"].as_array().map(|items| items.len()),
+            Some(1)
+        );
+        assert_eq!(payload["pageInfo"]["mode"], "offset");
+        assert_eq!(payload["pageInfo"]["page"], 2);
+        assert_eq!(payload["pageInfo"]["pageSize"], 10);
+        assert_eq!(payload["pageInfo"]["totalItems"], "25");
+        assert_eq!(payload["pageInfo"]["hasMore"], true);
+    }
+
+    #[test]
+    fn tree_resource_json_uses_standard_item_nodes_shape() {
+        let payload = tree_resource_json(vec![json!({"organizationId": "org-1"})]);
+        assert!(payload["item"]["nodes"].is_array());
+        assert_eq!(payload["item"]["nodes"][0]["organizationId"], "org-1");
+        assert!(payload.get("items").is_none());
+    }
 }
