@@ -1,10 +1,6 @@
-import {
-  buildNextSdkWorkListQuery,
-  extractSdkWorkListPage,
-  mergeSdkWorkListPage,
-  resolveSdkWorkListQuery,
-} from "@sdkwork/iam-contracts";
+import { createSdkWorkPagedListSession } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
+import { isBlank, trim } from "@sdkwork/utils";
 
 import type {
   CreateSdkworkIamUserAdminControllerInput,
@@ -25,7 +21,10 @@ export function createSdkworkIamUserAdminController(
     users: [],
   };
 
-  let lastListParams: Record<string, unknown> | undefined;
+  const usersSession = createSdkWorkPagedListSession({
+    fetchPage: (query) => resolved.service.iam.users.list(query),
+    mapItem: toUser,
+  });
 
   const setState = (patch: Partial<SdkworkIamAdminUserState>) => {
     state = { ...state, ...patch };
@@ -68,37 +67,45 @@ export function createSdkworkIamUserAdminController(
       selectedUser: state.selectedUser ? { ...state.selectedUser } : undefined,
       users: [...state.users],
     }),
-    listUsers: async (params, options) => {
-      const append = options?.append === true;
-      if (!append) {
-        lastListParams = params ? { ...params } : undefined;
-      }
-      setState({ status: "loading" });
+    listUsers: async (params) => {
+      setState({ lastError: undefined, status: "loading" });
       try {
-        const query = resolveSdkWorkListQuery(append ? lastListParams : params);
-        const page = extractSdkWorkListPage(
-          await resolved.service.iam.users.list(query),
-        );
-        const mapped = page.items.map(toUser).filter(Boolean) as SdkworkIamAdminUser[];
-        const merged = mergeSdkWorkListPage(append ? state.users : [], { ...page, items: mapped }, append ? "append" : "replace");
-        const users = merged.items;
+        const users = await usersSession.list(params) as SdkworkIamAdminUser[];
         const selectedUser = state.selectedUser
           ? users.find((user) => user.userId === state.selectedUser?.userId) ?? state.selectedUser
           : users.find((user) => user.userId === resolved.selectedUserId);
-        setState({ listPageInfo: merged.pageInfo, selectedUser, status: "ready", users });
+        setState({
+          listPageInfo: usersSession.getPageInfo(),
+          selectedUser,
+          status: "ready",
+          users,
+        });
         return users;
       } catch (error) {
-        setState({ status: "error" });
+        setState({
+          lastError: error instanceof Error ? error.message : "Failed to load users",
+          status: "error",
+        });
         throw error;
       }
     },
     loadMoreUsers: async () => {
-      const nextQuery = buildNextSdkWorkListQuery(lastListParams, state.listPageInfo);
-      if (!nextQuery) {
-        return state.users;
+      setState({ lastError: undefined, status: "loading" });
+      try {
+        const users = await usersSession.loadMore() as SdkworkIamAdminUser[];
+        setState({
+          listPageInfo: usersSession.getPageInfo(),
+          status: "ready",
+          users,
+        });
+        return users;
+      } catch (error) {
+        setState({
+          lastError: error instanceof Error ? error.message : "Failed to load more users",
+          status: "error",
+        });
+        throw error;
       }
-      lastListParams = { ...nextQuery };
-      return controller.listUsers(lastListParams, { append: true });
     },
     retrieveUser: async (userId) => {
       const normalizedUserId = requireId(userId, "userId");
@@ -188,8 +195,8 @@ function toRecord(value: unknown): Record<string, unknown> {
 }
 
 function optionalString(value: unknown): string | undefined {
-  const normalized = typeof value === "string" ? value.trim() : value === undefined || value === null ? "" : String(value).trim();
-  return normalized || undefined;
+  const normalized = typeof value === "string" ? trim(value) : value === undefined || value === null ? "" : trim(String(value));
+  return isBlank(normalized) ? undefined : normalized;
 }
 
 function requireId(value: unknown, name: string): string {

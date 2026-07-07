@@ -100,8 +100,7 @@ pub fn build_openid_configuration_document() -> Value {
             "organization",
             "offline_access"
         ],
-        "subject_types_supported": ["public"],
-        "id_token_signing_alg_values_supported": ["HS256"]
+        "subject_types_supported": ["public"]
     })
 }
 
@@ -132,9 +131,11 @@ pub async fn resolve_relying_party_client(
         sqlx::query(
             "SELECT tenant_id, app_id, runtime_config_json \
              FROM iam_tenant_application \
-             WHERE app_id = $1 AND status = 'enabled'",
+             WHERE app_id = $1 AND status = 'enabled' \
+             LIMIT $2",
         )
         .bind(client_id)
+        .bind(sdkwork_iam_bootstrap::limits::IAM_OAUTH_RELYING_PARTY_PROBE_LIMIT)
         .fetch_all(pg)
         .await
     }
@@ -681,7 +682,13 @@ pub async fn build_userinfo_claims(
     Ok(claims)
 }
 
-pub fn build_oauth_jwks_document() -> Value {
+pub async fn build_oauth_jwks_document(pg: &PgPool) -> Value {
+    sdkwork_iam_bootstrap::list_postgres_oauth_jwks_document(pg)
+        .await
+        .unwrap_or_else(|_| build_oauth_jwks_document_empty())
+}
+
+pub fn build_oauth_jwks_document_empty() -> Value {
     json!({ "keys": [] })
 }
 
@@ -908,10 +915,8 @@ async fn sign_oauth_access_token(
     context: &IamAppContext,
     audience: &str,
 ) -> Result<String, String> {
-    let signing_key = load_active_signing_key(pg, &context.tenant_id).await?;
     let issued_at = current_unix_seconds();
     let expires_at = issued_at + OAUTH_ACCESS_TOKEN_TTL_SECONDS;
-    let header = json!({"alg":"HS256","kid":signing_key.kid,"typ":"JWT"});
     let payload = json!({
         "app_id": context.app_id,
         "aud": audience,
@@ -932,6 +937,22 @@ async fn sign_oauth_access_token(
         "token_version": stamp_token_version(),
         "user_id": context.user_id,
     });
+
+    if let Ok(Some(rs256)) =
+        sdkwork_iam_bootstrap::load_postgres_oauth_rs256_signing_key(pg, &context.tenant_id).await
+    {
+        return sdkwork_iam_bootstrap::sign_rs256_jwt(&rs256, &json!({"typ":"JWT"}), &payload);
+    }
+
+    if !crate::production_runtime::is_explicit_development_iam_deployment() {
+        return Err(
+            "tenant OAuth RS256 signing key is required outside explicit development deployments"
+                .to_string(),
+        );
+    }
+
+    let signing_key = load_active_signing_key(pg, &context.tenant_id).await?;
+    let header = json!({"alg":"HS256","kid":signing_key.kid,"typ":"JWT"});
     sign_jwt(&signing_key.secret, &header, &payload)
 }
 

@@ -1,4 +1,4 @@
-import { extractSdkWorkListItems, resolveSdkWorkListQuery } from "@sdkwork/iam-contracts";
+import { createSdkWorkPagedListSession } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 import { isBlank, trim } from "@sdkwork/utils";
 
@@ -20,11 +20,16 @@ export function createSdkworkIamH5AccountBindingController(
     status: "idle",
   };
 
+  const accountLinksSession = createSdkWorkPagedListSession({
+    fetchPage: (query) => service.oauth.accountLinks.list(query),
+    mapItem: toAccountLink,
+  });
+
   const setState = (patch: Partial<SdkworkIamH5AccountBindingState>) => {
     state = { ...state, ...patch };
   };
 
-  return {
+  const controller: SdkworkIamH5AccountBindingController = {
     bindEmail: async (body) => {
       setState({ lastError: undefined, status: "loading" });
       try {
@@ -40,20 +45,42 @@ export function createSdkworkIamH5AccountBindingController(
     getState: () => ({
       ...state,
       accountLinks: [...state.accountLinks],
-      policy: state.policy ? { ...state.policy, contactBinding: { ...state.policy.contactBinding }, oauthBinding: { ...state.policy.oauthBinding } } : undefined,
+      listPageInfo: state.listPageInfo ? { ...state.listPageInfo } : undefined,
+      policy: state.policy
+        ? {
+            contactBinding: { ...state.policy.contactBinding },
+            oauthBinding: { ...state.policy.oauthBinding },
+          }
+        : undefined,
     }),
     listAccountLinks: async (params) => {
       setState({ status: "loading" });
       try {
-        const accountLinks = extractSdkWorkListItems(
-          await service.oauth.accountLinks.list(resolveSdkWorkListQuery(params)),
-        )
-          .map(toAccountLink)
-          .filter(Boolean) as SdkworkIamH5OAuthAccountLink[];
-        setState({ accountLinks, status: "ready" });
+        const accountLinks = (await accountLinksSession.list(params)) as SdkworkIamH5OAuthAccountLink[];
+        setState({
+          accountLinks,
+          listPageInfo: accountLinksSession.getPageInfo(),
+          status: "ready",
+        });
         return accountLinks;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to load account links";
+        setState({ lastError: message, status: "error" });
+        throw error;
+      }
+    },
+    loadMoreAccountLinks: async () => {
+      setState({ lastError: undefined, status: "loading" });
+      try {
+        const accountLinks = (await accountLinksSession.loadMore()) as SdkworkIamH5OAuthAccountLink[];
+        setState({
+          accountLinks,
+          listPageInfo: accountLinksSession.getPageInfo(),
+          status: "ready",
+        });
+        return accountLinks;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load more account links";
         setState({ lastError: message, status: "error" });
         throw error;
       }
@@ -83,6 +110,8 @@ export function createSdkworkIamH5AccountBindingController(
       }
     },
   };
+
+  return controller;
 }
 
 function normalizePolicy(value: unknown): SdkworkIamH5AccountBindingPolicy {
@@ -140,9 +169,6 @@ function toRecord(value: unknown): Record<string, unknown> {
 }
 
 function optionalString(value: unknown): string | undefined {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-  const normalized = trim(String(value));
+  const normalized = typeof value === "string" ? trim(value) : value === undefined || value === null ? "" : trim(String(value));
   return isBlank(normalized) ? undefined : normalized;
 }

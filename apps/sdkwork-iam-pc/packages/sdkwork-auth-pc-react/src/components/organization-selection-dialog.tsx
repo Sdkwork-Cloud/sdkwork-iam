@@ -30,6 +30,7 @@ export interface SdkworkOrganizationSelectionDialogProps {
   onCancel(): void;
   onSelectOrganization(organizationId: string): void;
   onSelectPersonal?(): void;
+  overlayClassName?: string;
   selectedOrganizationId?: string;
   selectingPersonal?: boolean;
 }
@@ -64,6 +65,7 @@ export function SdkworkOrganizationSelectionDialog({
   onCancel,
   onSelectOrganization,
   onSelectPersonal,
+  overlayClassName,
   selectedOrganizationId,
   selectingPersonal = false,
 }: SdkworkOrganizationSelectionDialogProps) {
@@ -75,7 +77,7 @@ export function SdkworkOrganizationSelectionDialog({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 px-4 py-6">
+    <div className={`fixed inset-0 flex items-center justify-center bg-zinc-950/40 px-4 py-6 ${overlayClassName ?? "z-50"}`}>
       <section
         aria-labelledby="sdkwork-auth-organization-selection-title"
         aria-modal="true"

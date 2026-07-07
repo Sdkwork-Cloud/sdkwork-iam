@@ -318,7 +318,7 @@ describe("sdkwork-iam-core-pc-react", () => {
           register: vi.fn(),
         },
         apiKeys: { list: vi.fn(), revoke: vi.fn() },
-        auditEvents: { list: vi.fn() },
+        auditEvents: { list: vi.fn(), retrieve: vi.fn() },
         organizations: {
           create: vi.fn(),
           delete: vi.fn(),
@@ -378,7 +378,7 @@ describe("sdkwork-iam-core-pc-react", () => {
           create: vi.fn(),
           delete: vi.fn(),
         },
-        securityEvents: { list: vi.fn() },
+        securityEvents: { list: vi.fn(), retrieve: vi.fn() },
         tenantApplications: {
           enable: vi.fn(),
           provision: vi.fn(),

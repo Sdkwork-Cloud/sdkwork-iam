@@ -1,0 +1,53 @@
+{
+  "name": "@sdkwork/iam-pc-admin-audit",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Audit and security event visibility for backend-admin operators.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@sdkwork/iam-contracts": "workspace:*",
+    "@sdkwork/iam-pc-admin-core": "workspace:*",
+    "@sdkwork/iam-service": "workspace:*",
+    "@sdkwork/ui-pc-react": "workspace:*",
+    "@sdkwork/utils": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0 <20.0.0",
+    "react-dom": ">=18.2.0 <20.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "sdkwork": {
+    "workspace": "sdkwork-iam",
+    "architecture": "pc-admin",
+    "surface": "backend-admin",
+    "domain": "iam",
+    "capability": "audit",
+    "status": "standard"
+  }
+}

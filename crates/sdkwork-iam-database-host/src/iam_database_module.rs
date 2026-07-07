@@ -146,6 +146,14 @@ impl SeedProvider for IamDatabaseModule {
             SpiError::Seed(format!("materialize iam module catalog failed: {error}"))
         })?;
         apply_locale_seed_overlays(pg, &self.app_root, &ctx.plan.locale.0, profile).await?;
+        match sdkwork_iam_bootstrap::ensure_postgres_bootstrap_admin_user(pg).await {
+            Ok(outcome) => tracing::info!(?outcome, "IAM bootstrap admin user seed finished"),
+            Err(error) => {
+                return Err(SpiError::Seed(format!(
+                    "ensure bootstrap admin user failed: {error}"
+                )));
+            }
+        }
         Ok(())
     }
 }

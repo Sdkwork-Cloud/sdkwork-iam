@@ -121,10 +121,14 @@ pub async fn check_rate_limit_sqlite(
     let now = current_millis();
     let window_ms = (window_seconds as u128) * 1000;
     let storage_key = artifact_key(tenant_id, KIND_RATE_LIMIT, key);
-    let mut tx = sqlite
-        .begin()
+    let mut conn = sqlite
+        .acquire()
         .await
-        .map_err(|error| format!("begin rate limit transaction failed: {error}"))?;
+        .map_err(|error| format!("acquire sqlite connection for rate limit failed: {error}"))?;
+    sqlx::query("BEGIN IMMEDIATE")
+        .execute(&mut *conn)
+        .await
+        .map_err(|error| format!("begin immediate rate limit transaction failed: {error}"))?;
 
     let row = sqlx::query(
         "SELECT payload_json, expires_at FROM iam_ephemeral_artifact \
@@ -132,7 +136,7 @@ pub async fn check_rate_limit_sqlite(
     )
     .bind(&storage_key)
     .bind(current_timestamp_utc().to_rfc3339())
-    .fetch_optional(&mut *tx)
+    .fetch_optional(&mut *conn)
     .await
     .map_err(|error| format!("load rate limit artifact failed: {error}"))?;
 
@@ -156,7 +160,8 @@ pub async fn check_rate_limit_sqlite(
         } else if count < max_requests {
             (count + 1, window_start, expires_at)
         } else {
-            tx.rollback()
+            sqlx::query("ROLLBACK")
+                .execute(&mut *conn)
                 .await
                 .map_err(|error| format!("rollback rate limit transaction failed: {error}"))?;
             return Ok(false);
@@ -184,11 +189,12 @@ pub async fn check_rate_limit_sqlite(
     .bind(&expires_at)
     .bind(&timestamp)
     .bind(&timestamp)
-    .execute(&mut *tx)
+    .execute(&mut *conn)
     .await
     .map_err(|error| format!("upsert rate limit artifact failed: {error}"))?;
 
-    tx.commit()
+    sqlx::query("COMMIT")
+        .execute(&mut *conn)
         .await
         .map_err(|error| format!("commit rate limit transaction failed: {error}"))?;
     Ok(true)

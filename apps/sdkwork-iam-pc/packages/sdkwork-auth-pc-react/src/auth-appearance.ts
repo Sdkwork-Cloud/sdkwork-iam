@@ -10,6 +10,8 @@ export interface SdkworkAuthSlotContainerProps {
   style?: CSSProperties;
 }
 
+export type SdkworkAuthPresentation = "modal" | "page";
+
 export interface SdkworkAuthAsideContainerSlotProps extends SdkworkAuthSlotContainerProps {
   presentation: "panel" | "raw";
 }

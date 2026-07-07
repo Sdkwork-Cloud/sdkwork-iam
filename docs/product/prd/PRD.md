@@ -3,7 +3,7 @@
 Status: active
 Owner: SDKWork maintainers
 Application: iam
-Updated: 2026-07-05
+Updated: 2026-07-06
 Specs: REQUIREMENTS_SPEC.md, IAM_SPEC.md, IAM_OAUTH_SPEC.md, IAM_LOGIN_INTEGRATION_SPEC.md
 
 ## 1. Background And Problem
@@ -40,7 +40,8 @@ SDKWork applications require a centralized identity and access management domain
 ## 4. Scope
 
 - Rust route crates: app-api, backend-api, open-api, gateway assembly
-- Database module: `iam_*` PostgreSQL/SQLite schemas and migrations
+- Database module: `iam_*` PostgreSQL schemas, migrations, and lifecycle (`database.manifest.json`)
+- Embedded SQLite mirror for OAuth-device narrow paths only (not production-equivalent)
 - TypeScript packages under `apps/sdkwork-iam-common` and surface roots (PC/H5/Flutter)
 - IMF registry and generated SDK families under `sdks/`
 
@@ -56,10 +57,19 @@ SDKWork applications require a centralized identity and access management domain
 | Metric | Target |
 | --- | --- |
 | `pnpm run verify` | Green on every PR |
-| Production hardening | No dev fallback/env bypass active when `SDKWORK_IM_ENVIRONMENT=production` |
-| List/tree APIs | SQL-level pagination or documented node limits (`IAM_TREE_MAX_NODES`) |
+| Production hardening | No dev fallback/env bypass active when `SDKWORK_IM_ENVIRONMENT=production`; `SDKWORK_IAM_SIGNING_MASTER_SECRET` required |
+| List/tree APIs | SQL-level pagination or documented node limits (`IAM_TREE_MAX_NODES`); invalid `page_size` returns `40003` |
+| Audit/security list APIs | Offset and keyset cursor modes (`k:{created_at}\|{id}`) per `PAGINATION_SPEC.md` |
+| OAuth inbound IdP | Userinfo-backed OIDC identity resolution; no unverified `id_token` trust |
+| OAuth AS outbound | RS256 JWT signing with tenant-scoped keys; JWKS publishes RS256 public keys; HS256 fallback when RS256 key is absent |
+| Backend 500 errors | Sanitized client messages; SQL/driver details logged server-side only |
+| Tenant admin isolation | Path `tenantId` must match session tenant unless platform tenant (`100001`) |
+| Permission catalog | Global `iam_permission` mutations restricted to platform tenant |
 | OAuth webhook POST | Signature or verify-token validation before accept |
-| Commercial onboarding | Documented RP onboarding path in `docs/README.md` |
+| Contact bind / password reset | Messaging `verificationCodes.*` delivery + IAM `messaging_verification_challenge` validation when `SDKWORK_IAM_MESSAGING_VERIFICATION_ENABLED` |
+| Backend admin mutations | `iam_audit_event` writes transactional with directory CRUD and OAuth admin creates/updates/deletes |
+| Operator audit visibility | PC admin `@sdkwork/iam-pc-admin-audit`: typed list/retrieve OpenAPI, debounced `q` search, `detailJson` via retrieve |
+| Organization admin lists | `@sdkwork/iam-pc-admin-organization` and `@sdkwork/iam-pc-admin-user` use `createSdkWorkPagedListSession` for all interactive lists |
 
 ## 7. Phases
 
@@ -67,7 +77,7 @@ SDKWork applications require a centralized identity and access management domain
 | --- | --- |
 | L3 core auth/session/RBAC | Active |
 | OAuth AS + admin CRUD + diagnostics | Active |
-| Production gateway + deploy manifest | Active |
+| Production gateway + deploy manifest | Active (app/backend/open async `gateway_mount`) |
 | RPC runnable servers | Planned (manifests only today) |
 | Enterprise MFA/SCIM/SAML | Future |
 

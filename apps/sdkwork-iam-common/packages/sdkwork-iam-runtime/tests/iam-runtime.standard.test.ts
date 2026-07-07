@@ -752,6 +752,7 @@ function createStandardBackendIamClient() {
     },
     auditEvents: {
       list: vi.fn(),
+      retrieve: vi.fn(),
     },
     organizations: {
       create: vi.fn(),
@@ -818,6 +819,7 @@ function createStandardBackendIamClient() {
     },
     securityEvents: {
       list: vi.fn(),
+      retrieve: vi.fn(),
     },
     tenantApplications: {
       enable: vi.fn(),

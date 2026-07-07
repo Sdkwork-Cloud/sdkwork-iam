@@ -77,9 +77,13 @@ async fn backend_postgres_router_wires_database_pool_for_user_list() {
         "backend user list must require authenticated principal when postgres is wired: {body_text}"
     );
     assert!(
-        body_text.contains("iam_principal_required")
+        body_text.contains("\"code\":40101")
+            || body_text.contains("40101")
+            || body_text.contains("iam_principal_required")
             || body_text.contains("missing-credentials")
-            || body_text.contains("Unauthorized"),
+            || body_text.contains("Unauthorized")
+            || body_text.contains("Authentication required")
+            || body_text.contains("Access-Token JWT"),
         "backend user list must fail closed on missing principal: {body_text}"
     );
 }

@@ -10,6 +10,7 @@ use sdkwork_iam_web_adapter::{
     introspect_oauth_token, load_oauth_bearer_scopes, resolve_iam_app_context_from_oauth_bearer,
     resolve_relying_party_client, revoke_oauth_token, validate_authorize_request, AuthorizeRequest,
 };
+use sdkwork_utils_rust::OAuthProtocolErrorBody;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -17,7 +18,7 @@ use crate::state::OpenIamState;
 
 const OPEN_API_RATE_LIMIT_SCOPE: &str = "iam-open-api";
 
-async fn enforce_open_api_rate_limit(
+pub(crate) async fn enforce_open_api_rate_limit(
     state: &OpenIamState,
     pg: &sqlx::PgPool,
     bucket: &str,
@@ -233,8 +234,15 @@ pub async fn handle_oauth_token(
     }
 }
 
-pub async fn retrieve_oauth_jwks() -> Json<Value> {
-    Json(build_oauth_jwks_document())
+pub async fn retrieve_oauth_jwks(State(state): State<OpenIamState>) -> Response {
+    let Ok(pg) = state.require_pool() else {
+        return oauth_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "iam_oauth_authorization_server_unavailable",
+            "OAuth authorization server database is not configured",
+        );
+    };
+    Json(build_oauth_jwks_document(pg).await).into_response()
 }
 
 pub async fn handle_oauth_revoke(
@@ -418,11 +426,7 @@ fn base64_decode(input: &str) -> Result<String, String> {
 fn oauth_error(status: StatusCode, code: &str, message: &str) -> Response {
     (
         status,
-        Json(json!({
-            "code": code,
-            "data": Value::Null,
-            "message": message,
-        })),
+        Json(OAuthProtocolErrorBody::from_iam_oauth_code(code, message)),
     )
         .into_response()
 }
@@ -437,5 +441,15 @@ mod tests {
         let doc = build_openid_configuration_document();
         assert_eq!(doc["issuer"], json!("https://iam.example.com"));
         std::env::remove_var("SDKWORK_IAM_OAUTH_ISSUER");
+    }
+
+    #[test]
+    fn oauth_error_uses_rfc6749_envelope() {
+        let response = oauth_error(
+            StatusCode::BAD_REQUEST,
+            "iam_oauth_authorize_invalid",
+            "missing response_type",
+        );
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 }

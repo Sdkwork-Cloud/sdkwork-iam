@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 
 pub use iam_database_module::IamDatabaseModule;
+use sdkwork_database_id::{NodeAllocatorConfig, SnowflakeNodeAllocator};
 use sdkwork_database_lifecycle::{lifecycle_options_from_env, LifecycleOrchestrator};
 use sdkwork_database_spi::{DatabaseAssetProvider, DatabaseManifest};
 use sdkwork_database_sqlx::DatabasePool;
@@ -81,6 +82,7 @@ pub async fn bootstrap_iam_database(pool: DatabasePool) -> Result<IamDatabaseHos
     }
 
     run_post_bootstrap_hooks(&pool).await?;
+    allocate_and_init_iam_snowflake_node(&pool).await;
 
     if let Some(pg_pool) = pool.as_postgres() {
         let _ = sdkwork_iam_web_adapter::install_iam_postgres_pool_for_process(Arc::new(
@@ -111,6 +113,30 @@ pub async fn bootstrap_iam_database_from_env() -> Result<IamDatabaseHost, String
     bootstrap_iam_database(pool).await
 }
 
+/// Allocate a Snowflake node_id from the database and initialize the IAM ID generator.
+///
+/// Falls back to env/default node id when allocation fails (for example ephemeral dev DB).
+async fn allocate_and_init_iam_snowflake_node(pool: &DatabasePool) {
+    let config = NodeAllocatorConfig::from_service_name("iam-service");
+    match SnowflakeNodeAllocator::allocate_generator(pool, &config).await {
+        Ok((generator, lease)) => {
+            let node_id = generator.node_id();
+            tracing::info!(
+                node_id,
+                "IAM snowflake node_id allocated from database registry"
+            );
+            sdkwork_iam_bootstrap::init_iam_id_generator(generator, Some(lease));
+        }
+        Err(error) => {
+            tracing::warn!(
+                %error,
+                "IAM snowflake database node_id allocation failed; \
+                 falling back to SDKWORK_IAM_SNOWFLAKE_NODE_ID or default node id"
+            );
+        }
+    }
+}
+
 async fn run_post_bootstrap_hooks(pool: &DatabasePool) -> Result<(), String> {
     let Some(pg) = pool.as_postgres() else {
         tracing::info!("skipping postgres-only IAM post-bootstrap hooks for sqlite pool");
@@ -131,5 +157,9 @@ async fn run_post_bootstrap_hooks(pool: &DatabasePool) -> Result<(), String> {
     )
     .await
         .map_err(|error| format!("ensure embedded IAM tenant application bootstrap failed: {error}"))?;
+    match sdkwork_iam_bootstrap::ensure_postgres_bootstrap_admin_user(pg).await {
+        Ok(outcome) => tracing::info!(?outcome, "IAM bootstrap admin user seed finished"),
+        Err(error) => return Err(format!("ensure bootstrap admin user failed: {error}")),
+    }
     Ok(())
 }

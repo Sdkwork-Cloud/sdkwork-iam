@@ -83,7 +83,7 @@ Consumer application gateways mount IAM through `sdkwork-iam-gateway-assembly`:
 - `assemble_application_router()` — merges app-api, backend-api, and open-api business routers
 - Infrastructure probes — `/healthz` (liveness) and `/readyz` (readiness via IAM database pool when configured)
 - `bootstrap_iam_database_from_env()` — IAM DDL and migrations via `sdkwork-iam-database-host`
-- Route crate `gateway_mount()` — per-surface business routers (no duplicate infra routes)
+- Route crate async `gateway_mount()` — per-surface business routers with database pool from env (no duplicate infra routes)
 
 IAM database lifecycle is owned by `sdkwork-iam-database-host` during federated router startup, not by consumer product installers.
 

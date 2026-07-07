@@ -248,4 +248,16 @@ mod tests {
             Some("iam.applications.register")
         );
     }
+
+    #[test]
+    fn maps_audit_and_security_retrieve_to_read_permissions() {
+        assert_eq!(
+            iam_backend_permission_for_operation("auditEvents.retrieve"),
+            Some("iam.audit_events.read")
+        );
+        assert_eq!(
+            iam_backend_permission_for_operation("securityEvents.retrieve"),
+            Some("iam.security_events.read")
+        );
+    }
 }

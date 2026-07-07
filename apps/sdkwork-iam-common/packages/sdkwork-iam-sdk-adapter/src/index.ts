@@ -1,4 +1,4 @@
-import { trim } from "@sdkwork/utils";
+import { isSdkWorkSuccessCode, trim } from "@sdkwork/utils";
 import type { IamAppSdkClient, IamBackendSdkClient, IamSdkMethod } from "@sdkwork/iam-sdk-ports";
 import {
   SDKWORK_IAM_BACKEND_SDK_FORBIDDEN_LEGACY_NAMESPACES,
@@ -301,6 +301,7 @@ export function createIamBackendSdkAdapter(client: unknown): IamBackendSdkClient
       },
       auditEvents: {
         list: standardResourceMethod(toRecord(iam.auditEvents), "list", "appbaseBackend.iam.auditEvents.list"),
+        retrieve: standardResourceMethod(toRecord(iam.auditEvents), "retrieve", "appbaseBackend.iam.auditEvents.retrieve"),
       },
       organizations: {
         create: standardResourceMethod(iamOrganizations, "create", "appbaseBackend.iam.organizations.create"),
@@ -367,6 +368,7 @@ export function createIamBackendSdkAdapter(client: unknown): IamBackendSdkClient
       },
       securityEvents: {
         list: standardResourceMethod(toRecord(iam.securityEvents), "list", "appbaseBackend.iam.securityEvents.list"),
+        retrieve: standardResourceMethod(toRecord(iam.securityEvents), "retrieve", "appbaseBackend.iam.securityEvents.retrieve"),
       },
       tenantApplications: {
         enable: standardResourceMethod(toRecord(iam.tenantApplications), "enable", "appbaseBackend.iam.tenantApplications.enable"),
@@ -599,8 +601,8 @@ function isSuccessCode(code: number | string | undefined): boolean {
     return true;
   }
 
-  const normalized = trim(String(code));
-  return normalized === "0" || normalized === "200" || normalized === "2000";
+  const parsed = Number(trim(String(code)));
+  return Number.isFinite(parsed) && isSdkWorkSuccessCode(parsed);
 }
 
 function toRecord(value: unknown): AnyRecord {

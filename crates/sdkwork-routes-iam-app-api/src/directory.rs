@@ -76,10 +76,22 @@ pub(crate) enum OpenRegistrationTenantResolution {
 }
 
 pub(crate) async fn list_active_tenant_ids(pg: &PgPool) -> Result<Vec<String>, String> {
-    sqlx::query_scalar::<_, String>("SELECT id FROM iam_tenant WHERE status = 'active' ORDER BY id")
-        .fetch_all(pg)
-        .await
-        .map_err(|error| format!("list active tenants failed: {error}"))
+    let rows = sqlx::query_scalar::<_, String>(
+        "SELECT id FROM iam_tenant WHERE status = 'active' ORDER BY id LIMIT $1",
+    )
+    .bind(sdkwork_iam_bootstrap::limits::IAM_ACTIVE_TENANT_LIST_LIMIT + 1)
+    .fetch_all(pg)
+    .await
+    .map_err(|error| format!("list active tenants failed: {error}"))?;
+
+    if rows.len() > sdkwork_iam_bootstrap::limits::IAM_ACTIVE_TENANT_LIST_LIMIT as usize {
+        return Err(format!(
+            "active tenant count exceeds limit of {}",
+            sdkwork_iam_bootstrap::limits::IAM_ACTIVE_TENANT_LIST_LIMIT
+        ));
+    }
+
+    Ok(rows)
 }
 
 pub(crate) async fn resolve_bootstrap_registration_tenant(
@@ -228,13 +240,16 @@ impl SdkworkIamLocalIamDirectory {
         keyword: &str,
         page_size: i64,
         offset: i64,
-    ) -> (Vec<SdkworkIamLocalIamUserProfile>, i64) {
-        let pg = match self.state.pool.as_postgres() {
-            Some(p) => p,
-            None => return (Vec::new(), 0),
-        };
+    ) -> Result<(Vec<SdkworkIamLocalIamUserProfile>, i64), DirectorySearchError> {
+        let pg = self
+            .state
+            .pool
+            .as_postgres()
+            .ok_or(DirectorySearchError::DatabaseUnavailable)?;
+        if page_size < 1 || page_size > i64::from(sdkwork_utils_rust::MAX_LIST_PAGE_SIZE) {
+            return Err(DirectorySearchError::InvalidListPagination);
+        }
         let pattern = format!("%{}%", keyword.trim().to_ascii_lowercase());
-        let clamped_page_size = page_size.clamp(1, 200);
         let rows = sqlx::query(&format!(
             "SELECT id, username, display_name, email, phone, status, \
                     COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
@@ -247,11 +262,11 @@ impl SdkworkIamLocalIamDirectory {
         ))
         .bind(tenant_id)
         .bind(&pattern)
-        .bind(clamped_page_size)
+        .bind(page_size)
         .bind(offset.max(0))
         .fetch_all(pg)
         .await
-        .unwrap_or_default();
+        .map_err(|_| DirectorySearchError::DatabaseUnavailable)?;
         let total = crate::utils::total_from_rows(&rows);
         let profiles = rows
             .into_iter()
@@ -265,8 +280,14 @@ impl SdkworkIamLocalIamDirectory {
                 inactive: r.get::<String, _>(5) != "active",
             })
             .collect();
-        (profiles, total)
+        Ok((profiles, total))
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DirectorySearchError {
+    DatabaseUnavailable,
+    InvalidListPagination,
 }
 
 // ── User construction ──────────────────────────────────────────────
@@ -497,35 +518,50 @@ pub(crate) async fn backfill_tenant_members(pg: &PgPool, tenant_id: &str) -> Res
     if tenant_id.is_empty() {
         return Ok(());
     }
-    let rows = sqlx::query(
-        "SELECT u.id \
-         FROM iam_user u \
-         WHERE u.tenant_id = $1 AND u.status = 'active' AND u.is_deleted = 0 \
-           AND NOT EXISTS ( \
-             SELECT 1 FROM iam_tenant_member m \
-             WHERE m.tenant_id = u.tenant_id AND m.user_id = u.id AND m.status = 'active' \
-           )",
-    )
-    .bind(tenant_id)
-    .fetch_all(pg)
-    .await
-    .map_err(|error| format!("list users for tenant member backfill failed: {error}"))?;
+    let batch_size = sdkwork_iam_bootstrap::limits::IAM_TENANT_MEMBER_BACKFILL_BATCH_SIZE;
     let now = current_timestamp_utc();
-    for row in rows {
-        let user_id: String = row.get(0);
-        let member_id = stable_local_id("iamtenantmember", &[tenant_id, &user_id, "member"]);
-        sqlx::query(
-            "INSERT INTO iam_tenant_member (id, tenant_id, user_id, member_kind, status, joined_at, created_at, updated_at) \
-             VALUES ($1, $2, $3, 'member', 'active', $4, $4, $4) \
-             ON CONFLICT (tenant_id, user_id, member_kind) DO NOTHING",
+    loop {
+        let rows = sqlx::query(
+            "SELECT u.id \
+             FROM iam_user u \
+             WHERE u.tenant_id = $1 AND u.status = 'active' AND u.is_deleted = 0 \
+               AND NOT EXISTS ( \
+                 SELECT 1 FROM iam_tenant_member m \
+                 WHERE m.tenant_id = u.tenant_id AND m.user_id = u.id AND m.status = 'active' \
+               ) \
+             ORDER BY u.id \
+             LIMIT $2",
         )
-        .bind(&member_id)
         .bind(tenant_id)
-        .bind(&user_id)
-        .bind(&now)
-        .execute(pg)
+        .bind(batch_size)
+        .fetch_all(pg)
         .await
-        .map_err(|error| format!("backfill tenant member failed: {error}"))?;
+        .map_err(|error| format!("list users for tenant member backfill failed: {error}"))?;
+
+        if rows.is_empty() {
+            break;
+        }
+
+        for row in &rows {
+            let user_id: String = row.get(0);
+            let member_id = stable_local_id("iamtenantmember", &[tenant_id, &user_id, "member"]);
+            sqlx::query(
+                "INSERT INTO iam_tenant_member (id, tenant_id, user_id, member_kind, status, joined_at, created_at, updated_at) \
+                 VALUES ($1, $2, $3, 'member', 'active', $4, $4, $4) \
+                 ON CONFLICT (tenant_id, user_id, member_kind) DO NOTHING",
+            )
+            .bind(&member_id)
+            .bind(tenant_id)
+            .bind(&user_id)
+            .bind(&now)
+            .execute(pg)
+            .await
+            .map_err(|error| format!("backfill tenant member failed: {error}"))?;
+        }
+
+        if rows.len() < batch_size as usize {
+            break;
+        }
     }
     Ok(())
 }

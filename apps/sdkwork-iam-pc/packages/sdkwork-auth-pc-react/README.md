@@ -105,6 +105,42 @@ export function LoginRoute() {
 }
 ```
 
+## Session auth modal
+
+When SDK/API calls return session-expired or unauthorized business codes in
+`modal` mode, mount `SdkworkSessionAuthBrowserRoot` with the same auth runtime
+inputs used by your standalone login routes. The provider renders the standard
+`SdkworkAuthPage` shell inside a modal, including password/code login,
+registration, password recovery, OAuth, QR, and organization selection.
+
+```tsx
+import {
+  SdkworkSessionAuthBrowserRoot,
+  SdkworkIamAuthRoutes,
+} from "@sdkwork/auth-pc-react";
+import { getAppIamRuntime } from "./runtime/iam";
+
+export function AppRoot() {
+  return (
+    <BrowserRouter>
+      <SdkworkSessionAuthBrowserRoot
+        appearance={authAppearance}
+        getRuntime={getAppIamRuntime}
+        runtimeConfig={authRuntimeConfig}
+      >
+        <AppRoutes />
+      </SdkworkSessionAuthBrowserRoot>
+    </BrowserRouter>
+  );
+}
+```
+
+Pass either `controller` or `getRuntime`. Without one of them, modal mode falls
+back to redirecting to `/auth/login`.
+
+`SdkworkAuthPage` also accepts `presentation="modal"` and optional
+`embeddedRouting` when you need to host the same auth surface in a custom modal.
+
 ## QR login and registration
 
 `SdkworkAuthPage` uses the QR rail only for login and registration screens.

@@ -1,8 +1,11 @@
+use axum::http::StatusCode;
+use axum::response::Response;
 use rand_core::{OsRng, RngCore};
 use sdkwork_iam_context_service::{AuthLevel, DeploymentMode, Environment};
+use sdkwork_iam_web_adapter::iam_api_error;
 use sdkwork_utils_rust::{
-    offset_list_page_data, offset_list_page_params_from_map, sdkwork_tree_resource_json,
-    OffsetListPageParams, LIST_TOTAL_SQL_COLUMN,
+    offset_list_page_data, sdkwork_tree_resource_json, validated_list_page_params_from_map,
+    OffsetListPageParams, ResolvedListPageParams, SdkWorkResultCode, LIST_TOTAL_SQL_COLUMN,
 };
 use serde_json::{json, Value};
 use sqlx::Row;
@@ -19,8 +22,36 @@ pub(crate) const PASSWORD_RESET_TTL_MILLIS: u128 = 10 * 60 * 1000;
 
 pub(crate) const LOGIN_CONTINUATION_TTL_MILLIS: u128 = 5 * 60 * 1000;
 
-pub(crate) fn list_page_params(query: &HashMap<String, String>) -> ListPageParams {
-    offset_list_page_params_from_map(query)
+pub(crate) const OAUTH_PROVIDER_LIST_MAX: usize = 100;
+
+pub(crate) fn list_page_params_or_error(
+    query: &HashMap<String, String>,
+) -> Result<ListPageParams, Response> {
+    match validated_list_page_params_from_map(query) {
+        Ok(ResolvedListPageParams::Offset(params)) => Ok(params),
+        Ok(ResolvedListPageParams::Cursor(_)) => Err(list_page_invalid_parameter_error()),
+        Err(SdkWorkResultCode::InvalidParameter) => Err(list_page_invalid_parameter_error()),
+        Err(_) => Err(list_page_invalid_parameter_error()),
+    }
+}
+
+pub(crate) fn list_page_invalid_parameter_error() -> Response {
+    iam_api_error(
+        StatusCode::BAD_REQUEST,
+        "iam_invalid_list_query",
+        "invalid list pagination parameters",
+    )
+}
+
+pub(crate) fn list_page_params_for_directory(
+    query: &HashMap<String, String>,
+) -> Result<ListPageParams, sqlx::Error> {
+    match validated_list_page_params_from_map(query) {
+        Ok(ResolvedListPageParams::Offset(params)) => Ok(params),
+        Ok(ResolvedListPageParams::Cursor(_)) | Err(_) => Err(sqlx::Error::Protocol(
+            "invalid list pagination parameters".into(),
+        )),
+    }
 }
 
 pub(crate) fn total_from_rows(rows: &[sqlx::postgres::PgRow]) -> i64 {
@@ -59,12 +90,19 @@ pub(crate) fn list_search_sql_clause(columns: &[&str], bind: &str) -> String {
     format!("AND ({bind}::text IS NULL OR {conditions})")
 }
 
-/// Paginate a bounded catalog (cardinality ≤ 100) with standard `SdkWorkPageData`.
+/// Paginate a bounded OAuth provider catalog (cardinality ≤ `OAUTH_PROVIDER_LIST_MAX`).
 pub(crate) fn paginate_bounded_json_values(
     items: Vec<Value>,
     query: &HashMap<String, String>,
-) -> Value {
-    let params = list_page_params(query);
+) -> Result<Value, Response> {
+    if items.len() > OAUTH_PROVIDER_LIST_MAX {
+        return Err(iam_api_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "iam_oauth_providers_catalog_overflow",
+            "oauth provider catalog exceeds configured limit",
+        ));
+    }
+    let params = list_page_params_or_error(query)?;
     let search = list_search_pattern(query);
     let filtered = if let Some(pattern) = search {
         items
@@ -85,7 +123,7 @@ pub(crate) fn paginate_bounded_json_values(
     } else {
         filtered[start..end].to_vec()
     };
-    list_page_json(page_items, total_items, &params)
+    Ok(list_page_json(page_items, total_items, &params))
 }
 
 pub(crate) fn tree_resource_json(nodes: Vec<Value>) -> Value {

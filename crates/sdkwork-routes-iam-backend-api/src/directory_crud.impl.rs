@@ -107,37 +107,44 @@ async fn soft_delete(
         "UPDATE {table} SET status = 'disabled', updated_at = $3 \
          WHERE tenant_id = $1 AND id = $2 AND status <> 'disabled'"
     );
-    match sqlx::query(&sql)
-        .bind(&tenant_id)
-        .bind(id)
-        .bind(&now)
-        .execute(pg)
-        .await
+    let tenant_id = tenant_id.to_owned();
+    let id = id.to_owned();
+    let response_id = id.clone();
+    let table = table.to_owned();
+    let action = format!("{table}.delete");
+    match execute_conditional_mutation_with_audit(
+        pg,
+        ctx,
+        &action,
+        &table,
+        id.to_string(),
+        json!({ "deleted": true }),
+        |tx| Box::pin(async move {
+            let sql = sql.clone();
+            let tenant_id = tenant_id.clone();
+            let row_id = id.clone();
+            let now = now.clone();
+
+                sqlx::query(&sql)
+                    .bind(&tenant_id)
+                    .bind(&row_id)
+                    .bind(&now)
+                    .execute(&mut **tx)
+                    .await
+                    .map(|result| result.rows_affected())
+            }),
+        |rows_affected| *rows_affected > 0,
+    )
+    .await
     {
-        Ok(result) if result.rows_affected() > 0 => {
-            let organization_id = organization_id_from_context(ctx);
-            let actor_user_id = actor_user_id_from_context(ctx);
-            let environment = sdkwork_iam_web_adapter::backend_environment_from_context(None);
-            let _ = sdkwork_iam_web_adapter::record_audit_event(
-                pg,
-                &tenant_id,
-                organization_id.as_deref(),
-                actor_user_id.as_deref(),
-                &format!("{table}.delete"),
-                table,
-                Some(id),
-                None,
-                &environment,
-                json!({ "deleted": true }),
-            )
-            .await;
-            appbase_ok(json!({ "deleted": true, "id": id }))
+        Ok(rows_affected) if rows_affected > 0 => {
+            appbase_ok(json!({ "deleted": true, "id": response_id }))
         }
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, not_found_code, "resource not found"),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             error_code,
-            &error.to_string(),
+            &error,
         ),
     }
 }
@@ -209,19 +216,44 @@ async fn create_user(
         );
     }
     let id = format!("iamu-{}", Uuid::new_v4());
+    let insert_id = id.clone();
     let now = Utc::now().to_rfc3339();
-    match sqlx::query(
-        "INSERT INTO iam_user (id, tenant_id, username, display_name, email, phone, status, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $7)",
+    let username_value = username.as_ref().expect("validated").clone();
+    let display_name_value = display_name.as_ref().expect("validated").clone();
+    let email = read_string_field(&body, &["email"]);
+    let phone = read_string_field(&body, &["phone"]);
+    let tenant_id_for_insert = tenant_id.clone();
+    let detail = json!({ "username": username });
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_user",
+        id.clone(),
+        detail,
+        |tx| Box::pin(async move {
+            let tenant_id = tenant_id_for_insert.clone();
+            let username_value = username_value.clone();
+            let display_name_value = display_name_value.clone();
+            let email = email.clone();
+            let phone = phone.clone();
+            let now = now.clone();
+            
+                sqlx::query(
+                    "INSERT INTO iam_user (id, tenant_id, username, display_name, email, phone, status, created_at, updated_at) \
+                     VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $7)",
+                )
+                .bind(&insert_id)
+                .bind(&tenant_id)
+                .bind(&username_value)
+                .bind(&display_name_value)
+                .bind(email)
+                .bind(phone)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+            }),
     )
-    .bind(&id)
-    .bind(&tenant_id)
-    .bind(username.as_ref().expect("validated"))
-    .bind(display_name.as_ref().expect("validated"))
-    .bind(read_string_field(&body, &["email"]))
-    .bind(read_string_field(&body, &["phone"]))
-    .bind(&now)
-    .execute(pg)
     .await
     {
         Ok(_) => match fetch_user_row(pg, &tenant_id, &id).await {
@@ -235,7 +267,7 @@ async fn create_user(
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_user_create_failed",
-            &error.to_string(),
+            &error,
         ),
     }
 }
@@ -263,17 +295,13 @@ async fn update_user(
             "no updatable fields provided",
         );
     }
-    match patch_tenant_row(pg, &tenant_id, "iam_user", &user_id, &assignments).await {
+    match patch_directory_row(pg, &ctx, &tenant_id, "iam_user", &user_id, &assignments).await {
         Ok(true) => match fetch_user_row(pg, &tenant_id, &user_id).await {
             Ok(Some(row)) => appbase_ok(user_row_to_json(&row)),
             _ => appbase_error(StatusCode::NOT_FOUND, "iam_user_not_found", "user not found"),
         },
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_user_not_found", "user not found"),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_user_update_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_user_update_failed", error),
     }
 }
 
@@ -316,17 +344,37 @@ async fn create_role(
         );
     }
     let id = format!("iamr-{}", Uuid::new_v4());
+    let insert_id = id.clone();
     let now = Utc::now().to_rfc3339();
-    match sqlx::query(
-        "INSERT INTO iam_role (id, tenant_id, code, name, status, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, 'active', $5, $5)",
+    let code_value = code.as_ref().expect("validated").clone();
+    let name_value = name.as_ref().expect("validated").clone();
+    let tenant_id_insert = tenant_id.clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_role",
+        id.clone(),
+        json!({ "code": code }),
+        |tx| Box::pin(async move {
+            let tenant_id = tenant_id_insert.clone();
+            let code_value = code_value.clone();
+            let name_value = name_value.clone();
+            let now = now.clone();
+            
+                sqlx::query(
+                    "INSERT INTO iam_role (id, tenant_id, code, name, status, created_at, updated_at) \
+                     VALUES ($1, $2, $3, $4, 'active', $5, $5)",
+                )
+                .bind(&insert_id)
+                .bind(&tenant_id)
+                .bind(&code_value)
+                .bind(&name_value)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+            }),
     )
-    .bind(&id)
-    .bind(&tenant_id)
-    .bind(code.as_ref().expect("validated"))
-    .bind(name.as_ref().expect("validated"))
-    .bind(&now)
-    .execute(pg)
     .await
     {
         Ok(_) => match fetch_role_row(pg, &tenant_id, &id).await {
@@ -340,7 +388,7 @@ async fn create_role(
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_role_create_failed",
-            &error.to_string(),
+            &error,
         ),
     }
 }
@@ -361,17 +409,13 @@ async fn update_role(
     };
     let mut assignments = patch_fields(&body);
     assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
-    match patch_tenant_row(pg, &tenant_id, "iam_role", &role_id, &assignments).await {
+    match patch_directory_row(pg, &ctx, &tenant_id, "iam_role", &role_id, &assignments).await {
         Ok(true) => match fetch_role_row(pg, &tenant_id, &role_id).await {
             Ok(Some(row)) => appbase_ok(role_row_to_json(&row)),
             _ => appbase_error(StatusCode::NOT_FOUND, "iam_role_not_found", "role not found"),
         },
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_role_not_found", "role not found"),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_role_update_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_role_update_failed", error),
     }
 }
 
@@ -393,7 +437,7 @@ async fn delete_role(
 
 async fn create_permission(
     State(state): State<BackendIamState>,
-    _ctx: WebRequestContext,
+    ctx: WebRequestContext,
     Json(body): Json<Value>,
 ) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else {
@@ -401,6 +445,9 @@ async fn create_permission(
             .err()
             .expect("error response");
     };
+    if let Err(response) = ensure_platform_catalog_access(&ctx) {
+        return response;
+    }
     let code = read_string_field(&body, &["code"]);
     let name = read_string_field(&body, &["name"]);
     let resource = read_string_field(&body, &["resource"]);
@@ -416,18 +463,40 @@ async fn create_permission(
         );
     }
     let id = format!("iamp-{}", Uuid::new_v4());
+    let insert_id = id.clone();
     let now = Utc::now().to_rfc3339();
-    match sqlx::query(
-        "INSERT INTO iam_permission (id, code, name, resource, action, created_at) \
-         VALUES ($1, $2, $3, $4, $5, $6)",
+    let code_value = code.as_ref().expect("validated").clone();
+    let name_value = name.as_ref().expect("validated").clone();
+    let resource_value = resource.as_ref().expect("validated").clone();
+    let action_value = action.as_ref().expect("validated").clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_permission",
+        id.clone(),
+        json!({ "code": code }),
+        |tx| Box::pin(async move {
+            let code_value = code_value.clone();
+            let name_value = name_value.clone();
+            let resource_value = resource_value.clone();
+            let action_value = action_value.clone();
+            let now = now.clone();
+            
+                sqlx::query(
+                    "INSERT INTO iam_permission (id, code, name, resource, action, created_at) \
+                     VALUES ($1, $2, $3, $4, $5, $6)",
+                )
+                .bind(&insert_id)
+                .bind(&code_value)
+                .bind(&name_value)
+                .bind(&resource_value)
+                .bind(&action_value)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+            }),
     )
-    .bind(&id)
-    .bind(code.as_ref().expect("validated"))
-    .bind(name.as_ref().expect("validated"))
-    .bind(resource.as_ref().expect("validated"))
-    .bind(action.as_ref().expect("validated"))
-    .bind(&now)
-    .execute(pg)
     .await
     {
         Ok(_) => match fetch_permission_row(pg, &id).await {
@@ -441,14 +510,14 @@ async fn create_permission(
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_permission_create_failed",
-            &error.to_string(),
+            &error,
         ),
     }
 }
 
 async fn update_permission(
     State(state): State<BackendIamState>,
-    _ctx: WebRequestContext,
+    ctx: WebRequestContext,
     Path(permission_id): Path<String>,
     Json(body): Json<Value>,
 ) -> Response {
@@ -457,6 +526,9 @@ async fn update_permission(
             .err()
             .expect("error response");
     };
+    if let Err(response) = ensure_platform_catalog_access(&ctx) {
+        return response;
+    }
     let assignments = patch_fields(&body);
     if assignments.is_empty() {
         return appbase_error(
@@ -475,19 +547,49 @@ async fn update_permission(
         set_clause.push_str(&(index + 2).to_string());
     }
     let sql = format!("UPDATE iam_permission SET {set_clause} WHERE id = $1 OR code = $1");
-    let mut query = sqlx::query(&sql).bind(&permission_id);
-    for (_, value) in &assignments {
-        query = query.bind(value);
-    }
-    match query.execute(pg).await {
-        Ok(result) if result.rows_affected() > 0 => match fetch_permission_row(pg, &permission_id).await {
-            Ok(Some(row)) => appbase_ok(permission_row_to_json(&row)),
-            _ => appbase_error(
-                StatusCode::NOT_FOUND,
-                "iam_permission_not_found",
-                "permission not found",
-            ),
-        },
+    let permission_id_for_update = permission_id.clone();
+    let assignment_values: Vec<String> = assignments.iter().map(|(_, value)| value.clone()).collect();
+    let audit_detail = json!({
+        "updatedFields": assignments
+            .iter()
+            .map(|(column, _)| column.as_str())
+            .collect::<Vec<_>>()
+    });
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_permission.update",
+        "iam_permission",
+        permission_id.clone(),
+        audit_detail,
+        |tx| Box::pin(async move {
+let sql = sql.clone();
+            let permission_id = permission_id_for_update.clone();
+            let assignment_values = assignment_values.clone();
+            
+                let mut query = sqlx::query(&sql).bind(&permission_id);
+                for value in &assignment_values {
+                    query = query.bind(value);
+                }
+                query
+                    .execute(&mut **tx)
+                    .await
+                    .map(|result| result.rows_affected())
+            }),
+        |rows_affected| *rows_affected > 0,
+    )
+    .await
+    {
+        Ok(rows_affected) if rows_affected > 0 => {
+            match fetch_permission_row(pg, &permission_id).await {
+                Ok(Some(row)) => appbase_ok(permission_row_to_json(&row)),
+                _ => appbase_error(
+                    StatusCode::NOT_FOUND,
+                    "iam_permission_not_found",
+                    "permission not found",
+                ),
+            }
+        }
         Ok(_) => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_permission_not_found",
@@ -496,14 +598,14 @@ async fn update_permission(
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_permission_update_failed",
-            &error.to_string(),
+            &error,
         ),
     }
 }
 
 async fn delete_permission(
     State(state): State<BackendIamState>,
-    _ctx: WebRequestContext,
+    ctx: WebRequestContext,
     Path(permission_id): Path<String>,
 ) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else {
@@ -511,12 +613,31 @@ async fn delete_permission(
             .err()
             .expect("error response");
     };
-    match sqlx::query("DELETE FROM iam_permission WHERE id = $1 OR code = $1")
-        .bind(&permission_id)
-        .execute(pg)
-        .await
+    if let Err(response) = ensure_platform_catalog_access(&ctx) {
+        return response;
+    }
+    let permission_id_owned = permission_id.clone();
+    let insert_id = permission_id.clone();
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_permission.delete",
+        "iam_permission",
+        permission_id_owned.clone(),
+        json!({ "deleted": true }),
+        |tx| Box::pin(async move {
+            
+                sqlx::query("DELETE FROM iam_permission WHERE id = $1 OR code = $1")
+                    .bind(&insert_id)
+                    .execute(&mut **tx)
+                    .await
+                    .map(|result| result.rows_affected())
+            }),
+        |rows_affected| *rows_affected > 0,
+    )
+    .await
     {
-        Ok(result) if result.rows_affected() > 0 => {
+        Ok(rows_affected) if rows_affected > 0 => {
             appbase_ok(json!({ "deleted": true, "permissionId": permission_id }))
         }
         Ok(_) => appbase_error(
@@ -527,7 +648,7 @@ async fn delete_permission(
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_permission_delete_failed",
-            &error.to_string(),
+            &error,
         ),
     }
 }
@@ -608,11 +729,7 @@ async fn create_role_permission(
     .await
     {
         Ok(_) => appbase_ok(json!({ "permissionId": permission_id, "roleId": role_id })),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_role_permission_create_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_role_permission_create_failed", error),
     }
 }
 
@@ -655,11 +772,7 @@ async fn delete_role_permission(
             "iam_role_permission_not_found",
             "role permission not found",
         ),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_role_permission_delete_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_role_permission_delete_failed", error),
     }
 }
 
@@ -676,7 +789,9 @@ async fn list_policies(
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query).err().expect("error response");
+    };
     match list_tenant_rows(
         pg,
         &tenant_id,
@@ -690,11 +805,7 @@ async fn list_policies(
     .await
     {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, policy_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_policies_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_policies_list_failed", error),
     }
 }
 
@@ -722,11 +833,7 @@ async fn retrieve_policy(
     {
         Ok(Some(row)) => appbase_ok(policy_row_to_json(&row)),
         Ok(None) => appbase_error(StatusCode::NOT_FOUND, "iam_policy_not_found", "policy not found"),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_policy_retrieve_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_policy_retrieve_failed", error),
     }
 }
 
@@ -770,11 +877,7 @@ async fn create_policy(
     .await
     {
         Ok(_) => retrieve_policy(State(state), ctx, Path(id)).await,
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_policy_create_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_policy_create_failed", error),
     }
 }
 
@@ -794,14 +897,10 @@ async fn update_policy(
     };
     let mut assignments = patch_fields(&body);
     assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
-    match patch_tenant_row(pg, &tenant_id, "iam_policy", &policy_id, &assignments).await {
+    match patch_directory_row(pg, &ctx, &tenant_id, "iam_policy", &policy_id, &assignments).await {
         Ok(true) => retrieve_policy(State(state), ctx, Path(policy_id)).await,
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_policy_not_found", "policy not found"),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_policy_update_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_policy_update_failed", error),
     }
 }
 
@@ -836,26 +935,75 @@ async fn create_organization(
     let id = format!("iamorg-{}", Uuid::new_v4());
     let now = Utc::now().to_rfc3339();
     let path = format!("/{}", code.as_ref().expect("validated"));
-    match sqlx::query(
+    let parent_organization_id =
+        read_string_field(&body, &["parentOrganizationId", "parent_organization_id"]);
+    let mut tx = match pg.begin().await {
+        Ok(transaction) => transaction,
+        Err(error) => {
+            return internal_handler_error("iam_organization_create_failed", error);
+        }
+    };
+    if let Err(error) = sqlx::query(
         "INSERT INTO iam_organization \
          (id, tenant_id, parent_organization_id, code, name, organization_kind, tenant_boundary_kind, \
           data_boundary_kind, verification_status, path, status, created_at, updated_at) \
          VALUES ($1, $2, $3, $4, $5, 'enterprise', 'shared', 'organization', 'verified', $6, 'active', $7, $7)",
     )
-    .bind(&id).bind(&tenant_id)
-    .bind(read_string_field(&body, &["parentOrganizationId", "parent_organization_id"]))
-    .bind(code.as_ref().expect("validated")).bind(name.as_ref().expect("validated"))
-    .bind(&path).bind(&now).execute(pg).await
+    .bind(&id)
+    .bind(&tenant_id)
+    .bind(&parent_organization_id)
+    .bind(code.as_ref().expect("validated"))
+    .bind(name.as_ref().expect("validated"))
+    .bind(&path)
+    .bind(&now)
+    .execute(&mut *tx)
+    .await
     {
-        Ok(_) => {
-            let _ = sqlx::query("INSERT INTO iam_organization_closure (id, tenant_id, ancestor_organization_id, descendant_organization_id, depth, created_at) VALUES ($1, $2, $3, $3, 0, $4)")
-                .bind(format!("iamoc-{}", Uuid::new_v4())).bind(&tenant_id).bind(&id).bind(&now).execute(pg).await;
-            match fetch_organization_row(pg, &tenant_id, &id).await {
-                Ok(Some(row)) => appbase_ok(organization_row_to_json(&row)),
-                _ => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_organization_create_failed", "organization created but could not be loaded"),
-            }
-        }
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_organization_create_failed", &error.to_string()),
+        let _ = tx.rollback().await;
+        return internal_handler_error("iam_organization_create_failed", error);
+    }
+    if let Err(error) = sqlx::query(
+        "INSERT INTO iam_organization_closure \
+         (id, tenant_id, ancestor_organization_id, descendant_organization_id, depth, created_at) \
+         VALUES ($1, $2, $3, $3, 0, $4)",
+    )
+    .bind(format!("iamoc-{}", Uuid::new_v4()))
+    .bind(&tenant_id)
+    .bind(&id)
+    .bind(&now)
+    .execute(&mut *tx)
+    .await
+    {
+        let _ = tx.rollback().await;
+        return internal_handler_error("iam_organization_create_failed", error);
+    }
+    if let Err(error) = record_backend_mutation_audit_tx(
+        &mut *tx,
+        &ctx,
+        "iam_organization.create",
+        "iam_organization",
+        &id,
+        json!({ "code": code }),
+    )
+    .await
+    {
+        let _ = tx.rollback().await;
+        return appbase_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "iam_organization_create_failed",
+            &error,
+        );
+    }
+    if let Err(error) = tx.commit().await {
+        return internal_handler_error("iam_organization_create_failed", error);
+    }
+    match fetch_organization_row(pg, &tenant_id, &id).await {
+        Ok(Some(row)) => appbase_ok(organization_row_to_json(&row)),
+        _ => appbase_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "iam_organization_create_failed",
+            "organization created but could not be loaded",
+        ),
     }
 }
 
@@ -865,7 +1013,7 @@ async fn retrieve_organization(State(state): State<BackendIamState>, ctx: WebReq
     match fetch_organization_row(pg, &tenant_id, &organization_id).await {
         Ok(Some(row)) => appbase_ok(organization_row_to_json(&row)),
         Ok(None) => appbase_error(StatusCode::NOT_FOUND, "iam_organization_not_found", "organization not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_organization_retrieve_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_organization_retrieve_failed", error),
     }
 }
 
@@ -874,10 +1022,10 @@ async fn update_organization(State(state): State<BackendIamState>, ctx: WebReque
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
     let mut assignments = patch_fields(&body);
     assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
-    match patch_tenant_row(pg, &tenant_id, "iam_organization", &organization_id, &assignments).await {
+    match patch_directory_row(pg, &ctx, &tenant_id, "iam_organization", &organization_id, &assignments).await {
         Ok(true) => retrieve_organization(State(state), ctx, Path(organization_id)).await,
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_organization_not_found", "organization not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_organization_update_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_organization_update_failed", error),
     }
 }
 
@@ -896,7 +1044,7 @@ async fn organizations_tree(State(state): State<BackendIamState>, ctx: WebReques
             }
             appbase_ok(tree_resource_json(nest_tree(rows.iter().map(organization_row_to_json).collect(), "id", "parentOrganizationId")))
         },
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_organizations_tree_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_organizations_tree_failed", error),
     }
 }
 
@@ -913,7 +1061,7 @@ async fn create_organization_membership(State(state): State<BackendIamState>, ct
         .bind(&id).bind(&tenant_id).bind(organization_id.as_ref().expect("validated")).bind(user_id.as_ref().expect("validated"))
         .bind(read_string_field(&body, &["membershipKind", "membership_kind"]).unwrap_or_else(|| "employee".to_owned())).bind(&now).execute(pg).await {
         Ok(_) => appbase_ok(json!({ "membershipId": id })),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_membership_create_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_membership_create_failed", error),
     }
 }
 
@@ -921,10 +1069,10 @@ async fn update_organization_membership(State(state): State<BackendIamState>, ct
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
     let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
-    match patch_tenant_row(pg, &tenant_id, "iam_organization_membership", &membership_id, &assignments).await {
+    match patch_directory_row(pg, &ctx, &tenant_id, "iam_organization_membership", &membership_id, &assignments).await {
         Ok(true) => appbase_ok(json!({ "membershipId": membership_id })),
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_membership_not_found", "membership not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_membership_update_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_membership_update_failed", error),
     }
 }
 
@@ -944,15 +1092,52 @@ async fn create_department(State(state): State<BackendIamState>, ctx: WebRequest
         {
             Ok(Some(row)) => format!("{}/{}", row.get::<String, _>(0), code.as_ref().expect("validated")),
             Ok(None) => return appbase_error(StatusCode::BAD_REQUEST, "iam_department_invalid", "parentDepartmentId not found"),
-            Err(error) => return appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_department_create_failed", &error.to_string()),
+            Err(error) => return internal_handler_error("iam_department_create_failed", error),
         }
     } else {
         format!("/{organization_id}/{}", code.as_ref().expect("validated"))
     };
     let id = format!("iamdept-{}", Uuid::new_v4()); let now = Utc::now();
-    match sqlx::query("INSERT INTO iam_department (id, tenant_id, organization_id, parent_department_id, code, name, department_kind, path, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, 'standard', $7, 'active', $8, $8)")
-        .bind(&id).bind(&tenant_id).bind(&organization_id).bind(&parent_department_id)
-        .bind(code.as_ref().expect("validated")).bind(name.as_ref().expect("validated")).bind(&path).bind(now).execute(pg).await {
+    let insert_id = id.clone();
+    let code_value = code.as_ref().expect("validated").clone();
+    let name_value = name.as_ref().expect("validated").clone();
+    let organization_id_insert = organization_id.clone();
+    let parent_department_id_insert = parent_department_id.clone();
+    let path_insert = path.clone();
+    let detail = json!({ "code": code.clone(), "organizationId": organization_id.clone() });
+    let tenant_id_insert = tenant_id.clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_department",
+        id.clone(),
+        detail,
+        |tx| Box::pin(async move {
+            let tenant_id = tenant_id_insert.clone();
+            let organization_id = organization_id_insert.clone();
+            let parent_department_id = parent_department_id_insert.clone();
+            let code_value = code_value.clone();
+            let name_value = name_value.clone();
+            let path = path_insert.clone();
+            let now = now;
+            
+                sqlx::query(
+                    "INSERT INTO iam_department (id, tenant_id, organization_id, parent_department_id, code, name, department_kind, path, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, 'standard', $7, 'active', $8, $8)",
+                )
+                .bind(&insert_id)
+                .bind(&tenant_id)
+                .bind(&organization_id)
+                .bind(&parent_department_id)
+                .bind(&code_value)
+                .bind(&name_value)
+                .bind(&path)
+                .bind(now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+            }),
+    )
+    .await {
         Ok(_) => {
             if let Err(error) = sdkwork_iam_module_registry::ensure_department_closure_postgres(
                 pg,
@@ -969,7 +1154,7 @@ async fn create_department(State(state): State<BackendIamState>, ctx: WebRequest
                 _ => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_department_create_failed", "department created but could not be loaded"),
             }
         }
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_department_create_failed", &error.to_string()),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_department_create_failed", &error),
     }
 }
 
@@ -979,7 +1164,7 @@ async fn retrieve_department(State(state): State<BackendIamState>, ctx: WebReque
     match fetch_department_row(pg, &tenant_id, &department_id).await {
         Ok(Some(row)) => appbase_ok(department_row_to_json(&row)),
         Ok(None) => appbase_error(StatusCode::NOT_FOUND, "iam_department_not_found", "department not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_department_retrieve_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_department_retrieve_failed", error),
     }
 }
 
@@ -987,10 +1172,10 @@ async fn update_department(State(state): State<BackendIamState>, ctx: WebRequest
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
     let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
-    match patch_tenant_row(pg, &tenant_id, "iam_department", &department_id, &assignments).await {
+    match patch_directory_row(pg, &ctx, &tenant_id, "iam_department", &department_id, &assignments).await {
         Ok(true) => retrieve_department(State(state), ctx, Path(department_id)).await,
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_department_not_found", "department not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_department_update_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_department_update_failed", error),
     }
 }
 
@@ -1015,14 +1200,16 @@ async fn departments_tree(State(state): State<BackendIamState>, ctx: WebRequestC
             }
             appbase_ok(tree_resource_json(nest_tree(rows.iter().map(department_row_to_json).collect(), "id", "parentDepartmentId")))
         },
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_departments_tree_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_departments_tree_failed", error),
     }
 }
 
 async fn list_department_assignments(State(state): State<BackendIamState>, ctx: WebRequestContext, Query(query): Query<HashMap<String, String>>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query).err().expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     match sqlx::query(&format!(
         "SELECT id, tenant_id, organization_id, organization_membership_id, user_id, department_id, assignment_kind, is_primary, effective_from, status, \
@@ -1041,7 +1228,7 @@ async fn list_department_assignments(State(state): State<BackendIamState>, ctx: 
     .fetch_all(pg)
     .await {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| json!({"assignmentId": row.get::<String,_>(0), "departmentId": row.get::<String,_>(5), "id": row.get::<String,_>(0), "organizationId": row.get::<String,_>(2), "status": row.get::<String,_>(9), "tenantId": row.get::<String,_>(1), "userId": row.get::<String,_>(4)}))),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_department_assignments_list_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_department_assignments_list_failed", error),
     }
 }
 
@@ -1060,7 +1247,7 @@ async fn create_department_assignment(State(state): State<BackendIamState>, ctx:
         .bind(&id).bind(&tenant_id).bind(organization_id.as_ref().expect("validated")).bind(membership_id.as_ref().expect("validated")).bind(department_id.as_ref().expect("validated")).bind(user_id.as_ref().expect("validated"))
         .bind(read_string_field(&body, &["assignmentKind", "assignment_kind"]).unwrap_or_else(|| "primary".to_owned())).bind(&now).execute(pg).await {
         Ok(_) => appbase_ok(json!({ "assignmentId": id })),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_department_assignment_create_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_department_assignment_create_failed", error),
     }
 }
 
@@ -1068,20 +1255,22 @@ async fn update_department_assignment(State(state): State<BackendIamState>, ctx:
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
     let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
-    match patch_tenant_row(pg, &tenant_id, "iam_department_assignment", &assignment_id, &assignments).await {
+    match patch_directory_row(pg, &ctx, &tenant_id, "iam_department_assignment", &assignment_id, &assignments).await {
         Ok(true) => appbase_ok(json!({ "assignmentId": assignment_id })),
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_department_assignment_not_found", "assignment not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_department_assignment_update_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_department_assignment_update_failed", error),
     }
 }
 
 async fn list_positions(State(state): State<BackendIamState>, ctx: WebRequestContext, Query(query): Query<HashMap<String, String>>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query).err().expect("error response");
+    };
     match list_tenant_rows(pg, &tenant_id, "iam_position", "id, tenant_id, organization_id, code, name, position_kind, status, created_at, updated_at", "name, id", &params, list_search_pattern(&query), &["code", "name"]).await {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| json!({"code": row.get::<String,_>(3), "id": row.get::<String,_>(0), "name": row.get::<String,_>(4), "organizationId": row.get::<String,_>(2), "positionId": row.get::<String,_>(0), "positionKind": row.get::<String,_>(5), "status": row.get::<String,_>(6), "tenantId": row.get::<String,_>(1)}))),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_positions_list_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_positions_list_failed", error),
     }
 }
 
@@ -1098,7 +1287,7 @@ async fn create_position(State(state): State<BackendIamState>, ctx: WebRequestCo
         .bind(&id).bind(&tenant_id).bind(organization_id.as_ref().expect("validated")).bind(read_string_field(&body, &["departmentId", "department_id"]))
         .bind(code.as_ref().expect("validated")).bind(name.as_ref().expect("validated")).bind(read_string_field(&body, &["positionKind", "position_kind"]).unwrap_or_else(|| "standard".to_owned())).bind(&now).execute(pg).await {
         Ok(_) => appbase_ok(json!({ "positionId": id })),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_position_create_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_position_create_failed", error),
     }
 }
 
@@ -1106,10 +1295,10 @@ async fn update_position(State(state): State<BackendIamState>, ctx: WebRequestCo
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
     let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
-    match patch_tenant_row(pg, &tenant_id, "iam_position", &position_id, &assignments).await {
+    match patch_directory_row(pg, &ctx, &tenant_id, "iam_position", &position_id, &assignments).await {
         Ok(true) => appbase_ok(json!({ "positionId": position_id })),
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_position_not_found", "position not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_position_update_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_position_update_failed", error),
     }
 }
 
@@ -1120,7 +1309,9 @@ async fn delete_position(State(state): State<BackendIamState>, ctx: WebRequestCo
 async fn list_position_assignments(State(state): State<BackendIamState>, ctx: WebRequestContext, Query(query): Query<HashMap<String, String>>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query).err().expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     match sqlx::query(&format!(
         "SELECT id, tenant_id, organization_id, department_assignment_id, position_id, user_id, is_primary, effective_from, status, \
@@ -1138,7 +1329,7 @@ async fn list_position_assignments(State(state): State<BackendIamState>, ctx: We
     .bind(&search_pattern)
     .fetch_all(pg).await {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| json!({"assignmentId": row.get::<String,_>(0), "departmentAssignmentId": row.get::<String,_>(3), "id": row.get::<String,_>(0), "organizationId": row.get::<String,_>(2), "positionId": row.get::<String,_>(4), "status": row.get::<String,_>(8), "tenantId": row.get::<String,_>(1), "userId": row.get::<String,_>(5)}))),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_position_assignments_list_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_position_assignments_list_failed", error),
     }
 }
 
@@ -1156,7 +1347,7 @@ async fn create_position_assignment(State(state): State<BackendIamState>, ctx: W
     match sqlx::query("INSERT INTO iam_position_assignment (id, tenant_id, organization_id, department_assignment_id, position_id, user_id, is_primary, effective_from, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,0,$7,'active',$7,$7)")
         .bind(&id).bind(&tenant_id).bind(organization_id.as_ref().expect("validated")).bind(department_assignment_id.as_ref().expect("validated")).bind(position_id.as_ref().expect("validated")).bind(user_id.as_ref().expect("validated")).bind(&now).execute(pg).await {
         Ok(_) => appbase_ok(json!({ "assignmentId": id })),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_position_assignment_create_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_position_assignment_create_failed", error),
     }
 }
 
@@ -1164,10 +1355,10 @@ async fn update_position_assignment(State(state): State<BackendIamState>, ctx: W
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
     let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
-    match patch_tenant_row(pg, &tenant_id, "iam_position_assignment", &assignment_id, &assignments).await {
+    match patch_directory_row(pg, &ctx, &tenant_id, "iam_position_assignment", &assignment_id, &assignments).await {
         Ok(true) => appbase_ok(json!({ "assignmentId": assignment_id })),
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_position_assignment_not_found", "assignment not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_position_assignment_update_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_position_assignment_update_failed", error),
     }
 }
 
@@ -1178,7 +1369,9 @@ fn tenant_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
 async fn list_tenants(State(state): State<BackendIamState>, ctx: WebRequestContext, Query(query): Query<HashMap<String, String>>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query).err().expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     match sqlx::query(&format!(
         "SELECT id, code, name, status, created_at, updated_at, \
@@ -1194,7 +1387,7 @@ async fn list_tenants(State(state): State<BackendIamState>, ctx: WebRequestConte
     .bind(&search_pattern)
     .fetch_all(pg).await {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, tenant_row_to_json)),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenants_list_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_tenants_list_failed", error),
     }
 }
 
@@ -1203,54 +1396,150 @@ async fn create_tenant(State(state): State<BackendIamState>, ctx: WebRequestCont
     let code = read_string_field(&body, &["code"]); let name = read_string_field(&body, &["name"]);
     if code.as_deref().unwrap_or("").is_empty() || name.as_deref().unwrap_or("").is_empty() { return appbase_error(StatusCode::BAD_REQUEST, "iam_tenant_invalid", "code and name are required"); }
     let id = format!("iamt-{}", Uuid::new_v4()); let now = Utc::now().to_rfc3339();
-    match sqlx::query("INSERT INTO iam_tenant (id, code, name, status, created_at, updated_at) VALUES ($1, $2, $3, 'active', $4, $4)").bind(&id).bind(code.as_ref().expect("validated")).bind(name.as_ref().expect("validated")).bind(&now).execute(pg).await {
+    let insert_id = id.clone();
+    let code_value = code.as_ref().expect("validated").clone();
+    let name_value = name.as_ref().expect("validated").clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_tenant",
+        id.clone(),
+        json!({ "code": code }),
+        |tx| Box::pin(async move {
+            let code_value = code_value.clone();
+            let name_value = name_value.clone();
+            let now = now.clone();
+            
+                sqlx::query(
+                    "INSERT INTO iam_tenant (id, code, name, status, created_at, updated_at) VALUES ($1, $2, $3, 'active', $4, $4)",
+                )
+                .bind(&insert_id)
+                .bind(&code_value)
+                .bind(&name_value)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+            }),
+    )
+    .await {
         Ok(_) => {
             if let Err(error) = sdkwork_iam_bootstrap::ensure_postgres_tenant_signing_key(pg, &id).await {
-                return appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_signing_key_provision_failed", &error.to_string());
+                return internal_handler_error("iam_tenant_signing_key_provision_failed", error);
             }
             retrieve_tenant(State(state), ctx, Path(id)).await
         }
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_create_failed", &error.to_string()),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_create_failed", &error),
     }
 }
 
-async fn retrieve_tenant(State(state): State<BackendIamState>, _ctx: WebRequestContext, Path(tenant_id): Path<String>) -> Response {
+async fn retrieve_tenant(State(state): State<BackendIamState>, ctx: WebRequestContext, Path(tenant_id): Path<String>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
+    if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
+        return response;
+    }
     match sqlx::query("SELECT id, code, name, status, created_at, updated_at FROM iam_tenant WHERE id = $1 LIMIT 1").bind(&tenant_id).fetch_optional(pg).await {
         Ok(Some(row)) => appbase_ok(tenant_row_to_json(&row)),
         Ok(None) => appbase_error(StatusCode::NOT_FOUND, "iam_tenant_not_found", "tenant not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_retrieve_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_tenant_retrieve_failed", &error),
     }
 }
 
 async fn update_tenant(State(state): State<BackendIamState>, ctx: WebRequestContext, Path(tenant_id): Path<String>, Json(body): Json<Value>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
+    if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
+        return response;
+    }
     let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
     if assignments.len() == 1 { return appbase_error(StatusCode::BAD_REQUEST, "iam_tenant_invalid", "no updatable fields provided"); }
     let mut set_clause = String::new();
     for (index, (column, _)) in assignments.iter().enumerate() { if index > 0 { set_clause.push_str(", "); } set_clause.push_str(column); set_clause.push_str(" = $"); set_clause.push_str(&(index + 2).to_string()); }
     let sql = format!("UPDATE iam_tenant SET {set_clause} WHERE id = $1");
-    let mut query = sqlx::query(&sql).bind(&tenant_id); for (_, value) in &assignments { query = query.bind(value); }
-    match query.execute(pg).await {
-        Ok(result) if result.rows_affected() > 0 => retrieve_tenant(State(state), ctx, Path(tenant_id)).await,
+    let audit_detail = json!({
+        "updatedFields": assignments
+            .iter()
+            .map(|(column, _)| column.as_str())
+            .filter(|column| *column != "updated_at")
+            .collect::<Vec<_>>()
+    });
+    let tenant_id_owned = tenant_id.clone();
+    let assignments_owned = assignments.clone();
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_tenant.update",
+        "iam_tenant",
+        tenant_id_owned.clone(),
+        audit_detail,
+        |tx| Box::pin(async move {
+let sql = sql.clone();
+            let tenant_id = tenant_id_owned.clone();
+            let assignments = assignments_owned.clone();
+            
+                let mut query = sqlx::query(&sql).bind(&tenant_id);
+                for (_, value) in &assignments {
+                    query = query.bind(value);
+                }
+                query
+                    .execute(&mut **tx)
+                    .await
+                    .map(|result| result.rows_affected())
+            }),
+        |rows_affected| *rows_affected > 0,
+    )
+    .await {
+        Ok(rows_affected) if rows_affected > 0 => retrieve_tenant(State(state), ctx, Path(tenant_id)).await,
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, "iam_tenant_not_found", "tenant not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_update_failed", &error.to_string()),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_update_failed", &error),
     }
 }
 
-async fn delete_tenant(State(state): State<BackendIamState>, _ctx: WebRequestContext, Path(tenant_id): Path<String>) -> Response {
+async fn delete_tenant(State(state): State<BackendIamState>, ctx: WebRequestContext, Path(tenant_id): Path<String>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
+    if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
+        return response;
+    }
     let now = Utc::now().to_rfc3339();
-    match sqlx::query("UPDATE iam_tenant SET status = 'disabled', updated_at = $2 WHERE id = $1 AND status <> 'disabled'").bind(&tenant_id).bind(&now).execute(pg).await {
-        Ok(result) if result.rows_affected() > 0 => appbase_ok(json!({ "deleted": true, "tenantId": tenant_id })),
+    let tenant_id_owned = tenant_id.clone();
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_tenant.delete",
+        "iam_tenant",
+        tenant_id_owned.clone(),
+        json!({ "deleted": true }),
+        |tx| Box::pin(async move {
+let tenant_id = tenant_id_owned.clone();
+            let now = now.clone();
+            
+                sqlx::query(
+                    "UPDATE iam_tenant SET status = 'disabled', updated_at = $2 WHERE id = $1 AND status <> 'disabled'",
+                )
+                .bind(&tenant_id)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await
+                .map(|result| result.rows_affected())
+            }),
+        |rows_affected| *rows_affected > 0,
+    )
+    .await {
+        Ok(rows_affected) if rows_affected > 0 => {
+            appbase_ok(json!({ "deleted": true, "tenantId": tenant_id }))
+        }
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, "iam_tenant_not_found", "tenant not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_delete_failed", &error.to_string()),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_delete_failed", &error),
     }
 }
 
-async fn list_tenant_members(State(state): State<BackendIamState>, _ctx: WebRequestContext, Path(tenant_id): Path<String>, Query(query): Query<HashMap<String, String>>) -> Response {
+async fn list_tenant_members(State(state): State<BackendIamState>, ctx: WebRequestContext, Path(tenant_id): Path<String>, Query(query): Query<HashMap<String, String>>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
-    let params = list_page_params(&query);
+    if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
+        return response;
+    }
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query).err().expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     match sqlx::query(&format!(
         "SELECT id, tenant_id, user_id, member_kind, status, joined_at, created_at, updated_at, \
@@ -1267,24 +1556,30 @@ async fn list_tenant_members(State(state): State<BackendIamState>, _ctx: WebRequ
     .bind(&search_pattern)
     .fetch_all(pg).await {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| json!({"id": row.get::<String,_>(0), "memberKind": row.get::<String,_>(3), "status": row.get::<String,_>(4), "tenantId": row.get::<String,_>(1), "userId": row.get::<String,_>(2)}))),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_members_list_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_tenant_members_list_failed", &error),
     }
 }
 
-async fn create_tenant_member(State(state): State<BackendIamState>, _ctx: WebRequestContext, Path(tenant_id): Path<String>, Json(body): Json<Value>) -> Response {
+async fn create_tenant_member(State(state): State<BackendIamState>, ctx: WebRequestContext, Path(tenant_id): Path<String>, Json(body): Json<Value>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
+    if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
+        return response;
+    }
     let user_id = read_string_field(&body, &["userId", "user_id"]);
     if user_id.as_deref().unwrap_or("").is_empty() { return appbase_error(StatusCode::BAD_REQUEST, "iam_tenant_member_invalid", "userId is required"); }
     let id = format!("iamtm-{}", Uuid::new_v4()); let now = Utc::now().to_rfc3339();
     match sqlx::query("INSERT INTO iam_tenant_member (id, tenant_id, user_id, member_kind, status, joined_at, created_at, updated_at) VALUES ($1,$2,$3,$4,'active',$5,$5,$5)")
         .bind(&id).bind(&tenant_id).bind(user_id.as_ref().expect("validated")).bind(read_string_field(&body, &["memberKind", "member_kind"]).unwrap_or_else(|| "member".to_owned())).bind(&now).execute(pg).await {
         Ok(_) => appbase_ok(json!({ "id": id, "tenantId": tenant_id, "userId": user_id })),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_member_create_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_tenant_member_create_failed", error),
     }
 }
 
-async fn update_tenant_member(State(state): State<BackendIamState>, _ctx: WebRequestContext, Path((tenant_id, user_id)): Path<(String, String)>, Json(body): Json<Value>) -> Response {
+async fn update_tenant_member(State(state): State<BackendIamState>, ctx: WebRequestContext, Path((tenant_id, user_id)): Path<(String, String)>, Json(body): Json<Value>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
+    if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
+        return response;
+    }
     let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
     let mut set_clause = String::new();
     for (index, (column, _)) in assignments.iter().enumerate() { if index > 0 { set_clause.push_str(", "); } set_clause.push_str(column); set_clause.push_str(" = $"); set_clause.push_str(&(index + 3).to_string()); }
@@ -1293,17 +1588,20 @@ async fn update_tenant_member(State(state): State<BackendIamState>, _ctx: WebReq
     match query.execute(pg).await {
         Ok(result) if result.rows_affected() > 0 => appbase_ok(json!({ "tenantId": tenant_id, "userId": user_id })),
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, "iam_tenant_member_not_found", "tenant member not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_member_update_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_tenant_member_update_failed", error),
     }
 }
 
-async fn delete_tenant_member(State(state): State<BackendIamState>, _ctx: WebRequestContext, Path((tenant_id, user_id)): Path<(String, String)>) -> Response {
+async fn delete_tenant_member(State(state): State<BackendIamState>, ctx: WebRequestContext, Path((tenant_id, user_id)): Path<(String, String)>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
+    if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
+        return response;
+    }
     let now = Utc::now().to_rfc3339();
     match sqlx::query("UPDATE iam_tenant_member SET status = 'disabled', updated_at = $3 WHERE tenant_id = $1 AND user_id = $2 AND status <> 'disabled'").bind(&tenant_id).bind(&user_id).bind(&now).execute(pg).await {
         Ok(result) if result.rows_affected() > 0 => appbase_ok(json!({ "deleted": true, "tenantId": tenant_id, "userId": user_id })),
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, "iam_tenant_member_not_found", "tenant member not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_member_delete_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_tenant_member_delete_failed", error),
     }
 }
 
@@ -1314,7 +1612,7 @@ async fn revoke_api_key(State(state): State<BackendIamState>, ctx: WebRequestCon
     match sqlx::query("UPDATE iam_api_key SET status = 'revoked', updated_at = $3 WHERE tenant_id = $1 AND id = $2 AND status <> 'revoked'").bind(&tenant_id).bind(&api_key_id).bind(&now).execute(pg).await {
         Ok(result) if result.rows_affected() > 0 => appbase_ok(json!({ "apiKeyId": api_key_id, "status": "revoked" })),
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, "iam_api_key_not_found", "api key not found"),
-        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_api_key_revoke_failed", &error.to_string()),
+        Err(error) => internal_handler_error("iam_api_key_revoke_failed", error),
     }
 }
 
@@ -1378,7 +1676,9 @@ async fn list_groups(
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query).err().expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     match sqlx::query(&format!(
         "SELECT id, tenant_id, organization_id, code, name, group_kind, status, \
@@ -1397,11 +1697,7 @@ async fn list_groups(
     .await
     {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, group_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_groups_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_groups_list_failed", error),
     }
 }
 
@@ -1430,20 +1726,42 @@ async fn create_group(
     let group_kind = read_string_field(&body, &["groupKind", "group_kind"])
         .unwrap_or_else(|| "general".to_owned());
     let id = format!("iamgrp-{}", Uuid::new_v4());
+    let insert_id = id.clone();
     let now = Utc::now().to_rfc3339();
-    match sqlx::query(
-        "INSERT INTO iam_group \
-         (id, tenant_id, organization_id, code, name, group_kind, status, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $7)",
+    let code_value = code.as_ref().expect("validated").clone();
+    let name_value = name.as_ref().expect("validated").clone();
+    let tenant_id_insert = tenant_id.clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_group",
+        id.clone(),
+        json!({ "code": code }),
+        |tx| Box::pin(async move {
+            let tenant_id = tenant_id_insert.clone();
+            let organization_id = organization_id.clone();
+            let code_value = code_value.clone();
+            let name_value = name_value.clone();
+            let group_kind = group_kind.clone();
+            let now = now.clone();
+            
+                sqlx::query(
+                    "INSERT INTO iam_group \
+                     (id, tenant_id, organization_id, code, name, group_kind, status, created_at, updated_at) \
+                     VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $7)",
+                )
+                .bind(&insert_id)
+                .bind(&tenant_id)
+                .bind(&organization_id)
+                .bind(&code_value)
+                .bind(&name_value)
+                .bind(&group_kind)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+            }),
     )
-    .bind(&id)
-    .bind(&tenant_id)
-    .bind(&organization_id)
-    .bind(code.as_ref().expect("validated"))
-    .bind(name.as_ref().expect("validated"))
-    .bind(&group_kind)
-    .bind(&now)
-    .execute(pg)
     .await
     {
         Ok(_) => match fetch_group_row(pg, &tenant_id, &id).await {
@@ -1457,7 +1775,7 @@ async fn create_group(
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_group_create_failed",
-            &error.to_string(),
+            &error,
         ),
     }
 }
@@ -1476,11 +1794,7 @@ async fn retrieve_group(
     match fetch_group_row(pg, &tenant_id, &group_id).await {
         Ok(Some(row)) => appbase_ok(group_row_to_json(&row)),
         Ok(None) => appbase_error(StatusCode::NOT_FOUND, "iam_group_not_found", "group not found"),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_group_retrieve_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_group_retrieve_failed", error),
     }
 }
 
@@ -1501,14 +1815,10 @@ async fn update_group(
         .unwrap_or(group_id);
     let mut assignments = patch_fields(&body);
     assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
-    match patch_tenant_row(pg, &tenant_id, "iam_group", &group_id, &assignments).await {
+    match patch_directory_row(pg, &ctx, &tenant_id, "iam_group", &group_id, &assignments).await {
         Ok(true) => retrieve_group(State(state), ctx, Path(group_id)).await,
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_group_not_found", "group not found"),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_group_update_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_group_update_failed", error),
     }
 }
 
@@ -1552,7 +1862,9 @@ async fn list_group_members(
     let Some(group_id) = resolve_group_id(pg, &tenant_id, &group_id).await else {
         return appbase_error(StatusCode::NOT_FOUND, "iam_group_not_found", "group not found");
     };
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query).err().expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     match sqlx::query(&format!(
         "SELECT id, tenant_id, group_id, principal_kind, principal_id, joined_at, status, \
@@ -1572,11 +1884,7 @@ async fn list_group_members(
     .await
     {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, group_member_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_group_members_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_group_members_list_failed", error),
     }
 }
 
@@ -1651,11 +1959,7 @@ async fn create_group_member(
                 "member created but could not be loaded",
             ),
         },
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_group_member_create_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_group_member_create_failed", error),
     }
 }
 
@@ -1693,11 +1997,7 @@ async fn delete_group_member(
             "iam_group_member_not_found",
             "group member not found",
         ),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_group_member_delete_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_group_member_delete_failed", error),
     }
 }
 
@@ -1712,7 +2012,9 @@ async fn list_service_accounts(
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query).err().expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     match sqlx::query(&format!(
         "SELECT id, tenant_id, organization_id, code, name, status, credential_kind, \
@@ -1731,11 +2033,7 @@ async fn list_service_accounts(
     .await
     {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, service_account_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_service_accounts_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_service_accounts_list_failed", error),
     }
 }
 
@@ -1764,20 +2062,42 @@ async fn create_service_account(
     let credential_kind = read_string_field(&body, &["credentialKind", "credential_kind"])
         .unwrap_or_else(|| "api_key".to_owned());
     let id = format!("iamsa-{}", Uuid::new_v4());
+    let insert_id = id.clone();
     let now = Utc::now().to_rfc3339();
-    match sqlx::query(
-        "INSERT INTO iam_service_account \
-         (id, tenant_id, organization_id, code, name, status, credential_kind, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $7)",
+    let code_value = code.as_ref().expect("validated").clone();
+    let name_value = name.as_ref().expect("validated").clone();
+    let tenant_id_insert = tenant_id.clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_service_account",
+        id.clone(),
+        json!({ "code": code }),
+        |tx| Box::pin(async move {
+            let tenant_id = tenant_id_insert.clone();
+            let organization_id = organization_id.clone();
+            let code_value = code_value.clone();
+            let name_value = name_value.clone();
+            let credential_kind = credential_kind.clone();
+            let now = now.clone();
+            
+                sqlx::query(
+                    "INSERT INTO iam_service_account \
+                     (id, tenant_id, organization_id, code, name, status, credential_kind, created_at, updated_at) \
+                     VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $7)",
+                )
+                .bind(&insert_id)
+                .bind(&tenant_id)
+                .bind(&organization_id)
+                .bind(&code_value)
+                .bind(&name_value)
+                .bind(&credential_kind)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+            }),
     )
-    .bind(&id)
-    .bind(&tenant_id)
-    .bind(&organization_id)
-    .bind(code.as_ref().expect("validated"))
-    .bind(name.as_ref().expect("validated"))
-    .bind(&credential_kind)
-    .bind(&now)
-    .execute(pg)
     .await
     {
         Ok(_) => match fetch_service_account_row(pg, &tenant_id, &id).await {
@@ -1791,7 +2111,7 @@ async fn create_service_account(
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_service_account_create_failed",
-            &error.to_string(),
+            &error,
         ),
     }
 }
@@ -1814,11 +2134,7 @@ async fn retrieve_service_account(
             "iam_service_account_not_found",
             "service account not found",
         ),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_service_account_retrieve_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_service_account_retrieve_failed", error),
     }
 }
 
@@ -1842,8 +2158,9 @@ async fn update_service_account(
         .unwrap_or(service_account_id);
     let mut assignments = patch_fields(&body);
     assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
-    match patch_tenant_row(
+    match patch_directory_row(
         pg,
+        &ctx,
         &tenant_id,
         "iam_service_account",
         &service_account_id,
@@ -1857,11 +2174,7 @@ async fn update_service_account(
             "iam_service_account_not_found",
             "service account not found",
         ),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_service_account_update_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_service_account_update_failed", error),
     }
 }
 

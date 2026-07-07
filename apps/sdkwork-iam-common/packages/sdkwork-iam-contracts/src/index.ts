@@ -618,6 +618,7 @@ export const SDKWORK_IAM_API_ROUTES = {
     },
     auditEvents: {
       list: operation("GET", `${backend}/iam/audit_events`, "iam", "auditEvents.list", "dualToken"),
+      retrieve: operation("GET", `${backend}/iam/audit_events/{auditEventId}`, "iam", "auditEvents.retrieve", "dualToken"),
     },
     organizations: {
       create: operation("POST", `${backend}/iam/organizations`, "iam", "organizations.create", "dualToken"),
@@ -697,6 +698,7 @@ export const SDKWORK_IAM_API_ROUTES = {
     },
     securityEvents: {
       list: operation("GET", `${backend}/iam/security_events`, "iam", "securityEvents.list", "dualToken"),
+      retrieve: operation("GET", `${backend}/iam/security_events/{securityEventId}`, "iam", "securityEvents.retrieve", "dualToken"),
     },
     tenants: {
       create: operation("POST", `${backend}/iam/tenants`, "iam", "tenants.create", "dualToken"),
@@ -1015,7 +1017,7 @@ export const SDKWORK_IAM_CAPABILITIES = [
     "securityAudit",
     ["iam"],
     ["securityEvent", "auditEvent"],
-    ["securityEvents.list", "auditEvents.list"],
+    ["securityEvents.list", "auditEvents.list", "securityEvents.retrieve", "auditEvents.retrieve"],
   ),
   capability(
     "oauthManagement",

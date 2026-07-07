@@ -19,7 +19,7 @@ pub(crate) const IAM_SESSION_CONTEXT_SELECT: &str =
      s.data_scope_json, s.permission_scope_json, \
      COALESCE(u.display_name, '') AS user_display_name, \
      COALESCE(u.email, '') AS user_email, \
-     COALESCE(u.email_verified, false) AS user_email_verified";
+     u.email_verified AS user_email_verified";
 
 pub(crate) fn user_profile_from_session_row(row: &sqlx::postgres::PgRow) -> (String, String, bool) {
     let display_name: String = row.try_get(11).unwrap_or_default();

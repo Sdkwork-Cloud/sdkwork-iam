@@ -18,6 +18,8 @@ anyhow = "1.0"
 async-trait = { workspace = true }
 clap = { version = "4.5", features = ["derive", "env"] }
 sdkwork-database-config = { workspace = true }
+sdkwork-database-id = { workspace = true }
+sdkwork_iam_bootstrap = { workspace = true }
 sdkwork_database_drift = { workspace = true }
 dotenvy = "0.15"
 sdkwork_database_lifecycle = { workspace = true }

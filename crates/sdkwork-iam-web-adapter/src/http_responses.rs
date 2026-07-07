@@ -56,6 +56,9 @@ pub fn iam_wire_result_code(status: StatusCode, wire_code: &str) -> SdkWorkResul
         "iam_permission_forbidden" | "iam_login_credential_headers_forbidden" => {
             SdkWorkResultCode::PermissionRequired
         }
+        "iam_tenant_access_denied" => SdkWorkResultCode::TenantAccessDenied,
+        "iam_permission_catalog_forbidden" => SdkWorkResultCode::TenantAccessDenied,
+        "iam_invalid_list_query" => SdkWorkResultCode::InvalidParameter,
         "iam_account_locked" => SdkWorkResultCode::Locked,
         "iam_password_policy_violation"
         | "iam_password_reused"

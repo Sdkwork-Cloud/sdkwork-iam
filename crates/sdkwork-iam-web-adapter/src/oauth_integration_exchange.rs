@@ -26,6 +26,7 @@ pub struct OAuthIntegrationExchangeContext {
 #[derive(Clone, Debug)]
 struct OAuthTokenResponse {
     access_token: String,
+    #[allow(dead_code)]
     id_token: Option<String>,
     #[allow(dead_code)]
     token_type: Option<String>,
@@ -157,12 +158,14 @@ async fn resolve_oauth_client_secret(
         }
     }
 
-    if let Some(secret) = std::env::var("SDKWORK_IAM_OAUTH_CLIENT_SECRET")
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-    {
-        return Ok(secret);
+    if crate::allows_oauth_client_secret_env_override() {
+        if let Some(secret) = std::env::var("SDKWORK_IAM_OAUTH_CLIENT_SECRET")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+        {
+            return Ok(secret);
+        }
     }
 
     let _ = provider_client_id;
@@ -229,14 +232,6 @@ async fn resolve_identity_claims(
     ctx: &OAuthIntegrationExchangeContext,
     token: &OAuthTokenResponse,
 ) -> Result<Value, String> {
-    if let Some(id_token) = token.id_token.as_deref() {
-        if let Ok(claims) = decode_unverified_jwt_payload(id_token) {
-            if extract_subject(&claims).is_some() {
-                return Ok(claims);
-            }
-        }
-    }
-
     if ctx.supports_userinfo {
         if let Some(endpoint) = ctx.userinfo_endpoint.as_deref() {
             return fetch_userinfo_claims(endpoint, &token.access_token, &ctx.provider_code).await;
@@ -244,7 +239,7 @@ async fn resolve_identity_claims(
     }
 
     if ctx.protocol_family.eq_ignore_ascii_case("oidc") {
-        return Err("OAuth provider userinfo is not configured".to_string());
+        return Err("OAuth provider userinfo is required for OIDC identity resolution".to_string());
     }
 
     Err("OAuth provider identity claims are unavailable".to_string())
@@ -430,19 +425,6 @@ fn pick_string_claim(claims: &Value, keys: &[&str]) -> Option<String> {
     None
 }
 
-fn decode_unverified_jwt_payload(token: &str) -> Result<Value, String> {
-    let payload_segment = token
-        .split('.')
-        .nth(1)
-        .ok_or_else(|| "id_token payload is invalid".to_string())?;
-    let decoded = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(payload_segment.as_bytes())
-        .or_else(|_| BASE64_STANDARD.decode(payload_segment.as_bytes()))
-        .map_err(|error| format!("decode id_token payload failed: {error}"))?;
-    serde_json::from_slice(&decoded)
-        .map_err(|error| format!("parse id_token payload failed: {error}"))
-}
-
 fn summarize_oauth_error_body(body: &str) -> String {
     let trimmed = body.trim();
     if trimmed.is_empty() {
@@ -456,6 +438,9 @@ fn summarize_oauth_error_body(body: &str) -> String {
 }
 
 fn read_env_oauth_client_secret(provider_code: &str) -> Option<String> {
+    if !crate::allows_oauth_client_secret_env_override() {
+        return None;
+    }
     let normalized = normalize_oauth_provider_code(provider_code)?;
     let provider_segment = normalized.to_ascii_uppercase();
     for key in [
@@ -701,6 +686,7 @@ fn region_group_to_db(
     }
 }
 
+#[cfg(test)]
 #[cfg(test)]
 mod tests {
     use super::*;

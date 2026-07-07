@@ -3,7 +3,7 @@ import {
   type CreateSdkworkAuthControllerOptions,
   type SdkworkAuthController,
 } from "./auth-controller.ts";
-import { isBlank } from "@sdkwork/utils";
+import { isBlank, isSdkWorkSuccessCode } from "@sdkwork/utils";
 import {
   buildOrganizationLoginContextSelectionBody,
   buildPersonalLoginContextSelectionBody,
@@ -1064,8 +1064,8 @@ function isSuccessCode(code: unknown): boolean {
     return true;
   }
 
-  const normalized = String(code).trim();
-  return normalized === "0" || normalized === "200" || normalized === "2000";
+  const parsed = Number(String(code).trim());
+  return Number.isFinite(parsed) && isSdkWorkSuccessCode(parsed);
 }
 
 function resolveQrAuthPurpose(

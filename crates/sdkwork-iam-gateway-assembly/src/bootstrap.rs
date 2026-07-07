@@ -67,7 +67,7 @@ async fn service_router_config() -> ServiceRouterConfig {
 
 pub async fn assemble_application_business_router() -> ApplicationAssembly {
     let app = sdkwork_routes_iam_app_api::gateway_mount().await;
-    let backend = sdkwork_routes_iam_backend_api::gateway_mount();
+    let backend = sdkwork_routes_iam_backend_api::gateway_mount().await;
     let open = sdkwork_routes_iam_open_api::gateway_mount().await;
     let router = app.merge(backend).merge(open);
     ApplicationAssembly { router }

@@ -97,14 +97,28 @@ pub async fn materialize_postgres_catalog(
     validate_catalog(&modules)?;
     let merged = merge_discovered(&modules);
 
-    upsert_postgres_default_subject(pool).await?;
-    ensure_organization_closure_postgres(pool, DEFAULT_IAM_TENANT_ID, DEFAULT_IAM_ORGANIZATION_ID)
-        .await?;
-    upsert_postgres_permissions_from_catalog(pool, &merged).await?;
-    upsert_postgres_roles(pool, DEFAULT_IAM_TENANT_ID, &merged).await?;
-    upsert_postgres_role_exclusions(pool, DEFAULT_IAM_TENANT_ID, &modules).await?;
-    let directory_node_count = materialize_directory_postgres(pool, profile, &modules).await?;
-    upsert_registry_metadata_postgres(pool, profile, &merged, directory_node_count).await?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|error| format!("begin materialize transaction failed: {error}"))?;
+
+    upsert_postgres_default_subject(&mut tx).await?;
+    ensure_organization_closure_postgres(
+        &mut tx,
+        DEFAULT_IAM_TENANT_ID,
+        DEFAULT_IAM_ORGANIZATION_ID,
+    )
+    .await?;
+    upsert_postgres_permissions_from_catalog(&mut tx, &merged).await?;
+    upsert_postgres_roles(&mut tx, DEFAULT_IAM_TENANT_ID, &merged).await?;
+    upsert_postgres_role_exclusions(&mut tx, DEFAULT_IAM_TENANT_ID, &modules).await?;
+    let directory_node_count = materialize_directory_postgres(&mut tx, profile, &modules).await?;
+    upsert_registry_metadata_postgres(&mut tx, profile, &merged, directory_node_count).await?;
+
+    tx.commit()
+        .await
+        .map_err(|error| format!("commit materialize transaction failed: {error}"))?;
+
     write_lock_file(&root, profile, &merged)?;
 
     Ok(MaterializeReport {
@@ -158,7 +172,9 @@ fn role_surface(surface: &IamRoleSurface) -> &'static str {
     }
 }
 
-async fn upsert_postgres_default_subject(pool: &PgPool) -> Result<(), String> {
+async fn upsert_postgres_default_subject(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+) -> Result<(), String> {
     sqlx::query(
         r#"
         INSERT INTO iam_tenant (id, code, name, status, created_at, updated_at)
@@ -169,7 +185,7 @@ async fn upsert_postgres_default_subject(pool: &PgPool) -> Result<(), String> {
     .bind(DEFAULT_IAM_TENANT_ID)
     .bind(DEFAULT_IAM_TENANT_CODE)
     .bind(DEFAULT_IAM_TENANT_NAME)
-    .execute(pool)
+    .execute(&mut **tx)
     .await
     .map_err(|error| format!("upsert tenant failed: {error}"))?;
 
@@ -197,7 +213,7 @@ async fn upsert_postgres_default_subject(pool: &PgPool) -> Result<(), String> {
     .bind(DEFAULT_IAM_ORGANIZATION_TENANT_BOUNDARY_KIND)
     .bind(DEFAULT_IAM_ORGANIZATION_DATA_BOUNDARY_KIND)
     .bind(DEFAULT_IAM_ORGANIZATION_VERIFICATION_STATUS)
-    .execute(pool)
+    .execute(&mut **tx)
     .await
     .map_err(|error| format!("upsert organization failed: {error}"))?;
     Ok(())
@@ -257,7 +273,7 @@ async fn upsert_sqlite_default_subject(pool: &SqlitePool) -> Result<(), String> 
 }
 
 async fn upsert_postgres_permissions_from_catalog(
-    pool: &PgPool,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     merged: &crate::merge::MergedIamCatalog,
 ) -> Result<(), String> {
     for (entry, module_id) in merged.permissions.values() {
@@ -289,7 +305,7 @@ async fn upsert_postgres_permissions_from_catalog(
         .bind("1.0.0")
         .bind(&entry.status)
         .bind(&entry.replacement_code)
-        .execute(pool)
+        .execute(&mut **tx)
         .await
         .map_err(|error| format!("upsert permission {} failed: {error}", entry.code))?;
     }
@@ -336,7 +352,14 @@ pub async fn upsert_tenant_roles_postgres(
     let modules = discover_modules(&root, &config.enabled_modules)?;
     validate_catalog(&modules)?;
     let merged = merge_discovered(&modules);
-    upsert_postgres_roles(pool, tenant_id, &merged).await
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|error| format!("begin tenant roles transaction failed: {error}"))?;
+    upsert_postgres_roles(&mut tx, tenant_id, &merged).await?;
+    tx.commit()
+        .await
+        .map_err(|error| format!("commit tenant roles transaction failed: {error}"))
 }
 
 pub async fn upsert_tenant_roles_sqlite(
@@ -353,7 +376,7 @@ pub async fn upsert_tenant_roles_sqlite(
 }
 
 async fn upsert_postgres_roles(
-    pool: &PgPool,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     tenant_id: &str,
     merged: &crate::merge::MergedIamCatalog,
 ) -> Result<(), String> {
@@ -383,7 +406,7 @@ async fn upsert_postgres_roles(
         .bind(definition.code)
         .bind(definition.name)
         .bind(role_surface(&definition.surface))
-        .execute(pool)
+        .execute(&mut **tx)
         .await
         .map_err(|error| format!("upsert platform role {} failed: {error}", definition.code))?;
 
@@ -392,7 +415,7 @@ async fn upsert_postgres_roles(
             .get(definition.code)
             .cloned()
             .unwrap_or_default();
-        upsert_role_permissions_postgres(pool, tenant_id, &role_id, &patterns, &catalog_codes)
+        upsert_role_permissions_postgres(tx, tenant_id, &role_id, &patterns, &catalog_codes)
             .await?;
     }
 
@@ -424,7 +447,7 @@ async fn upsert_postgres_roles(
         .bind(&role.surface)
         .bind(i32::from(role.assignable))
         .bind(&role.binding_principal_kind)
-        .execute(pool)
+        .execute(&mut **tx)
         .await
         .map_err(|error| format!("upsert domain role {} failed: {error}", role.code))?;
 
@@ -433,7 +456,7 @@ async fn upsert_postgres_roles(
             .get(&role.code)
             .cloned()
             .unwrap_or_default();
-        upsert_role_permissions_postgres(pool, tenant_id, &role_id, &patterns, &catalog_codes)
+        upsert_role_permissions_postgres(tx, tenant_id, &role_id, &patterns, &catalog_codes)
             .await?;
     }
     Ok(())
@@ -489,7 +512,7 @@ async fn upsert_sqlite_roles(
 }
 
 async fn upsert_role_permissions_postgres(
-    pool: &PgPool,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     tenant_id: &str,
     role_id: &str,
     patterns: &std::collections::BTreeSet<String>,
@@ -511,7 +534,7 @@ async fn upsert_role_permissions_postgres(
         .bind(tenant_id)
         .bind(role_id)
         .bind(&permission_key)
-        .execute(pool)
+        .execute(&mut **tx)
         .await
         .map_err(|error| format!("upsert role permission failed: {error}"))?;
     }
@@ -519,7 +542,7 @@ async fn upsert_role_permissions_postgres(
 }
 
 async fn upsert_registry_metadata_postgres(
-    pool: &PgPool,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     profile: &str,
     merged: &crate::merge::MergedIamCatalog,
     directory_node_count: usize,
@@ -547,7 +570,7 @@ async fn upsert_registry_metadata_postgres(
         .bind(catalog_version)
         .bind(manifest_sha256)
         .bind(now)
-        .execute(pool)
+        .execute(&mut **tx)
         .await
         .map_err(|error| format!("upsert registry entry for {module_id} failed: {error}"))?;
     }
@@ -582,7 +605,7 @@ async fn upsert_registry_metadata_postgres(
     .bind(&lock_sha256)
     .bind(&snapshot_json)
     .bind(now)
-    .execute(pool)
+    .execute(&mut **tx)
     .await
     .map_err(|error| format!("insert registry snapshot failed: {error}"))?;
 
@@ -611,14 +634,14 @@ async fn upsert_registry_metadata_postgres(
     .bind(i32::try_from(directory_node_count).unwrap_or(i32::MAX))
     .bind(&snapshot_json)
     .bind(now)
-    .execute(pool)
+    .execute(&mut **tx)
     .await
     .map_err(|error| format!("insert catalog materialization failed: {error}"))?;
     Ok(())
 }
 
 async fn materialize_directory_postgres(
-    pool: &PgPool,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     profile: &str,
     modules: &[crate::discover::DiscoveredModule],
 ) -> Result<usize, String> {
@@ -650,7 +673,7 @@ async fn materialize_directory_postgres(
             .bind(org.sort_order)
             .bind(tenant_id)
             .bind(&org_id)
-            .execute(pool)
+            .execute(&mut **tx)
             .await
             .map_err(|error| format!("tag organization template failed: {error}"))?;
             node_count += 1;
@@ -710,12 +733,12 @@ async fn materialize_directory_postgres(
             .bind(&planned_dept.module_id)
             .bind(profile)
             .bind(now)
-            .execute(pool)
+            .execute(&mut **tx)
             .await
             .map_err(|error| format!("upsert department {} failed: {error}", dept.code))?;
             node_count += 1;
-            ensure_department_closure_postgres(
-                pool,
+            ensure_department_closure_postgres_tx(
+                tx,
                 tenant_id,
                 &org_id,
                 &dept_id,
@@ -756,7 +779,7 @@ async fn materialize_directory_postgres(
                 .bind(&module.module_id)
                 .bind(profile)
                 .bind(now)
-                .execute(pool)
+                .execute(&mut **tx)
                 .await
                 .map_err(|error| format!("upsert position {} failed: {error}", position.code))?;
                 node_count += 1;
@@ -768,7 +791,7 @@ async fn materialize_directory_postgres(
 }
 
 async fn upsert_postgres_role_exclusions(
-    pool: &PgPool,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     tenant_id: &str,
     modules: &[crate::discover::DiscoveredModule],
 ) -> Result<(), String> {
@@ -800,7 +823,7 @@ async fn upsert_postgres_role_exclusions(
             .bind(&module.module_id)
             .bind(now)
             .bind(now)
-            .execute(pool)
+            .execute(&mut **tx)
             .await
             .map_err(|error| format!("upsert role exclusion failed: {error}"))?;
         }
@@ -809,7 +832,7 @@ async fn upsert_postgres_role_exclusions(
 }
 
 async fn ensure_organization_closure_postgres(
-    pool: &PgPool,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     tenant_id: &str,
     organization_id: &str,
 ) -> Result<(), String> {
@@ -828,9 +851,69 @@ async fn ensure_organization_closure_postgres(
     .bind(tenant_id)
     .bind(organization_id)
     .bind(now)
-    .execute(pool)
+    .execute(&mut **tx)
     .await
     .map_err(|error| format!("ensure organization closure failed: {error}"))?;
+    Ok(())
+}
+
+async fn ensure_department_closure_postgres_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tenant_id: &str,
+    organization_id: &str,
+    department_id: &str,
+    parent_department_id: Option<&str>,
+    now: DateTime<Utc>,
+) -> Result<(), String> {
+    let self_id = format!("iam-dept-closure-{tenant_id}-{organization_id}-{department_id}-self");
+    sqlx::query(
+        r#"
+        INSERT INTO iam_department_closure
+            (id, tenant_id, organization_id, ancestor_department_id, descendant_department_id, depth, created_at)
+        VALUES
+            ($1, $2, $3, $4, $4, 0, $5)
+        ON CONFLICT (tenant_id, organization_id, ancestor_department_id, descendant_department_id) DO NOTHING
+        "#,
+    )
+    .bind(&self_id)
+    .bind(tenant_id)
+    .bind(organization_id)
+    .bind(department_id)
+    .bind(now)
+    .execute(&mut **tx)
+    .await
+    .map_err(|error| format!("ensure department self-closure failed: {error}"))?;
+
+    if let Some(parent_id) = parent_department_id {
+        sqlx::query(
+            r#"
+            INSERT INTO iam_department_closure
+                (id, tenant_id, organization_id, ancestor_department_id, descendant_department_id, depth, created_at)
+            SELECT
+                'iam-dept-closure-' || $2 || '-' || $3 || '-' || c.ancestor_department_id || '-' || $4 || '-' || (c.depth + 1)::text,
+                $2,
+                $3,
+                c.ancestor_department_id,
+                $4,
+                c.depth + 1,
+                $5
+            FROM iam_department_closure c
+            WHERE c.tenant_id = $2
+              AND c.organization_id = $3
+              AND c.descendant_department_id = $1
+            ON CONFLICT (tenant_id, organization_id, ancestor_department_id, descendant_department_id) DO NOTHING
+            "#,
+        )
+        .bind(parent_id)
+        .bind(tenant_id)
+        .bind(organization_id)
+        .bind(department_id)
+        .bind(now)
+        .execute(&mut **tx)
+        .await
+        .map_err(|error| format!("ensure department ancestor closures failed: {error}"))?;
+    }
+
     Ok(())
 }
 

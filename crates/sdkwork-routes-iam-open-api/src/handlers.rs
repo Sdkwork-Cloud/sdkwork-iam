@@ -15,8 +15,9 @@ use std::collections::HashMap;
 
 use crate::is_blank;
 use crate::oauth_authorization_handlers::{
-    handle_oauth_authorize, handle_oauth_introspect, handle_oauth_revoke, handle_oauth_token,
-    handle_oauth_userinfo, retrieve_oauth_jwks, retrieve_openid_configuration,
+    enforce_open_api_rate_limit, handle_oauth_authorize, handle_oauth_introspect,
+    handle_oauth_revoke, handle_oauth_token, handle_oauth_userinfo, retrieve_oauth_jwks,
+    retrieve_openid_configuration,
 };
 use crate::state::OpenIamState;
 
@@ -73,6 +74,15 @@ async fn handle_provider_callback_get(
     let Ok(pg) = state.require_pool() else {
         return oauth_provider_callback_unavailable_error();
     };
+    if let Some(response) = enforce_open_api_rate_limit(
+        &state,
+        pg,
+        &format!("oauth:provider_callback:{callback_public_id}"),
+    )
+    .await
+    {
+        return response;
+    }
 
     match process_provider_callback_get(pg, &callback_public_id, &query).await {
         Ok(response) => provider_callback_response(response),
@@ -90,6 +100,15 @@ async fn handle_provider_callback_post(
     let Ok(pg) = state.require_pool() else {
         return oauth_provider_callback_unavailable_error();
     };
+    if let Some(response) = enforce_open_api_rate_limit(
+        &state,
+        pg,
+        &format!("oauth:provider_callback:{callback_public_id}"),
+    )
+    .await
+    {
+        return response;
+    }
 
     let meta = provider_callback_request_meta(&headers);
     match process_provider_callback_post(pg, &callback_public_id, &query, &body, &meta).await {

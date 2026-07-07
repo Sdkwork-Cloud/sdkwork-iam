@@ -253,6 +253,11 @@ export class IamSecurityEventsApi {
     ]);
     return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/security_events`), query));
   }
+
+/** Security Events retrieve. */
+  async retrieve(securityEventId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/security_events/${serializePathParameter(securityEventId, { name: 'securityEventId', style: 'simple', explode: false })}`));
+  }
 }
 
 export interface IamRolesPermissionsListParams {
@@ -889,6 +894,11 @@ export class IamAuditEventsApi {
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
     return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/audit_events`), query));
+  }
+
+/** Audit Events retrieve. */
+  async retrieve(auditEventId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/audit_events/${serializePathParameter(auditEventId, { name: 'auditEventId', style: 'simple', explode: false })}`));
   }
 }
 

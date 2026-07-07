@@ -1,3 +1,4 @@
+import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 export interface SdkworkIamConsoleOrganizationRecord {
@@ -23,8 +24,15 @@ export interface SdkworkIamConsoleOrganizationMembership {
   userId: string;
 }
 
+export interface SdkworkIamConsoleOrganizationListPageInfo {
+  departments?: SdkWorkPageInfo;
+  memberships?: SdkWorkPageInfo;
+  organizations?: SdkWorkPageInfo;
+}
+
 export interface SdkworkIamConsoleOrganizationState {
   departments: readonly SdkworkIamConsoleDepartmentRecord[];
+  listPageInfo?: SdkworkIamConsoleOrganizationListPageInfo;
   memberships: readonly SdkworkIamConsoleOrganizationMembership[];
   organizations: readonly SdkworkIamConsoleOrganizationRecord[];
   selectedOrganization?: SdkworkIamConsoleOrganizationRecord;
@@ -40,6 +48,9 @@ export interface SdkworkIamConsoleOrganizationController {
   listDepartments(organizationId: string, params?: Record<string, unknown>): Promise<readonly SdkworkIamConsoleDepartmentRecord[]>;
   listMemberships(params?: Record<string, unknown>): Promise<readonly SdkworkIamConsoleOrganizationMembership[]>;
   listOrganizations(params?: Record<string, unknown>): Promise<readonly SdkworkIamConsoleOrganizationRecord[]>;
+  loadMoreDepartments(organizationId: string): Promise<readonly SdkworkIamConsoleDepartmentRecord[]>;
+  loadMoreMemberships(): Promise<readonly SdkworkIamConsoleOrganizationMembership[]>;
+  loadMoreOrganizations(): Promise<readonly SdkworkIamConsoleOrganizationRecord[]>;
   refreshWorkspace(organizationId?: string, params?: Record<string, unknown>): Promise<{
     departments: readonly SdkworkIamConsoleDepartmentRecord[];
     memberships: readonly SdkworkIamConsoleOrganizationMembership[];

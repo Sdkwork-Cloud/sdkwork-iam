@@ -20,6 +20,7 @@ export interface SdkworkIamAdminUserDraft {
 }
 
 export interface SdkworkIamAdminUserState {
+  lastError?: string;
   listPageInfo?: SdkWorkPageInfo;
   selectedUser?: SdkworkIamAdminUser;
   status: "idle" | "loading" | "ready" | "error";
@@ -36,10 +37,7 @@ export interface SdkworkIamUserAdminController {
   deleteUser(userId: string): Promise<void>;
   getSelectedUser(): SdkworkIamAdminUser | undefined;
   getState(): SdkworkIamAdminUserState;
-  listUsers(
-    params?: Record<string, unknown>,
-    options?: { append?: boolean },
-  ): Promise<readonly SdkworkIamAdminUser[]>;
+  listUsers(params?: Record<string, unknown>): Promise<readonly SdkworkIamAdminUser[]>;
   loadMoreUsers(): Promise<readonly SdkworkIamAdminUser[]>;
   retrieveUser(userId: string): Promise<SdkworkIamAdminUser | undefined>;
   selectUser(userId: string): Promise<SdkworkIamAdminUser | undefined>;

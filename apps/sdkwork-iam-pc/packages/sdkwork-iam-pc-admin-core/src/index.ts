@@ -11,11 +11,13 @@ export const IAM_PC_ADMIN_CAPABILITY_PACKAGES = [
   "@sdkwork/iam-pc-admin-permission",
   "@sdkwork/iam-pc-admin-account-binding",
   "@sdkwork/iam-pc-admin-user",
+  "@sdkwork/iam-pc-admin-audit",
 ] as const;
 
 export type IamPcAdminCapabilityPackage = (typeof IAM_PC_ADMIN_CAPABILITY_PACKAGES)[number];
 
 export interface IamPcAdminModuleRecord {
+  additionalPermissionPrefixes?: readonly string[];
   capability: string;
   id: string;
   packageName: IamPcAdminCapabilityPackage;
@@ -66,6 +68,14 @@ export function createSdkworkIamPcAdminModuleRegistry(): readonly IamPcAdminModu
       packageName: "@sdkwork/iam-pc-admin-user",
       permissionPrefix: "iam.users",
       routeBasePath: "/admin/iam/users",
+    },
+    {
+      additionalPermissionPrefixes: ["iam.security_events"],
+      capability: "audit",
+      id: "iam-audit",
+      packageName: "@sdkwork/iam-pc-admin-audit",
+      permissionPrefix: "iam.audit_events",
+      routeBasePath: "/admin/iam/audit",
     },
   ] as const;
 }

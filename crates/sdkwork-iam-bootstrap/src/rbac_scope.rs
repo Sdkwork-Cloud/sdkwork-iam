@@ -82,16 +82,25 @@ pub async fn load_active_allow_role_codes_for_principal(
          WHERE b.tenant_id = $1 AND b.status = 'active' AND b.effect = 'allow' \
            AND b.principal_kind = $2 AND b.principal_id = $3 \
            AND b.scope_kind = $4 AND b.scope_id = $5 \
-         ORDER BY r.code",
+         ORDER BY r.code \
+         LIMIT $6",
     )
     .bind(tenant_id)
     .bind(principal_kind)
     .bind(principal_id)
     .bind(scope_kind)
     .bind(scope_id)
+    .bind(crate::limits::IAM_RBAC_ROLE_CODE_ROW_LIMIT + 1)
     .fetch_all(pg)
     .await
     .map_err(|error| format!("load active role codes failed: {error}"))?;
+
+    if rows.len() > crate::limits::IAM_RBAC_ROLE_CODE_ROW_LIMIT as usize {
+        return Err(format!(
+            "active role codes exceed limit of {}",
+            crate::limits::IAM_RBAC_ROLE_CODE_ROW_LIMIT
+        ));
+    }
 
     Ok(rows
         .into_iter()
@@ -188,13 +197,22 @@ pub async fn load_role_permission_codes(
          JOIN iam_permission p ON p.id = rp.permission_id \
          WHERE rp.tenant_id = $1 AND rp.role_id = $2 \
            AND COALESCE(p.status, 'active') <> 'retired' \
-         ORDER BY p.code",
+         ORDER BY p.code \
+         LIMIT $3",
     )
     .bind(tenant_id)
     .bind(role_id)
+    .bind(crate::limits::IAM_RBAC_ROLE_PERMISSION_ROW_LIMIT + 1)
     .fetch_all(pg)
     .await
     .map_err(|error| format!("load role permission codes failed: {error}"))?;
+
+    if rows.len() > crate::limits::IAM_RBAC_ROLE_PERMISSION_ROW_LIMIT as usize {
+        return Err(format!(
+            "role permission codes exceed limit of {}",
+            crate::limits::IAM_RBAC_ROLE_PERMISSION_ROW_LIMIT
+        ));
+    }
 
     Ok(rows
         .into_iter()
@@ -307,12 +325,21 @@ pub async fn load_role_exclusion_rules(
          JOIN iam_role r ON r.id = e.role_id AND r.tenant_id = e.tenant_id \
          JOIN iam_role er ON er.id = e.excludes_role_id AND er.tenant_id = e.tenant_id \
          WHERE e.tenant_id = $1 AND e.status = 'active' \
-           AND r.status = 'active' AND er.status = 'active'",
+           AND r.status = 'active' AND er.status = 'active' \
+         LIMIT $2",
     )
     .bind(tenant_id)
+    .bind(crate::limits::IAM_RBAC_EXCLUSION_ROW_LIMIT + 1)
     .fetch_all(pg)
     .await
     .map_err(|error| format!("load role exclusion rules failed: {error}"))?;
+
+    if rows.len() > crate::limits::IAM_RBAC_EXCLUSION_ROW_LIMIT as usize {
+        return Err(format!(
+            "role exclusion rules exceed limit of {}",
+            crate::limits::IAM_RBAC_EXCLUSION_ROW_LIMIT
+        ));
+    }
 
     Ok(rows
         .into_iter()
@@ -355,15 +382,24 @@ pub async fn load_binding_data_scopes(
          FROM iam_role_binding b \
          WHERE b.tenant_id = $1 AND b.status = 'active' AND b.effect = 'allow' \
            AND {PRINCIPAL_MATCH_SQL} \
-           {BINDING_SCOPE_SQL}"
+           {BINDING_SCOPE_SQL} \
+         LIMIT $4"
     );
     let rows = sqlx::query(&sql)
         .bind(tenant_id)
         .bind(user_id)
         .bind(organization_id.unwrap_or(""))
+        .bind(crate::limits::IAM_RBAC_DATA_SCOPE_ROW_LIMIT + 1)
         .fetch_all(pg)
         .await
         .map_err(|error| format!("load binding data scopes failed: {error}"))?;
+
+    if rows.len() > crate::limits::IAM_RBAC_DATA_SCOPE_ROW_LIMIT as usize {
+        return Err(format!(
+            "binding data scopes exceed limit of {}",
+            crate::limits::IAM_RBAC_DATA_SCOPE_ROW_LIMIT
+        ));
+    }
 
     Ok(rows
         .into_iter()

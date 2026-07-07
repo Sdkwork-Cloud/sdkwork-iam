@@ -71,7 +71,8 @@ pub use dev_runtime::allows_dev_authentication_fallback;
 pub use ephemeral_rate_limit::{check_rate_limit, check_rate_limit_sqlite};
 pub use http_responses::{iam_api_error, iam_api_success, iam_wire_result_code};
 pub use iam_audit::{
-    backend_environment_from_context, hash_session_id, record_audit_event, record_security_event,
+    backend_environment_from_context, hash_session_id, record_audit_event, record_audit_event_tx,
+    record_security_event,
 };
 pub use iam_database_env::{
     bridge_iam_database_env_from_im, install_iam_postgres_pool_for_process,
@@ -117,7 +118,21 @@ pub use oauth_redirect::{
     validate_oauth_redirect_uri_for_provider,
 };
 pub use oauth_token_lookup::IamOAuthTokenLookupService;
-pub use production_runtime::{assert_production_hardening, is_production_iam_deployment};
+pub use production_runtime::{
+    allows_oauth_client_secret_env_override, assert_production_hardening,
+    is_explicit_development_iam_deployment, is_production_iam_deployment,
+};
+
+#[cfg(test)]
+pub(crate) mod test_env_lock {
+    use std::sync::{Mutex, MutexGuard};
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    pub fn lock() -> MutexGuard<'static, ()> {
+        ENV_LOCK.lock().expect("env lock poisoned")
+    }
+}
 pub use resolver::{
     web_request_principal_from_iam, IamDatabaseWebRequestContextResolver,
     IamOpenApiWebRequestContextResolver, IamWebRequestContextResolver,

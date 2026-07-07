@@ -48,7 +48,8 @@ pub(crate) async fn list_login_enabled_providers(
             sqlx::query(
                 "SELECT DISTINCT provider_code \
                  FROM iam_oauth_integration \
-                 WHERE enabled = 1 AND status = 'active'",
+                 WHERE enabled = 1 AND status = 'active' \
+                 LIMIT 200",
             )
             .fetch_all(pg)
             .await
@@ -56,7 +57,8 @@ pub(crate) async fn list_login_enabled_providers(
             sqlx::query(
                 "SELECT DISTINCT provider_code \
                  FROM iam_oauth_integration \
-                 WHERE tenant_id = $1 AND enabled = 1 AND status = 'active'",
+                 WHERE tenant_id = $1 AND enabled = 1 AND status = 'active' \
+                 LIMIT 200",
             )
             .bind(tenant_id)
             .fetch_all(pg)

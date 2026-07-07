@@ -1,3 +1,4 @@
+import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 export interface SdkworkIamConsoleAccountBindingPolicy {
@@ -25,6 +26,7 @@ export interface SdkworkIamConsoleOAuthAccountLink {
 export interface SdkworkIamConsoleAccountBindingState {
   accountLinks: readonly SdkworkIamConsoleOAuthAccountLink[];
   lastError?: string;
+  listPageInfo?: SdkWorkPageInfo;
   policy?: SdkworkIamConsoleAccountBindingPolicy;
   status: "idle" | "loading" | "ready" | "error";
 }
@@ -37,6 +39,7 @@ export interface SdkworkIamConsoleAccountBindingController {
   bindEmail(body: Record<string, unknown>): Promise<unknown>;
   getState(): SdkworkIamConsoleAccountBindingState;
   listAccountLinks(params?: Record<string, unknown>): Promise<readonly SdkworkIamConsoleOAuthAccountLink[]>;
+  loadMoreAccountLinks(): Promise<readonly SdkworkIamConsoleOAuthAccountLink[]>;
   loadPolicy(): Promise<SdkworkIamConsoleAccountBindingPolicy>;
   refreshWorkspace(params?: Record<string, unknown>): Promise<{
     accountLinks: readonly SdkworkIamConsoleOAuthAccountLink[];

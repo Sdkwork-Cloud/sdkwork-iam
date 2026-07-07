@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "@sdkwork/iam-backend-sdk"
   },
-  "changeFingerprint": "4924d09a64396e9e17393eb2fccb259ea7e5f703f8b39d5975248546a9a4180b",
+  "changeFingerprint": "b2ced87c9d155ffbdec472e2965cd0c8d91ba77e08b20894f7a8aed65f56f73e",
   "changes": {
     "createdGeneratedFiles": [
       "bin/publish-core.mjs",

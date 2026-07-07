@@ -1,3 +1,4 @@
+import { isSdkWorkSuccessCode } from "@sdkwork/utils";
 import type {
   UserCenterAuthInteropContract,
   UserCenterRuntimeClient,
@@ -43,8 +44,8 @@ function isSuccessCode(code: number | string | undefined): boolean {
     return true;
   }
 
-  const normalized = String(code).trim();
-  return normalized === "0" || normalized === "200" || normalized === "2000";
+  const parsed = Number(String(code).trim());
+  return Number.isFinite(parsed) && isSdkWorkSuccessCode(parsed);
 }
 
 function normalizeOptionalText(value: unknown): string | undefined {

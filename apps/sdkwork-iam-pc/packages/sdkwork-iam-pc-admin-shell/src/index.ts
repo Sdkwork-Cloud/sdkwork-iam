@@ -4,6 +4,7 @@ import {
 } from "@sdkwork/iam-pc-admin-core";
 
 export type IamAdminShellMenuItem = {
+  additionalPermissionPrefixes?: readonly string[];
   id: string;
   label: string;
   packageName: string;
@@ -23,6 +24,7 @@ export function resolveIamAdminModuleByPath(pathname: string): IamPcAdminModuleR
 
 function toMenuItem(module: IamPcAdminModuleRecord): IamAdminShellMenuItem {
   return {
+    additionalPermissionPrefixes: module.additionalPermissionPrefixes,
     id: module.id,
     label: formatModuleLabel(module.capability),
     packageName: module.packageName,

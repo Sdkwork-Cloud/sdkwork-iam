@@ -12,6 +12,7 @@ import {
   type SdkworkAuthAppearanceConfig,
   type SdkworkAuthAsideContainerSlotProps,
   type SdkworkAuthHeaderSlotProps,
+  type SdkworkAuthPresentation,
   type SdkworkAuthSlotContainerProps,
 } from "../auth-appearance.ts";
 
@@ -22,6 +23,7 @@ export interface SdkworkAuthPageShellProps {
   badge?: ReactNode;
   children: ReactNode;
   description: ReactNode;
+  presentation?: SdkworkAuthPresentation;
   showAside?: boolean;
   title: ReactNode;
 }
@@ -73,9 +75,11 @@ export function SdkworkAuthPageShell({
   badge,
   children,
   description,
+  presentation = "page",
   showAside = true,
   title,
 }: SdkworkAuthPageShellProps) {
+  const isModalPresentation = presentation === "modal";
   const resolvedAppearance = resolveSdkworkAuthAppearance(appearance);
   const slots = resolvedAppearance?.slots;
   const slotProps = resolvedAppearance?.slotProps;
@@ -126,7 +130,9 @@ export function SdkworkAuthPageShell({
     PageSlot,
     {
       className: mergeSdkworkAuthClassNames(
-        "sdkwork-auth-surface relative flex min-h-[100dvh] w-full items-center justify-center overflow-x-hidden overflow-y-auto bg-[var(--sdkwork-auth-page-background-color,#fafafa)] p-4 text-[var(--sdkwork-auth-content-text-color,#09090b)] dark:bg-zinc-950 sm:p-8",
+        isModalPresentation
+          ? "sdkwork-auth-surface relative flex w-full flex-col overflow-hidden bg-transparent p-0 text-[var(--sdkwork-auth-content-text-color,#09090b)]"
+          : "sdkwork-auth-surface relative flex min-h-[100dvh] w-full items-center justify-center overflow-x-hidden overflow-y-auto bg-[var(--sdkwork-auth-page-background-color,#fafafa)] p-4 text-[var(--sdkwork-auth-content-text-color,#09090b)] dark:bg-zinc-950 sm:p-8",
         resolvedAppearance?.pageClassName,
         slotProps?.page?.className,
       ),
@@ -142,6 +148,7 @@ export function SdkworkAuthPageShell({
         {
           className: mergeSdkworkAuthClassNames(
             "pointer-events-none absolute inset-0 overflow-hidden",
+            isModalPresentation ? "rounded-xl" : undefined,
             slotProps?.background?.className,
           ),
           style: slotProps?.background?.style,
@@ -170,6 +177,9 @@ export function SdkworkAuthPageShell({
           className: mergeSdkworkAuthClassNames(
             "sdkwork-auth-shell relative z-10 flex w-full flex-col overflow-hidden rounded-xl bg-white dark:bg-zinc-950",
             showAside ? "max-w-[920px] md:min-h-[560px] md:flex-row" : "max-w-md",
+            isModalPresentation
+              ? "max-h-[min(90dvh,720px)] overflow-y-auto shadow-2xl md:min-h-0"
+              : undefined,
             resolvedAppearance?.shellClassName,
             slotProps?.shell?.className,
           ),

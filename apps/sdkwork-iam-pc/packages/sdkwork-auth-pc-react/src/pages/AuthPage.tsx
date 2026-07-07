@@ -18,6 +18,11 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
+  createSdkworkAuthPageRouting,
+  createSdkworkAuthPageRoutingNavigate,
+  type SdkworkAuthPageRouting,
+} from "../auth-page-routing.ts";
+import {
   Navigate,
   useLocation,
   useNavigate,
@@ -37,6 +42,7 @@ import {
   mergeSdkworkAuthStyles,
   resolveSdkworkAuthAppearance,
   type SdkworkAuthAppearanceConfig,
+  type SdkworkAuthPresentation,
 } from "../auth-appearance.ts";
 import { useSdkworkAuthIntl } from "../auth-intl.tsx";
 import {
@@ -408,14 +414,38 @@ export interface SdkworkAuthPageProps {
   appearance?: SdkworkAuthAppearanceConfig;
   basePath?: string;
   controller?: SdkworkAuthController;
+  embeddedRouting?: SdkworkAuthPageRouting;
   events?: SdkworkAuthPageEvents;
   homePath?: string;
+  onAuthComplete?: () => void;
+  onDismiss?: () => void;
+  presentation?: SdkworkAuthPresentation;
   routerContextMode?: SdkworkAuthPageRouterContextMode;
   runtimeConfig?: SdkworkAuthRuntimeConfig;
   slots?: SdkworkAuthPageSlots;
 }
 
-interface SdkworkAuthPageContentProps extends SdkworkAuthPageProps {}
+interface SdkworkAuthPageContentProps extends SdkworkAuthPageProps {
+  routing: SdkworkAuthPageRouting;
+}
+
+function SdkworkAuthPageRouted(props: SdkworkAuthPageProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams();
+  const [searchParams] = useSearchParams();
+  const routing = useMemo(
+    () => createSdkworkAuthPageRouting({
+      location,
+      navigate,
+      params,
+      search: location.search,
+    }),
+    [location, navigate, params, searchParams],
+  );
+
+  return <SdkworkAuthPageContent {...props} routing={routing} />;
+}
 
 function SdkworkAuthPageContent({
   appearance,
@@ -423,6 +453,10 @@ function SdkworkAuthPageContent({
   controller: providedController,
   events,
   homePath = "/dashboard",
+  onAuthComplete,
+  onDismiss,
+  presentation = "page",
+  routing,
   runtimeConfig,
   slots,
 }: SdkworkAuthPageContentProps) {
@@ -432,10 +466,10 @@ function SdkworkAuthPageContent({
     formatOAuthProviderName,
   } = useSdkworkAuthIntl();
   const resolvedAppearance = resolveSdkworkAuthAppearance(appearance);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const params = useParams();
-  const [searchParams] = useSearchParams();
+  const navigate = routing.navigate;
+  const location = routing.location;
+  const params = routing.params;
+  const searchParams = routing.searchParams;
   const controllerOptions = useMemo<CreateSdkworkAuthControllerOptions>(() => ({}), []);
   const controller = useSdkworkAuthController(providedController, controllerOptions);
   const authState = useSdkworkAuthControllerState(controller);
@@ -653,6 +687,15 @@ function SdkworkAuthPageContent({
     if (oauthAuthorizationStateId) {
       const completion = await controller.completeOAuthAuthorization(oauthAuthorizationStateId);
       window.location.assign(completion.redirectUrl);
+      return;
+    }
+
+    finalizeAuthenticatedRedirect();
+  };
+
+  const finalizeAuthenticatedRedirect = () => {
+    if (presentation === "modal") {
+      onAuthComplete?.();
       return;
     }
 
@@ -952,9 +995,7 @@ function SdkworkAuthPageContent({
             }
           }
           clearPollTimer();
-          startTransition(() => {
-            navigate(redirectTarget, { replace: true });
-          });
+          finalizeAuthenticatedRedirect();
           return;
         }
 
@@ -1287,6 +1328,7 @@ function SdkworkAuthPageContent({
         )}
         asidePresentation={shouldRenderQrRail ? "raw" : "panel"}
         description={pageDescription}
+        presentation={presentation}
         showAside={showAsideColumn}
         title={pageTitle}
       >
@@ -1346,7 +1388,7 @@ function SdkworkAuthPageContent({
                       throw error;
                     }
                     startTransition(() => {
-                      navigate(redirectTarget, { replace: true });
+                      finalizeAuthenticatedRedirect();
                     });
                     return;
                   }
@@ -1496,7 +1538,7 @@ function SdkworkAuthPageContent({
                     throw error;
                   }
                   startTransition(() => {
-                    navigate(redirectTarget, { replace: true });
+                    finalizeAuthenticatedRedirect();
                   });
                   return undefined;
                 }
@@ -1550,6 +1592,7 @@ function SdkworkAuthPageContent({
           challenge={organizationSelectionChallenge}
           copy={copy.organizationSelection}
           errorMessage={organizationSelectionErrorMessage}
+          overlayClassName={presentation === "modal" ? "z-[130]" : undefined}
           onCancel={() => {
             if (selectedOrganizationId || selectingPersonalLogin) {
               return;
@@ -1675,12 +1718,21 @@ function resolveSessionBridgeToken(searchParams: URLSearchParams): string | unde
 }
 
 export function SdkworkAuthPage({
+  embeddedRouting,
   routerContextMode = "auto",
   ...props
 }: SdkworkAuthPageProps) {
+  if (embeddedRouting) {
+    return (
+      <SdkworkAuthPageRouterContextBoundary mode="external">
+        <SdkworkAuthPageContent {...props} routing={embeddedRouting} />
+      </SdkworkAuthPageRouterContextBoundary>
+    );
+  }
+
   return (
     <SdkworkAuthPageRouterContextBoundary mode={routerContextMode}>
-      <SdkworkAuthPageContent {...props} />
+      <SdkworkAuthPageRouted {...props} />
     </SdkworkAuthPageRouterContextBoundary>
   );
 }

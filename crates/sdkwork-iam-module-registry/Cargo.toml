@@ -14,7 +14,7 @@ chrono = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = "0.10"
-sqlx = { workspace = true }
+sqlx = { workspace = true, features = ["postgres", "runtime-tokio"] }
 sdkwork-iam-context-service = { path = "../sdkwork-iam-context-service" }
 
 [dev-dependencies]

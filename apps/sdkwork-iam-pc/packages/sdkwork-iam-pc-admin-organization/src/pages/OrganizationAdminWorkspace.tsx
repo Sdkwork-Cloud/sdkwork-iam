@@ -7,7 +7,17 @@ import type {
   SdkworkIamOrganizationAdminWorkspaceProps,
   SdkworkIamOrganizationDraft,
   SdkworkIamOrganizationMembershipDraft,
+  SdkworkIamOrganizationState,
 } from "../types/organization-admin-types";
+
+type OrganizationAdminPageInfoState = Pick<
+  SdkworkIamOrganizationState,
+  | "departmentListPageInfo"
+  | "membershipListPageInfo"
+  | "organizationListPageInfo"
+  | "positionListPageInfo"
+  | "roleBindingListPageInfo"
+>;
 
 const emptyOrganizationDraft = (): SdkworkIamOrganizationDraft => ({ name: "" });
 const emptyDepartmentDraft = (organizationId: string): SdkworkIamDepartmentDraft => ({
@@ -24,6 +34,9 @@ export function SdkworkIamOrganizationAdminWorkspace({
   const [organizations, setOrganizations] = useState(controller.getState().organizations);
   const [departments, setDepartments] = useState(controller.getState().departments);
   const [memberships, setMemberships] = useState(controller.getState().memberships);
+  const [positions, setPositions] = useState(controller.getState().positions);
+  const [roleBindings, setRoleBindings] = useState(controller.getState().roleBindings);
+  const [pageInfo, setPageInfo] = useState<OrganizationAdminPageInfoState>({});
   const [selectedOrganizationId, setSelectedOrganizationId] = useState(
     controller.getState().selectedOrganization?.organizationId ?? "",
   );
@@ -39,9 +52,21 @@ export function SdkworkIamOrganizationAdminWorkspace({
     (organization) => organization.organizationId === selectedOrganizationId,
   );
 
+  const syncListPageInfo = () => {
+    const next = controller.getState();
+    setPageInfo({
+      departmentListPageInfo: next.departmentListPageInfo,
+      membershipListPageInfo: next.membershipListPageInfo,
+      organizationListPageInfo: next.organizationListPageInfo,
+      positionListPageInfo: next.positionListPageInfo,
+      roleBindingListPageInfo: next.roleBindingListPageInfo,
+    });
+  };
+
   const refreshOrganizations = async () => {
     const items = await controller.listOrganizations();
     setOrganizations(items);
+    syncListPageInfo();
     return items;
   };
 
@@ -52,6 +77,7 @@ export function SdkworkIamOrganizationAdminWorkspace({
     }
     const items = await controller.listDepartments(organizationId);
     setDepartments(items);
+    syncListPageInfo();
     return items;
   };
 
@@ -62,6 +88,29 @@ export function SdkworkIamOrganizationAdminWorkspace({
     }
     const items = await controller.listMemberships(organizationId);
     setMemberships(items);
+    syncListPageInfo();
+    return items;
+  };
+
+  const refreshPositions = async (organizationId: string) => {
+    if (!organizationId) {
+      setPositions([]);
+      return [];
+    }
+    const items = await controller.listPositions({ organizationId });
+    setPositions(items);
+    syncListPageInfo();
+    return items;
+  };
+
+  const refreshRoleBindings = async (organizationId: string) => {
+    if (!organizationId) {
+      setRoleBindings([]);
+      return [];
+    }
+    const items = await controller.listRoleBindings({ organizationId });
+    setRoleBindings(items);
+    syncListPageInfo();
     return items;
   };
 
@@ -93,6 +142,8 @@ export function SdkworkIamOrganizationAdminWorkspace({
         return Promise.all([
           refreshDepartments(selectedOrganizationId),
           refreshMemberships(selectedOrganizationId),
+          refreshPositions(selectedOrganizationId),
+          refreshRoleBindings(selectedOrganizationId),
         ]);
       })
       .catch((loadError) => {
@@ -163,7 +214,7 @@ export function SdkworkIamOrganizationAdminWorkspace({
                 const items = await controller.loadMoreOrganizations();
                 setOrganizations(items);
               }, "Loaded more organizations")}
-              pageInfo={controller.getState().organizationListPageInfo}
+              pageInfo={pageInfo.organizationListPageInfo}
             />
           </section>
         </div>
@@ -246,6 +297,15 @@ export function SdkworkIamOrganizationAdminWorkspace({
                 </li>
               ))}
             </ul>
+            <SdkworkIamListPaginationControls
+              busy={busy}
+              onLoadMore={() => void runAction(async () => {
+                const items = await controller.loadMoreDepartments(selectedOrganization.organizationId);
+                setDepartments(items);
+                syncListPageInfo();
+              }, "Loaded more departments")}
+              pageInfo={pageInfo.departmentListPageInfo}
+            />
           </section>
         ) : null}
 
@@ -293,6 +353,66 @@ export function SdkworkIamOrganizationAdminWorkspace({
                 </li>
               ))}
             </ul>
+            <SdkworkIamListPaginationControls
+              busy={busy}
+              onLoadMore={() => void runAction(async () => {
+                const items = await controller.loadMoreMemberships(selectedOrganization.organizationId);
+                setMemberships(items);
+                syncListPageInfo();
+              }, "Loaded more memberships")}
+              pageInfo={pageInfo.membershipListPageInfo}
+            />
+          </section>
+        ) : null}
+
+        {selectedOrganization ? (
+          <section className="space-y-3 rounded-[0.75rem] border border-[var(--sdk-color-border-default)] p-4">
+            <h3 className="text-sm font-semibold">Positions ({positions.length})</h3>
+            <ul className="space-y-2">
+              {positions.map((position) => (
+                <li
+                  className="rounded-[0.75rem] border border-[var(--sdk-color-border-default)] px-3 py-2 text-sm"
+                  key={position.positionId}
+                >
+                  {position.name} ({position.positionId})
+                </li>
+              ))}
+            </ul>
+            <SdkworkIamListPaginationControls
+              busy={busy}
+              onLoadMore={() => void runAction(async () => {
+                const items = await controller.loadMorePositions();
+                setPositions(items);
+                syncListPageInfo();
+              }, "Loaded more positions")}
+              pageInfo={pageInfo.positionListPageInfo}
+            />
+          </section>
+        ) : null}
+
+        {selectedOrganization ? (
+          <section className="space-y-3 rounded-[0.75rem] border border-[var(--sdk-color-border-default)] p-4">
+            <h3 className="text-sm font-semibold">Role bindings ({roleBindings.length})</h3>
+            <ul className="space-y-2">
+              {roleBindings.map((binding) => (
+                <li
+                  className="rounded-[0.75rem] border border-[var(--sdk-color-border-default)] px-3 py-2 text-sm"
+                  key={binding.id}
+                >
+                  {binding.principalKind || "principal"}:{binding.principalId || binding.id}
+                  {binding.roleId ? ` → ${binding.roleId}` : ""}
+                </li>
+              ))}
+            </ul>
+            <SdkworkIamListPaginationControls
+              busy={busy}
+              onLoadMore={() => void runAction(async () => {
+                const items = await controller.loadMoreRoleBindings();
+                setRoleBindings(items);
+                syncListPageInfo();
+              }, "Loaded more role bindings")}
+              pageInfo={pageInfo.roleBindingListPageInfo}
+            />
           </section>
         ) : null}
       </SettingsSection>

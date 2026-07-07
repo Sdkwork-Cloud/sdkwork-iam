@@ -76,7 +76,7 @@ pub async fn integration_database_pool_for_router() -> DatabasePool {
                 url,
                 mode: DeploymentMode::Integrated,
                 table_prefix: "iam_".to_owned(),
-                max_connections: 2,
+                max_connections: 8,
                 min_connections: 0,
                 acquire_timeout_secs: 60,
                 ..DatabaseConfig::default()

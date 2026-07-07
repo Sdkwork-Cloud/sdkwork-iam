@@ -1125,6 +1125,34 @@ async fn authenticated_app_directory_routes_read_registered_local_store() {
         .as_str()
         .expect("registration should return user id");
 
+    let pg = unified_database_env::postgres_pool_for_integration_tests().await;
+
+    let (current_status, current_body, _) = request_app_route_with_auth(
+        router.clone(),
+        Method::GET,
+        "/app/v3/api/auth/sessions/current",
+        None,
+        auth_token,
+        access_token,
+    )
+    .await;
+    assert_eq!(
+        StatusCode::OK,
+        current_status,
+        "registered session should resolve through app-api session handlers: {current_body}"
+    );
+
+    let resolved = sdkwork_iam_web_adapter::resolve_iam_app_context_from_dual_tokens(
+        &pg,
+        auth_token,
+        access_token,
+    )
+    .await;
+    assert!(
+        resolved.is_some(),
+        "registered session must resolve through IAM database dual-token adapter before directory reads"
+    );
+
     let membership_paths = ["/app/v3/api/iam/organization_memberships"];
     for path in membership_paths {
         let (status, body_text, payload) = request_app_route_with_auth(
@@ -1257,7 +1285,8 @@ async fn resolve_session_data_after_auth_response(
             let selection_body = if login_scope.eq_ignore_ascii_case("TENANT") {
                 json!({
                     "continuationToken": continuation_token,
-                    "loginScope": "TENANT"
+                    "loginScope": "TENANT",
+                    "organizationId": "0"
                 })
             } else {
                 let organization_id = organization_id
@@ -1276,11 +1305,12 @@ async fn resolve_session_data_after_auth_response(
                     "organizationId": organization_id
                 })
             };
-            let (status, body_text, payload) = request_app_route(
+            let (status, body_text, payload) = request_app_route_with_headers(
                 router.clone(),
                 Method::POST,
                 "/app/v3/api/auth/sessions/login_context_selection",
                 Some(&selection_body.to_string()),
+                &[],
             )
             .await;
             assert_eq!(

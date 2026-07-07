@@ -15,6 +15,13 @@ Canonical lifecycle assets for `sdkwork-iam` per `DATABASE_FRAMEWORK_SPEC.md`.
 
 Lifecycle orchestration is implemented in `crates/sdkwork-iam-database-host` (`sdkwork-iam-db` CLI).
 
+## Engines
+
+| Engine | Lifecycle | Notes |
+| --- | --- | --- |
+| PostgreSQL | **Authoritative** — `db:init`, `db:migrate`, `db:bootstrap`, drift checks | Required for production IAM HTTP services |
+| SQLite | **Embedded mirror only** — not in `database.manifest.json` | OAuth-device / Claw Router narrow paths; baseline uses SQLite `TEXT` JSON columns (not PostgreSQL `JSONB`) |
+
 ## Commands
 
 ```bash

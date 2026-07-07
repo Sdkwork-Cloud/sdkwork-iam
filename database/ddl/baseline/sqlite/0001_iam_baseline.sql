@@ -1,6 +1,6 @@
--- IAM PostgreSQL baseline for sdkwork-appbase (57 tables).
--- Authoritative lifecycle owner: application-root database/
--- Consolidated sections: foundation, application bootstrap tables, RBAC federation, subject extensions.
+-- IAM SQLite embedded baseline mirror (non-authoritative).
+-- Production lifecycle uses PostgreSQL only; see database/database.manifest.json.
+-- This file supports embedded/OAuth-device runtime paths and is not executed by sdkwork-iam-db.
 
 -- source: database/ddl/baseline/postgres/0001_iam_baseline.sql#foundation
 CREATE TABLE IF NOT EXISTS iam_tenant (
@@ -1264,10 +1264,10 @@ CREATE TABLE IF NOT EXISTS iam_ephemeral_artifact (
   artifact_key TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
   artifact_kind TEXT NOT NULL,
-  payload_json JSONB NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
+  payload_json TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_iam_ephemeral_artifact_expires_at
@@ -1290,13 +1290,13 @@ CREATE TABLE IF NOT EXISTS iam_application_template (
   version TEXT NOT NULL,
   channel TEXT NOT NULL DEFAULT 'stable',
   status TEXT NOT NULL DEFAULT 'active',
-  runtime_config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-  artifacts_config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-  default_access_permissions_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+  runtime_config_json TEXT NOT NULL DEFAULT '{}',
+  artifacts_config_json TEXT NOT NULL DEFAULT '{}',
+  default_access_permissions_json TEXT NOT NULL DEFAULT '[]',
   manifest_hash TEXT,
-  last_synced_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL,
+  last_synced_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
   UNIQUE (app_key),
   UNIQUE (name)
 );
@@ -1319,10 +1319,10 @@ CREATE TABLE IF NOT EXISTS iam_application_template_package (
   deployment_profile TEXT NOT NULL,
   package_format TEXT NOT NULL,
   version TEXT,
-  config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  config_json TEXT NOT NULL DEFAULT '{}',
   status TEXT NOT NULL DEFAULT 'active',
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
   UNIQUE (template_id, package_id)
 );
 
@@ -1341,14 +1341,14 @@ CREATE TABLE IF NOT EXISTS iam_tenant_application (
   environment TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending_config',
   primary_domain TEXT,
-  domain_config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-  access_permissions_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-  runtime_config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-  provisioned_at TIMESTAMPTZ,
-  activated_at TIMESTAMPTZ,
-  last_synced_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL,
+  domain_config_json TEXT NOT NULL DEFAULT '{}',
+  access_permissions_json TEXT NOT NULL DEFAULT '[]',
+  runtime_config_json TEXT NOT NULL DEFAULT '{}',
+  provisioned_at TEXT,
+  activated_at TEXT,
+  last_synced_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
   UNIQUE (app_id),
   UNIQUE (tenant_id, instance_key)
 );

@@ -1,5 +1,12 @@
 # Guides
 
-Role-based developer, operator, and integrator guides.
+Status: active  
+Owner: SDKWork maintainers
 
-See `DOCUMENTATION_SPEC.md` section 2.
+| Guide | Audience |
+| --- | --- |
+| [operator/README.md](operator/README.md) | Platform operators — production prerequisites, gateway, Snowflake IDs |
+| [integrator/README.md](integrator/README.md) | Application integrators — SDK families, bootstrap, HTTP contract |
+| [developer/README.md](developer/README.md) | IAM maintainers — repository layout, local dev, change rules |
+
+Canonical architecture: [docs/architecture/tech/TECH_ARCHITECTURE.md](../architecture/tech/TECH_ARCHITECTURE.md)

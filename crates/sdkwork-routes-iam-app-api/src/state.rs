@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use sdkwork_database_sqlx::DatabasePool;
+use sdkwork_iam_bootstrap::limits::IAM_ACTIVE_TENANT_LIST_LIMIT;
 use serde_json::Value;
 
 use crate::password_session_bridge::PasswordSessionBridge;
@@ -308,8 +309,9 @@ async fn backfill_tenant_members(pool: &DatabasePool) -> Result<(), String> {
         return Ok(());
     };
     let tenant_ids = sqlx::query_scalar::<_, String>(
-        "SELECT id FROM iam_tenant WHERE status = 'active' ORDER BY id",
+        "SELECT id FROM iam_tenant WHERE status = 'active' ORDER BY id LIMIT $1",
     )
+    .bind(IAM_ACTIVE_TENANT_LIST_LIMIT)
     .fetch_all(pg)
     .await
     .map_err(|error| format!("list active tenants failed: {error}"))?;

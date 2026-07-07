@@ -184,10 +184,12 @@ pub(crate) async fn authenticate_password(
          WHERE u.tenant_id = $1 \
            AND (LOWER(u.username) = $2 OR LOWER(u.email) = $2 OR u.phone = $2) \
            AND u.status = 'active' AND u.is_deleted = 0 \
-           AND NULLIF(TRIM(u.tenant_id), '') IS NOT NULL",
+           AND NULLIF(TRIM(u.tenant_id), '') IS NOT NULL \
+         LIMIT $3",
     )
     .bind(tenant_id)
     .bind(&account_key)
+    .bind(sdkwork_iam_bootstrap::limits::IAM_PASSWORD_AUTH_USER_ROW_LIMIT + 1)
     .fetch_all(pg)
     .await
     {
@@ -196,6 +198,10 @@ pub(crate) async fn authenticate_password(
     };
 
     if rows.is_empty() {
+        return PasswordAuthenticationOutcome::InvalidCredentials;
+    }
+
+    if rows.len() > sdkwork_iam_bootstrap::limits::IAM_PASSWORD_AUTH_USER_ROW_LIMIT as usize {
         return PasswordAuthenticationOutcome::InvalidCredentials;
     }
 

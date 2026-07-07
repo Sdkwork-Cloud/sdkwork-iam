@@ -1,16 +1,25 @@
+pub mod bootstrap_operator;
 pub mod constants;
 pub mod iam_entity_ids;
 pub mod iam_scope_resolver;
 pub mod iam_sql_subject;
 pub mod legacy_subject_repair;
 pub mod limits;
+pub mod oauth_rs256_signing;
 pub mod permission_catalog;
 pub mod rbac_scope;
 pub mod role_catalog;
 pub mod tenant_signing_key;
 
+pub use bootstrap_operator::{
+    ensure_postgres_bootstrap_admin_user, ensure_sqlite_bootstrap_admin_user,
+    resolve_bootstrap_admin_password_from_env, BootstrapAdminUserOutcome,
+    SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV, SDKWORK_IAM_SUPER_ADMIN_PASSWORD_ENV,
+};
 pub use constants::*;
-pub use iam_entity_ids::{new_iam_snowflake_id, new_iam_tenant_id, new_iam_user_id};
+pub use iam_entity_ids::{
+    init_iam_id_generator, new_iam_snowflake_id, new_iam_tenant_id, new_iam_user_id,
+};
 pub use iam_scope_resolver::{
     effective_iam_organization_code, effective_iam_tenant_code,
     resolve_postgres_iam_organization_id_string, resolve_postgres_iam_scope,
@@ -25,7 +34,16 @@ pub use legacy_subject_repair::{
     repair_postgres_legacy_opaque_iam_user_ids, repair_sqlite_legacy_opaque_iam_user_ids,
     LegacyIamSubjectRepairReport,
 };
-pub use limits::{IAM_RBAC_BINDING_ROW_LIMIT, IAM_TREE_MAX_NODES};
+pub use limits::{
+    IAM_ACTIVE_ORGANIZATION_MEMBERSHIP_ROW_LIMIT, IAM_ACTIVE_TENANT_LIST_LIMIT,
+    IAM_RBAC_BINDING_ROW_LIMIT, IAM_RBAC_DATA_SCOPE_ROW_LIMIT, IAM_RBAC_EXCLUSION_ROW_LIMIT,
+    IAM_RBAC_ROLE_CODE_ROW_LIMIT, IAM_RBAC_ROLE_PERMISSION_ROW_LIMIT, IAM_TREE_MAX_NODES,
+};
+pub use oauth_rs256_signing::{
+    ensure_postgres_oauth_rs256_signing_key, list_postgres_oauth_jwks_document,
+    load_postgres_oauth_rs256_signing_key, oauth_rs256_signing_kid, sign_rs256_jwt,
+    OAuthRs256SigningMaterial,
+};
 pub use rbac_scope::{
     ensure_assigner_covers_role_permissions, ensure_permission_grant_within_assigner_scope,
     ensure_role_assignment_allowed, ensure_role_grant_within_assigner_scope,
@@ -471,4 +489,17 @@ pub fn iam_baseline_postgres_sql() -> &'static str {
 
 pub fn iam_rbac_federation_postgres_sql() -> &'static str {
     include_str!("../../../database/ddl/baseline/postgres/0001_iam_baseline.sql")
+}
+
+#[cfg(test)]
+pub(crate) mod test_env_lock {
+    use std::sync::{Mutex, MutexGuard};
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    pub fn lock() -> MutexGuard<'static, ()> {
+        ENV_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
 }

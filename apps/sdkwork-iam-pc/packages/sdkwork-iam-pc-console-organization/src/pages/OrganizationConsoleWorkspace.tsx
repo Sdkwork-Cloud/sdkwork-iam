@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
 import { SettingsSection, StatusNotice } from "@sdkwork/ui-pc-react";
 
 import type { SdkworkIamConsoleOrganizationWorkspaceProps } from "../types/organization-console-types";
@@ -11,6 +12,7 @@ export function SdkworkIamConsoleOrganizationWorkspace({
   const [organizations, setOrganizations] = useState(controller.getState().organizations);
   const [departments, setDepartments] = useState(controller.getState().departments);
   const [memberships, setMemberships] = useState(controller.getState().memberships);
+  const [listPageInfo, setListPageInfo] = useState(controller.getState().listPageInfo);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState(
     controller.getState().selectedOrganization?.organizationId ?? "",
   );
@@ -22,6 +24,7 @@ export function SdkworkIamConsoleOrganizationWorkspace({
         setOrganizations(nextOrganizations);
         setDepartments(nextDepartments);
         setMemberships(nextMemberships);
+        setListPageInfo(controller.getState().listPageInfo);
         if (nextOrganizations[0]?.organizationId) {
           setSelectedOrganizationId(nextOrganizations[0].organizationId);
         }
@@ -40,6 +43,7 @@ export function SdkworkIamConsoleOrganizationWorkspace({
         const state = controller.getState();
         setDepartments(state.departments);
         setMemberships(state.memberships);
+        setListPageInfo(state.listPageInfo);
       })
       .catch((loadError) => {
         setError(loadError instanceof Error ? loadError.message : "Failed to load organization details");
@@ -65,6 +69,15 @@ export function SdkworkIamConsoleOrganizationWorkspace({
             ))}
           </select>
         </label>
+        <SdkworkIamListPaginationControls
+          onLoadMore={() => controller.loadMoreOrganizations().then((items) => {
+            setOrganizations(items);
+            setListPageInfo(controller.getState().listPageInfo);
+          }).catch((loadError) => {
+            setError(loadError instanceof Error ? loadError.message : "Failed to load more organizations");
+          })}
+          pageInfo={listPageInfo?.organizations}
+        />
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">Departments ({departments.length})</h3>
           <ul className="space-y-2">
@@ -74,6 +87,17 @@ export function SdkworkIamConsoleOrganizationWorkspace({
               </li>
             ))}
           </ul>
+          {selectedOrganizationId ? (
+            <SdkworkIamListPaginationControls
+              onLoadMore={() => controller.loadMoreDepartments(selectedOrganizationId).then((items) => {
+                setDepartments(items);
+                setListPageInfo(controller.getState().listPageInfo);
+              }).catch((loadError) => {
+                setError(loadError instanceof Error ? loadError.message : "Failed to load more departments");
+              })}
+              pageInfo={listPageInfo?.departments}
+            />
+          ) : null}
         </section>
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">Memberships ({memberships.length})</h3>
@@ -81,10 +105,19 @@ export function SdkworkIamConsoleOrganizationWorkspace({
             {memberships.map((membership) => (
               <li className="rounded-[0.75rem] border border-[var(--sdk-color-border-default)] px-3 py-2 text-sm" key={membership.id}>
                 {membership.displayName || membership.userId}
-                {membership.roleCode ? ` — ${membership.roleCode}` : ""}
+                {membership.roleCode ? ` (${membership.roleCode})` : ""}
               </li>
             ))}
           </ul>
+          <SdkworkIamListPaginationControls
+            onLoadMore={() => controller.loadMoreMemberships().then((items) => {
+              setMemberships(items);
+              setListPageInfo(controller.getState().listPageInfo);
+            }).catch((loadError) => {
+              setError(loadError instanceof Error ? loadError.message : "Failed to load more memberships");
+            })}
+            pageInfo={listPageInfo?.memberships}
+          />
         </section>
       </SettingsSection>
     </div>

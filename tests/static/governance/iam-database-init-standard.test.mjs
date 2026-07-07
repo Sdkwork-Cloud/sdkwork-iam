@@ -122,6 +122,18 @@ test("operational seed profile loads IAM subject and application bootstrap data"
   ]);
 });
 
+test("IAM database seed hooks provision bootstrap admin user when password env is configured", () => {
+  const databaseModule = readText("crates/sdkwork-iam-database-host/src/iam_database_module.rs");
+  const databaseHostLib = readText("crates/sdkwork-iam-database-host/src/lib.rs");
+  const bootstrapOperator = readText("crates/sdkwork-iam-bootstrap/src/bootstrap_operator.rs");
+
+  assert.match(databaseModule, /ensure_postgres_bootstrap_admin_user/u);
+  assert.match(databaseHostLib, /ensure_postgres_bootstrap_admin_user/u);
+  assert.match(bootstrapOperator, /DEFAULT_BOOTSTRAP_ADMIN_USERNAME/u);
+  assert.match(bootstrapOperator, /PLATFORM_SUPER_ADMIN_ROLE_CODE/u);
+  assert.match(bootstrapOperator, /SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV/u);
+});
+
 test("IAM component spec declares DATABASE_FRAMEWORK_SPEC and database verification", () => {
   const componentSpec = JSON.parse(readText("specs/component.spec.json"));
   const canonicalFiles = (componentSpec.canonicalSpecs ?? []).map((entry) => entry.file);

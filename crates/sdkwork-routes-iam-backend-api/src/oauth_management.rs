@@ -15,10 +15,11 @@ use serde_json::{json, Value};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
+use crate::backend_audit::{directory_create_with_audit, execute_conditional_mutation_with_audit};
 use crate::backend_sql::{
-    delete_tenant_row, list_page_params, list_search_pattern, list_tenant_rows,
-    page_json_from_rows, patch_tenant_row, read_i32_field, read_string_field, retrieve_tenant_row,
-    row_to_json_with_aliases, LIST_TOTAL_COLUMN,
+    internal_handler_error, list_page_params_or_error, list_search_pattern, list_tenant_rows,
+    page_json_from_rows, patch_tenant_row_tx, read_i32_field, read_string_field,
+    retrieve_tenant_row, row_to_json_with_aliases, LIST_TOTAL_COLUMN,
 };
 use crate::handlers::{
     appbase_error, appbase_ok, organization_id_from_context, postgres_pool_or_error,

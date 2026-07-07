@@ -1422,7 +1422,10 @@ async fn list_oauth_providers(
     };
 
     if !policy.oauth_login.enabled {
-        return appbase_ok(paginate_bounded_json_values(Vec::new(), &query));
+        return match paginate_bounded_json_values(Vec::new(), &query) {
+            Ok(payload) => appbase_ok(payload),
+            Err(response) => response,
+        };
     }
 
     let pg = state.pool.as_postgres();
@@ -1434,7 +1437,10 @@ async fn list_oauth_providers(
     )
     .await
     {
-        Ok(items) => appbase_ok(paginate_bounded_json_values(items, &query)),
+        Ok(items) => match paginate_bounded_json_values(items, &query) {
+            Ok(payload) => appbase_ok(payload),
+            Err(response) => response,
+        },
         Err(error) => appbase_error(
             StatusCode::SERVICE_UNAVAILABLE,
             "iam_oauth_providers_list_failed",
@@ -1855,7 +1861,11 @@ async fn list_oauth_account_links(
         );
     }
 
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let rows = sqlx::query(&format!(
         "SELECT id, provider_code, integration_id, external_account_display_snapshot, linked_at, status, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
@@ -2006,7 +2016,11 @@ async fn list_oauth_grants(
         return iam_session_required_error();
     };
 
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search = list_search_pattern(&query);
     let rows = sqlx::query(&format!(
         "SELECT id, provider_code, integration_id, grant_owner_kind, flow_kind, status, issued_at, created_at, \
@@ -2510,22 +2524,31 @@ async fn retrieve_runtime(State(state): State<LocalIamState>, ctx: WebRequestCon
                 .as_deref()
                 .filter(|value| !value.is_empty())
                 .unwrap_or(LOCAL_EPHEMERAL_SCOPE);
-            let oauth_providers = crate::oauth_login::list_login_enabled_providers(
+            let oauth_providers = match crate::oauth_login::list_login_enabled_providers(
                 Some(pg),
                 oauth_tenant_id,
                 &policy,
                 &crate::oauth_login::OAuthLoginContext::new(),
             )
             .await
-            .unwrap_or_default()
-            .into_iter()
-            .map(|provider| {
-                json!({
-                    "providerCode": provider.get("providerCode").cloned().unwrap_or(Value::Null),
-                    "regionGroup": provider.get("regionGroup").cloned().unwrap_or(Value::Null),
-                })
-            })
-            .collect::<Vec<_>>();
+            {
+                Ok(items) => items
+                    .into_iter()
+                    .map(|provider| {
+                        json!({
+                            "providerCode": provider.get("providerCode").cloned().unwrap_or(Value::Null),
+                            "regionGroup": provider.get("regionGroup").cloned().unwrap_or(Value::Null),
+                        })
+                    })
+                    .collect::<Vec<_>>(),
+                Err(error) => {
+                    return appbase_error(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "iam_runtime_oauth_providers_failed",
+                        &error,
+                    );
+                }
+            };
             sdkwork_iam_web_adapter::build_runtime_auth_metadata_json(
                 &policy,
                 &oauth_providers,
@@ -3033,6 +3056,20 @@ async fn resolve_password_login_session_outcome(
     PasswordLoginSessionOutcome::Error(postgres_pool_or_error(state).err().expect("error response"))
 }
 
+type DirectoryPagedResult<T> = Result<(Vec<T>, i64, ListPageParams), sqlx::Error>;
+
+fn directory_query_error(error: sqlx::Error) -> Response {
+    if matches!(error, sqlx::Error::Protocol(_)) {
+        return list_page_invalid_parameter_error();
+    }
+    tracing::error!(%error, "directory query failed");
+    appbase_error(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "iam_directory_query_failed",
+        "directory query failed",
+    )
+}
+
 async fn list_organizations(
     State(state): State<LocalIamState>,
     ctx: WebRequestContext,
@@ -3050,7 +3087,10 @@ async fn list_organizations(
         return response;
     }
     let (organizations, total, params) =
-        paged_organizations_for_session(pg, &session, &query).await;
+        match paged_organizations_for_session(pg, &session, &query).await {
+            Ok(value) => value,
+            Err(error) => return directory_query_error(error),
+        };
     appbase_ok(list_page_json(
         organizations.iter().map(organization_to_json).collect(),
         total,
@@ -3110,7 +3150,11 @@ async fn list_organization_memberships(
     ) {
         return response;
     }
-    let (memberships, total, params) = paged_organization_memberships(pg, &session, &query).await;
+    let (memberships, total, params) =
+        match paged_organization_memberships(pg, &session, &query).await {
+            Ok(value) => value,
+            Err(error) => return directory_query_error(error),
+        };
     appbase_ok(list_page_json(
         memberships
             .iter()
@@ -3137,7 +3181,11 @@ async fn list_departments(
     if let Some(response) = ensure_directory_permission(&session, &["iam.departments.read"]) {
         return response;
     }
-    let (departments, total, params) = paged_departments_for_session(pg, &session, &query).await;
+    let (departments, total, params) =
+        match paged_departments_for_session(pg, &session, &query).await {
+            Ok(value) => value,
+            Err(error) => return directory_query_error(error),
+        };
     appbase_ok(list_page_json(
         departments.iter().map(department_to_json).collect(),
         total,
@@ -3194,7 +3242,11 @@ async fn list_department_assignments(
     if let Some(response) = ensure_directory_permission(&session, &["iam.assignments.read"]) {
         return response;
     }
-    let (assignments, total, params) = paged_department_assignments(pg, &session, &query).await;
+    let (assignments, total, params) =
+        match paged_department_assignments(pg, &session, &query).await {
+            Ok(value) => value,
+            Err(error) => return directory_query_error(error),
+        };
     appbase_ok(list_page_json(
         assignments
             .iter()
@@ -3221,7 +3273,10 @@ async fn list_positions(
     if let Some(response) = ensure_directory_permission(&session, &["iam.positions.read"]) {
         return response;
     }
-    let (positions, total, params) = paged_positions(pg, &session, &query).await;
+    let (positions, total, params) = match paged_positions(pg, &session, &query).await {
+        Ok(value) => value,
+        Err(error) => return directory_query_error(error),
+    };
     appbase_ok(list_page_json(
         positions.iter().map(position_to_json).collect(),
         total,
@@ -3245,7 +3300,11 @@ async fn list_position_assignments(
     if let Some(response) = ensure_directory_permission(&session, &["iam.assignments.read"]) {
         return response;
     }
-    let (assignments, total, params) = paged_position_assignments(pg, &session, &query).await;
+    let (assignments, total, params) = match paged_position_assignments(pg, &session, &query).await
+    {
+        Ok(value) => value,
+        Err(error) => return directory_query_error(error),
+    };
     appbase_ok(list_page_json(
         assignments
             .iter()
@@ -3272,7 +3331,10 @@ async fn list_role_bindings(
     if let Some(response) = ensure_directory_permission(&session, &["iam.role_bindings.read"]) {
         return response;
     }
-    let (bindings, total, params) = paged_role_bindings(pg, &session, &query).await;
+    let (bindings, total, params) = match paged_role_bindings(pg, &session, &query).await {
+        Ok(value) => value,
+        Err(error) => return directory_query_error(error),
+    };
     appbase_ok(list_page_json(
         bindings.iter().map(role_binding_to_json).collect(),
         total,
@@ -3335,7 +3397,13 @@ async fn create_authenticated_session_or_challenge(
             postgres_pool_or_error(state).err().expect("error response"),
         );
     };
-    let memberships = active_organization_memberships_for_user(pg, &user.tenant_id, user).await;
+    let memberships =
+        match active_organization_memberships_for_user(pg, &user.tenant_id, user).await {
+            Ok(items) => items,
+            Err(error) => {
+                return AuthenticatedSessionOutcome::Error(directory_query_error(error));
+            }
+        };
     let eligible_memberships = login_eligible_organization_memberships(memberships);
     match eligible_memberships.len() {
         0 => match create_session_record(pg, &state.config, user, None, runtime_app_id).await {
@@ -3378,20 +3446,29 @@ async fn active_organization_memberships_for_user(
     pg: &PgPool,
     tenant_id: &str,
     user: &LocalIamUser,
-) -> Vec<LocalOrganizationMembership> {
+) -> Result<Vec<LocalOrganizationMembership>, sqlx::Error> {
+    let row_limit = sdkwork_iam_bootstrap::IAM_ACTIVE_ORGANIZATION_MEMBERSHIP_ROW_LIMIT + 1;
     let rows = sqlx::query(
         "SELECT id, tenant_id, organization_id, user_id, membership_kind, is_primary, status \
          FROM iam_organization_membership \
          WHERE tenant_id = $1 AND user_id = $2 AND status = 'active' \
-         ORDER BY is_primary DESC, organization_id, id",
+         ORDER BY is_primary DESC, organization_id, id \
+         LIMIT $3",
     )
     .bind(tenant_id)
     .bind(&user.id)
+    .bind(row_limit)
     .fetch_all(pg)
-    .await
-    .unwrap_or_default();
+    .await?;
 
-    rows.into_iter()
+    if rows.len() > sdkwork_iam_bootstrap::IAM_ACTIVE_ORGANIZATION_MEMBERSHIP_ROW_LIMIT as usize {
+        return Err(sqlx::Error::Protocol(
+            "active organization membership row limit exceeded".into(),
+        ));
+    }
+
+    Ok(rows
+        .into_iter()
         .enumerate()
         .map(|(index, row)| LocalOrganizationMembership {
             id: row.get(0),
@@ -3404,7 +3481,7 @@ async fn active_organization_memberships_for_user(
             order: index as i64,
             user: user.clone(),
         })
-        .collect()
+        .collect())
 }
 
 async fn has_active_organization_membership(
@@ -3473,22 +3550,26 @@ async fn login_context_selection_challenge_json(
         .map(|membership| membership.organization_id.clone())
         .collect::<Vec<_>>();
     let organizations = if let Some(pg) = state.pool.as_postgres() {
-        organizations_by_ids(pg, &user.tenant_id, &organization_ids)
-            .await
-            .into_iter()
-            .filter_map(|organization| {
-                memberships
-                    .iter()
-                    .find(|membership| membership.organization_id == organization.id)
-                    .map(|membership| {
-                        let mut value = organization_to_json(&organization);
-                        value["membershipId"] = json!(membership.id);
-                        value["membershipKind"] = json!(membership.membership_type);
-                        value["primary"] = json!(membership.primary);
-                        value
-                    })
-            })
-            .collect::<Vec<_>>()
+        match organizations_by_ids(pg, &user.tenant_id, &organization_ids).await {
+            Ok(items) => items
+                .into_iter()
+                .filter_map(|organization| {
+                    memberships
+                        .iter()
+                        .find(|membership| membership.organization_id == organization.id)
+                        .map(|membership| {
+                            let mut value = organization_to_json(&organization);
+                            value["membershipId"] = json!(membership.id);
+                            value["membershipKind"] = json!(membership.membership_type);
+                            value["primary"] = json!(membership.primary);
+                            value
+                        })
+                })
+                .collect::<Vec<_>>(),
+            Err(error) => {
+                return Err(format!("load login organizations failed: {error}"));
+            }
+        }
     } else {
         Vec::new()
     };
@@ -3532,9 +3613,9 @@ async fn organizations_by_ids(
     pg: &PgPool,
     tenant_id: &str,
     organization_ids: &[String],
-) -> Vec<LocalOrganization> {
+) -> Result<Vec<LocalOrganization>, sqlx::Error> {
     if organization_ids.is_empty() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
 
     let rows = sqlx::query(
@@ -3548,10 +3629,10 @@ async fn organizations_by_ids(
     .bind(tenant_id)
     .bind(organization_ids)
     .fetch_all(pg)
-    .await
-    .unwrap_or_default();
+    .await?;
 
-    rows.into_iter()
+    Ok(rows
+        .into_iter()
         .map(|row| LocalOrganization {
             id: row.get(0),
             tenant_id: row.get(1),
@@ -3565,7 +3646,7 @@ async fn organizations_by_ids(
             status: row.get(9),
             order: 0,
         })
-        .collect()
+        .collect())
 }
 
 async fn load_organization(
@@ -3604,22 +3685,22 @@ async fn load_organization(
 async fn accessible_organization_ids_for_session(
     pg: &PgPool,
     session: &LocalSession,
-) -> Vec<String> {
+) -> Result<Vec<String>, sqlx::Error> {
     if let Some(organization_id) = session
         .context
         .organization_id
         .as_ref()
         .filter(|value| !crate::is_blank(Some(value)) && *value != "0")
     {
-        return vec![organization_id.clone()];
+        return Ok(vec![organization_id.clone()]);
     }
-    login_eligible_organization_memberships(
+    let memberships =
         active_organization_memberships_for_user(pg, &session.context.tenant_id, &session.user)
-            .await,
-    )
-    .into_iter()
-    .map(|membership| membership.organization_id)
-    .collect()
+            .await?;
+    Ok(login_eligible_organization_memberships(memberships)
+        .into_iter()
+        .map(|membership| membership.organization_id)
+        .collect())
 }
 
 async fn scoped_organizations_for_session(
@@ -3627,7 +3708,9 @@ async fn scoped_organizations_for_session(
     session: &LocalSession,
     query: &HashMap<String, String>,
 ) -> Result<Vec<LocalOrganization>, String> {
-    let organization_ids = accessible_organization_ids_for_session(pg, session).await;
+    let organization_ids = accessible_organization_ids_for_session(pg, session)
+        .await
+        .map_err(|error| format!("load accessible organizations failed: {error}"))?;
     if organization_ids.is_empty() {
         return Ok(Vec::new());
     }
@@ -3687,12 +3770,12 @@ async fn paged_organizations_for_session(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> (Vec<LocalOrganization>, i64, ListPageParams) {
-    let params = list_page_params(query);
+) -> DirectoryPagedResult<LocalOrganization> {
+    let params = list_page_params_for_directory(query)?;
     let search_pattern = list_search_pattern(query);
-    let organization_ids = accessible_organization_ids_for_session(pg, session).await;
+    let organization_ids = accessible_organization_ids_for_session(pg, session).await?;
     if organization_ids.is_empty() {
-        return (Vec::new(), 0, params);
+        return Ok((Vec::new(), 0, params));
     }
     let org_id = optional_query_string(query, &["organizationId", "organization_id", "id"]);
     let parent_id = optional_query_string(
@@ -3724,8 +3807,7 @@ async fn paged_organizations_for_session(
     .bind(params.page_size)
     .bind(params.offset)
     .fetch_all(pg)
-    .await
-    .unwrap_or_default();
+    .await?;
     let total = total_from_rows(&rows);
     let organizations = rows
         .into_iter()
@@ -3744,15 +3826,15 @@ async fn paged_organizations_for_session(
             order: index as i64,
         })
         .collect();
-    (organizations, total, params)
+    Ok((organizations, total, params))
 }
 
 async fn paged_organization_memberships(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> (Vec<LocalOrganizationMembership>, i64, ListPageParams) {
-    let params = list_page_params(query);
+) -> DirectoryPagedResult<LocalOrganizationMembership> {
+    let params = list_page_params_for_directory(query)?;
     let search_pattern = list_search_pattern(query);
     let membership_id = optional_query_string(
         query,
@@ -3794,8 +3876,7 @@ async fn paged_organization_memberships(
     .bind(params.offset)
     .bind(&search_pattern)
     .fetch_all(pg)
-    .await
-    .unwrap_or_default();
+    .await?;
     let total = total_from_rows(&rows);
     let memberships = rows
         .into_iter()
@@ -3816,7 +3897,7 @@ async fn paged_organization_memberships(
             }
         })
         .collect();
-    (memberships, total, params)
+    Ok((memberships, total, params))
 }
 
 async fn scoped_departments_for_session(
@@ -3824,7 +3905,9 @@ async fn scoped_departments_for_session(
     session: &LocalSession,
     query: &HashMap<String, String>,
 ) -> Result<Vec<LocalDepartment>, String> {
-    let organization_ids = accessible_organization_ids_for_session(pg, session).await;
+    let organization_ids = accessible_organization_ids_for_session(pg, session)
+        .await
+        .map_err(|error| format!("load accessible organizations failed: {error}"))?;
     if organization_ids.is_empty() {
         return Ok(Vec::new());
     }
@@ -3881,12 +3964,12 @@ async fn paged_departments_for_session(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> (Vec<LocalDepartment>, i64, ListPageParams) {
-    let params = list_page_params(query);
+) -> DirectoryPagedResult<LocalDepartment> {
+    let params = list_page_params_for_directory(query)?;
     let search_pattern = list_search_pattern(query);
-    let organization_ids = accessible_organization_ids_for_session(pg, session).await;
+    let organization_ids = accessible_organization_ids_for_session(pg, session).await?;
     if organization_ids.is_empty() {
-        return (Vec::new(), 0, params);
+        return Ok((Vec::new(), 0, params));
     }
     let organization_id = optional_query_string(query, &["organizationId", "organization_id"]);
     let department_id = optional_query_string(query, &["departmentId", "department_id", "id"]);
@@ -3920,8 +4003,7 @@ async fn paged_departments_for_session(
     .bind(params.page_size)
     .bind(params.offset)
     .fetch_all(pg)
-    .await
-    .unwrap_or_default();
+    .await?;
     let total = total_from_rows(&rows);
     let departments = rows
         .into_iter()
@@ -3936,15 +4018,15 @@ async fn paged_departments_for_session(
             order: index as i64,
         })
         .collect();
-    (departments, total, params)
+    Ok((departments, total, params))
 }
 
 async fn paged_department_assignments(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> (Vec<LocalDepartmentAssignment>, i64, ListPageParams) {
-    let params = list_page_params(query);
+) -> DirectoryPagedResult<LocalDepartmentAssignment> {
+    let params = list_page_params_for_directory(query)?;
     let search_pattern = list_search_pattern(query);
     let assignment_id = optional_query_string(
         query,
@@ -4001,8 +4083,7 @@ async fn paged_department_assignments(
     .bind(params.offset)
     .bind(&search_pattern)
     .fetch_all(pg)
-    .await
-    .unwrap_or_default();
+    .await?;
     let total = total_from_rows(&rows);
     let assignments = rows
         .into_iter()
@@ -4024,19 +4105,19 @@ async fn paged_department_assignments(
             }
         })
         .collect();
-    (assignments, total, params)
+    Ok((assignments, total, params))
 }
 
 async fn paged_positions(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> (Vec<LocalPosition>, i64, ListPageParams) {
-    let params = list_page_params(query);
+) -> DirectoryPagedResult<LocalPosition> {
+    let params = list_page_params_for_directory(query)?;
     let search_pattern = list_search_pattern(query);
-    let organization_ids = accessible_organization_ids_for_session(pg, session).await;
+    let organization_ids = accessible_organization_ids_for_session(pg, session).await?;
     if organization_ids.is_empty() {
-        return (Vec::new(), 0, params);
+        return Ok((Vec::new(), 0, params));
     }
     let organization_id = optional_query_string(query, &["organizationId", "organization_id"]);
     let position_id = optional_query_string(query, &["positionId", "position_id", "id"]);
@@ -4061,8 +4142,7 @@ async fn paged_positions(
     .bind(params.page_size)
     .bind(params.offset)
     .fetch_all(pg)
-    .await
-    .unwrap_or_default();
+    .await?;
     let total = total_from_rows(&rows);
     let positions = rows
         .into_iter()
@@ -4076,15 +4156,15 @@ async fn paged_positions(
             order: index as i64,
         })
         .collect();
-    (positions, total, params)
+    Ok((positions, total, params))
 }
 
 async fn paged_position_assignments(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> (Vec<LocalPositionAssignment>, i64, ListPageParams) {
-    let params = list_page_params(query);
+) -> DirectoryPagedResult<LocalPositionAssignment> {
+    let params = list_page_params_for_directory(query)?;
     let search_pattern = list_search_pattern(query);
     let assignment_id = optional_query_string(
         query,
@@ -4137,8 +4217,7 @@ async fn paged_position_assignments(
     .bind(params.offset)
     .bind(&search_pattern)
     .fetch_all(pg)
-    .await
-    .unwrap_or_default();
+    .await?;
     let total = total_from_rows(&rows);
     let assignments = rows
         .into_iter()
@@ -4156,15 +4235,15 @@ async fn paged_position_assignments(
             order: index as i64,
         })
         .collect();
-    (assignments, total, params)
+    Ok((assignments, total, params))
 }
 
 async fn paged_role_bindings(
     pg: &PgPool,
     session: &LocalSession,
     query: &HashMap<String, String>,
-) -> (Vec<LocalRoleBinding>, i64, ListPageParams) {
-    let params = list_page_params(query);
+) -> DirectoryPagedResult<LocalRoleBinding> {
+    let params = list_page_params_for_directory(query)?;
     let search_pattern = list_search_pattern(query);
     let binding_id = optional_query_string(query, &["roleBindingId", "role_binding_id", "id"]);
     let principal_id = optional_query_string(query, &["principalId", "principal_id"]);
@@ -4207,8 +4286,7 @@ async fn paged_role_bindings(
     .bind(params.offset)
     .bind(&search_pattern)
     .fetch_all(pg)
-    .await
-    .unwrap_or_default();
+    .await?;
     let total = total_from_rows(&rows);
     let bindings = rows
         .into_iter()
@@ -4224,7 +4302,7 @@ async fn paged_role_bindings(
             order: index as i64,
         })
         .collect();
-    (bindings, total, params)
+    Ok((bindings, total, params))
 }
 
 async fn load_user_by_account_global(pg: &PgPool, account: &str) -> Option<LocalIamUser> {

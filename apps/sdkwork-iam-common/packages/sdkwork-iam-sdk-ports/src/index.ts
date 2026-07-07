@@ -165,6 +165,7 @@ export interface IamBackendIamResourceClient {
   };
   auditEvents?: {
     list?: IamSdkMethod;
+    retrieve?: IamSdkMethod;
   };
   organizations?: {
     create?: IamSdkMethod;
@@ -231,6 +232,7 @@ export interface IamBackendIamResourceClient {
   };
   securityEvents?: {
     list?: IamSdkMethod;
+    retrieve?: IamSdkMethod;
   };
   tenantApplications?: {
     enable?: IamSdkMethod;

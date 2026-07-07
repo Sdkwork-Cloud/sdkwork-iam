@@ -1,3 +1,4 @@
+mod backend_audit;
 mod backend_sql;
 mod handlers;
 mod management;
@@ -27,6 +28,6 @@ pub fn gateway_route_manifest() -> HttpRouteManifest {
     iam_backend_api_route_manifest()
 }
 
-pub fn gateway_mount() -> Router {
-    build_sdkwork_iam_backend_api_router()
+pub async fn gateway_mount() -> Router {
+    build_sdkwork_iam_backend_api_router_from_env().await
 }

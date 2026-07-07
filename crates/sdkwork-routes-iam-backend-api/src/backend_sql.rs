@@ -2,9 +2,13 @@
 
 use std::collections::HashMap;
 
+use axum::http::StatusCode;
+use axum::response::Response;
+use sdkwork_iam_web_adapter::iam_api_error;
 use sdkwork_utils_rust::{
-    offset_list_page_data, offset_list_page_params_from_map, sdkwork_tree_resource_json,
-    OffsetListPageParams, LIST_TOTAL_SQL_COLUMN,
+    cursor_list_page_data, offset_list_page_data, sdkwork_tree_resource_json,
+    validated_list_page_params_from_map, CursorListPageParams, OffsetListPageParams,
+    ResolvedListPageParams, SdkWorkResultCode, LIST_TOTAL_SQL_COLUMN,
 };
 use serde_json::{json, Value};
 use sqlx::{postgres::PgRow, PgPool, Row};
@@ -13,8 +17,165 @@ pub(crate) use sdkwork_utils_rust::LIST_TOTAL_SQL_COLUMN as LIST_TOTAL_COLUMN;
 
 pub(crate) type ListPageParams = OffsetListPageParams;
 
-pub(crate) fn list_page_params(query: &HashMap<String, String>) -> ListPageParams {
-    offset_list_page_params_from_map(query)
+pub(crate) fn list_page_params_or_error(
+    query: &HashMap<String, String>,
+) -> Result<ListPageParams, Response> {
+    match validated_list_page_params_from_map(query) {
+        Ok(ResolvedListPageParams::Offset(params)) => Ok(params),
+        Ok(ResolvedListPageParams::Cursor(_)) => Err(list_page_invalid_parameter_error()),
+        Err(SdkWorkResultCode::InvalidParameter) => Err(list_page_invalid_parameter_error()),
+        Err(_) => Err(list_page_invalid_parameter_error()),
+    }
+}
+
+pub(crate) fn list_page_invalid_parameter_error() -> Response {
+    iam_api_error(
+        StatusCode::BAD_REQUEST,
+        "iam_invalid_list_query",
+        "invalid list pagination parameters",
+    )
+}
+
+pub(crate) fn internal_handler_error(wire_code: &str, error: impl std::fmt::Display) -> Response {
+    tracing::error!(%error, wire_code, "backend IAM handler failed");
+    iam_api_error(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        wire_code,
+        "internal server error",
+    )
+}
+
+/// Keyset cursor for timeline feeds ordered by `(created_at DESC, id DESC)`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct TimelineKeysetCursor {
+    pub created_at: String,
+    pub id: String,
+}
+
+pub(crate) fn encode_timeline_keyset_cursor(created_at: &str, id: &str) -> String {
+    format!("k:{created_at}|{id}")
+}
+
+pub(crate) fn parse_timeline_keyset_cursor(
+    cursor: Option<&str>,
+) -> Result<Option<TimelineKeysetCursor>, SdkWorkResultCode> {
+    let Some(cursor) = cursor.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    let Some(rest) = cursor.strip_prefix("k:") else {
+        return Err(SdkWorkResultCode::InvalidParameter);
+    };
+    let Some((created_at, id)) = rest.split_once('|') else {
+        return Err(SdkWorkResultCode::InvalidParameter);
+    };
+    if created_at.is_empty() || id.is_empty() {
+        return Err(SdkWorkResultCode::InvalidParameter);
+    }
+    Ok(Some(TimelineKeysetCursor {
+        created_at: created_at.to_owned(),
+        id: id.to_owned(),
+    }))
+}
+
+pub(crate) fn cursor_page_json(
+    items: Vec<Value>,
+    page_size: usize,
+    next_cursor: Option<String>,
+    has_more: bool,
+) -> Value {
+    let page = cursor_list_page_data(items, page_size, next_cursor, has_more);
+    serde_json::to_value(page).unwrap_or_else(|_| json!({ "items": [], "pageInfo": {} }))
+}
+
+/// Timeline feed pagination for audit/security event lists.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum TimelineListParams {
+    Offset(OffsetListPageParams),
+    CursorOffset(CursorListPageParams),
+    CursorKeyset {
+        page_size: usize,
+        cursor: TimelineKeysetCursor,
+    },
+}
+
+pub(crate) fn resolve_timeline_list_params(
+    query: &HashMap<String, String>,
+) -> Result<TimelineListParams, SdkWorkResultCode> {
+    let has_page = query
+        .get("page")
+        .or_else(|| query.get("pageNo"))
+        .or_else(|| query.get("page_no"))
+        .map(|value| !value.trim().is_empty())
+        .unwrap_or(false);
+    let has_cursor = query
+        .get("cursor")
+        .map(|value| !value.trim().is_empty())
+        .unwrap_or(false);
+    if has_page && has_cursor {
+        return Err(SdkWorkResultCode::InvalidParameter);
+    }
+
+    let page_size_i32 = query
+        .get("page_size")
+        .or_else(|| query.get("pageSize"))
+        .and_then(|value| value.parse::<i32>().ok());
+
+    if has_cursor {
+        let cursor = query.get("cursor").map(String::as_str);
+        if let Ok(Some(keyset)) = parse_timeline_keyset_cursor(cursor) {
+            let page_size = page_size_i32.unwrap_or(sdkwork_utils_rust::DEFAULT_LIST_PAGE_SIZE);
+            if page_size < 1 || page_size > sdkwork_utils_rust::MAX_LIST_PAGE_SIZE {
+                return Err(SdkWorkResultCode::InvalidParameter);
+            }
+            return Ok(TimelineListParams::CursorKeyset {
+                page_size: page_size as usize,
+                cursor: keyset,
+            });
+        }
+        return Ok(TimelineListParams::CursorOffset(
+            sdkwork_utils_rust::validated_cursor_list_params(page_size_i32, cursor)?,
+        ));
+    }
+
+    let page = query
+        .get("page")
+        .or_else(|| query.get("pageNo"))
+        .or_else(|| query.get("page_no"))
+        .and_then(|value| value.parse::<i64>().ok());
+    Ok(TimelineListParams::Offset(
+        sdkwork_utils_rust::validated_offset_list_params(page, page_size_i32.map(i64::from))?,
+    ))
+}
+
+pub(crate) fn timeline_list_params_or_error(
+    query: &HashMap<String, String>,
+) -> Result<TimelineListParams, Response> {
+    resolve_timeline_list_params(query).map_err(|_| list_page_invalid_parameter_error())
+}
+
+pub(crate) fn timeline_cursor_page_from_rows<F, C>(
+    rows: Vec<PgRow>,
+    page_size: usize,
+    mut map_row: F,
+    encode_cursor: C,
+) -> Value
+where
+    F: FnMut(&PgRow) -> Value,
+    C: Fn(&PgRow) -> String,
+{
+    let has_more = rows.len() > page_size;
+    let page_rows = if has_more {
+        &rows[..page_size]
+    } else {
+        rows.as_slice()
+    };
+    let items = page_rows.iter().map(&mut map_row).collect::<Vec<_>>();
+    let next_cursor = if has_more {
+        page_rows.last().map(encode_cursor)
+    } else {
+        None
+    };
+    cursor_page_json(items, page_size, next_cursor, has_more)
 }
 
 pub(crate) fn total_from_rows(rows: &[PgRow]) -> i64 {
@@ -247,15 +408,78 @@ pub(crate) async fn patch_tenant_row(
     Ok(result.rows_affected() > 0)
 }
 
+pub(crate) async fn patch_tenant_row_tx<'e, E>(
+    executor: E,
+    tenant_id: &str,
+    table: &str,
+    id: &str,
+    assignments: &[(String, String)],
+) -> Result<bool, sqlx::Error>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
+    if assignments.is_empty() {
+        return Ok(false);
+    }
+
+    let mut set_clause = String::new();
+    for (index, (column, _)) in assignments.iter().enumerate() {
+        if index > 0 {
+            set_clause.push_str(", ");
+        }
+        set_clause.push_str(column);
+        set_clause.push_str(" = $");
+        set_clause.push_str(&(index + 3).to_string());
+    }
+
+    let sql = format!("UPDATE {table} SET {set_clause} WHERE tenant_id = $1 AND id = $2");
+    let mut query = sqlx::query(&sql).bind(tenant_id).bind(id);
+    for (_, value) in assignments {
+        query = query.bind(value);
+    }
+
+    let result = query.execute(executor).await?;
+    Ok(result.rows_affected() > 0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn list_page_params_default_matches_spec() {
-        let params = list_page_params(&HashMap::new());
+    fn list_page_params_or_error_defaults_match_spec() {
+        let params = list_page_params_or_error(&HashMap::new()).expect("defaults");
         assert_eq!(1, params.page);
         assert_eq!(20, params.page_size);
+    }
+
+    #[test]
+    fn list_page_params_or_error_rejects_invalid_page_size() {
+        let mut query = HashMap::new();
+        query.insert("page_size".to_owned(), "201".to_owned());
+        assert!(list_page_params_or_error(&query).is_err());
+    }
+
+    #[test]
+    fn list_page_invalid_parameter_error_returns_40003() {
+        use sdkwork_iam_web_adapter::iam_wire_result_code;
+
+        let response = list_page_invalid_parameter_error();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            iam_wire_result_code(StatusCode::BAD_REQUEST, "iam_invalid_list_query").as_i32(),
+            40_003
+        );
+    }
+
+    #[test]
+    fn parse_timeline_keyset_cursor_round_trips() {
+        let encoded = encode_timeline_keyset_cursor("2026-01-01T00:00:00Z", "audit-1");
+        let parsed = parse_timeline_keyset_cursor(Some(&encoded))
+            .expect("parsed")
+            .expect("cursor");
+        assert_eq!(parsed.created_at, "2026-01-01T00:00:00Z");
+        assert_eq!(parsed.id, "audit-1");
     }
 
     #[test]

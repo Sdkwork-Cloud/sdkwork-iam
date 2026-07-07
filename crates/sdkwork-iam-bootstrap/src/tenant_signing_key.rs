@@ -10,10 +10,6 @@ use sqlx::{PgPool, Row, SqlitePool};
 const LEGACY_ENCRYPTED_PREFIX: &str = "enc:v1:";
 const PRIMARY_SIGNING_KID_SUFFIX: &str = "local-hs256:primary";
 
-/// Historical deployment KEKs used only to read legacy `enc:v1:` rows during migration.
-/// Configure through `SDKWORK_IAM_LEGACY_SIGNING_MASTER_SECRETS` (comma-separated) in migration jobs only.
-const LEGACY_ENCRYPTED_SIGNING_MASTER_SECRETS: &[&str] = &[];
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TenantSigningKeyMaterial {
     pub tenant_id: String,
@@ -26,12 +22,38 @@ pub fn tenant_primary_signing_kid(tenant_id: &str) -> String {
 }
 
 pub fn encode_signing_secret_ref(plaintext: &[u8]) -> String {
+    if let Some(master) = signing_master_secret() {
+        return encrypt_signing_secret_ref(plaintext, &master);
+    }
     URL_SAFE_NO_PAD.encode(plaintext)
+}
+
+fn signing_master_secret() -> Option<String> {
+    std::env::var("SDKWORK_IAM_SIGNING_MASTER_SECRET")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn encrypt_signing_secret_ref(plaintext: &[u8], master: &str) -> String {
+    use aes_gcm::aead::{Aead, AeadCore};
+    let key = derive_master_key_from_secret(master).expect("valid signing master secret");
+    let cipher = Aes256Gcm::new(&key);
+    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+    let ciphertext = cipher
+        .encrypt(&nonce, plaintext)
+        .expect("encrypt tenant signing secret");
+    let mut payload = nonce.to_vec();
+    payload.extend(ciphertext);
+    format!(
+        "{LEGACY_ENCRYPTED_PREFIX}{}",
+        URL_SAFE_NO_PAD.encode(payload)
+    )
 }
 
 pub fn decode_signing_secret_ref(secret_ref: &str) -> Result<Vec<u8>, String> {
     if let Some(encoded) = secret_ref.strip_prefix(LEGACY_ENCRYPTED_PREFIX) {
-        return decode_legacy_encrypted_signing_secret_ref(encoded);
+        return decode_encrypted_signing_secret_ref(encoded);
     }
 
     URL_SAFE_NO_PAD
@@ -66,6 +88,7 @@ pub async fn ensure_postgres_tenant_signing_key(
     .bind(&secret_hash)
     .execute(pool)
     .await?;
+    crate::oauth_rs256_signing::ensure_postgres_oauth_rs256_signing_key(pool, tenant_id).await?;
     Ok(())
 }
 
@@ -268,33 +291,36 @@ fn legacy_master_secrets() -> Vec<String> {
                 .map(str::trim)
                 .filter(|secret| !secret.is_empty())
                 .map(str::to_owned)
-                .collect()
+                .collect::<Vec<_>>()
         })
-        .filter(|secrets: &Vec<String>| !secrets.is_empty())
-        .unwrap_or_else(|| {
-            LEGACY_ENCRYPTED_SIGNING_MASTER_SECRETS
-                .iter()
-                .map(|secret| (*secret).to_string())
-                .collect()
-        })
+        .filter(|secrets| !secrets.is_empty())
+        .unwrap_or_default()
 }
 
-fn decode_legacy_encrypted_signing_secret_ref(encoded: &str) -> Result<Vec<u8>, String> {
+fn decode_encrypted_signing_secret_ref(encoded: &str) -> Result<Vec<u8>, String> {
     let payload = URL_SAFE_NO_PAD
         .decode(encoded)
-        .map_err(|error| format!("decode legacy encrypted signing secret failed: {error}"))?;
+        .map_err(|error| format!("decode encrypted signing secret failed: {error}"))?;
     if payload.len() <= 12 {
-        return Err("legacy encrypted signing secret payload is too short".to_string());
+        return Err("encrypted signing secret payload is too short".to_string());
     }
     let (nonce_bytes, ciphertext) = payload.split_at(12);
     let nonce = Nonce::from_slice(nonce_bytes);
-    let mut last_error = "decrypt legacy signing secret failed".to_string();
-    for secret in legacy_master_secrets() {
+    let mut candidates = Vec::new();
+    if let Some(master) = signing_master_secret() {
+        candidates.push(master);
+    }
+    candidates.extend(legacy_master_secrets());
+    if candidates.is_empty() {
+        return Err("no signing master secret configured for encrypted secret_ref".to_string());
+    }
+    let mut last_error = "decrypt signing secret failed".to_string();
+    for secret in candidates {
         let key = derive_master_key_from_secret(&secret)?;
         let cipher = Aes256Gcm::new(&key);
         match cipher.decrypt(nonce, ciphertext) {
             Ok(plaintext) => return Ok(plaintext),
-            Err(error) => last_error = format!("decrypt legacy signing secret failed: {error}"),
+            Err(error) => last_error = format!("decrypt signing secret failed: {error}"),
         }
     }
     Err(last_error)
@@ -318,7 +344,23 @@ mod tests {
     }
 
     #[test]
-    fn database_native_signing_secret_roundtrip() {
+    fn encrypted_signing_secret_roundtrip_with_master_secret() {
+        std::env::set_var(
+            "SDKWORK_IAM_SIGNING_MASTER_SECRET",
+            "integration-test-signing-master-secret",
+        );
+        let plaintext = b"tenant-signing-secret-material";
+        let secret_ref = encode_signing_secret_ref(plaintext);
+        assert!(secret_ref.starts_with(LEGACY_ENCRYPTED_PREFIX));
+        let decoded =
+            decode_signing_secret_ref(&secret_ref).expect("decode encrypted signing secret");
+        assert_eq!(decoded, plaintext);
+        std::env::remove_var("SDKWORK_IAM_SIGNING_MASTER_SECRET");
+    }
+
+    #[test]
+    fn database_native_signing_secret_roundtrip_without_master() {
+        std::env::remove_var("SDKWORK_IAM_SIGNING_MASTER_SECRET");
         let plaintext = b"tenant-signing-secret-material";
         let secret_ref = encode_signing_secret_ref(plaintext);
         assert!(!secret_ref.starts_with(LEGACY_ENCRYPTED_PREFIX));

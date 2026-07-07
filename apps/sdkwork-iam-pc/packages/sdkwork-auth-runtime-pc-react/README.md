@@ -119,7 +119,7 @@ SDK/API `401` and session-expired business codes are handled through a shared in
 
 Set `VITE_SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE` in browser runtime env:
 
-- `modal` (default on `localhost` / `127.0.0.1`): show a dialog with error details
+- `modal` (default on `localhost` / `127.0.0.1`): open the standard auth surface inside a modal dialog
 - `redirect`: clear session and navigate to `/auth/login`
 - `debug`: keep page and session untouched for investigation
 
@@ -132,6 +132,7 @@ Runtime env is read from `window.__SDKWORK_RUNTIME_ENV__` and Vite `import.meta.
 ### Browser UI root
 
 Mount `SdkworkSessionAuthBrowserRoot` inside `BrowserRouter` (or `MemoryRouter` for router-less shells).
+Provide `controller` or `getRuntime` so modal mode renders the same `SdkworkAuthPage` login, registration, recovery, OAuth, and QR flows as the standalone auth routes.
 
 For custom generated SDK clients outside the appbase runtime factory, use `createSdkworkSessionAuthUnauthorizedIntegration()` and `attachSdkworkSdkSessionAuthBoundary(client)`.
 

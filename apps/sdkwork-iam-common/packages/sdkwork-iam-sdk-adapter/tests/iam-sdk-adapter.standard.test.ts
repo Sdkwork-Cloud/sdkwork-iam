@@ -28,7 +28,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
       oauth: {
         deviceAuthorizations: {
           create: vi.fn().mockResolvedValue({
-            code: 2000,
+            code: 0,
             data: {
               deviceAuthorizationId: "device-authorization-1",
               qrContent: {
@@ -421,7 +421,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
       status: "pending",
     });
     expect(unwrapIamSdkResponse({ code: "0", data: { ok: true } })).toEqual({ ok: true });
-    expect(unwrapIamSdkResponse({ code: 200, data: ["a"] })).toEqual(["a"]);
+    expect(unwrapIamSdkResponse({ code: 0, data: ["a"] })).toEqual(["a"]);
     expect(() => unwrapIamSdkResponse({
       code: "5000",
       data: null,
@@ -578,6 +578,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
         },
         auditEvents: {
           list: vi.fn().mockResolvedValue({ data: [] }),
+          retrieve: vi.fn().mockResolvedValue({ data: { auditEventId: "audit-1" } }),
         },
         organizations: {
           create: vi.fn().mockResolvedValue({ data: { id: "organization-1" } }),
@@ -644,6 +645,7 @@ describe("SDKWork IAM generated SDK adapters", () => {
         },
         securityEvents: {
           list: vi.fn().mockResolvedValue({ data: [] }),
+          retrieve: vi.fn().mockResolvedValue({ data: { securityEventId: "sec-1" } }),
         },
         tenantApplications: {
           enable: vi.fn().mockResolvedValue({ data: { tenantApplicationId: "ta-1" } }),
@@ -1012,6 +1014,7 @@ function createGeneratedBackendClient(overrides: AnyRecord = {}): AnyRecord {
       },
       auditEvents: {
         list: vi.fn().mockResolvedValue({ data: null }),
+        retrieve: vi.fn().mockResolvedValue({ data: null }),
       },
       organizations: {
         create: vi.fn().mockResolvedValue({ data: null }),
@@ -1078,6 +1081,7 @@ function createGeneratedBackendClient(overrides: AnyRecord = {}): AnyRecord {
       },
       securityEvents: {
         list: vi.fn().mockResolvedValue({ data: null }),
+        retrieve: vi.fn().mockResolvedValue({ data: null }),
       },
       tenantApplications: {
         enable: vi.fn().mockResolvedValue({ data: null }),

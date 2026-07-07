@@ -1,3 +1,4 @@
+import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 export interface SdkworkIamH5AccountBindingPolicy {
@@ -25,6 +26,7 @@ export interface SdkworkIamH5OAuthAccountLink {
 export interface SdkworkIamH5AccountBindingState {
   accountLinks: readonly SdkworkIamH5OAuthAccountLink[];
   lastError?: string;
+  listPageInfo?: SdkWorkPageInfo;
   policy?: SdkworkIamH5AccountBindingPolicy;
   status: "idle" | "loading" | "ready" | "error";
 }
@@ -37,6 +39,7 @@ export interface SdkworkIamH5AccountBindingController {
   bindEmail(body: Record<string, unknown>): Promise<unknown>;
   getState(): SdkworkIamH5AccountBindingState;
   listAccountLinks(params?: Record<string, unknown>): Promise<readonly SdkworkIamH5OAuthAccountLink[]>;
+  loadMoreAccountLinks(): Promise<readonly SdkworkIamH5OAuthAccountLink[]>;
   loadPolicy(): Promise<SdkworkIamH5AccountBindingPolicy>;
   unbindEmail(body: Record<string, unknown>): Promise<unknown>;
 }

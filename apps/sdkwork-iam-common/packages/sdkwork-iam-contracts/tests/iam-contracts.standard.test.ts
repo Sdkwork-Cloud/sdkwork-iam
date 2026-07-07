@@ -78,6 +78,8 @@ describe("SDKWork IAM standard contracts", () => {
     expect(paths).toContain("/backend/v3/api/iam/api_keys");
     expect(paths).toContain("/backend/v3/api/iam/security_events");
     expect(paths).toContain("/backend/v3/api/iam/audit_events");
+    expect(paths).toContain("/backend/v3/api/iam/audit_events/{auditEventId}");
+    expect(paths).toContain("/backend/v3/api/iam/security_events/{securityEventId}");
     expect(paths).toContain("/app/v3/api/iam/departments");
     expect(paths).toContain("/app/v3/api/iam/department_assignments");
     expect(paths.join("\n")).not.toMatch(/iam_accounts|iam_department_members|\/iam\/users\/\{userId\}\/roles/);

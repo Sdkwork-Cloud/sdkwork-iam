@@ -10,18 +10,27 @@ use axum::{
     Json, Router,
 };
 use chrono::Utc;
+use sdkwork_utils_rust::sdkwork_resource_json;
 use sdkwork_web_core::WebRequestContext;
 use serde_json::{json, Value};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
+use crate::backend_audit::{
+    directory_create_with_audit, execute_conditional_mutation_with_audit,
+    record_backend_mutation_audit_tx,
+};
 use crate::backend_sql::{
-    list_page_params, list_search_pattern, list_tenant_rows, page_json_from_rows, patch_tenant_row,
-    read_i32_field, read_string_field, retrieve_tenant_row, tree_resource_json, LIST_TOTAL_COLUMN,
+    cursor_page_json, encode_timeline_keyset_cursor, internal_handler_error,
+    list_page_params_or_error, list_search_pattern, list_tenant_rows, page_json_from_rows,
+    patch_tenant_row_tx, read_i32_field, read_string_field, retrieve_tenant_row,
+    timeline_cursor_page_from_rows, timeline_list_params_or_error, tree_resource_json,
+    TimelineListParams, LIST_TOTAL_COLUMN,
 };
 use crate::handlers::{
-    actor_user_id_from_context, appbase_error, appbase_ok, assigner_permission_scope,
-    organization_id_from_context, postgres_pool_or_error, tenant_id_from_context, BackendIamState,
+    appbase_error, appbase_ok, assigner_permission_scope, ensure_platform_catalog_access,
+    ensure_target_tenant_access, organization_id_from_context, postgres_pool_or_error,
+    tenant_id_from_context, BackendIamState,
 };
 
 pub fn apply_management_routes(router: Router<BackendIamState>) -> Router<BackendIamState> {
@@ -191,7 +200,15 @@ pub fn apply_management_routes(router: Router<BackendIamState>) -> Router<Backen
             "/backend/v3/api/iam/security_events",
             get(list_security_events),
         )
+        .route(
+            "/backend/v3/api/iam/security_events/{securityEventId}",
+            get(retrieve_security_event),
+        )
         .route("/backend/v3/api/iam/audit_events", get(list_audit_events))
+        .route(
+            "/backend/v3/api/iam/audit_events/{auditEventId}",
+            get(retrieve_audit_event),
+        )
 }
 
 async fn list_users(
@@ -208,7 +225,11 @@ async fn list_users(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     let rows = sqlx::query(&format!(
         "SELECT id, tenant_id, username, display_name, email, phone, status, \
@@ -228,11 +249,7 @@ async fn list_users(
 
     match rows {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, user_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_users_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_users_list_failed", error),
     }
 }
 
@@ -257,11 +274,7 @@ async fn retrieve_user(
             "iam_user_not_found",
             "user not found",
         ),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_user_retrieve_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_user_retrieve_failed", error),
     }
 }
 
@@ -279,7 +292,11 @@ async fn list_roles(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     let rows = sqlx::query(&format!(
         "SELECT id, tenant_id, code, name, status, \
@@ -299,11 +316,7 @@ async fn list_roles(
 
     match rows {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, role_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_roles_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_roles_list_failed", error),
     }
 }
 
@@ -328,11 +341,7 @@ async fn retrieve_role(
             "iam_role_not_found",
             "role not found",
         ),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_role_retrieve_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_role_retrieve_failed", error),
     }
 }
 
@@ -351,7 +360,11 @@ async fn list_role_permissions(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     let rows = sqlx::query(&format!(
         "SELECT p.id, p.code, p.name, p.resource, p.action, \
@@ -375,11 +388,7 @@ async fn list_role_permissions(
 
     match rows {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, permission_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_role_permissions_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_role_permissions_list_failed", error),
     }
 }
 
@@ -393,7 +402,11 @@ async fn list_permissions(
             .expect("error response");
     };
 
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     let rows = sqlx::query(&format!(
         "SELECT id, code, name, resource, action, \
@@ -412,11 +425,7 @@ async fn list_permissions(
 
     match rows {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, permission_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_permissions_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_permissions_list_failed", error),
     }
 }
 
@@ -447,11 +456,7 @@ async fn retrieve_permission(
             "iam_permission_not_found",
             "permission not found",
         ),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_permission_retrieve_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_permission_retrieve_failed", error),
     }
 }
 
@@ -470,7 +475,11 @@ async fn list_role_bindings(
     };
     let organization_id = organization_id_from_context(&ctx);
 
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     let rows = if let Some(organization_id) = organization_id.as_deref() {
         sqlx::query(&format!(
@@ -514,11 +523,7 @@ async fn list_role_bindings(
 
     match rows {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, role_binding_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_role_bindings_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_role_bindings_list_failed", error),
     }
 }
 
@@ -578,11 +583,7 @@ async fn create_role_binding(
             );
         }
         Err(error) => {
-            return appbase_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "iam_role_lookup_failed",
-                &error.to_string(),
-            );
+            return internal_handler_error("iam_role_lookup_failed", error);
         }
     };
     let role_id: String = role_row.get(0);
@@ -665,11 +666,7 @@ async fn create_role_binding(
 
             match row {
                 Ok(row) => appbase_ok(role_binding_row_to_json(&row)),
-                Err(error) => appbase_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "iam_role_binding_create_failed",
-                    &error.to_string(),
-                ),
+                Err(error) => internal_handler_error("iam_role_binding_create_failed", error),
             }
         }
         Err(error) => appbase_error(
@@ -715,11 +712,7 @@ async fn delete_role_binding(
             "iam_role_binding_not_found",
             "role binding not found",
         ),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_role_binding_delete_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_role_binding_delete_failed", error),
     }
 }
 
@@ -737,7 +730,11 @@ async fn list_organizations(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     let rows = sqlx::query(&format!(
         "SELECT id, tenant_id, code, name, status, organization_kind, parent_organization_id, \
@@ -757,11 +754,7 @@ async fn list_organizations(
 
     match rows {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, organization_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_organizations_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_organizations_list_failed", error),
     }
 }
 
@@ -780,7 +773,11 @@ async fn list_organization_memberships(
     };
     let organization_id = organization_id_from_context(&ctx);
 
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     let rows = if let Some(organization_id) = organization_id.as_deref() {
         sqlx::query(&format!(
@@ -825,11 +822,7 @@ async fn list_organization_memberships(
 
     match rows {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, membership_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_memberships_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_memberships_list_failed", error),
     }
 }
 
@@ -848,7 +841,11 @@ async fn list_departments(
     };
     let organization_id = organization_id_from_context(&ctx);
 
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     let rows = if let Some(organization_id) = organization_id.as_deref() {
         sqlx::query(&format!(
@@ -887,11 +884,7 @@ async fn list_departments(
 
     match rows {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, department_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_departments_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_departments_list_failed", error),
     }
 }
 
@@ -909,7 +902,11 @@ async fn list_api_keys(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let params = list_page_params(&query);
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
     let rows = sqlx::query(&format!(
         "SELECT id, tenant_id, organization_id, user_id, name, status, expires_at, \
@@ -929,11 +926,7 @@ async fn list_api_keys(
 
     match rows {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, api_key_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_api_keys_list_failed",
-            &error.to_string(),
-        ),
+        Err(error) => internal_handler_error("iam_api_keys_list_failed", error),
     }
 }
 
@@ -951,35 +944,27 @@ async fn list_security_events(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let params = list_page_params(&query);
+    let Ok(params) = timeline_list_params_or_error(&query) else {
+        return timeline_list_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
-    let rows = sqlx::query(&format!(
-        "SELECT id, tenant_id, organization_id, user_id, event_type, created_at, \
-                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
-         FROM iam_security_event \
-         WHERE tenant_id = $1 \
-           AND ($4::text IS NULL OR LOWER(event_type) LIKE $4) \
-         ORDER BY created_at DESC NULLS LAST, id \
-         LIMIT $2 OFFSET $3"
-    ))
-    .bind(&tenant_id)
-    .bind(params.page_size)
-    .bind(params.offset)
-    .bind(&search_pattern)
-    .fetch_all(pg)
-    .await;
-
-    match rows {
-        Ok(rows) => appbase_ok(page_json_from_rows(
-            rows,
-            &params,
-            security_event_row_to_json,
-        )),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_security_events_list_failed",
-            &error.to_string(),
-        ),
+    match list_timeline_feed(
+        pg,
+        &tenant_id,
+        "iam_security_event",
+        "id, tenant_id, organization_id, user_id, event_type, severity, created_at",
+        "LOWER(event_type) LIKE $4 OR LOWER(severity) LIKE $4",
+        params,
+        search_pattern,
+        security_event_row_to_json,
+        |row| encode_timeline_keyset_cursor(&row.get::<String, _>(6), &row.get::<String, _>(0)),
+    )
+    .await
+    {
+        Ok(payload) => appbase_ok(payload),
+        Err(error) => internal_handler_error("iam_security_events_list_failed", &error),
     }
 }
 
@@ -997,32 +982,205 @@ async fn list_audit_events(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let params = list_page_params(&query);
+    let Ok(params) = timeline_list_params_or_error(&query) else {
+        return timeline_list_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
     let search_pattern = list_search_pattern(&query);
-    let rows = sqlx::query(&format!(
-        "SELECT id, tenant_id, organization_id, actor_user_id, action, created_at, \
-                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
-         FROM iam_audit_event \
-         WHERE tenant_id = $1 \
-           AND ($4::text IS NULL OR LOWER(action) LIKE $4) \
-         ORDER BY created_at DESC NULLS LAST, id \
-         LIMIT $2 OFFSET $3"
-    ))
-    .bind(&tenant_id)
-    .bind(params.page_size)
-    .bind(params.offset)
-    .bind(&search_pattern)
-    .fetch_all(pg)
-    .await;
-
-    match rows {
-        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, audit_event_row_to_json)),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "iam_audit_events_list_failed",
-            &error.to_string(),
-        ),
+    match list_timeline_feed(
+        pg,
+        &tenant_id,
+        "iam_audit_event",
+        "id, tenant_id, organization_id, actor_user_id, action, resource_type, resource_id, environment, created_at",
+        "LOWER(action) LIKE $4 OR LOWER(resource_type) LIKE $4",
+        params,
+        search_pattern,
+        audit_event_row_to_json,
+        |row| encode_timeline_keyset_cursor(&row.get::<String, _>(8), &row.get::<String, _>(0)),
+    )
+    .await
+    {
+        Ok(payload) => appbase_ok(payload),
+        Err(error) => internal_handler_error("iam_audit_events_list_failed", &error),
     }
+}
+
+async fn list_timeline_feed<F, C>(
+    pg: &PgPool,
+    tenant_id: &str,
+    table: &str,
+    select: &str,
+    search_predicate: &str,
+    params: TimelineListParams,
+    search_pattern: Option<String>,
+    map_row: F,
+    encode_cursor: C,
+) -> Result<Value, sqlx::Error>
+where
+    F: FnMut(&sqlx::postgres::PgRow) -> Value,
+    C: Fn(&sqlx::postgres::PgRow) -> String,
+{
+    match params {
+        TimelineListParams::Offset(offset) => {
+            let rows = sqlx::query(&format!(
+                "SELECT {select}, COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+                 FROM {table} \
+                 WHERE tenant_id = $1 \
+                   AND ($4::text IS NULL OR {search_predicate}) \
+                 ORDER BY created_at DESC NULLS LAST, id \
+                 LIMIT $2 OFFSET $3"
+            ))
+            .bind(tenant_id)
+            .bind(offset.page_size)
+            .bind(offset.offset)
+            .bind(&search_pattern)
+            .fetch_all(pg)
+            .await?;
+            Ok(page_json_from_rows(rows, &offset, map_row))
+        }
+        TimelineListParams::CursorOffset(cursor) => {
+            let limit = (cursor.page_size + 1) as i64;
+            let rows = sqlx::query(&format!(
+                "SELECT {select} \
+                 FROM {table} \
+                 WHERE tenant_id = $1 \
+                   AND ($4::text IS NULL OR {search_predicate}) \
+                 ORDER BY created_at DESC NULLS LAST, id \
+                 LIMIT $2 OFFSET $3"
+            ))
+            .bind(tenant_id)
+            .bind(limit)
+            .bind(cursor.offset as i64)
+            .bind(&search_pattern)
+            .fetch_all(pg)
+            .await?;
+            let has_more = rows.len() > cursor.page_size;
+            let next_cursor = has_more.then(|| (cursor.offset + cursor.page_size).to_string());
+            let items = rows
+                .iter()
+                .take(cursor.page_size)
+                .map(map_row)
+                .collect::<Vec<_>>();
+            Ok(cursor_page_json(
+                items,
+                cursor.page_size,
+                next_cursor,
+                has_more,
+            ))
+        }
+        TimelineListParams::CursorKeyset { page_size, cursor } => {
+            let limit = (page_size + 1) as i64;
+            let rows = sqlx::query(&format!(
+                "SELECT {select} \
+                 FROM {table} \
+                 WHERE tenant_id = $1 \
+                   AND ($3::text IS NULL OR {search_predicate}) \
+                   AND (created_at < $4 OR (created_at = $4 AND id < $5)) \
+                 ORDER BY created_at DESC NULLS LAST, id \
+                 LIMIT $2"
+            ))
+            .bind(tenant_id)
+            .bind(limit)
+            .bind(&search_pattern)
+            .bind(&cursor.created_at)
+            .bind(&cursor.id)
+            .fetch_all(pg)
+            .await?;
+            Ok(timeline_cursor_page_from_rows(
+                rows,
+                page_size,
+                map_row,
+                encode_cursor,
+            ))
+        }
+    }
+}
+
+async fn retrieve_audit_event(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(audit_event_id): Path<String>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
+        return tenant_id_from_context(&ctx).err().expect("error response");
+    };
+
+    match fetch_audit_event_row(pg, &tenant_id, &audit_event_id).await {
+        Ok(Some(row)) => appbase_ok(sdkwork_resource_json(audit_event_detail_row_to_json(&row))),
+        Ok(None) => appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_audit_event_not_found",
+            "audit event not found",
+        ),
+        Err(error) => internal_handler_error("iam_audit_event_retrieve_failed", error),
+    }
+}
+
+async fn retrieve_security_event(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(security_event_id): Path<String>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
+        return tenant_id_from_context(&ctx).err().expect("error response");
+    };
+
+    match fetch_security_event_row(pg, &tenant_id, &security_event_id).await {
+        Ok(Some(row)) => appbase_ok(sdkwork_resource_json(security_event_detail_row_to_json(
+            &row,
+        ))),
+        Ok(None) => appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_security_event_not_found",
+            "security event not found",
+        ),
+        Err(error) => internal_handler_error("iam_security_event_retrieve_failed", error),
+    }
+}
+
+async fn fetch_audit_event_row<'e>(
+    pg: &'e PgPool,
+    tenant_id: &str,
+    audit_event_id: &str,
+) -> Result<Option<sqlx::postgres::PgRow>, sqlx::Error> {
+    sqlx::query(
+        "SELECT id, tenant_id, organization_id, actor_user_id, action, resource_type, resource_id, request_id, environment, detail_json, created_at \
+         FROM iam_audit_event \
+         WHERE tenant_id = $1 AND id = $2 \
+         LIMIT 1",
+    )
+    .bind(tenant_id)
+    .bind(audit_event_id)
+    .fetch_optional(pg)
+    .await
+}
+
+async fn fetch_security_event_row<'e>(
+    pg: &'e PgPool,
+    tenant_id: &str,
+    security_event_id: &str,
+) -> Result<Option<sqlx::postgres::PgRow>, sqlx::Error> {
+    sqlx::query(
+        "SELECT id, tenant_id, organization_id, user_id, session_id, event_type, severity, detail_json, created_at \
+         FROM iam_security_event \
+         WHERE tenant_id = $1 AND id = $2 \
+         LIMIT 1",
+    )
+    .bind(tenant_id)
+    .bind(security_event_id)
+    .fetch_optional(pg)
+    .await
 }
 
 async fn fetch_user_row<'e>(
@@ -1173,23 +1331,67 @@ fn api_key_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
 }
 
 fn security_event_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
+    let id = row.get::<String, _>(0);
     json!({
-        "createdAt": row.get::<String, _>(5),
+        "category": row.get::<String, _>(4),
+        "createdAt": row.get::<String, _>(6),
         "eventType": row.get::<String, _>(4),
-        "id": row.get::<String, _>(0),
+        "id": id,
         "organizationId": row.get::<String, _>(2),
+        "securityEventId": id,
+        "severity": row.get::<String, _>(5),
+        "tenantId": row.get::<String, _>(1),
+        "userId": row.get::<Option<String>, _>(3),
+    })
+}
+
+fn security_event_detail_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
+    let id = row.get::<String, _>(0);
+    json!({
+        "category": row.get::<String, _>(5),
+        "createdAt": row.get::<String, _>(8),
+        "detailJson": row.get::<String, _>(7),
+        "eventType": row.get::<String, _>(5),
+        "id": id,
+        "organizationId": row.get::<String, _>(2),
+        "securityEventId": id,
+        "sessionId": row.get::<Option<String>, _>(4),
+        "severity": row.get::<String, _>(6),
         "tenantId": row.get::<String, _>(1),
         "userId": row.get::<Option<String>, _>(3),
     })
 }
 
 fn audit_event_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
+    let id = row.get::<String, _>(0);
     json!({
         "action": row.get::<String, _>(4),
         "actorUserId": row.get::<Option<String>, _>(3),
-        "createdAt": row.get::<String, _>(5),
-        "id": row.get::<String, _>(0),
+        "auditEventId": id,
+        "createdAt": row.get::<String, _>(8),
+        "environment": row.get::<Option<String>, _>(7),
+        "id": id,
         "organizationId": row.get::<Option<String>, _>(2),
+        "resourceId": row.get::<Option<String>, _>(6),
+        "resourceType": row.get::<String, _>(5),
+        "tenantId": row.get::<String, _>(1),
+    })
+}
+
+fn audit_event_detail_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
+    let id = row.get::<String, _>(0);
+    json!({
+        "action": row.get::<String, _>(4),
+        "actorUserId": row.get::<Option<String>, _>(3),
+        "auditEventId": id,
+        "createdAt": row.get::<String, _>(10),
+        "detailJson": row.get::<String, _>(9),
+        "environment": row.get::<Option<String>, _>(8),
+        "id": id,
+        "organizationId": row.get::<Option<String>, _>(2),
+        "requestId": row.get::<Option<String>, _>(7),
+        "resourceId": row.get::<Option<String>, _>(6),
+        "resourceType": row.get::<String, _>(5),
         "tenantId": row.get::<String, _>(1),
     })
 }
@@ -1231,6 +1433,42 @@ fn service_account_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
         "status": row.get::<String, _>(5),
         "tenantId": row.get::<String, _>(1),
     })
+}
+
+async fn patch_directory_row(
+    pg: &PgPool,
+    ctx: &WebRequestContext,
+    tenant_id: &str,
+    table: &str,
+    id: &str,
+    assignments: &[(String, String)],
+) -> Result<bool, sqlx::Error> {
+    let mut tx = pg.begin().await?;
+    let updated = patch_tenant_row_tx(&mut *tx, tenant_id, table, id, assignments).await?;
+    if updated {
+        let audit_detail = json!({
+            "updatedFields": assignments
+                .iter()
+                .map(|(column, _)| column.as_str())
+                .filter(|column| *column != "updated_at")
+                .collect::<Vec<_>>()
+        });
+        if let Err(error) = record_backend_mutation_audit_tx(
+            &mut *tx,
+            ctx,
+            &format!("{table}.update"),
+            table,
+            id,
+            audit_detail,
+        )
+        .await
+        {
+            tracing::error!(%error, table, resource_id = %id, "directory patch audit failed; rolling back");
+            return Err(sqlx::Error::Protocol(error));
+        }
+    }
+    tx.commit().await?;
+    Ok(updated)
 }
 
 include!("directory_crud.impl.rs");

@@ -1,4 +1,4 @@
-import { isBlank, trim } from "@sdkwork/utils";
+import { isBlank, isSdkWorkSuccessCode, trim } from "@sdkwork/utils";
 import { createIamAppContext, type IamAppContext, extractSdkWorkTreeNodes, resolveSdkWorkListQuery } from "@sdkwork/iam-contracts";
 import {
   buildTenantCurrentSessionUpdateBody,
@@ -170,6 +170,7 @@ export interface SdkworkIamService {
     };
     auditEvents: {
       list(params?: Record<string, unknown>): Promise<unknown>;
+      retrieve(auditEventId: string): Promise<unknown>;
     };
     organizations: {
       create(body: Record<string, unknown>): Promise<unknown>;
@@ -250,6 +251,7 @@ export interface SdkworkIamService {
     };
     securityEvents: {
       list(params?: Record<string, unknown>): Promise<unknown>;
+      retrieve(securityEventId: string): Promise<unknown>;
     };
     accessCredentials: {
       create(body: Record<string, unknown>): Promise<unknown>;
@@ -527,6 +529,7 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
       },
       auditEvents: {
         list: (params) => callBackendIam(backendIam, (iam) => iam.auditEvents, "list", "iam.auditEvents.list", iamListQuery(params)),
+        retrieve: (auditEventId) => callBackendIam(backendIam, (iam) => iam.auditEvents, "retrieve", "iam.auditEvents.retrieve", auditEventId),
       },
       organizations: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.organizations, "create", "iam.organizations.create", body),
@@ -623,6 +626,7 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
       },
       securityEvents: {
         list: (params) => callBackendIam(backendIam, (iam) => iam.securityEvents, "list", "iam.securityEvents.list", iamListQuery(params)),
+        retrieve: (securityEventId) => callBackendIam(backendIam, (iam) => iam.securityEvents, "retrieve", "iam.securityEvents.retrieve", securityEventId),
       },
       accessCredentials: {
         create: (body) => callBackendIam(backendIam, (iam) => iam.accessCredentials, "create", "iam.accessCredentials.create", body),
@@ -795,8 +799,8 @@ function isSuccessCode(code: number | string | undefined): boolean {
     return true;
   }
 
-  const normalized = trim(String(code));
-  return normalized === "0" || normalized === "200" || normalized === "2000";
+  const parsed = Number(trim(String(code)));
+  return Number.isFinite(parsed) && isSdkWorkSuccessCode(parsed);
 }
 
 function toSession(value: unknown): IamSession {

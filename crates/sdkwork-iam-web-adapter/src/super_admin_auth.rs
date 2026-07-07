@@ -143,14 +143,7 @@ pub fn allows_automatic_super_admin_auth() -> bool {
         return false;
     }
 
-    let env = read_env_value(&["SDKWORK_ENV"]).map(|value| value.to_ascii_lowercase());
-    if matches!(env.as_deref(), Some("dev") | Some("test") | Some("local")) {
-        return true;
-    }
-
-    let deployment_mode =
-        read_env_value(&["SDKWORK_DEPLOYMENT_MODE"]).map(|value| value.to_ascii_lowercase());
-    if matches!(deployment_mode.as_deref(), Some("local") | Some("private")) {
+    if crate::production_runtime::is_explicit_development_iam_deployment() {
         return true;
     }
 
@@ -283,12 +276,21 @@ async fn authenticate_super_admin_password(
          JOIN iam_credential c ON c.user_id = u.id AND c.credential_type = 'password' AND c.status = 'active' \
          JOIN iam_tenant_member m ON m.tenant_id = u.tenant_id AND m.user_id = u.id AND m.status = 'active' \
          WHERE (LOWER(u.username) = $1 OR LOWER(u.email) = $1 OR u.phone = $1) \
-           AND u.status = 'active' AND u.is_deleted = 0",
+           AND u.status = 'active' AND u.is_deleted = 0 \
+         LIMIT $2",
     )
     .bind(&account_key)
+    .bind(sdkwork_iam_bootstrap::limits::IAM_SUPER_ADMIN_AUTH_USER_ROW_LIMIT + 1)
     .fetch_all(pg)
     .await
     .map_err(|error| format!("load super admin credentials failed: {error}"))?;
+
+    if rows.len() > sdkwork_iam_bootstrap::limits::IAM_SUPER_ADMIN_AUTH_USER_ROW_LIMIT as usize {
+        return Err(format!(
+            "super admin credential lookup exceeds limit of {}",
+            sdkwork_iam_bootstrap::limits::IAM_SUPER_ADMIN_AUTH_USER_ROW_LIMIT
+        ));
+    }
 
     for row in rows {
         let user_id: String = row.get(0);
@@ -428,15 +430,11 @@ mod tests {
 
     #[test]
     fn allows_automatic_super_admin_auth_in_dev_env() {
-        // SAFETY: single-threaded unit test.
-        unsafe {
-            std::env::set_var("SDKWORK_ENV", "dev");
-        }
+        let _env_lock = crate::test_env_lock::lock();
+        std::env::remove_var("SDKWORK_IM_ENVIRONMENT");
+        std::env::set_var("SDKWORK_ENV", "dev");
         assert!(allows_automatic_super_admin_auth());
-        // SAFETY: single-threaded unit test.
-        unsafe {
-            std::env::remove_var("SDKWORK_ENV");
-        }
+        std::env::remove_var("SDKWORK_ENV");
     }
 
     #[test]

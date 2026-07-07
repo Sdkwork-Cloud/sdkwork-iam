@@ -569,7 +569,8 @@ async fn local_appbase_directory_reads_registered_iam_users_without_fixture_rows
 
     let (matches, _) = directory
         .search_user_profiles(tenant_id, &directory_username, 50, 0)
-        .await;
+        .await
+        .expect("search profiles");
     assert_eq!(matches.len(), 1);
     assert_eq!(matches[0].user_id, user_id);
     let probe_tenant_id = if tenant_id == "100001" {
@@ -581,9 +582,16 @@ async fn local_appbase_directory_reads_registered_iam_users_without_fixture_rows
         directory
             .search_user_profiles(probe_tenant_id, &directory_username, 50, 0)
             .await
+            .expect("search profiles")
             .0
             .is_empty(),
         "directory search must stay tenant-scoped"
+    );
+    assert_eq!(
+        directory
+            .search_user_profiles(tenant_id, &directory_username, 201, 0)
+            .await,
+        Err(sdkwork_routes_iam_app_api::DirectorySearchError::InvalidListPagination)
     );
 }
 

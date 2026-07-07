@@ -10,11 +10,14 @@ name = "sdkwork_iam_bootstrap"
 path = "src/lib.rs"
 
 [dependencies]
+argon2 = "0.5"
 aes-gcm = "0.10"
 base64 = "0.22"
 chrono = { workspace = true }
 rand_core = { version = "0.6", features = ["getrandom"] }
+serde_json = { workspace = true }
 sha2 = "0.10"
+rsa = { version = "0.9", features = ["sha2", "pem"] }
 sqlx = { workspace = true }
 uuid = { version = "1", features = ["v7"] }
 sdkwork-database-id.workspace = true

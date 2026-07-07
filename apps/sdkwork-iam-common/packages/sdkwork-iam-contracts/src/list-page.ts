@@ -154,20 +154,24 @@ export function buildSdkWorkListQuery(input?: {
   readonly sort?: string;
 }): Record<string, string | number> {
   const query: Record<string, string | number> = {};
-  if (input?.page !== undefined) {
+  const useCursor = Boolean(input?.cursor?.trim());
+  if (!useCursor && input?.page !== undefined) {
     query.page = input.page;
   }
   if (input?.pageSize !== undefined) {
     query.page_size = clampListPageSize(input.pageSize) ?? SDKWORK_DEFAULT_LIST_PAGE_SIZE;
   }
-  if (input?.cursor) {
-    query.cursor = input.cursor;
+  if (useCursor && input?.cursor) {
+    query.cursor = input.cursor.trim();
   }
   if (input?.sort) {
     query.sort = input.sort;
   }
   if (input?.q) {
     query.q = input.q;
+  }
+  if (!("page_size" in query)) {
+    query.page_size = SDKWORK_DEFAULT_LIST_PAGE_SIZE;
   }
   return query;
 }
@@ -221,10 +225,16 @@ export function buildNextSdkWorkListQuery(
     if (!pageInfo.nextCursor) {
       return undefined;
     }
-    return resolveSdkWorkListQuery({ ...params, cursor: pageInfo.nextCursor });
+    const base = { ...params };
+    delete base.page;
+    delete base.pageNo;
+    delete base.page_no;
+    return resolveSdkWorkListQuery({ ...base, cursor: pageInfo.nextCursor });
   }
+  const base = { ...params };
+  delete base.cursor;
   const nextPage = (pageInfo.page ?? 1) + 1;
-  return resolveSdkWorkListQuery({ ...params, page: nextPage });
+  return resolveSdkWorkListQuery({ ...base, page: nextPage });
 }
 
 /** Merge a newly fetched list page into controller state. */
@@ -252,7 +262,7 @@ export interface SdkWorkPagedListSession<T> {
   getItems(): readonly T[];
   getPageInfo(): SdkWorkPageInfo | undefined;
   list(params?: Record<string, unknown>): Promise<readonly T[]>;
-  loadMore(): Promise<readonly T[]>;
+  loadMore(params?: Record<string, unknown>): Promise<readonly T[]>;
   reset(): void;
   setItems(items: readonly T[]): void;
 }
@@ -289,7 +299,10 @@ export function createSdkWorkPagedListSession<T>(
     getItems: () => items,
     getPageInfo: () => (listPageInfo ? { ...listPageInfo } : undefined),
     list: (params) => applyPage(params, false),
-    loadMore: async () => {
+    loadMore: async (params) => {
+      if (params) {
+        lastListParams = { ...(lastListParams ?? {}), ...params };
+      }
       const nextQuery = buildNextSdkWorkListQuery(lastListParams, listPageInfo);
       if (!nextQuery) {
         return items;

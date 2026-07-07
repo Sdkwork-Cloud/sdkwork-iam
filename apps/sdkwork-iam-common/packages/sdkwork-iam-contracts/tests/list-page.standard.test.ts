@@ -58,6 +58,13 @@ describe("@sdkwork/iam-contracts list-page helpers", () => {
     });
   });
 
+  it("does not combine page and cursor in buildSdkWorkListQuery", () => {
+    expect(buildSdkWorkListQuery({ page: 2, cursor: "k:2026-01-01|audit-1" })).toEqual({
+      cursor: "k:2026-01-01|audit-1",
+      page_size: SDKWORK_DEFAULT_LIST_PAGE_SIZE,
+    });
+  });
+
   it("builds next offset and cursor list queries from pageInfo", () => {
     expect(
       buildNextSdkWorkListQuery(undefined, {

@@ -132,7 +132,9 @@ export function resolveDevBootstrapContext(startDir = process.cwd()) {
 function resolveLocalExecutable(cwd, command) {
   const require = createRequire(path.join(cwd, 'package.json'));
   if (command === 'vite') {
-    return require.resolve('vite/bin/vite.js');
+    // Vite 6+ no longer exports bin/vite.js via package exports; resolve via package root.
+    const vitePackageJson = require.resolve('vite/package.json');
+    return path.join(path.dirname(vitePackageJson), 'bin', 'vite.js');
   }
   return command;
 }

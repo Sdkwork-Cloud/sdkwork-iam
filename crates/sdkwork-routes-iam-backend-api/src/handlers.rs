@@ -3,12 +3,14 @@ use std::sync::Arc;
 
 use crate::is_blank;
 use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
+    extract::{Path, Query, Request, State},
+    http::{Method, StatusCode},
+    middleware::{self, Next},
     response::Response,
     routing::{get, post},
     Json, Router,
 };
+use sdkwork_iam_bootstrap::DEFAULT_IAM_TENANT_ID;
 use sdkwork_iam_database_host;
 use sdkwork_iam_web_adapter::{
     account_binding_policy_to_json, enable_tenant_application, ensure_actor_tenant_scope,
@@ -40,8 +42,46 @@ use crate::management;
 use crate::oauth_management;
 
 const BACKEND_EPHEMERAL_SCOPE: &str = "iam-backend";
-const BACKEND_RATE_LIMIT_MAX_REQUESTS: u32 = 10;
+const BACKEND_RATE_LIMIT_MAX_REQUESTS: u32 = 60;
 const BACKEND_RATE_LIMIT_WINDOW_SECONDS: u32 = 60;
+
+async fn backend_write_rate_limit_middleware(
+    State(state): State<BackendIamState>,
+    request: Request,
+    next: Next,
+) -> Response {
+    if matches!(
+        request.method(),
+        &Method::POST | &Method::PUT | &Method::PATCH | &Method::DELETE
+    ) {
+        if let Some(pg) = state.pool.as_deref() {
+            let bucket = backend_rate_limit_bucket(&request);
+            if let Some(response) = enforce_backend_rate_limit(pg, &bucket).await {
+                return response;
+            }
+        } else {
+            return appbase_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "iam_database_unavailable",
+                "backend IAM API requires a PostgreSQL database pool",
+            );
+        }
+    }
+    next.run(request).await
+}
+
+fn backend_rate_limit_bucket(request: &Request) -> String {
+    let path = request.uri().path();
+    if let Some(ctx) = request.extensions().get::<WebRequestContext>() {
+        let tenant_id = ctx
+            .principal()
+            .map(|principal| principal.tenant_id())
+            .unwrap_or("anonymous");
+        let actor_id = ctx.user_id().unwrap_or("anonymous");
+        return format!("backend:write:{tenant_id}:{actor_id}:{path}");
+    }
+    format!("backend:write:anonymous:{path}")
+}
 
 async fn enforce_backend_rate_limit(pg: &PgPool, bucket: &str) -> Option<Response> {
     match sdkwork_iam_web_adapter::check_rate_limit(
@@ -84,6 +124,7 @@ pub async fn build_sdkwork_iam_backend_api_router_from_env() -> Router {
         }
     };
 
+    let state = BackendIamState { pool };
     let router = oauth_management::apply_oauth_routes(management::apply_management_routes(
         Router::new()
             .route(
@@ -111,7 +152,11 @@ pub async fn build_sdkwork_iam_backend_api_router_from_env() -> Router {
                 post(enable_tenant_application_handler),
             ),
     ))
-    .with_state(BackendIamState { pool });
+    .with_state(state.clone())
+    .layer(middleware::from_fn_with_state(
+        state,
+        backend_write_rate_limit_middleware,
+    ));
 
     sdkwork_iam_web_adapter::wrap_router_with_iam_backend_web_framework_from_env(
         router,
@@ -144,6 +189,40 @@ fn principal_from_context(
 
 pub(crate) fn tenant_id_from_context(ctx: &WebRequestContext) -> Result<String, Response> {
     Ok(principal_from_context(ctx)?.tenant_id().to_owned())
+}
+
+/// Enforces tenant data isolation for path-scoped tenant operations.
+///
+/// Platform operators authenticated in the default IAM tenant may access other tenants.
+pub(crate) fn ensure_target_tenant_access(
+    ctx: &WebRequestContext,
+    target_tenant_id: &str,
+) -> Result<(), Response> {
+    let session_tenant_id = tenant_id_from_context(ctx)?;
+    if session_tenant_id.trim() == target_tenant_id.trim() {
+        return Ok(());
+    }
+    if session_tenant_id.trim() == DEFAULT_IAM_TENANT_ID {
+        return Ok(());
+    }
+    Err(appbase_error(
+        StatusCode::FORBIDDEN,
+        "iam_tenant_access_denied",
+        "tenant access denied",
+    ))
+}
+
+/// Global permission catalog mutations are restricted to the platform tenant.
+pub(crate) fn ensure_platform_catalog_access(ctx: &WebRequestContext) -> Result<(), Response> {
+    let session_tenant_id = tenant_id_from_context(ctx)?;
+    if session_tenant_id.trim() == DEFAULT_IAM_TENANT_ID {
+        return Ok(());
+    }
+    Err(appbase_error(
+        StatusCode::FORBIDDEN,
+        "iam_permission_catalog_forbidden",
+        "permission catalog mutations require platform tenant access",
+    ))
 }
 
 pub(crate) fn organization_id_from_context(ctx: &WebRequestContext) -> Option<String> {

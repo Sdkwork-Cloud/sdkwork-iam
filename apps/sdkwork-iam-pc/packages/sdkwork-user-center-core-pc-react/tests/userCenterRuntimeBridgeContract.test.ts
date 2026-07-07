@@ -68,7 +68,7 @@ describe("canonical user-center runtime bridge", () => {
             },
           },
           async json() {
-            return { code: 2000, data: { id: "profile-1" } };
+            return { code: 0, data: { id: "profile-1" } };
           },
           ok: true,
           status: 200,

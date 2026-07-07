@@ -8,7 +8,7 @@ import {
   type SdkworkUserMessagesOverrides,
 } from "./user-copy.ts";
 import { getDefaultSdkworkUserStorage } from "./user-preferences.ts";
-import { coalesce } from "@sdkwork/utils";
+import { coalesce, isSdkWorkSuccessCode } from "@sdkwork/utils";
 
 export interface SdkworkUserProfile {
   avatar?: SdkworkMediaResource;
@@ -285,8 +285,8 @@ function isSuccessCode(code: number | string | undefined): boolean {
     return true;
   }
 
-  const normalized = String(code).trim();
-  return normalized === "0" || normalized === "200" || normalized === "2000";
+  const parsed = Number(String(code).trim());
+  return Number.isFinite(parsed) && isSdkWorkSuccessCode(parsed);
 }
 
 function unwrapAppSdkResponse<T>(

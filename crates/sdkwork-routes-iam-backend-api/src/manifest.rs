@@ -510,9 +510,21 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
     ),
     HttpRoute::dual_token(
         HttpMethod::Get,
+        "/backend/v3/api/iam/security_events/{securityEventId}",
+        "iam",
+        "securityEvents.retrieve",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
         "/backend/v3/api/iam/audit_events",
         "iam",
         "auditEvents.list",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/iam/audit_events/{auditEventId}",
+        "iam",
+        "auditEvents.retrieve",
     ),
     HttpRoute::dual_token(
         HttpMethod::Get,

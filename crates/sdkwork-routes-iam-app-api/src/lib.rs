@@ -26,7 +26,9 @@ mod web_bootstrap;
 
 pub(crate) use sdkwork_utils_rust::is_blank;
 
-pub use directory::{SdkworkIamLocalIamDirectory, SdkworkIamLocalIamUserProfile};
+pub use directory::{
+    DirectorySearchError, SdkworkIamLocalIamDirectory, SdkworkIamLocalIamUserProfile,
+};
 pub use manifest::{
     app_routes, iam_app_api_route_manifest, sdkwork_iam_app_api_routes,
     IAM_ANONYMOUS_BOOTSTRAP_OPERATION_IDS, IAM_CREDENTIAL_ENTRY_OPERATION_IDS,

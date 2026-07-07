@@ -703,6 +703,7 @@ function createBackendIamManagementResources(options?: { usersRoles?: boolean })
       },
       auditEvents: {
         list: vi.fn(),
+        retrieve: vi.fn(),
       },
       organizations: {
         create: vi.fn(),
@@ -769,6 +770,7 @@ function createBackendIamManagementResources(options?: { usersRoles?: boolean })
       },
       securityEvents: {
         list: vi.fn(),
+        retrieve: vi.fn(),
       },
       tenantApplications: {
         enable: vi.fn(),
