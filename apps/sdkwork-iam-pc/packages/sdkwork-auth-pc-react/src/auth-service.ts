@@ -144,6 +144,7 @@ export interface SdkworkAuthStoredSession {
   authToken?: string;
   context?: SdkworkAuthAppContext;
   expiresAt?: number | string;
+  mustChangePassword?: boolean;
   refreshToken?: string;
   sessionId?: string;
 }
@@ -151,6 +152,7 @@ export interface SdkworkAuthStoredSession {
 export interface SdkworkAuthSession extends Required<Pick<SdkworkAuthStoredSession, "accessToken" | "authToken">> {
   context?: SdkworkAuthAppContext;
   expiresAt?: number | string;
+  mustChangePassword?: boolean;
   refreshToken?: string;
   sessionId?: string;
   user?: SdkworkAuthUser;
@@ -490,6 +492,7 @@ interface SdkworkRemoteLoginData {
   context?: unknown;
   continuationToken?: string;
   expiresAt?: number | string;
+  mustChangePassword?: boolean;
   options?: unknown;
   organizations?: unknown;
   refreshToken?: string;
@@ -1322,6 +1325,7 @@ export function createSdkworkAuthService(
       accessToken,
       authToken,
       context,
+      ...(loginData.mustChangePassword ? { mustChangePassword: true } : {}),
       refreshToken: normalizeOptionalString(loginData.refreshToken),
       sessionId:
         normalizeOptionalString(loginData.sessionId)
@@ -1348,6 +1352,7 @@ export function createSdkworkAuthService(
       accessToken: committedSession.accessToken || "",
       authToken: committedSession.authToken || "",
       ...(committedSession.context ? { context: committedSession.context } : {}),
+      ...(committedSession.mustChangePassword ? { mustChangePassword: true } : {}),
       ...(committedSession.refreshToken ? { refreshToken: committedSession.refreshToken } : {}),
       ...(committedSession.sessionId ? { sessionId: committedSession.sessionId } : {}),
       user: toAuthUser(mergeIdentity(profileIdentity, resolveLoginDataIdentity(loginData))),
@@ -2123,6 +2128,7 @@ function normalizeStoredSession(session: SdkworkAuthStoredSession): SdkworkAuthS
     ...(normalizeOptionalString(session.accessToken) ? { accessToken: normalizeOptionalString(session.accessToken) } : {}),
     ...(normalizeOptionalString(session.authToken) ? { authToken: normalizeOptionalString(session.authToken) } : {}),
     ...(context ? { context } : {}),
+    ...(session.mustChangePassword ? { mustChangePassword: true } : {}),
     ...(normalizeOptionalString(session.refreshToken) ? { refreshToken: normalizeOptionalString(session.refreshToken) } : {}),
     ...(normalizeOptionalString(session.sessionId) ? { sessionId: normalizeOptionalString(session.sessionId) } : {}),
   };

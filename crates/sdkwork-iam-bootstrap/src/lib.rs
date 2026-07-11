@@ -12,9 +12,11 @@ pub mod role_catalog;
 pub mod tenant_signing_key;
 
 pub use bootstrap_operator::{
-    ensure_postgres_bootstrap_admin_user, ensure_sqlite_bootstrap_admin_user,
-    resolve_bootstrap_admin_password_from_env, BootstrapAdminUserOutcome,
-    SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV, SDKWORK_IAM_SUPER_ADMIN_PASSWORD_ENV,
+    ensure_postgres_bootstrap_admin_user, ensure_postgres_bootstrap_manager_user,
+    ensure_sqlite_bootstrap_admin_user, ensure_sqlite_bootstrap_manager_user,
+    resolve_bootstrap_admin_password_from_env, resolve_bootstrap_manager_password_from_env,
+    BootstrapAdminUserOutcome, BootstrapManagerUserOutcome, SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV,
+    SDKWORK_IAM_MANAGER_PASSWORD_ENV, SDKWORK_IAM_SUPER_ADMIN_PASSWORD_ENV,
 };
 pub use constants::*;
 pub use iam_entity_ids::{

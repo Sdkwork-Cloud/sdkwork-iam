@@ -154,6 +154,14 @@ impl SeedProvider for IamDatabaseModule {
                 )));
             }
         }
+        match sdkwork_iam_bootstrap::ensure_postgres_bootstrap_manager_user(pg).await {
+            Ok(outcome) => tracing::info!(?outcome, "IAM bootstrap manager user seed finished"),
+            Err(error) => {
+                return Err(SpiError::Seed(format!(
+                    "ensure bootstrap manager user failed: {error}"
+                )));
+            }
+        }
         Ok(())
     }
 }

@@ -116,6 +116,8 @@ const QR_RETRY_POLL_INTERVAL_MS = 10_000;
 const QR_SESSION_CACHE_FALLBACK_TTL_MS = 5_000;
 const QR_SESSION_CACHE_EXPIRY_SAFETY_MS = 5_000;
 
+const SDKWORK_AUTH_CHANGE_PASSWORD_PATH = "/user/sections/security";
+
 interface SdkworkAuthAsideHighlight {
   description: string;
   icon: ReactElement;
@@ -787,6 +789,11 @@ function SdkworkAuthPageContent({
   }, [controller, qrEntryKey, sendQrEntryCallback]);
 
   const completeAuthFlow = async () => {
+    if (controller.getState().session?.mustChangePassword) {
+      finalizeAuthenticatedRedirect();
+      return;
+    }
+
     if (oauthAuthorizationStateId) {
       const completion = await controller.completeOAuthAuthorization(oauthAuthorizationStateId);
       window.location.assign(completion.redirectUrl);
@@ -802,8 +809,12 @@ function SdkworkAuthPageContent({
       return;
     }
 
+    const target = controller.getState().session?.mustChangePassword
+      ? SDKWORK_AUTH_CHANGE_PASSWORD_PATH
+      : redirectTarget;
+
     startTransition(() => {
-      navigate(redirectTarget, { replace: true });
+      navigate(target, { replace: true });
     });
   };
 
@@ -1258,7 +1269,10 @@ function SdkworkAuthPageContent({
   }, [activeLoginMethodsKey, appearance, basePath, events, homePath, mode, qrState, redirectTarget, shouldRenderQrRail]);
 
   if (authState.isAuthenticated && !qrEntryKey && !oauthAuthorizationStateId) {
-    return <Navigate replace to={redirectTarget} />;
+    const authenticatedTarget = authState.session?.mustChangePassword
+      ? SDKWORK_AUTH_CHANGE_PASSWORD_PATH
+      : redirectTarget;
+    return <Navigate replace to={authenticatedTarget} />;
   }
 
   const buildAuthRoute = (

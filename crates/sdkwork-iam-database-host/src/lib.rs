@@ -161,5 +161,9 @@ async fn run_post_bootstrap_hooks(pool: &DatabasePool) -> Result<(), String> {
         Ok(outcome) => tracing::info!(?outcome, "IAM bootstrap admin user seed finished"),
         Err(error) => return Err(format!("ensure bootstrap admin user failed: {error}")),
     }
+    match sdkwork_iam_bootstrap::ensure_postgres_bootstrap_manager_user(pg).await {
+        Ok(outcome) => tracing::info!(?outcome, "IAM bootstrap manager user seed finished"),
+        Err(error) => return Err(format!("ensure bootstrap manager user failed: {error}")),
+    }
     Ok(())
 }

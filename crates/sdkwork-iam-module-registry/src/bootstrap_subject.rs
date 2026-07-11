@@ -15,3 +15,8 @@ pub const DEFAULT_BOOTSTRAP_ADMIN_USER_ID: &str = "1";
 pub const DEFAULT_BOOTSTRAP_ADMIN_USERNAME: &str = "admin";
 pub const DEFAULT_BOOTSTRAP_ADMIN_DISPLAY_NAME: &str = "Administrator";
 pub const DEFAULT_BOOTSTRAP_ADMIN_EMAIL: &str = "admin@sdkwork.com";
+
+pub const DEFAULT_BOOTSTRAP_MANAGER_USER_ID: &str = "2";
+pub const DEFAULT_BOOTSTRAP_MANAGER_USERNAME: &str = "manager";
+pub const DEFAULT_BOOTSTRAP_MANAGER_DISPLAY_NAME: &str = "Manager";
+pub const DEFAULT_BOOTSTRAP_MANAGER_EMAIL: &str = "manager@sdkwork.com";
