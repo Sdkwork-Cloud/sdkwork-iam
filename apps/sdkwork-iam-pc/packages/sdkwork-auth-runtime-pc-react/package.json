@@ -20,10 +20,20 @@
       "import": "./src/sdkSessionAuthError.ts",
       "default": "./src/sdkSessionAuthError.ts"
     },
+    "./appbasePcAuthSessionBridge": {
+      "types": "./src/appbasePcAuthSessionBridge.ts",
+      "import": "./src/appbasePcAuthSessionBridge.ts",
+      "default": "./src/appbasePcAuthSessionBridge.ts"
+    },
     "./appbasePcAuthRuntime": {
       "types": "./src/appbasePcAuthRuntime.ts",
       "import": "./src/appbasePcAuthRuntime.ts",
       "default": "./src/appbasePcAuthRuntime.ts"
+    },
+    "./attachSdkworkSdkSessionAuthBoundary": {
+      "types": "./src/attachSdkworkSdkSessionAuthBoundary.ts",
+      "import": "./src/attachSdkworkSdkSessionAuthBoundary.ts",
+      "default": "./src/attachSdkworkSdkSessionAuthBoundary.ts"
     }
   },
   "files": [

@@ -1,6 +1,7 @@
 export const SDKWORK_SESSION_AUTH_ERROR_CODES = new Set([
   "401",
   "4010",
+  "40103",
   "UNAUTHORIZED",
   "TOKEN_EXPIRED",
   "TOKEN_INVALID",
@@ -10,6 +11,8 @@ export const SDKWORK_SESSION_AUTH_ERROR_MESSAGES = [
   "app session token has expired",
   "session token has expired",
   "token has expired",
+  "invalid or expired iam session",
+  "invalid token",
   "not logged in",
   "not login",
   "unauthorized",
@@ -56,8 +59,16 @@ export function readSdkworkSessionAuthBusinessCode(error: unknown): string {
 }
 
 export function readSdkworkSessionAuthErrorHttpStatus(error: unknown): number | undefined {
-  const value = readSdkErrorField(error, "httpStatus");
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  const value = readSdkErrorField(error, "httpStatus")
+    ?? readSdkErrorField(error, "status");
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.trunc(value);
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number.parseInt(value.trim(), 10);
+    return Number.isInteger(parsed) ? parsed : undefined;
+  }
+  return undefined;
 }
 
 export function readSdkworkSessionAuthErrorMessage(error: unknown): string {
@@ -65,7 +76,9 @@ export function readSdkworkSessionAuthErrorMessage(error: unknown): string {
     return error.message;
   }
   const value = readSdkErrorField(error, "message")
-    ?? readSdkErrorField(error, "msg");
+    ?? readSdkErrorField(error, "msg")
+    ?? readSdkErrorField(error, "detail")
+    ?? readSdkErrorField(error, "title");
   return typeof value === "string" ? value : "";
 }
 
@@ -98,6 +111,8 @@ export function formatSdkworkSessionAuthUnauthorizedDetail(
   const message =
     readStringField(record, "message")
     ?? readStringField(record, "msg")
+    ?? readStringField(record, "detail")
+    ?? readStringField(record, "title")
     ?? (error instanceof Error ? error.message : undefined)
     ?? "Session authentication failed";
 

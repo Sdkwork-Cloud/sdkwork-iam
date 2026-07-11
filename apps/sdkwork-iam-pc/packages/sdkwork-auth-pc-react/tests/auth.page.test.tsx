@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { CSSProperties, ReactNode } from "react";
+import { StrictMode, type CSSProperties, type ReactNode } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { SdkworkI18nProvider } from "@sdkwork/i18n-pc-react";
@@ -2980,6 +2980,56 @@ describe("sdkwork-auth-pc-react page", () => {
     expect(toDataUrlMock).not.toHaveBeenCalled();
   });
 
+  it("reuses the desktop QR login session across React StrictMode effect replay", async () => {
+    const generateLoginQrCode = vi.fn().mockResolvedValue({
+      qrContent: "sdkwork://auth/strict-mode-qr-login",
+      sessionKey: "qr-strict-mode-1",
+    });
+    const controller = createSdkworkAuthController({
+      service: {
+        generateLoginQrCode,
+        checkLoginQrCodeStatus: vi.fn().mockResolvedValue({
+          status: "pending",
+        }),
+        getCurrentSession: vi.fn().mockResolvedValue(null),
+        getCurrentUser: vi.fn().mockResolvedValue(null),
+      },
+    });
+
+    render(
+      <StrictMode>
+        <SdkworkThemeProvider defaultTheme="light">
+          <MemoryRouter initialEntries={["/auth/login"]}>
+            <Routes>
+              <Route
+                path="/auth/login"
+                element={
+                  <SdkworkAuthPage
+                    controller={controller}
+                    runtimeConfig={{
+                      loginMethods: ["password"],
+                      oauthProviders: [],
+                      qrLoginEnabled: true,
+                    }}
+                  />
+                }
+              />
+            </Routes>
+          </MemoryRouter>
+        </SdkworkThemeProvider>
+      </StrictMode>,
+    );
+
+    expect(await screen.findByAltText(/login qr code/i)).toHaveAttribute(
+      "src",
+      "data:image/png;base64,qr-login",
+    );
+    expect(generateLoginQrCode).toHaveBeenCalledTimes(1);
+    expect(generateLoginQrCode).toHaveBeenCalledWith({
+      purpose: "login",
+    });
+  });
+
   it("backs off desktop QR polling before scan and polls faster after scan", async () => {
     const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
     const checkLoginQrCodeStatus = vi.fn().mockResolvedValue({
@@ -3564,6 +3614,101 @@ describe("sdkwork-auth-pc-react page", () => {
     expect(container.innerHTML).not.toContain("max-w-[1040px]");
     expect(container.innerHTML).not.toContain("lg:my-8");
     expect(getRuntime).toHaveBeenCalled();
+  });
+
+  it("keeps IAM auth route QR session creation idempotent under React StrictMode", async () => {
+    const createDeviceAuthorization = vi.fn().mockResolvedValue({
+      qrContent: {
+        content: "sdkwork://auth/iam-routes-strict-mode-qr",
+        mode: "fallback_url",
+      },
+      sessionKey: "iam-routes-strict-mode-qr-1",
+      status: "pending",
+      title: "Desktop QR Login",
+    });
+    const getRuntime = vi.fn().mockResolvedValue({
+      contextStore: {
+        clear: vi.fn(),
+      },
+      service: {
+        auth: {
+          passwordResetRequests: {
+            create: vi.fn(),
+          },
+          passwordResets: {
+            create: vi.fn(),
+          },
+          registrations: {
+            create: vi.fn(),
+          },
+          sessions: {
+            create: vi.fn(),
+            current: {
+              delete: vi.fn(),
+              retrieve: vi.fn().mockRejectedValue(new Error("anonymous")),
+            },
+          },
+        },
+        messaging: {
+          verificationCodes: {
+            create: vi.fn(),
+            verify: vi.fn(),
+          },
+        },
+        oauth: {
+          deviceAuthorizations: {
+            create: createDeviceAuthorization,
+            retrieve: vi.fn().mockResolvedValue({
+              sessionKey: "iam-routes-strict-mode-qr-1",
+              status: "pending",
+            }),
+          },
+        },
+        iam: {
+          users: {
+            current: {
+              retrieve: vi.fn().mockRejectedValue(new Error("anonymous")),
+            },
+          },
+        },
+      },
+      tokenStore: {
+        get: vi.fn().mockResolvedValue(null),
+      },
+    });
+
+    render(
+      <StrictMode>
+        <SdkworkThemeProvider defaultTheme="light">
+          <MemoryRouter initialEntries={["/auth/login"]}>
+            <Routes>
+              <Route
+                path="/auth/*"
+                element={
+                  <SdkworkIamAuthRoutes
+                    getRuntime={getRuntime}
+                    homePath="/console"
+                    runtimeConfig={{
+                      loginMethods: ["password"],
+                      oauthLoginEnabled: false,
+                    }}
+                  />
+                }
+              />
+            </Routes>
+          </MemoryRouter>
+        </SdkworkThemeProvider>
+      </StrictMode>,
+    );
+
+    expect(await screen.findByAltText(/login qr code/i)).toHaveAttribute(
+      "src",
+      "data:image/png;base64,qr-login",
+    );
+    expect(createDeviceAuthorization).toHaveBeenCalledTimes(1);
+    expect(createDeviceAuthorization).toHaveBeenCalledWith({
+      purpose: "login",
+    });
   });
 
   it("renders IAM auth routes with Chinese auth copy and validation when host locale is Chinese", async () => {

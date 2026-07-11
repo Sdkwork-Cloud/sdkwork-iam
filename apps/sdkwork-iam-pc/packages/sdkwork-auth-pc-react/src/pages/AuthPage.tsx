@@ -113,6 +113,8 @@ import {
 const QR_ACTIVE_POLL_INTERVAL_MS = 1_500;
 const QR_PENDING_POLL_INTERVAL_MS = 5_000;
 const QR_RETRY_POLL_INTERVAL_MS = 10_000;
+const QR_SESSION_CACHE_FALLBACK_TTL_MS = 5_000;
+const QR_SESSION_CACHE_EXPIRY_SAFETY_MS = 5_000;
 
 interface SdkworkAuthAsideHighlight {
   description: string;
@@ -130,6 +132,107 @@ interface SdkworkAuthPageRenderContext {
   loginMethods: SdkworkAuthLoginMethod[];
   mode: SdkworkResolvedAuthMode;
   redirectTarget: string;
+}
+
+type SdkworkAuthQrCodePurpose = "login" | "register";
+
+interface SdkworkAuthQrSessionCacheEntry {
+  expiresAt: number;
+  promise: Promise<SdkworkAuthLoginQrCode>;
+}
+
+const sdkworkAuthQrSessionCache = new WeakMap<
+  SdkworkAuthController,
+  Map<string, SdkworkAuthQrSessionCacheEntry>
+>();
+
+function buildSdkworkAuthQrSessionCacheKey(
+  purpose: SdkworkAuthQrCodePurpose,
+  reloadNonce: number,
+): string {
+  return `${purpose}:${reloadNonce}`;
+}
+
+function resolveSdkworkAuthQrSessionCacheExpiresAt(qrCode: SdkworkAuthLoginQrCode): number {
+  const now = Date.now();
+  const expireTime = typeof qrCode.expireTime === "number" && Number.isFinite(qrCode.expireTime)
+    ? qrCode.expireTime
+    : undefined;
+  if (typeof expireTime === "number") {
+    return Math.max(now, expireTime - QR_SESSION_CACHE_EXPIRY_SAFETY_MS);
+  }
+
+  return now + QR_SESSION_CACHE_FALLBACK_TTL_MS;
+}
+
+function readSdkworkAuthQrSessionCacheMap(
+  controller: SdkworkAuthController,
+): Map<string, SdkworkAuthQrSessionCacheEntry> {
+  let cacheMap = sdkworkAuthQrSessionCache.get(controller);
+  if (!cacheMap) {
+    cacheMap = new Map<string, SdkworkAuthQrSessionCacheEntry>();
+    sdkworkAuthQrSessionCache.set(controller, cacheMap);
+  }
+
+  return cacheMap;
+}
+
+function pruneSdkworkAuthQrSessionCache(
+  cacheMap: Map<string, SdkworkAuthQrSessionCacheEntry>,
+): void {
+  const now = Date.now();
+  for (const [cacheKey, cacheEntry] of cacheMap) {
+    if (cacheEntry.expiresAt <= now) {
+      cacheMap.delete(cacheKey);
+    }
+  }
+}
+
+function invalidateSdkworkAuthQrSessionCache(
+  controller: SdkworkAuthController,
+  purpose: SdkworkAuthQrCodePurpose,
+  reloadNonce: number,
+): void {
+  sdkworkAuthQrSessionCache
+    .get(controller)
+    ?.delete(buildSdkworkAuthQrSessionCacheKey(purpose, reloadNonce));
+}
+
+function requestSdkworkAuthQrSession(
+  controller: SdkworkAuthController,
+  purpose: SdkworkAuthQrCodePurpose,
+  reloadNonce: number,
+): Promise<SdkworkAuthLoginQrCode> {
+  const cacheMap = readSdkworkAuthQrSessionCacheMap(controller);
+  pruneSdkworkAuthQrSessionCache(cacheMap);
+
+  const cacheKey = buildSdkworkAuthQrSessionCacheKey(purpose, reloadNonce);
+  const existingEntry = cacheMap.get(cacheKey);
+  const now = Date.now();
+  if (existingEntry && existingEntry.expiresAt > now) {
+    return existingEntry.promise;
+  }
+
+  let cacheEntry: SdkworkAuthQrSessionCacheEntry;
+  const promise = Promise.resolve()
+    .then(() => controller.generateLoginQrCode({ purpose }))
+    .then((qrCode) => {
+      cacheEntry.expiresAt = resolveSdkworkAuthQrSessionCacheExpiresAt(qrCode);
+      return qrCode;
+    })
+    .catch((error) => {
+      if (cacheMap.get(cacheKey) === cacheEntry) {
+        cacheMap.delete(cacheKey);
+      }
+      throw error;
+    });
+  cacheEntry = {
+    expiresAt: Number.POSITIVE_INFINITY,
+    promise,
+  };
+  cacheMap.set(cacheKey, cacheEntry);
+
+  return promise;
 }
 
 function isSdkworkQrPollingVisible(): boolean {
@@ -982,6 +1085,11 @@ function SdkworkAuthPageContent({
         setQrState(statusResult.status);
 
         if (statusResult.status === "confirmed") {
+          invalidateSdkworkAuthQrSessionCache(
+            controller,
+            mode === "register" ? "register" : "login",
+            qrReloadNonce,
+          );
           if (!statusResult.session) {
             const bootstrappedState = await controller.bootstrap();
             if (disposed) {
@@ -1000,6 +1108,11 @@ function SdkworkAuthPageContent({
         }
 
         if (isSdkworkQrPollingTerminalState(statusResult.status)) {
+          invalidateSdkworkAuthQrSessionCache(
+            controller,
+            mode === "register" ? "register" : "login",
+            qrReloadNonce,
+          );
           clearPollTimer();
           return;
         }
@@ -1041,9 +1154,12 @@ function SdkworkAuthPageContent({
       currentPollState = "loading";
 
       try {
-        const nextQrCode = await controller.generateLoginQrCode({
-          purpose: mode === "register" ? "register" : "login",
-        });
+        const nextQrPurpose: SdkworkAuthQrCodePurpose = mode === "register" ? "register" : "login";
+        const nextQrCode = await requestSdkworkAuthQrSession(
+          controller,
+          nextQrPurpose,
+          qrReloadNonce,
+        );
         if (disposed) {
           return;
         }

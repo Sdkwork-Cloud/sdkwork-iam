@@ -2,7 +2,7 @@ import { isBlank, trim } from '@sdkwork/utils';
 import {
   isLoginEligibleOrganizationId,
   PLATFORM_ORGANIZATION_ID,
-} from './login-context.js';
+} from './login-context.ts';
 
 export type IamLoginContextSelectionChallengeType =
   | 'LOGIN_CONTEXT_SELECTION'

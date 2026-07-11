@@ -2,7 +2,7 @@ import {
   isPlatformOrganizationId,
   resolveSessionOrganizationId,
   type IamLoginScope,
-} from './login-context.js';
+} from './login-context.ts';
 
 export type IamEnvironment = "dev" | "test" | "prod";
 export type IamDeploymentMode = "saas" | "local" | "private";
@@ -125,7 +125,7 @@ export const SDKWORK_IAM_HEADERS = {
   },
 } as const;
 
-export * from "./list-page.js";
+export * from "./list-page.ts";
 
 export const SDKWORK_STANDARD_PAGE_QUERY_PARAMS = ["page", "page_size", "cursor", "sort", "q"] as const;
 
@@ -1268,18 +1268,18 @@ export {
   normalizeLoginOrganizationClaim,
   PLATFORM_ORGANIZATION_ID,
   resolveSessionOrganizationId,
-} from './login-context.js';
-export type { IamLoginScope } from './login-context.js';
+} from './login-context.ts';
+export type { IamLoginScope } from './login-context.ts';
 export {
   buildOrganizationLoginContextSelectionBody,
   buildPersonalLoginContextSelectionBody,
   buildTenantCurrentSessionUpdateBody,
   isIamLoginContextSelectionChallenge,
   normalizeIamLoginContextSelectionChallenge,
-} from './login-context-challenge.js';
+} from './login-context-challenge.ts';
 export type {
   IamLoginContextOrganizationChoice,
   IamLoginContextSelectionChallenge,
   IamLoginContextSelectionChallengeType,
   IamLoginContextSelectionOption,
-} from './login-context-challenge.js';
+} from './login-context-challenge.ts';

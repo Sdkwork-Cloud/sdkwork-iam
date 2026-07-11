@@ -35,8 +35,8 @@ packages:
   - "../sdkwork-appbase/packages/common/integration/sdkwork-platform"
   - "../sdkwork-appbase/packages/common/intelligence/sdkwork-agent-contracts"
   - "../sdkwork-appbase/packages/pc-react/foundation/sdkwork-shell-pc-react"
-  - "../sdkwork-search/packages/common/search/sdkwork-search-contracts"
-  - "../sdkwork-search/packages/pc-react/foundation/sdkwork-search-pc-react"
+  - "../sdkwork-search/apps/sdkwork-search-common/packages/sdkwork-search-contracts"
+  - "../sdkwork-search/apps/sdkwork-search-pc/packages/sdkwork-search-pc-react"
 
 catalog:
   react: ^19.2.4

@@ -1,21 +1,15 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 4,
   "kind": "sdkwork.app.topology",
   "appId": "sdkwork-iam",
   "archetype": "application-http-gateway",
   "profileRoot": "configs/topology",
-  "profilePattern": "{deploymentProfile}.{serviceLayout}.{environment}.env",
+  "profilePattern": "{deploymentProfile}.{environment}.env",
   "vocabulary": {
     "deploymentProfile": {
       "allowed": [
         "standalone",
         "cloud"
-      ]
-    },
-    "serviceLayout": {
-      "allowed": [
-        "unified-process",
-        "split-services"
       ]
     },
     "environment": {
@@ -26,9 +20,10 @@
     }
   },
   "defaults": {
-    "developmentProfileId": "standalone.unified-process.development",
-    "productionProfileId": "cloud.split-services.production",
-    "gatewayBind": "127.0.0.1:3901"
+    "developmentProfileId": "standalone.development",
+    "productionProfileId": "cloud.production",
+    "gatewayBind": "127.0.0.1:3901",
+    "desktopBuildProfileId": "standalone.production"
   },
   "surfaces": {
     "application.public-ingress": {
@@ -38,11 +33,25 @@
       ],
       "bindEnv": "SDKWORK_IAM_APPLICATION_PUBLIC_INGRESS_BIND",
       "httpUrlEnv": "SDKWORK_IAM_APPLICATION_PUBLIC_HTTP_URL"
+    },
+    "platform.api-gateway": {
+      "connectivityPlane": "platform",
+      "protocols": [
+        "http"
+      ],
+      "owner": "sdkwork-api-cloud-gateway",
+      "bindEnv": "SDKWORK_API_CLOUD_GATEWAY_BIND",
+      "httpUrlEnv": "SDKWORK_IAM_PLATFORM_API_GATEWAY_HTTP_URL",
+      "clientHttpEnv": "VITE_SDKWORK_IAM_PLATFORM_API_GATEWAY_HTTP_URL",
+      "autostartEnv": "SDKWORK_IAM_PLATFORM_API_GATEWAY_AUTOSTART"
     }
   },
   "cloudPublicHosts": {
     "application.public-ingress": {
       "httpHost": "iam.sdkwork.com"
+    },
+    "platform.api-gateway": {
+      "httpHost": "api.sdkwork.com"
     }
   },
   "database": {
@@ -52,11 +61,17 @@
     "gatewayAssembly": {
       "crate": "sdkwork-iam-gateway-assembly",
       "manifest": "crates/sdkwork-iam-gateway-assembly/assembly-manifest.json"
+    },
+    "cloudGateway": {
+      "crate": "sdkwork-api-cloud-gateway",
+      "binary": "sdkwork-api-cloud-gateway",
+      "repository": "sdkwork-api-cloud-gateway",
+      "configGlob": "configs/sdkwork-api-cloud-gateway.iam.{profile}.toml"
     }
   },
   "orchestration": {
     "profiles": {
-      "standalone.unified-process.development": {
+      "standalone.development": {
         "processes": [
           {
             "id": "application.public-ingress",
@@ -68,7 +83,7 @@
           "application.public-ingress"
         ]
       },
-      "cloud.split-services.production": {
+      "cloud.production": {
         "processes": [
           {
             "id": "application.public-ingress",
@@ -79,7 +94,68 @@
         "healthSurfaces": [
           "application.public-ingress"
         ]
+      },
+      "standalone.production": {
+        "processes": [
+          {
+            "id": "application.public-ingress",
+            "crate": "sdkwork-iam-gateway-assembly",
+            "required": true
+          }
+        ],
+        "healthSurfaces": [
+          "application.public-ingress"
+        ]
+      },
+      "cloud.development": {
+        "processes": [
+          {
+            "id": "platform.api-gateway",
+            "crate": "sdkwork-api-cloud-gateway",
+            "binary": "sdkwork-api-cloud-gateway",
+            "repository": "sdkwork-api-cloud-gateway",
+            "required": false
+          },
+          {
+            "id": "application.public-ingress",
+            "crate": "sdkwork-iam-gateway-assembly",
+            "required": true
+          }
+        ],
+        "healthSurfaces": [
+          "application.public-ingress",
+          "platform.api-gateway"
+        ]
       }
     }
+  },
+  "envKeys": {},
+  "profileFiles": {
+    "standalone.development": "configs/topology/standalone.development.env",
+    "standalone.production": "configs/topology/standalone.production.env",
+    "cloud.development": "configs/topology/cloud.development.env",
+    "cloud.production": "configs/topology/cloud.production.env"
+  },
+  "packaging": {
+    "cloudConfigFiles": [
+      "sdkwork-api-cloud-gateway.iam.development.toml",
+      "sdkwork-api-cloud-gateway.iam.production.toml"
+    ],
+    "targets": [
+      {
+        "id": "container-noarch-cloud-container-config-bundle-tar-gz",
+        "profile": "container",
+        "platform": "container",
+        "architecture": "noarch",
+        "formats": [
+          "tar.gz"
+        ],
+        "runner": "ubuntu-24.04",
+        "outputGlob": "dist/cloud-config/sdkwork-iam-api-gateway-config-*.tar.gz",
+        "deploymentProfile": "cloud",
+        "runtimeTarget": "container",
+        "variant": "config-bundle"
+      }
+    ]
   }
 }

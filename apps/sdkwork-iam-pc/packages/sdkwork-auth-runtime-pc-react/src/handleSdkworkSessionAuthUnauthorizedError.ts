@@ -98,6 +98,9 @@ export function handleSdkworkSessionAuthUnauthorizedError(
     readEnv,
   });
 
+  options.clearSession?.();
+  options.resetClients?.();
+
   if (mode === "debug") {
     return true;
   }
@@ -115,13 +118,8 @@ export function handleSdkworkSessionAuthUnauthorizedError(
   const shouldRedirect = options.shouldRedirectOnUnauthorized
     ?? ((path) => defaultShouldRedirectOnUnauthorized(path, authLoginPath));
   if (!shouldRedirect(pathname)) {
-    options.clearSession?.();
-    options.resetClients?.();
     return true;
   }
-
-  options.clearSession?.();
-  options.resetClients?.();
 
   const returnPath = currentPath ?? pathname;
   const loginUrl = buildLoginRedirectPath(authLoginPath, returnPath);
