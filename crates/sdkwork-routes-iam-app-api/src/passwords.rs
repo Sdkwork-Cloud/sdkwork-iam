@@ -2,7 +2,9 @@ use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use password_hash::SaltString;
 use rand_core::OsRng;
 use serde_json::Value;
-use sqlx::{PgPool, Row};
+use sqlx::{PgPool, Postgres, Row};
+use std::sync::{Arc, OnceLock};
+use tokio::sync::Semaphore;
 
 use sdkwork_iam_web_adapter::{
     messaging_verification_enabled, verify_and_consume_messaging_challenge,
@@ -11,6 +13,24 @@ use sdkwork_iam_web_adapter::{
 
 use crate::state::*;
 use crate::utils::*;
+
+static PASSWORD_HASH_PERMITS: OnceLock<Arc<Semaphore>> = OnceLock::new();
+
+async fn run_password_cpu_task<T>(task: impl FnOnce() -> T + Send + 'static) -> Option<T>
+where
+    T: Send + 'static,
+{
+    let permits = PASSWORD_HASH_PERMITS
+        .get_or_init(|| Arc::new(Semaphore::new(32)))
+        .clone();
+    let permit = permits.acquire_owned().await.ok()?;
+    tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        task()
+    })
+    .await
+    .ok()
+}
 
 // ── Rate limiting ──────────────────────────────────────────────────
 
@@ -216,14 +236,14 @@ pub(crate) async fn authenticate_password(
 
         if let Some(lock_time) = locked_until {
             if lock_time > now {
-                if verify_password(&password_hash, password) {
+                if verify_password_async(password_hash.clone(), password.to_owned()).await {
                     locked_with_valid_password = true;
                 }
                 continue;
             }
         }
 
-        if !verify_password(&password_hash, password) {
+        if !verify_password_async(password_hash.clone(), password.to_owned()).await {
             record_failed_password_attempt(
                 pg,
                 &user.id,
@@ -308,17 +328,23 @@ pub(crate) async fn password_reused_in_history(
     .await
     .map_err(|error| format!("check password history failed: {error}"))?;
 
-    Ok(history_rows
-        .iter()
-        .any(|(old_hash,)| verify_password(old_hash, password)))
+    for (old_hash,) in history_rows {
+        if verify_password_async(old_hash, password.to_owned()).await {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
-pub(crate) async fn record_password_history(
-    pg: &PgPool,
+pub(crate) async fn record_password_history<'e, E>(
+    executor: E,
     tenant_id: &str,
     user_id: &str,
     password_hash: &str,
-) -> Result<(), String> {
+) -> Result<(), String>
+where
+    E: sqlx::Executor<'e, Database = Postgres>,
+{
     let now = current_timestamp_utc();
     sqlx::query(
         "INSERT INTO iam_password_history (id, tenant_id, user_id, password_hash, created_at) \
@@ -329,7 +355,7 @@ pub(crate) async fn record_password_history(
     .bind(user_id)
     .bind(password_hash)
     .bind(now)
-    .execute(pg)
+    .execute(executor)
     .await
     .map_err(|error| format!("insert password history failed: {error}"))?;
     Ok(())
@@ -343,11 +369,28 @@ pub(crate) async fn set_user_password(
     password: &str,
     config: &LocalIamConfig,
 ) -> Result<(), String> {
-    let password_hash =
-        hash_password(password).ok_or_else(|| "hash password failed".to_string())?;
+    let password_hash = hash_password_async(password.to_owned())
+        .await
+        .ok_or_else(|| "hash password failed".to_string())?;
     let now = current_timestamp_utc();
     let email_verified = user.email_verified as i32;
     let tenant_id = &user.tenant_id;
+
+    if password_reused_in_history(
+        pg,
+        tenant_id,
+        &user.id,
+        password,
+        config.password_history_count,
+    )
+    .await?
+    {
+        return Err("password was used recently - choose a different password".to_owned());
+    }
+    let mut tx = pg
+        .begin()
+        .await
+        .map_err(|error| format!("begin create password transaction failed: {error}"))?;
 
     // Insert user — ON CONFLICT DO NOTHING prevents overwriting existing users
     let result = sqlx::query(
@@ -360,7 +403,7 @@ pub(crate) async fn set_user_password(
     .bind(&user.email).bind(&user.phone)
     .bind(email_verified).bind(user.phone_verified as i32)
     .bind(&now).bind(&now).bind(&now)
-    .execute(pg).await
+    .execute(&mut *tx).await
     .map_err(|error| format!("insert user failed: {error}"))?;
 
     if result.rows_affected() == 0 {
@@ -368,18 +411,6 @@ pub(crate) async fn set_user_password(
     }
 
     let credential_id = uuid::Uuid::now_v7().to_string();
-
-    if password_reused_in_history(
-        pg,
-        tenant_id,
-        &user.id,
-        password,
-        config.password_history_count,
-    )
-    .await?
-    {
-        return Err("password was used recently — choose a different password".to_string());
-    }
 
     sqlx::query(
         "INSERT INTO iam_credential (id, tenant_id, user_id, credential_type, credential_hash, failed_attempts, status, created_at, updated_at) \
@@ -391,10 +422,13 @@ pub(crate) async fn set_user_password(
     )
     .bind(&credential_id).bind(tenant_id).bind(&user.id)
     .bind(&password_hash).bind(&now).bind(&now)
-    .execute(pg).await
+    .execute(&mut *tx).await
     .map_err(|error| format!("insert credential failed: {error}"))?;
 
-    record_password_history(pg, tenant_id, &user.id, &password_hash).await?;
+    record_password_history(&mut *tx, tenant_id, &user.id, &password_hash).await?;
+    tx.commit()
+        .await
+        .map_err(|error| format!("commit create password transaction failed: {error}"))?;
 
     Ok(())
 }
@@ -410,6 +444,18 @@ pub(crate) fn hash_password(password: &str) -> Option<String> {
         .hash_password(password.as_bytes(), &salt)
         .map(|hash| hash.to_string())
         .ok()
+}
+
+async fn hash_password_async(password: String) -> Option<String> {
+    run_password_cpu_task(move || hash_password(&password))
+        .await
+        .flatten()
+}
+
+async fn verify_password_async(password_hash: String, password: String) -> bool {
+    run_password_cpu_task(move || verify_password(&password_hash, &password))
+        .await
+        .unwrap_or(false)
 }
 
 pub(crate) fn verify_password(password_hash: &str, password: &str) -> bool {
@@ -463,10 +509,15 @@ pub(crate) async fn replace_user_password(
     {
         return Err("password was used recently — choose a different password".to_string());
     }
-    let password_hash =
-        hash_password(password).ok_or_else(|| "hash password failed".to_string())?;
+    let password_hash = hash_password_async(password.to_owned())
+        .await
+        .ok_or_else(|| "hash password failed".to_string())?;
     let now = current_timestamp_utc();
-    sqlx::query(
+    let mut tx = pg
+        .begin()
+        .await
+        .map_err(|error| format!("begin replace password transaction failed: {error}"))?;
+    let credential_result = sqlx::query(
         "UPDATE iam_credential \
          SET credential_hash = $3, failed_attempts = 0, locked_until = NULL, status = 'active', updated_at = $4 \
          WHERE tenant_id = $1 AND user_id = $2 AND credential_type = 'password'",
@@ -475,9 +526,12 @@ pub(crate) async fn replace_user_password(
     .bind(user_id)
     .bind(&password_hash)
     .bind(&now)
-    .execute(pg)
+    .execute(&mut *tx)
     .await
     .map_err(|error| format!("update credential failed: {error}"))?;
+    if credential_result.rows_affected() != 1 {
+        return Err("active password credential not found".to_owned());
+    }
     sqlx::query(
         "UPDATE iam_user SET password_changed_at = $3, updated_at = $4 WHERE tenant_id = $1 AND id = $2",
     )
@@ -485,10 +539,13 @@ pub(crate) async fn replace_user_password(
     .bind(user_id)
     .bind(&now)
     .bind(&now)
-    .execute(pg)
+    .execute(&mut *tx)
     .await
     .map_err(|error| format!("update user password timestamp failed: {error}"))?;
-    record_password_history(pg, &tenant_id, user_id, &password_hash).await?;
+    record_password_history(&mut *tx, &tenant_id, user_id, &password_hash).await?;
+    tx.commit()
+        .await
+        .map_err(|error| format!("commit replace password transaction failed: {error}"))?;
     Ok(())
 }
 

@@ -74,4 +74,41 @@ describe("@sdkwork/iam-h5-auth", () => {
       organizationId: "0",
     });
   });
+
+  it("creates typed WeChat mini program and OAuth sessions", async () => {
+    const service = {
+      oauth: {
+        authorizationUrls: {
+          create: vi.fn().mockResolvedValue({ authUrl: "https://open.weixin.qq.com/auth" }),
+        },
+        miniProgramSessions: {
+          create: vi.fn().mockResolvedValue({ authToken: "mini-auth", accessToken: "mini-access" }),
+        },
+        sessions: {
+          create: vi.fn().mockResolvedValue({ authToken: "oauth-auth", accessToken: "oauth-access" }),
+        },
+      },
+    };
+    const controller = createSdkworkIamH5AuthController({ service: service as never });
+
+    await expect(controller.loginWithMiniProgram({
+      jsCode: "wx-code",
+      surfaceCode: "consumer-mini",
+    })).resolves.toMatchObject({ authToken: "mini-auth" });
+    await expect(controller.loginWithOAuth({
+      code: "oauth-code",
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/callback",
+      state: "oauth-state",
+    })).resolves.toMatchObject({ authToken: "oauth-auth" });
+    await expect(controller.createOAuthAuthorizationUrl({
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/callback",
+    })).resolves.toBe("https://open.weixin.qq.com/auth");
+
+    expect(service.oauth.miniProgramSessions.create).toHaveBeenCalledWith({
+      jsCode: "wx-code",
+      surfaceCode: "consumer-mini",
+    });
+  });
 });

@@ -66,13 +66,13 @@ const IAM_OPEN_API_ROUTES: &[HttpRoute] = &[
         HttpMethod::Get,
         "/iam/v3/api/oauth/provider_callbacks/{callbackPublicId}",
         "iam.oauth",
-        "iam.oauth.providerCallbacks.handleGet",
+        "iam.oauth.providerCallbacks.retrieve",
     ),
     HttpRoute::open_api_flexible(
         HttpMethod::Post,
         "/iam/v3/api/oauth/provider_callbacks/{callbackPublicId}",
         "iam.oauth",
-        "iam.oauth.providerCallbacks.handlePost",
+        "iam.oauth.providerCallbacks.create",
     ),
 ];
 

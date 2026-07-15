@@ -98,12 +98,12 @@ export function handleSdkworkSessionAuthUnauthorizedError(
     readEnv,
   });
 
-  options.clearSession?.();
-  options.resetClients?.();
-
   if (mode === "debug") {
     return true;
   }
+
+  options.clearSession?.();
+  options.resetClients?.();
 
   const currentPath = options.readCurrentPath?.() ?? readBrowserRequestPath();
 

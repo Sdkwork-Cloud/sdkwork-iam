@@ -197,13 +197,6 @@ describe("SDKWork IAM SDK port contracts", () => {
         return {};
       }
 
-      async handleGet() {
-        return {};
-      }
-
-      async handlePost() {
-        return {};
-      }
     }
 
     const appClient = {
@@ -632,8 +625,8 @@ function createAppOAuthResources(createResource?: () => object) {
       },
     }),
     callbacks: Object.assign(resource(), {
-      handleGet: vi.fn(),
-      handlePost: vi.fn(),
+      create: vi.fn(),
+      retrieve: vi.fn(),
     }),
     miniProgramSessions: Object.assign(resource(), {
       create: vi.fn(),

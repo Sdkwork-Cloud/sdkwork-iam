@@ -18,6 +18,20 @@ export interface SdkworkSdkHttpRequestBoundary {
   [SDKWORK_SDK_SESSION_AUTH_BOUNDARY]?: boolean;
 }
 
+interface SdkworkSdkRequestAuthOptions {
+  credentialEntryBootstrap?: boolean;
+  skipAuth?: boolean;
+}
+
+function shouldHandleSessionAuthUnauthorized(options: unknown): boolean {
+  if (typeof options !== "object" || options === null || Array.isArray(options)) {
+    return true;
+  }
+
+  const authOptions = options as SdkworkSdkRequestAuthOptions;
+  return authOptions.credentialEntryBootstrap !== true && authOptions.skipAuth !== true;
+}
+
 export function attachSdkworkSdkSessionAuthBoundary<TClient extends SdkworkSdkClientWithHttp>(
   client: TClient,
   handlerOptions: SdkworkSessionAuthUnauthorizedHandlerOptions = {},
@@ -35,7 +49,9 @@ export function attachSdkworkSdkSessionAuthBoundary<TClient extends SdkworkSdkCl
     try {
       return await originalRequest<TResponse>(path, options);
     } catch (error) {
-      handleError(error);
+      if (shouldHandleSessionAuthUnauthorized(options)) {
+        handleError(error);
+      }
       throw error;
     }
   };
@@ -51,7 +67,9 @@ export function attachSdkworkSdkSessionAuthBoundary<TClient extends SdkworkSdkCl
       try {
         yield* originalStreamJson<TResponse>(path, options);
       } catch (error) {
-        handleError(error);
+        if (shouldHandleSessionAuthUnauthorized(options)) {
+          handleError(error);
+        }
         throw error;
       }
     };

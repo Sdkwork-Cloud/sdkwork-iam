@@ -11,7 +11,9 @@ use sdkwork_iam_web_adapter::{
     resolve_relying_party_client, revoke_oauth_token, validate_authorize_request, AuthorizeRequest,
 };
 use sdkwork_utils_rust::OAuthProtocolErrorBody;
-use serde_json::{json, Value};
+#[cfg(test)]
+use serde_json::json;
+use serde_json::Value;
 use std::collections::HashMap;
 
 use crate::state::OpenIamState;

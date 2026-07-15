@@ -44,7 +44,7 @@ pub use limits::{
 pub use oauth_rs256_signing::{
     ensure_postgres_oauth_rs256_signing_key, list_postgres_oauth_jwks_document,
     load_postgres_oauth_rs256_signing_key, oauth_rs256_signing_kid, sign_rs256_jwt,
-    OAuthRs256SigningMaterial,
+    verify_rs256_jwt, OAuthRs256SigningMaterial,
 };
 pub use rbac_scope::{
     ensure_assigner_covers_role_permissions, ensure_permission_grant_within_assigner_scope,

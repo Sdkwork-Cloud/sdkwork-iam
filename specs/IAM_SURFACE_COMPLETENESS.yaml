@@ -42,8 +42,8 @@ sdks:
     backend: complete
     open: complete
   otherLanguages:
-    status: missing
-    note: Spec declares multi-language; only TypeScript artifacts materialized in repo
+    status: partial
+    note: TypeScript generated SDKs are composed and verified; Dart/Swift artifacts are generated transport outputs and still require composed consumer verification before GA.
 
 capabilities:
   - id: auth-session
@@ -90,13 +90,19 @@ capabilities:
   - id: oauth
     database: complete
     backend-api: complete
-    app-api: complete
+    app-api: partial
     open-api: complete
-    pc-app: partial
+    pc-app: complete
     pc-admin: complete
     pc-console: missing-by-design
-    h5-app: missing
-    flutter-app: missing
+    h5-app: partial
+    flutter-app: partial
+
+    notes: >
+      WeChat mini-program login now has a dedicated jscode2session exchange and
+      typed command, but H5/Flutter consumers and live provider credentials still
+      require release acceptance. WeChat official-account XML/AES callbacks are
+      implemented at the open-api adapter boundary.
 
   - id: user-directory
     database: complete
@@ -142,3 +148,5 @@ verification:
   - pnpm run verify
   - pnpm run test:iam-standard-contracts
   - cargo test --workspace
+  - node ../sdkwork-specs/tools/check-api-operation-patterns.mjs --workspace .
+  - node ../sdkwork-specs/tools/check-app-sdk-consumer-imports.mjs --workspace .

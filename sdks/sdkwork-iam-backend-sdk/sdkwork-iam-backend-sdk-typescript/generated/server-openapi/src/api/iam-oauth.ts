@@ -1,7 +1,7 @@
 import { backendApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseOperationCommand, SdkWorkPageData } from '../types';
+import type { AppbaseOperationCommand, IamOauthClientCreateCommand, SdkWorkPageData } from '../types';
 
 
 export class IamOauthIamOauthWebhookConfigsVerificationsApi {
@@ -132,8 +132,8 @@ export class IamOauthIamOauthSurfacesApi {
   }
 
 /** Iam oauth surfaces delete. */
-  async delete(surfaceId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/oauth/surfaces/${serializePathParameter(surfaceId, { name: 'surfaceId', style: 'simple', explode: false })}`));
+  async delete(surfaceId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/oauth/surfaces/${serializePathParameter(surfaceId, { name: 'surfaceId', style: 'simple', explode: false })}`));
   }
 
 /** Iam oauth surfaces update. */
@@ -176,8 +176,8 @@ export class IamOauthIamOauthSecretsApi {
   }
 
 /** Iam oauth secrets delete. */
-  async delete(secretId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/oauth/secrets/${serializePathParameter(secretId, { name: 'secretId', style: 'simple', explode: false })}`));
+  async delete(secretId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/oauth/secrets/${serializePathParameter(secretId, { name: 'secretId', style: 'simple', explode: false })}`));
   }
 }
 
@@ -534,8 +534,8 @@ export class IamOauthIamOauthOperationalResourcesApi {
   }
 
 /** Iam oauth operational Resources delete. */
-  async delete(resourceId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/oauth/operational_resources/${serializePathParameter(resourceId, { name: 'resourceId', style: 'simple', explode: false })}`));
+  async delete(resourceId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/oauth/operational_resources/${serializePathParameter(resourceId, { name: 'resourceId', style: 'simple', explode: false })}`));
   }
 
 /** Iam oauth operational Resources update. */
@@ -578,8 +578,8 @@ export class IamOauthIamOauthIntegrationsApi {
   }
 
 /** Iam oauth integrations delete. */
-  async delete(integrationId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/oauth/integrations/${serializePathParameter(integrationId, { name: 'integrationId', style: 'simple', explode: false })}`));
+  async delete(integrationId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/oauth/integrations/${serializePathParameter(integrationId, { name: 'integrationId', style: 'simple', explode: false })}`));
   }
 
 /** Iam oauth integrations retrieve. */
@@ -622,8 +622,8 @@ export class IamOauthIamOauthGrantsApi {
   }
 
 /** Iam oauth grants delete. */
-  async delete(grantId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/oauth/grants/${serializePathParameter(grantId, { name: 'grantId', style: 'simple', explode: false })}`));
+  async delete(grantId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/oauth/grants/${serializePathParameter(grantId, { name: 'grantId', style: 'simple', explode: false })}`));
   }
 }
 
@@ -734,13 +734,13 @@ export class IamOauthIamOauthClientsApi {
   }
 
 /** Iam oauth clients create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+  async create(body: IamOauthClientCreateCommand): Promise<Record<string, unknown>> {
     return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/clients`), body, undefined, undefined, 'application/json');
   }
 
 /** Iam oauth clients delete. */
-  async delete(oauthClientId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/oauth/clients/${serializePathParameter(oauthClientId, { name: 'oauthClientId', style: 'simple', explode: false })}`));
+  async delete(oauthClientId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/oauth/clients/${serializePathParameter(oauthClientId, { name: 'oauthClientId', style: 'simple', explode: false })}`));
   }
 
 /** Iam oauth clients retrieve. */

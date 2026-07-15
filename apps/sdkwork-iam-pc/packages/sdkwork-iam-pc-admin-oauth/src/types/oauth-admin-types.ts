@@ -26,6 +26,7 @@ export interface SdkworkIamOauthClientDraft {
   integrationId: string;
   providerClientId: string;
   providerCode: string;
+  providerTenantId: string;
 }
 
 export interface SdkworkIamOauthClaimMappingDraft {

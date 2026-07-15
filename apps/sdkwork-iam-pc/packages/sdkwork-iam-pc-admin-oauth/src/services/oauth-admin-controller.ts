@@ -278,13 +278,17 @@ export function createSdkworkIamOauthAdminController(
     },
     createClient(body) {
       return wrapCreate(
-        () => service.iam.oauth.clients.create({
-          clientCode: body.clientCode.trim(),
-          displayName: body.displayName.trim(),
-          integrationId: body.integrationId.trim(),
-          providerClientId: body.providerClientId.trim(),
-          providerCode: body.providerCode.trim(),
-        }),
+        () => {
+          const providerTenantId = body.providerTenantId.trim();
+          return service.iam.oauth.clients.create({
+            clientCode: body.clientCode.trim(),
+            displayName: body.displayName.trim(),
+            integrationId: body.integrationId.trim(),
+            providerClientId: body.providerClientId.trim(),
+            providerCode: body.providerCode.trim(),
+            ...(providerTenantId ? { providerTenantId } : {}),
+          });
+        },
         "Failed to create OAuth client",
         true,
       );

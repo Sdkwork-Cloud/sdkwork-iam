@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::Response,
+    response::{IntoResponse, Response},
     routing::{delete, get, patch, post},
     Json, Router,
 };
@@ -18,7 +18,7 @@ use uuid::Uuid;
 
 use crate::backend_audit::{
     directory_create_with_audit, execute_conditional_mutation_with_audit,
-    record_backend_mutation_audit_tx,
+    execute_mutation_with_audit, record_backend_mutation_audit_tx,
 };
 use crate::backend_sql::{
     cursor_page_json, encode_timeline_keyset_cursor, internal_handler_error,
@@ -632,23 +632,42 @@ async fn create_role_binding(
     let binding_id = format!("iamrb-{}", Uuid::new_v4());
     let now = Utc::now().to_rfc3339();
 
-    let result = sqlx::query(
-        "INSERT INTO iam_role_binding \
-            (id, tenant_id, organization_id, role_id, principal_kind, principal_id, scope_kind, scope_id, \
-             effect, status, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active', $10, $10)",
+    let binding_id_insert = binding_id.clone();
+    let tenant_id_insert = tenant_id.clone();
+    let role_id_insert = role_id.clone();
+    let principal_kind_insert = principal_kind.clone();
+    let principal_id_insert = principal_id.clone();
+    let scope_kind_insert = scope_kind.clone();
+    let scope_id_insert = scope_id.clone();
+    let effect_insert = effect.clone();
+    let result = directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_role_binding",
+        binding_id.clone(),
+        json!({ "roleId": role_id, "principalKind": principal_kind, "principalId": principal_id }),
+        |tx| Box::pin(async move {
+            sqlx::query(
+                "INSERT INTO iam_role_binding \
+                    (id, tenant_id, organization_id, role_id, principal_kind, principal_id, scope_kind, scope_id, \
+                     effect, status, created_at, updated_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active', $10, $10)",
+            )
+            .bind(binding_id_insert)
+            .bind(tenant_id_insert)
+            .bind(organization_id)
+            .bind(role_id_insert)
+            .bind(principal_kind_insert)
+            .bind(principal_id_insert)
+            .bind(scope_kind_insert)
+            .bind(scope_id_insert)
+            .bind(effect_insert)
+            .bind(now)
+            .execute(&mut **tx)
+            .await
+            .map(|_| ())
+        }),
     )
-    .bind(&binding_id)
-    .bind(&tenant_id)
-    .bind(&organization_id)
-    .bind(&role_id)
-    .bind(&principal_kind)
-    .bind(&principal_id)
-    .bind(&scope_kind)
-    .bind(&scope_id)
-    .bind(&effect)
-    .bind(&now)
-    .execute(pg)
     .await;
 
     match result {
@@ -672,7 +691,7 @@ async fn create_role_binding(
         Err(error) => appbase_error(
             StatusCode::CONFLICT,
             "iam_role_binding_create_failed",
-            &error.to_string(),
+            &error,
         ),
     }
 }
@@ -692,27 +711,46 @@ async fn delete_role_binding(
     };
 
     let now = Utc::now().to_rfc3339();
-    let result = sqlx::query(
-        "UPDATE iam_role_binding \
-         SET status = 'revoked', updated_at = $3 \
-         WHERE tenant_id = $1 AND id = $2 AND status = 'active'",
+    let tenant_id_update = tenant_id.clone();
+    let role_binding_id_update = role_binding_id.clone();
+    let result = execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_role_binding.delete",
+        "iam_role_binding",
+        role_binding_id.clone(),
+        json!({}),
+        |tx| {
+            Box::pin(async move {
+                sqlx::query(
+                    "UPDATE iam_role_binding \
+                 SET status = 'revoked', updated_at = $3 \
+                 WHERE tenant_id = $1 AND id = $2 AND status = 'active'",
+                )
+                .bind(tenant_id_update)
+                .bind(role_binding_id_update)
+                .bind(now)
+                .execute(&mut **tx)
+                .await
+                .map(|result| result.rows_affected())
+            })
+        },
+        |rows_affected| *rows_affected > 0,
     )
-    .bind(&tenant_id)
-    .bind(&role_binding_id)
-    .bind(&now)
-    .execute(pg)
     .await;
 
     match result {
-        Ok(done) if done.rows_affected() > 0 => {
-            appbase_ok(json!({ "roleBindingId": role_binding_id }))
-        }
+        Ok(done) if done > 0 => appbase_ok(json!({ "roleBindingId": role_binding_id })),
         Ok(_) => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_role_binding_not_found",
             "role binding not found",
         ),
-        Err(error) => internal_handler_error("iam_role_binding_delete_failed", error),
+        Err(error) => appbase_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "iam_role_binding_delete_failed",
+            &error,
+        ),
     }
 }
 
@@ -1472,3 +1510,38 @@ async fn patch_directory_row(
 }
 
 include!("directory_crud.impl.rs");
+
+#[cfg(test)]
+mod tests {
+    use super::nest_tree;
+    use serde_json::json;
+
+    #[test]
+    fn nest_tree_preserves_descendants_when_rows_are_not_topologically_sorted() {
+        let tree = nest_tree(
+            vec![
+                json!({ "id": "grandchild", "parentId": "child" }),
+                json!({ "id": "root", "parentId": null }),
+                json!({ "id": "child", "parentId": "root" }),
+            ],
+            "id",
+            "parentId",
+        );
+        assert_eq!(tree[0]["id"], "root");
+        assert_eq!(tree[0]["children"][0]["id"], "child");
+        assert_eq!(tree[0]["children"][0]["children"][0]["id"], "grandchild");
+    }
+
+    #[test]
+    fn nest_tree_breaks_cycles_without_recursing_forever() {
+        let tree = nest_tree(
+            vec![
+                json!({ "id": "a", "parentId": "b" }),
+                json!({ "id": "b", "parentId": "a" }),
+            ],
+            "id",
+            "parentId",
+        );
+        assert!(tree.is_empty());
+    }
+}

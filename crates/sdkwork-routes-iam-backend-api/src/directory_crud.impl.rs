@@ -34,43 +34,65 @@ fn patch_fields(body: &Value) -> Vec<(String, String)> {
 }
 
 fn nest_tree(records: Vec<Value>, id_key: &str, parent_key: &str) -> Vec<Value> {
-    let mut nodes = records;
-    for node in &mut nodes {
-        if let Value::Object(map) = node {
-            map.insert("children".to_owned(), json!([]));
+    fn build(
+        id: &str,
+        nodes: &HashMap<String, Value>,
+        children: &HashMap<String, Vec<String>>,
+        visiting: &mut std::collections::HashSet<String>,
+    ) -> Option<Value> {
+        if !visiting.insert(id.to_owned()) {
+            return None;
         }
+        let mut node = nodes.get(id)?.clone();
+        let child_values = children
+            .get(id)
+            .into_iter()
+            .flatten()
+            .filter_map(|child_id| build(child_id, nodes, children, visiting))
+            .collect::<Vec<_>>();
+        if let Value::Object(map) = &mut node {
+            map.insert("children".to_owned(), Value::Array(child_values));
+        }
+        visiting.remove(id);
+        Some(node)
     }
 
-    let mut index = HashMap::<String, usize>::new();
-    for (idx, node) in nodes.iter().enumerate() {
-        if let Some(id) = node.get(id_key).and_then(Value::as_str) {
-            index.insert(id.to_owned(), idx);
+    let mut nodes = HashMap::<String, Value>::new();
+    let mut parents = HashMap::<String, Option<String>>::new();
+    for mut node in records {
+        let Some(id) = node.get(id_key).and_then(Value::as_str).map(str::to_owned) else {
+            continue;
+        };
+        if let Value::Object(map) = &mut node {
+            map.remove("children");
         }
-    }
-
-    let mut roots = Vec::new();
-    for idx in 0..nodes.len() {
-        let parent_id = nodes[idx]
+        let parent = node
             .get(parent_key)
             .and_then(Value::as_str)
             .filter(|value| !value.is_empty())
             .map(str::to_owned);
-        let Some(parent_id) = parent_id else {
-            roots.push(nodes[idx].clone());
-            continue;
-        };
-        let Some(parent_idx) = index.get(&parent_id).copied() else {
-            roots.push(nodes[idx].clone());
-            continue;
-        };
-        let child = nodes[idx].clone();
-        if let Value::Object(ref mut parent) = nodes[parent_idx] {
-            if let Some(Value::Array(children)) = parent.get_mut("children") {
-                children.push(child);
+        parents.insert(id.clone(), parent);
+        nodes.insert(id, node);
+    }
+
+    let mut children = HashMap::<String, Vec<String>>::new();
+    let mut roots = Vec::new();
+    for (id, parent) in parents {
+        match parent {
+            Some(parent_id) if nodes.contains_key(&parent_id) => {
+                children.entry(parent_id).or_default().push(id);
             }
+            _ => roots.push(id),
         }
     }
+    roots.sort();
+    for child_ids in children.values_mut() {
+        child_ids.sort();
+    }
     roots
+        .iter()
+        .filter_map(|id| build(id, &nodes, &children, &mut std::collections::HashSet::new()))
+        .collect()
 }
 
 async fn fetch_permission_row<'e>(
@@ -109,7 +131,6 @@ async fn soft_delete(
     );
     let tenant_id = tenant_id.to_owned();
     let id = id.to_owned();
-    let response_id = id.clone();
     let table = table.to_owned();
     let action = format!("{table}.delete");
     match execute_conditional_mutation_with_audit(
@@ -137,9 +158,7 @@ async fn soft_delete(
     )
     .await
     {
-        Ok(rows_affected) if rows_affected > 0 => {
-            appbase_ok(json!({ "deleted": true, "id": response_id }))
-        }
+        Ok(rows_affected) if rows_affected > 0 => StatusCode::NO_CONTENT.into_response(),
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, not_found_code, "resource not found"),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -637,9 +656,7 @@ async fn delete_permission(
     )
     .await
     {
-        Ok(rows_affected) if rows_affected > 0 => {
-            appbase_ok(json!({ "deleted": true, "permissionId": permission_id }))
-        }
+        Ok(rows_affected) if rows_affected > 0 => StatusCode::NO_CONTENT.into_response(),
         Ok(_) => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_permission_not_found",
@@ -716,20 +733,37 @@ async fn create_role_permission(
 
     let id = format!("iamrp-{}", Uuid::new_v4());
     let now = Utc::now().to_rfc3339();
-    match sqlx::query(
-        "INSERT INTO iam_role_permission (id, tenant_id, role_id, permission_id, created_at) \
-         VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, role_id, permission_id) DO NOTHING",
+    let id_insert = id.clone();
+    let tenant_id_insert = tenant_id.clone();
+    let role_id_insert = role_id.clone();
+    let permission_id_insert = permission_id.clone();
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_role_permission.create",
+        "iam_role_permission",
+        id,
+        json!({ "permissionId": permission_id, "roleId": role_id }),
+        |tx| Box::pin(async move {
+            sqlx::query(
+                "INSERT INTO iam_role_permission (id, tenant_id, role_id, permission_id, created_at) \
+                 VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, role_id, permission_id) DO NOTHING",
+            )
+            .bind(id_insert)
+            .bind(tenant_id_insert)
+            .bind(role_id_insert)
+            .bind(permission_id_insert)
+            .bind(now)
+            .execute(&mut **tx)
+            .await
+            .map(|result| result.rows_affected())
+        }),
+        |rows_affected| *rows_affected > 0,
     )
-    .bind(&id)
-    .bind(&tenant_id)
-    .bind(&role_id)
-    .bind(&permission_id)
-    .bind(&now)
-    .execute(pg)
     .await
     {
         Ok(_) => appbase_ok(json!({ "permissionId": permission_id, "roleId": role_id })),
-        Err(error) => internal_handler_error("iam_role_permission_create_failed", error),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_role_permission_create_failed", &error),
     }
 }
 
@@ -755,16 +789,32 @@ async fn delete_role_permission(
         .flatten()
         .map(|row| row.get::<String, _>(0))
         .unwrap_or(permission_id);
-    match sqlx::query(
-        "DELETE FROM iam_role_permission WHERE tenant_id = $1 AND role_id = $2 AND permission_id = $3",
+    let tenant_id_delete = tenant_id.clone();
+    let role_id_delete = role_id.clone();
+    let permission_id_delete = permission_id.clone();
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_role_permission.delete",
+        "iam_role_permission",
+        format!("{role_id}:{permission_id}"),
+        json!({ "permissionId": permission_id, "roleId": role_id }),
+        |tx| Box::pin(async move {
+            sqlx::query(
+                "DELETE FROM iam_role_permission WHERE tenant_id = $1 AND role_id = $2 AND permission_id = $3",
+            )
+            .bind(tenant_id_delete)
+            .bind(role_id_delete)
+            .bind(permission_id_delete)
+            .execute(&mut **tx)
+            .await
+            .map(|result| result.rows_affected())
+        }),
+        |rows_affected| *rows_affected > 0,
     )
-    .bind(&tenant_id)
-    .bind(&role_id)
-    .bind(&permission_id)
-    .execute(pg)
     .await
     {
-        Ok(result) if result.rows_affected() > 0 => {
+        Ok(result) if result > 0 => {
             appbase_ok(json!({ "permissionId": permission_id, "roleId": role_id }))
         }
         Ok(_) => appbase_error(
@@ -772,7 +822,7 @@ async fn delete_role_permission(
             "iam_role_permission_not_found",
             "role permission not found",
         ),
-        Err(error) => internal_handler_error("iam_role_permission_delete_failed", error),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_role_permission_delete_failed", &error),
     }
 }
 
@@ -863,21 +913,37 @@ async fn create_policy(
     let now = Utc::now().to_rfc3339();
     let policy_json = read_string_field(&body, &["policyJson", "policy_json"])
         .unwrap_or_else(|| "{}".to_owned());
-    match sqlx::query(
-        "INSERT INTO iam_policy (id, tenant_id, code, name, policy_json, status, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, 'active', $6, $6)",
+    let id_insert = id.clone();
+    let tenant_id_insert = tenant_id.clone();
+    let code_insert = code.as_ref().expect("validated").clone();
+    let name_insert = name.as_ref().expect("validated").clone();
+    let policy_json_insert = policy_json.clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_policy",
+        id.clone(),
+        json!({ "code": code, "name": name }),
+        |tx| Box::pin(async move {
+            sqlx::query(
+                "INSERT INTO iam_policy (id, tenant_id, code, name, policy_json, status, created_at, updated_at) \
+                 VALUES ($1, $2, $3, $4, $5, 'active', $6, $6)",
+            )
+            .bind(id_insert)
+            .bind(tenant_id_insert)
+            .bind(code_insert)
+            .bind(name_insert)
+            .bind(policy_json_insert)
+            .bind(now)
+            .execute(&mut **tx)
+            .await
+            .map(|_| ())
+        }),
     )
-    .bind(&id)
-    .bind(&tenant_id)
-    .bind(code.as_ref().expect("validated"))
-    .bind(name.as_ref().expect("validated"))
-    .bind(&policy_json)
-    .bind(&now)
-    .execute(pg)
     .await
     {
         Ok(_) => retrieve_policy(State(state), ctx, Path(id)).await,
-        Err(error) => internal_handler_error("iam_policy_create_failed", error),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_policy_create_failed", &error),
     }
 }
 
@@ -977,6 +1043,46 @@ async fn create_organization(
         let _ = tx.rollback().await;
         return internal_handler_error("iam_organization_create_failed", error);
     }
+    if let Some(parent_id) = parent_organization_id.as_deref() {
+        let ancestors = match sqlx::query(
+            "SELECT ancestor_organization_id, depth \
+             FROM iam_organization_closure \
+             WHERE tenant_id = $1 AND descendant_organization_id = $2 \
+             ORDER BY depth DESC",
+        )
+        .bind(&tenant_id)
+        .bind(parent_id)
+        .fetch_all(&mut *tx)
+        .await
+        {
+            Ok(rows) => rows,
+            Err(error) => {
+                let _ = tx.rollback().await;
+                return internal_handler_error("iam_organization_create_failed", error);
+            }
+        };
+        for ancestor in ancestors {
+            let ancestor_id: String = ancestor.get(0);
+            let parent_depth: i32 = ancestor.get(1);
+            if let Err(error) = sqlx::query(
+                "INSERT INTO iam_organization_closure \
+                 (id, tenant_id, ancestor_organization_id, descendant_organization_id, depth, created_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6)",
+            )
+            .bind(format!("iamoc-{}", Uuid::new_v4()))
+            .bind(&tenant_id)
+            .bind(ancestor_id)
+            .bind(&id)
+            .bind(parent_depth + 1)
+            .bind(&now)
+            .execute(&mut *tx)
+            .await
+            {
+                let _ = tx.rollback().await;
+                return internal_handler_error("iam_organization_create_failed", error);
+            }
+        }
+    }
     if let Err(error) = record_backend_mutation_audit_tx(
         &mut *tx,
         &ctx,
@@ -1056,12 +1162,38 @@ async fn create_organization_membership(State(state): State<BackendIamState>, ct
     if organization_id.as_deref().unwrap_or("").is_empty() || user_id.as_deref().unwrap_or("").is_empty() {
         return appbase_error(StatusCode::BAD_REQUEST, "iam_membership_invalid", "organizationId and userId are required");
     }
-    let id = format!("iamom-{}", Uuid::new_v4()); let now = Utc::now().to_rfc3339();
-    match sqlx::query("INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, membership_kind, status, joined_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'active', $6, $6, $6)")
-        .bind(&id).bind(&tenant_id).bind(organization_id.as_ref().expect("validated")).bind(user_id.as_ref().expect("validated"))
-        .bind(read_string_field(&body, &["membershipKind", "membership_kind"]).unwrap_or_else(|| "employee".to_owned())).bind(&now).execute(pg).await {
-        Ok(_) => appbase_ok(json!({ "membershipId": id })),
-        Err(error) => internal_handler_error("iam_membership_create_failed", error),
+    let id = format!("iamom-{}", Uuid::new_v4());
+    let now = Utc::now().to_rfc3339();
+    let organization_id = organization_id.expect("validated");
+    let user_id = user_id.expect("validated");
+    let membership_kind = read_string_field(&body, &["membershipKind", "membership_kind"])
+        .unwrap_or_else(|| "employee".to_owned());
+    let tenant_id_insert = tenant_id.clone();
+    let organization_id_insert = organization_id.clone();
+    let user_id_insert = user_id.clone();
+    let membership_kind_insert = membership_kind.clone();
+    let id_insert = id.clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_organization_membership",
+        id.clone(),
+        json!({ "organizationId": organization_id, "userId": user_id }),
+        |tx| Box::pin(async move {
+            sqlx::query("INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, membership_kind, status, joined_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'active', $6, $6, $6)")
+                .bind(id_insert)
+                .bind(tenant_id_insert)
+                .bind(organization_id_insert)
+                .bind(user_id_insert)
+                .bind(membership_kind_insert)
+                .bind(now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+        }),
+    ).await {
+        Ok(()) => appbase_ok(json!({ "membershipId": id })),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_membership_create_failed", &error),
     }
 }
 
@@ -1242,12 +1374,44 @@ async fn create_department_assignment(State(state): State<BackendIamState>, ctx:
     if [organization_id.as_deref(), user_id.as_deref(), department_id.as_deref(), membership_id.as_deref()].iter().any(|v| v.is_none_or(|t| t.is_empty())) {
         return appbase_error(StatusCode::BAD_REQUEST, "iam_department_assignment_invalid", "organizationId, userId, departmentId, and organizationMembershipId are required");
     }
-    let id = format!("iamda-{}", Uuid::new_v4()); let now = Utc::now().to_rfc3339();
-    match sqlx::query("INSERT INTO iam_department_assignment (id, tenant_id, organization_id, organization_membership_id, department_id, user_id, assignment_kind, is_primary, effective_from, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,0,$8,'active',$8,$8)")
-        .bind(&id).bind(&tenant_id).bind(organization_id.as_ref().expect("validated")).bind(membership_id.as_ref().expect("validated")).bind(department_id.as_ref().expect("validated")).bind(user_id.as_ref().expect("validated"))
-        .bind(read_string_field(&body, &["assignmentKind", "assignment_kind"]).unwrap_or_else(|| "primary".to_owned())).bind(&now).execute(pg).await {
-        Ok(_) => appbase_ok(json!({ "assignmentId": id })),
-        Err(error) => internal_handler_error("iam_department_assignment_create_failed", error),
+    let id = format!("iamda-{}", Uuid::new_v4());
+    let now = Utc::now().to_rfc3339();
+    let organization_id = organization_id.expect("validated");
+    let membership_id = membership_id.expect("validated");
+    let department_id = department_id.expect("validated");
+    let user_id = user_id.expect("validated");
+    let assignment_kind = read_string_field(&body, &["assignmentKind", "assignment_kind"])
+        .unwrap_or_else(|| "primary".to_owned());
+    let id_insert = id.clone();
+    let tenant_id_insert = tenant_id.clone();
+    let organization_id_insert = organization_id.clone();
+    let membership_id_insert = membership_id.clone();
+    let department_id_insert = department_id.clone();
+    let user_id_insert = user_id.clone();
+    let assignment_kind_insert = assignment_kind.clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_department_assignment",
+        id.clone(),
+        json!({ "organizationId": organization_id, "departmentId": department_id, "userId": user_id }),
+        |tx| Box::pin(async move {
+            sqlx::query("INSERT INTO iam_department_assignment (id, tenant_id, organization_id, organization_membership_id, department_id, user_id, assignment_kind, is_primary, effective_from, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,0,$8,'active',$8,$8)")
+                .bind(id_insert)
+                .bind(tenant_id_insert)
+                .bind(organization_id_insert)
+                .bind(membership_id_insert)
+                .bind(department_id_insert)
+                .bind(user_id_insert)
+                .bind(assignment_kind_insert)
+                .bind(now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+        }),
+    ).await {
+        Ok(()) => appbase_ok(json!({ "assignmentId": id })),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_department_assignment_create_failed", &error),
     }
 }
 
@@ -1282,12 +1446,44 @@ async fn create_position(State(state): State<BackendIamState>, ctx: WebRequestCo
     if organization_id.as_deref().unwrap_or("").is_empty() || code.as_deref().unwrap_or("").is_empty() || name.as_deref().unwrap_or("").is_empty() {
         return appbase_error(StatusCode::BAD_REQUEST, "iam_position_invalid", "organizationId, code, and name are required");
     }
-    let id = format!("iampo-{}", Uuid::new_v4()); let now = Utc::now().to_rfc3339();
-    match sqlx::query("INSERT INTO iam_position (id, tenant_id, organization_id, department_id, code, name, position_kind, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'active',$8,$8)")
-        .bind(&id).bind(&tenant_id).bind(organization_id.as_ref().expect("validated")).bind(read_string_field(&body, &["departmentId", "department_id"]))
-        .bind(code.as_ref().expect("validated")).bind(name.as_ref().expect("validated")).bind(read_string_field(&body, &["positionKind", "position_kind"]).unwrap_or_else(|| "standard".to_owned())).bind(&now).execute(pg).await {
-        Ok(_) => appbase_ok(json!({ "positionId": id })),
-        Err(error) => internal_handler_error("iam_position_create_failed", error),
+    let id = format!("iampo-{}", Uuid::new_v4());
+    let now = Utc::now().to_rfc3339();
+    let organization_id = organization_id.expect("validated");
+    let code = code.expect("validated");
+    let name = name.expect("validated");
+    let department_id = read_string_field(&body, &["departmentId", "department_id"]);
+    let position_kind = read_string_field(&body, &["positionKind", "position_kind"])
+        .unwrap_or_else(|| "standard".to_owned());
+    let id_insert = id.clone();
+    let tenant_id_insert = tenant_id.clone();
+    let organization_id_insert = organization_id.clone();
+    let code_insert = code.clone();
+    let name_insert = name.clone();
+    let department_id_insert = department_id.clone();
+    let position_kind_insert = position_kind.clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_position",
+        id.clone(),
+        json!({ "organizationId": organization_id, "code": code }),
+        |tx| Box::pin(async move {
+            sqlx::query("INSERT INTO iam_position (id, tenant_id, organization_id, department_id, code, name, position_kind, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'active',$8,$8)")
+                .bind(id_insert)
+                .bind(tenant_id_insert)
+                .bind(organization_id_insert)
+                .bind(department_id_insert)
+                .bind(code_insert)
+                .bind(name_insert)
+                .bind(position_kind_insert)
+                .bind(now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+        }),
+    ).await {
+        Ok(()) => appbase_ok(json!({ "positionId": id })),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_position_create_failed", &error),
     }
 }
 
@@ -1343,11 +1539,40 @@ async fn create_position_assignment(State(state): State<BackendIamState>, ctx: W
     if [organization_id.as_deref(), department_assignment_id.as_deref(), position_id.as_deref(), user_id.as_deref()].iter().any(|v| v.is_none_or(|t| t.is_empty())) {
         return appbase_error(StatusCode::BAD_REQUEST, "iam_position_assignment_invalid", "organizationId, departmentAssignmentId, positionId, and userId are required");
     }
-    let id = format!("iampa-{}", Uuid::new_v4()); let now = Utc::now().to_rfc3339();
-    match sqlx::query("INSERT INTO iam_position_assignment (id, tenant_id, organization_id, department_assignment_id, position_id, user_id, is_primary, effective_from, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,0,$7,'active',$7,$7)")
-        .bind(&id).bind(&tenant_id).bind(organization_id.as_ref().expect("validated")).bind(department_assignment_id.as_ref().expect("validated")).bind(position_id.as_ref().expect("validated")).bind(user_id.as_ref().expect("validated")).bind(&now).execute(pg).await {
-        Ok(_) => appbase_ok(json!({ "assignmentId": id })),
-        Err(error) => internal_handler_error("iam_position_assignment_create_failed", error),
+    let id = format!("iampa-{}", Uuid::new_v4());
+    let now = Utc::now().to_rfc3339();
+    let organization_id = organization_id.expect("validated");
+    let department_assignment_id = department_assignment_id.expect("validated");
+    let position_id = position_id.expect("validated");
+    let user_id = user_id.expect("validated");
+    let id_insert = id.clone();
+    let tenant_id_insert = tenant_id.clone();
+    let organization_id_insert = organization_id.clone();
+    let department_assignment_id_insert = department_assignment_id.clone();
+    let position_id_insert = position_id.clone();
+    let user_id_insert = user_id.clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_position_assignment",
+        id.clone(),
+        json!({ "organizationId": organization_id, "positionId": position_id, "userId": user_id }),
+        |tx| Box::pin(async move {
+            sqlx::query("INSERT INTO iam_position_assignment (id, tenant_id, organization_id, department_assignment_id, position_id, user_id, is_primary, effective_from, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,0,$7,'active',$7,$7)")
+                .bind(id_insert)
+                .bind(tenant_id_insert)
+                .bind(organization_id_insert)
+                .bind(department_assignment_id_insert)
+                .bind(position_id_insert)
+                .bind(user_id_insert)
+                .bind(now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+        }),
+    ).await {
+        Ok(()) => appbase_ok(json!({ "assignmentId": id })),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_position_assignment_create_failed", &error),
     }
 }
 
@@ -1524,9 +1749,7 @@ let tenant_id = tenant_id_owned.clone();
         |rows_affected| *rows_affected > 0,
     )
     .await {
-        Ok(rows_affected) if rows_affected > 0 => {
-            appbase_ok(json!({ "deleted": true, "tenantId": tenant_id }))
-        }
+        Ok(rows_affected) if rows_affected > 0 => StatusCode::NO_CONTENT.into_response(),
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, "iam_tenant_not_found", "tenant not found"),
         Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_delete_failed", &error),
     }
@@ -1567,11 +1790,35 @@ async fn create_tenant_member(State(state): State<BackendIamState>, ctx: WebRequ
     }
     let user_id = read_string_field(&body, &["userId", "user_id"]);
     if user_id.as_deref().unwrap_or("").is_empty() { return appbase_error(StatusCode::BAD_REQUEST, "iam_tenant_member_invalid", "userId is required"); }
-    let id = format!("iamtm-{}", Uuid::new_v4()); let now = Utc::now().to_rfc3339();
-    match sqlx::query("INSERT INTO iam_tenant_member (id, tenant_id, user_id, member_kind, status, joined_at, created_at, updated_at) VALUES ($1,$2,$3,$4,'active',$5,$5,$5)")
-        .bind(&id).bind(&tenant_id).bind(user_id.as_ref().expect("validated")).bind(read_string_field(&body, &["memberKind", "member_kind"]).unwrap_or_else(|| "member".to_owned())).bind(&now).execute(pg).await {
-        Ok(_) => appbase_ok(json!({ "id": id, "tenantId": tenant_id, "userId": user_id })),
-        Err(error) => internal_handler_error("iam_tenant_member_create_failed", error),
+    let id = format!("iamtm-{}", Uuid::new_v4());
+    let now = Utc::now().to_rfc3339();
+    let user_id = user_id.expect("validated");
+    let member_kind = read_string_field(&body, &["memberKind", "member_kind"])
+        .unwrap_or_else(|| "member".to_owned());
+    let id_insert = id.clone();
+    let tenant_id_insert = tenant_id.clone();
+    let user_id_insert = user_id.clone();
+    let member_kind_insert = member_kind.clone();
+    match directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_tenant_member",
+        id.clone(),
+        json!({ "tenantId": tenant_id, "userId": user_id }),
+        |tx| Box::pin(async move {
+            sqlx::query("INSERT INTO iam_tenant_member (id, tenant_id, user_id, member_kind, status, joined_at, created_at, updated_at) VALUES ($1,$2,$3,$4,'active',$5,$5,$5)")
+                .bind(id_insert)
+                .bind(tenant_id_insert)
+                .bind(user_id_insert)
+                .bind(member_kind_insert)
+                .bind(now)
+                .execute(&mut **tx)
+                .await
+                .map(|_| ())
+        }),
+    ).await {
+        Ok(()) => appbase_ok(json!({ "id": id, "tenantId": tenant_id, "userId": user_id })),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_member_create_failed", &error),
     }
 }
 
@@ -1584,11 +1831,25 @@ async fn update_tenant_member(State(state): State<BackendIamState>, ctx: WebRequ
     let mut set_clause = String::new();
     for (index, (column, _)) in assignments.iter().enumerate() { if index > 0 { set_clause.push_str(", "); } set_clause.push_str(column); set_clause.push_str(" = $"); set_clause.push_str(&(index + 3).to_string()); }
     let sql = format!("UPDATE iam_tenant_member SET {set_clause} WHERE tenant_id = $1 AND user_id = $2");
-    let mut query = sqlx::query(&sql).bind(&tenant_id).bind(&user_id); for (_, value) in &assignments { query = query.bind(value); }
-    match query.execute(pg).await {
-        Ok(result) if result.rows_affected() > 0 => appbase_ok(json!({ "tenantId": tenant_id, "userId": user_id })),
+    let tenant_id_update = tenant_id.clone();
+    let user_id_update = user_id.clone();
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_tenant_member.update",
+        "iam_tenant_member",
+        user_id.clone(),
+        json!({ "userId": user_id }),
+        |tx| Box::pin(async move {
+            let mut query = sqlx::query(&sql).bind(tenant_id_update).bind(user_id_update);
+            for (_, value) in assignments { query = query.bind(value); }
+            query.execute(&mut **tx).await.map(|result| result.rows_affected())
+        }),
+        |rows_affected| *rows_affected > 0,
+    ).await {
+        Ok(result) if result > 0 => appbase_ok(json!({ "tenantId": tenant_id, "userId": user_id })),
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, "iam_tenant_member_not_found", "tenant member not found"),
-        Err(error) => internal_handler_error("iam_tenant_member_update_failed", error),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_member_update_failed", &error),
     }
 }
 
@@ -1598,10 +1859,29 @@ async fn delete_tenant_member(State(state): State<BackendIamState>, ctx: WebRequ
         return response;
     }
     let now = Utc::now().to_rfc3339();
-    match sqlx::query("UPDATE iam_tenant_member SET status = 'disabled', updated_at = $3 WHERE tenant_id = $1 AND user_id = $2 AND status <> 'disabled'").bind(&tenant_id).bind(&user_id).bind(&now).execute(pg).await {
-        Ok(result) if result.rows_affected() > 0 => appbase_ok(json!({ "deleted": true, "tenantId": tenant_id, "userId": user_id })),
+    let tenant_id_owned = tenant_id.clone();
+    let user_id_owned = user_id.clone();
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_tenant_member.delete",
+        "iam_tenant_member",
+        user_id.clone(),
+        json!({ "userId": user_id }),
+        |tx| Box::pin(async move {
+            sqlx::query("UPDATE iam_tenant_member SET status = 'disabled', updated_at = $3 WHERE tenant_id = $1 AND user_id = $2 AND status <> 'disabled'")
+                .bind(tenant_id_owned)
+                .bind(user_id_owned)
+                .bind(now)
+                .execute(&mut **tx)
+                .await
+                .map(|result| result.rows_affected())
+        }),
+        |rows_affected| *rows_affected > 0,
+    ).await {
+        Ok(rows_affected) if rows_affected > 0 => StatusCode::NO_CONTENT.into_response(),
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, "iam_tenant_member_not_found", "tenant member not found"),
-        Err(error) => internal_handler_error("iam_tenant_member_delete_failed", error),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_tenant_member_delete_failed", &error),
     }
 }
 
@@ -1609,10 +1889,29 @@ async fn revoke_api_key(State(state): State<BackendIamState>, ctx: WebRequestCon
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
     let now = Utc::now().to_rfc3339();
-    match sqlx::query("UPDATE iam_api_key SET status = 'revoked', updated_at = $3 WHERE tenant_id = $1 AND id = $2 AND status <> 'revoked'").bind(&tenant_id).bind(&api_key_id).bind(&now).execute(pg).await {
-        Ok(result) if result.rows_affected() > 0 => appbase_ok(json!({ "apiKeyId": api_key_id, "status": "revoked" })),
+    let tenant_id_update = tenant_id.clone();
+    let api_key_id_update = api_key_id.clone();
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_api_key.revoke",
+        "iam_api_key",
+        api_key_id.clone(),
+        json!({}),
+        |tx| Box::pin(async move {
+            sqlx::query("UPDATE iam_api_key SET status = 'revoked', updated_at = $3 WHERE tenant_id = $1 AND id = $2 AND status <> 'revoked'")
+                .bind(tenant_id_update)
+                .bind(api_key_id_update)
+                .bind(now)
+                .execute(&mut **tx)
+                .await
+                .map(|result| result.rows_affected())
+        }),
+        |rows_affected| *rows_affected > 0,
+    ).await {
+        Ok(result) if result > 0 => appbase_ok(json!({ "apiKeyId": api_key_id, "status": "revoked" })),
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, "iam_api_key_not_found", "api key not found"),
-        Err(error) => internal_handler_error("iam_api_key_revoke_failed", error),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_api_key_revoke_failed", &error),
     }
 }
 
@@ -1923,20 +2222,37 @@ async fn create_group_member(
     }
     let id = format!("iamgrpm-{}", Uuid::new_v4());
     let now = Utc::now().to_rfc3339();
-    match sqlx::query(
-        "INSERT INTO iam_group_member \
-         (id, tenant_id, group_id, principal_kind, principal_id, status, joined_at, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, 'active', $6, $6, $6) \
-         ON CONFLICT (tenant_id, group_id, principal_kind, principal_id) DO UPDATE SET \
-           status = 'active', updated_at = excluded.updated_at",
+    let id_insert = id.clone();
+    let tenant_id_insert = tenant_id.clone();
+    let group_id_insert = group_id.clone();
+    let principal_kind_insert = principal_kind.clone();
+    let principal_id_insert = principal_id.clone();
+    match execute_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_group_member.create",
+        "iam_group_member",
+        format!("{group_id}:{principal_kind}:{principal_id}"),
+        json!({ "groupId": group_id, "principalKind": principal_kind, "principalId": principal_id }),
+        |tx| Box::pin(async move {
+            sqlx::query(
+                "INSERT INTO iam_group_member \
+                 (id, tenant_id, group_id, principal_kind, principal_id, status, joined_at, created_at, updated_at) \
+                 VALUES ($1, $2, $3, $4, $5, 'active', $6, $6, $6) \
+                 ON CONFLICT (tenant_id, group_id, principal_kind, principal_id) DO UPDATE SET \
+                   status = 'active', updated_at = excluded.updated_at",
+            )
+            .bind(id_insert)
+            .bind(tenant_id_insert)
+            .bind(group_id_insert)
+            .bind(principal_kind_insert)
+            .bind(principal_id_insert)
+            .bind(now)
+            .execute(&mut **tx)
+            .await
+            .map(|_| ())
+        }),
     )
-    .bind(&id)
-    .bind(&tenant_id)
-    .bind(&group_id)
-    .bind(&principal_kind)
-    .bind(&principal_id)
-    .bind(&now)
-    .execute(pg)
     .await
     {
         Ok(_) => match sqlx::query(
@@ -1959,7 +2275,7 @@ async fn create_group_member(
                 "member created but could not be loaded",
             ),
         },
-        Err(error) => internal_handler_error("iam_group_member_create_failed", error),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_group_member_create_failed", &error),
     }
 }
 
@@ -1978,26 +2294,40 @@ async fn delete_group_member(
         return appbase_error(StatusCode::NOT_FOUND, "iam_group_not_found", "group not found");
     };
     let now = Utc::now().to_rfc3339();
-    match sqlx::query(
-        "UPDATE iam_group_member SET status = 'disabled', updated_at = $4 \
-         WHERE tenant_id = $1 AND group_id = $2 AND id = $3 AND status <> 'disabled'",
+    let tenant_id_update = tenant_id.clone();
+    let group_id_update = group_id.clone();
+    let member_id_update = member_id.clone();
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_group_member.delete",
+        "iam_group_member",
+        member_id.clone(),
+        json!({ "groupId": group_id }),
+        |tx| Box::pin(async move {
+            sqlx::query(
+                "UPDATE iam_group_member SET status = 'disabled', updated_at = $4 \
+                 WHERE tenant_id = $1 AND group_id = $2 AND id = $3 AND status <> 'disabled'",
+            )
+            .bind(tenant_id_update)
+            .bind(group_id_update)
+            .bind(member_id_update)
+            .bind(now)
+            .execute(&mut **tx)
+            .await
+            .map(|result| result.rows_affected())
+        }),
+        |rows_affected| *rows_affected > 0,
     )
-    .bind(&tenant_id)
-    .bind(&group_id)
-    .bind(&member_id)
-    .bind(&now)
-    .execute(pg)
     .await
     {
-        Ok(result) if result.rows_affected() > 0 => {
-            appbase_ok(json!({ "deleted": true, "memberId": member_id }))
-        }
+        Ok(result) if result > 0 => StatusCode::NO_CONTENT.into_response(),
         Ok(_) => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_group_member_not_found",
             "group member not found",
         ),
-        Err(error) => internal_handler_error("iam_group_member_delete_failed", error),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_group_member_delete_failed", &error),
     }
 }
 

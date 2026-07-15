@@ -179,8 +179,8 @@ export function createIamAppSdkAdapter(client: unknown): IamAppSdkClient {
         },
       },
       callbacks: {
-        handleGet: standardResourceMethod(oauthCallbacks, "handleGet", "appbaseApp.oauth.callbacks.handleGet"),
-        handlePost: standardResourceMethod(oauthCallbacks, "handlePost", "appbaseApp.oauth.callbacks.handlePost"),
+        retrieve: standardResourceMethod(oauthCallbacks, "retrieve", "appbaseApp.oauth.callbacks.retrieve"),
+        create: standardResourceMethod(oauthCallbacks, "create", "appbaseApp.oauth.callbacks.create"),
       },
       miniProgramSessions: {
         create: standardResourceMethod(oauthMiniProgramSessions, "create", "appbaseApp.oauth.miniProgramSessions.create"),

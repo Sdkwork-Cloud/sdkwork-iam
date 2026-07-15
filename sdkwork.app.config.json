@@ -5,6 +5,20 @@
     "key": "sdkwork-iam",
     "name": "sdkwork-iam"
   },
+  "backend": {
+    "appId": "sdkwork-iam",
+    "serviceId": "sdkwork-iam-gateway-assembly",
+    "defaultBind": "127.0.0.1:3901",
+    "profileKey": "backend-root-admin",
+    "tenantId": "100001",
+    "organizationId": "0",
+    "accessTokenPermissionScope": [
+      "iam.users.read",
+      "iam.organizations.read",
+      "iam.roles.read",
+      "iam.permissions.read"
+    ]
+  },
   "runtime": {
     "supportedDeploymentProfiles": [
       "standalone",

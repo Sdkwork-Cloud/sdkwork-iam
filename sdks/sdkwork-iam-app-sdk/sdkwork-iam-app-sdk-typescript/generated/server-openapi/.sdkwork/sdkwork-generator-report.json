@@ -12,7 +12,7 @@
   "mode": "apply",
   "hasChanges": true,
   "hasDestructiveChanges": false,
-  "changeFingerprint": "6181fb835327eb1adebf83b27db60fded7ae9214c732dc6e9db1ddb9e4a82d06",
+  "changeFingerprint": "e84328153ba7c5230c11620118830ebbe9aae084bc68ebb01b2b4355c506255b",
   "changeImpact": {
     "schemaVersion": 1,
     "areas": [
@@ -52,6 +52,7 @@
           "src/types/appbase-tenant-application-update-command.ts",
           "src/types/common.ts",
           "src/types/field-error.ts",
+          "src/types/iam-oauth-client-create-command.ts",
           "src/types/index.ts",
           "src/types/page-info.ts",
           "src/types/problem-detail.ts",
@@ -62,7 +63,8 @@
           "src/types/sdk-work-page-data.ts",
           "src/types/sdk-work-platform-error-code.ts",
           "src/types/sdk-work-resource-data.ts",
-          "src/types/sdk-work-resource-response.ts"
+          "src/types/sdk-work-resource-response.ts",
+          "src/types/wechat-mini-program-session-create-command.ts"
         ]
       },
       {
@@ -230,21 +232,21 @@
     "localVersions": []
   },
   "stats": {
-    "totalFiles": 45,
-    "models": 18,
+    "totalFiles": 47,
+    "models": 20,
     "apis": 4,
-    "types": 20
+    "types": 22
   },
   "warnings": [],
   "syncSummary": {
     "dryRun": false,
     "controlPlaneEnabled": true,
-    "writtenFiles": 45,
+    "writtenFiles": 47,
     "skippedScaffoldFiles": 0,
     "skippedUnchangedGeneratedFiles": 0,
     "deletedGeneratedFiles": 0,
     "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
-    "changeFingerprint": "6181fb835327eb1adebf83b27db60fded7ae9214c732dc6e9db1ddb9e4a82d06",
+    "changeFingerprint": "e84328153ba7c5230c11620118830ebbe9aae084bc68ebb01b2b4355c506255b",
     "changes": {
       "createdGeneratedFiles": [
         "bin/publish-core.mjs",
@@ -278,6 +280,7 @@
         "src/types/appbase-tenant-application-update-command.ts",
         "src/types/common.ts",
         "src/types/field-error.ts",
+        "src/types/iam-oauth-client-create-command.ts",
         "src/types/index.ts",
         "src/types/page-info.ts",
         "src/types/problem-detail.ts",
@@ -289,6 +292,7 @@
         "src/types/sdk-work-platform-error-code.ts",
         "src/types/sdk-work-resource-data.ts",
         "src/types/sdk-work-resource-response.ts",
+        "src/types/wechat-mini-program-session-create-command.ts",
         "tsconfig.json"
       ],
       "updatedGeneratedFiles": [],
@@ -340,6 +344,7 @@
             "src/types/appbase-tenant-application-update-command.ts",
             "src/types/common.ts",
             "src/types/field-error.ts",
+            "src/types/iam-oauth-client-create-command.ts",
             "src/types/index.ts",
             "src/types/page-info.ts",
             "src/types/problem-detail.ts",
@@ -350,7 +355,8 @@
             "src/types/sdk-work-page-data.ts",
             "src/types/sdk-work-platform-error-code.ts",
             "src/types/sdk-work-resource-data.ts",
-            "src/types/sdk-work-resource-response.ts"
+            "src/types/sdk-work-resource-response.ts",
+            "src/types/wechat-mini-program-session-create-command.ts"
           ]
         },
         {

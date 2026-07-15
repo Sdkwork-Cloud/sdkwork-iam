@@ -16,6 +16,9 @@ const DEFAULT_LOCAL_OAUTH_CODE_TTL_SECONDS: u64 = 300;
 pub struct LocalOAuthProviderProfile {
     pub provider: String,
     pub subject: String,
+    pub open_id: Option<String>,
+    pub union_id: Option<String>,
+    pub union_scope_id: Option<String>,
     pub email: Option<String>,
     pub phone: Option<String>,
     pub name: Option<String>,
@@ -158,6 +161,9 @@ pub fn read_local_oauth_provider_profile(
     Ok(LocalOAuthProviderProfile {
         provider: normalized.clone(),
         subject,
+        open_id: None,
+        union_id: None,
+        union_scope_id: None,
         email: local_oauth_provider_env_key(&normalized, "EMAIL")
             .ok()
             .and_then(|key| read_env_trimmed(&key)),

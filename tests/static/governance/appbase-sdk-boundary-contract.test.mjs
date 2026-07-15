@@ -403,12 +403,12 @@ test("open-api generated ingress operations stay anonymous and suppress stored c
   );
   assert.match(
     oauthApi,
-    /async handleGet\([\s\S]*skipAuth:\s*true/u,
+    /async retrieve\([\s\S]*skipAuth:\s*true/u,
     "open-api GET provider callback must suppress stored credentials",
   );
   assert.match(
     oauthApi,
-    /async handlePost\([\s\S]*skipAuth:\s*true/u,
+    /async create\([\s\S]*skipAuth:\s*true/u,
     "open-api POST provider callback must suppress stored credentials",
   );
   assert.match(

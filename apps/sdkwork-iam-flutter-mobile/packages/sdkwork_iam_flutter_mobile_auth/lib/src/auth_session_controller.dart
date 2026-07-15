@@ -36,6 +36,10 @@ typedef IamFlutterMobileLoginContextSelectionCreator = Future<Map<String, dynami
   Map<String, String> body,
 );
 
+typedef IamFlutterMobileOAuthSessionCreator = Future<Map<String, dynamic>> Function(
+  Map<String, String> body,
+);
+
 typedef IamFlutterMobileAuthLogout = Future<void> Function();
 
 sealed class IamFlutterMobileLoginResult {
@@ -60,12 +64,18 @@ class IamFlutterMobileAuthSessionController {
     required IamFlutterMobileAuthSessionCreator createSession,
     required IamFlutterMobileAuthLogout logout,
     IamFlutterMobileLoginContextSelectionCreator? createLoginContextSelection,
+    IamFlutterMobileOAuthSessionCreator? createOAuthSession,
+    IamFlutterMobileOAuthSessionCreator? createMiniProgramSession,
   })  : _createSession = createSession,
         _createLoginContextSelection = createLoginContextSelection,
+        _createOAuthSession = createOAuthSession,
+        _createMiniProgramSession = createMiniProgramSession,
         _logout = logout;
 
   final IamFlutterMobileAuthSessionCreator _createSession;
   final IamFlutterMobileLoginContextSelectionCreator? _createLoginContextSelection;
+  final IamFlutterMobileOAuthSessionCreator? _createOAuthSession;
+  final IamFlutterMobileOAuthSessionCreator? _createMiniProgramSession;
   final IamFlutterMobileAuthLogout _logout;
 
   IamFlutterMobileAuthSession? _session;
@@ -89,6 +99,47 @@ class IamFlutterMobileAuthSessionController {
     _challenge = null;
     _session = _toSession(payload);
     return IamFlutterMobileLoginSessionResult(_session!);
+  }
+
+  Future<IamFlutterMobileAuthSession> loginWithOAuth({
+    required String provider,
+    required String code,
+    required String state,
+    String? redirectUri,
+  }) async {
+    final creator = _createOAuthSession;
+    if (creator == null) {
+      throw StateError('OAuth session creation is not configured');
+    }
+    final payload = await creator({
+      'provider': provider,
+      'code': code,
+      'state': state,
+      if (sdkworkNormalizeOptionalString(redirectUri) case final value?)
+        'redirectUri': value,
+    });
+    _challenge = null;
+    _session = _toSession(payload);
+    return _session!;
+  }
+
+  Future<IamFlutterMobileAuthSession> loginWithMiniProgram({
+    required String jsCode,
+    String? surfaceCode,
+  }) async {
+    final creator = _createMiniProgramSession;
+    if (creator == null) {
+      throw StateError('mini program session creation is not configured');
+    }
+    final payload = await creator({
+      'jsCode': jsCode,
+      'providerCode': 'wechat_mini_program',
+      if (sdkworkNormalizeOptionalString(surfaceCode) case final value?)
+        'surfaceCode': value,
+    });
+    _challenge = null;
+    _session = _toSession(payload);
+    return _session!;
   }
 
   Future<IamFlutterMobileAuthSession> selectPersonalLogin(String continuationToken) async {

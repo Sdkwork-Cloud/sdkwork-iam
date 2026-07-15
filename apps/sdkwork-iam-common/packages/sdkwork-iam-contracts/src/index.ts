@@ -560,10 +560,10 @@ export const SDKWORK_IAM_API_ROUTES = {
       },
     },
     callbacks: {
-      handleGet: operation("GET", `${app}/oauth/callbacks/{providerCode}`, "oauth", "oauth.callbacks.handleGet", "public", {
+      retrieve: operation("GET", `${app}/oauth/callbacks/{providerCode}`, "oauth", "oauth.callbacks.retrieve", "public", {
         forbidCredentialHeaders: true,
       }),
-      handlePost: operation("POST", `${app}/oauth/callbacks/{providerCode}`, "oauth", "oauth.callbacks.handlePost", "public", {
+      create: operation("POST", `${app}/oauth/callbacks/{providerCode}`, "oauth", "oauth.callbacks.create", "public", {
         forbidCredentialHeaders: true,
       }),
     },
@@ -836,7 +836,7 @@ export const SDKWORK_IAM_API_ROUTES = {
         retrieve: operation("GET", `${app}/iam/users/current`, "iam", "users.current.retrieve", "dualToken"),
         update: operation("PATCH", `${app}/iam/users/current`, "iam", "users.current.update", "dualToken"),
         password: {
-          update: operation("POST", `${app}/iam/users/current/password`, "iam", "users.current.password.update", "dualToken"),
+          update: operation("PATCH", `${app}/iam/users/current/password`, "iam", "users.current.password.update", "dualToken"),
         },
         emailBindings: {
           create: operation("POST", `${app}/iam/users/current/email_bindings`, "iam", "users.current.emailBindings.create", "dualToken"),
@@ -956,8 +956,8 @@ export const SDKWORK_IAM_CAPABILITIES = [
       "oauth.accountLinks.list",
       "oauth.authorizationUrls.create",
       "oauth.authorizations.completions.create",
-      "oauth.callbacks.handleGet",
-      "oauth.callbacks.handlePost",
+      "oauth.callbacks.retrieve",
+      "oauth.callbacks.create",
       "oauth.deviceAuthorizations.create",
       "oauth.deviceAuthorizations.passwordCompletions.create",
       "oauth.deviceAuthorizations.retrieve",

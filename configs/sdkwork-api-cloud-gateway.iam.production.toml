@@ -8,15 +8,15 @@ environment = "production"
 bind = "127.0.0.1:3900"
 
 [cors]
-allowAnyOrigin = true
-allowedOrigins = []
+allowAnyOrigin = false
+allowedOrigins = ["https://iam.sdkwork.com"]
 
 [request]
-maxBodyBytes = 33554432
-timeoutMs = 0
+maxBodyBytes = 8388608
+timeoutMs = 30000
 
 [readiness]
-checkUpstreams = false
+checkUpstreams = true
 timeoutMs = 1000
 
 [observability]
@@ -24,9 +24,9 @@ accessLogEnabled = true
 auditLogEnabled = true
 accessLogSampleRateBasisPoints = 10000
 auditLogSampleRateBasisPoints = 10000
-metricsEnabled = false
+metricsEnabled = true
 metricsPath = "/metrics"
-tracingEnabled = false
+tracingEnabled = true
 redactHeaders = ["authorization", "access-token", "cookie", "x-api-key", "set-cookie"]
 
 [diagnostics]
@@ -36,25 +36,25 @@ includePolicyInventory = true
 includeRouteInventory = true
 
 [security]
-allowedHosts = []
+allowedHosts = ["iam.sdkwork.com", "api.sdkwork.com"]
 trustedProxyCidrs = []
 secureHeadersEnabled = true
 maxHeaderBytes = 65536
 maxHeaderCount = 128
 rejectCredentialHeadersOnAnonymousAuthRoutes = true
-csrfGuardEnabled = false
+csrfGuardEnabled = true
 
 [security.waf]
-enabled = false
-mode = "monitor"
+enabled = true
+mode = "block"
 inspectQuery = true
 inspectHeaders = true
-inspectJsonBody = false
+inspectJsonBody = true
 
 [traffic]
-rateLimitEnabled = false
+rateLimitEnabled = true
 compatXRateLimitHeaders = true
-globalMaxInFlight = 1024
+globalMaxInFlight = 256
 rateLimits = []
 concurrencyLimits = []
 
@@ -64,11 +64,11 @@ dryRun = false
 rules = []
 
 [resilience]
-retryEnabled = false
-maxAttempts = 1
+retryEnabled = true
+maxAttempts = 2
 retryStatuses = [502, 503, 504]
-retryBackoffMs = 0
-circuitBreakerEnabled = false
+retryBackoffMs = 100
+circuitBreakerEnabled = true
 failureThreshold = 5
 openSeconds = 30
 halfOpenMaxAttempts = 1

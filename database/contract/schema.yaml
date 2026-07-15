@@ -8,112 +8,13 @@ engines:
   - postgres
 table_prefix: iam_
 tables:
-  - name: iam_api_key
+  - name: iam_tenant
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_application_template
+  - name: iam_tenant_member
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_application_template_package
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_audit_event
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_catalog_materialization
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_credential
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_department
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_department_assignment
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_department_closure
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_device
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_ephemeral_artifact
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_group
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_group_member
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_mfa_factor
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_module_registry_entry
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_module_registry_snapshot
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_account_link
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_authorization_state
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_callback_event
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_claim_mapping
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_client
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_diagnostic_run
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_flow_config
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_grant
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_integration
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_operational_resource
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_operator_platform
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_policy
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_provider_catalog
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_resource_account
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_resource_authorization
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_scope_profile
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_secret
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_surface
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_tenant_binding
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_oauth_webhook_config
+  - name: iam_tenant_signing_key
     lifecycle_status: active
     owner: sdkwork-iam
   - name: iam_organization
@@ -125,13 +26,13 @@ tables:
   - name: iam_organization_membership
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_password_history
+  - name: iam_department
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_permission
+  - name: iam_department_closure
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_policy
+  - name: iam_department_assignment
     lifecycle_status: active
     owner: sdkwork-iam
   - name: iam_position
@@ -140,42 +41,141 @@ tables:
   - name: iam_position_assignment
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_role
+  - name: iam_user
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_role_binding
+  - name: iam_user_identity
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_role_exclusion
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_role_permission
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_security_event
-    lifecycle_status: active
-    owner: sdkwork-iam
-  - name: iam_service_account
+  - name: iam_credential
     lifecycle_status: active
     owner: sdkwork-iam
   - name: iam_session
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_tenant
+  - name: iam_mfa_factor
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_device
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_role
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_permission
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_policy
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_role_permission
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_role_binding
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_api_key
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_security_event
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_audit_event
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_provider_catalog
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_integration
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_client
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_secret
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_surface
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_flow_config
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_scope_profile
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_claim_mapping
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_policy
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_tenant_binding
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_operator_platform
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_resource_account
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_resource_authorization
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_webhook_config
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_operational_resource
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_authorization_state
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_account_link
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_grant
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_callback_event
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_oauth_diagnostic_run
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_password_history
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_ephemeral_artifact
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_application_template
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_application_template_package
     lifecycle_status: active
     owner: sdkwork-iam
   - name: iam_tenant_application
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_tenant_member
+  - name: iam_module_registry_entry
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_tenant_signing_key
+  - name: iam_module_registry_snapshot
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_user
+  - name: iam_catalog_materialization
     lifecycle_status: active
     owner: sdkwork-iam
-  - name: iam_user_identity
+  - name: iam_group
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_group_member
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_service_account
+    lifecycle_status: active
+    owner: sdkwork-iam
+  - name: iam_role_exclusion
     lifecycle_status: active
     owner: sdkwork-iam

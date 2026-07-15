@@ -100,8 +100,9 @@ pub use oauth_authorization_server::{
 pub use oauth_integration_exchange::{
     builtin_authorization_endpoint, builtin_default_scopes, builtin_token_endpoint,
     builtin_userinfo_endpoint, exchange_oauth_authorization_code,
-    load_oauth_integration_exchange_context, seed_builtin_oauth_provider_catalog,
-    OAuthIntegrationExchangeContext,
+    exchange_wechat_mini_program_code, load_oauth_integration_exchange_context,
+    load_oauth_integration_exchange_context_for_app, probe_wechat_mini_program_configuration,
+    seed_builtin_oauth_provider_catalog, OAuthIntegrationExchangeContext,
 };
 pub use oauth_login_local::{LocalOAuthAuthority, LocalOAuthProviderProfile};
 pub use oauth_provider_callback::{

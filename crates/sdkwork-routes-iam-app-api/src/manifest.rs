@@ -108,13 +108,13 @@ const IAM_APP_API_ROUTES: &[HttpRoute] = &[
         HttpMethod::Get,
         "/app/v3/api/oauth/callbacks/{providerCode}",
         "oauth",
-        "oauth.callbacks.handleGet",
+        "oauth.callbacks.retrieve",
     ),
     HttpRoute::credential_entry_public(
         HttpMethod::Post,
         "/app/v3/api/oauth/callbacks/{providerCode}",
         "oauth",
-        "oauth.callbacks.handlePost",
+        "oauth.callbacks.create",
     ),
     HttpRoute::credential_entry_public(
         HttpMethod::Post,
@@ -191,7 +191,7 @@ const IAM_APP_API_ROUTES: &[HttpRoute] = &[
     )
     .with_required_permission("iam.profile.update"),
     HttpRoute::dual_token(
-        HttpMethod::Post,
+        HttpMethod::Patch,
         "/app/v3/api/iam/users/current/password",
         "iam",
         "users.current.password.update",
@@ -296,8 +296,8 @@ pub const IAM_ANONYMOUS_BOOTSTRAP_OPERATION_IDS: &[&str] = &[
     "oauth.deviceAuthorizations.scans.create",
     "oauth.deviceAuthorizations.passwordCompletions.create",
     "oauth.deviceAuthorizations.sessionExchanges.create",
-    "oauth.callbacks.handleGet",
-    "oauth.callbacks.handlePost",
+    "oauth.callbacks.retrieve",
+    "oauth.callbacks.create",
     "oauth.miniProgramSessions.create",
     "oauth.sessions.create",
     "iam.runtime.retrieve",
@@ -322,8 +322,8 @@ pub const IAM_CREDENTIAL_ENTRY_OPERATION_IDS: &[&str] = &[
     "oauth.authorizationUrls.create",
     "oauth.deviceAuthorizations.create",
     "oauth.deviceAuthorizations.passwordCompletions.create",
-    "oauth.callbacks.handleGet",
-    "oauth.callbacks.handlePost",
+    "oauth.callbacks.retrieve",
+    "oauth.callbacks.create",
     "oauth.miniProgramSessions.create",
     "oauth.sessions.create",
 ];

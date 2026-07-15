@@ -197,10 +197,8 @@ async fn find_iam_context_from_oauth_jwt(pg: &PgPool, token: &str) -> Option<Iam
     if !token.contains('.') {
         return None;
     }
-    let kid = jwt_header_kid(token)?;
-    let signing_key = load_signing_key_by_kid(pg, &kid).await?;
     let now_unix = (current_millis() / 1000) as i64;
-    let claims = verify_oauth_access_token_claims(&signing_key, token, now_unix)?;
+    let claims = verify_oauth_access_token_claims_for_database(pg, token, now_unix).await?;
     let context = iam_context_from_token_claims(&claims)?;
     if !oauth_jwt_session_is_active(pg, &context).await {
         return None;
@@ -209,6 +207,39 @@ async fn find_iam_context_from_oauth_jwt(pg: &PgPool, token: &str) -> Option<Iam
         return None;
     }
     Some(context)
+}
+
+async fn verify_oauth_access_token_claims_for_database(
+    pg: &PgPool,
+    token: &str,
+    now_unix: i64,
+) -> Option<Value> {
+    let parts: Vec<&str> = token.split('.').collect();
+    if parts.len() != 3 {
+        return None;
+    }
+    let header = decode_jwt_json(parts[0])?;
+    let payload = decode_jwt_json(parts[1])?;
+    let algorithm = header.get("alg").and_then(Value::as_str)?;
+    let kid = header.get("kid").and_then(Value::as_str)?;
+
+    if algorithm == "RS256" {
+        let tenant_id = claim_string_value(&payload, &["tenant_id"])?;
+        let material = sdkwork_iam_bootstrap::load_postgres_oauth_rs256_signing_key(pg, &tenant_id)
+            .await
+            .ok()??;
+        if material.kid != kid {
+            return None;
+        }
+        let verified = sdkwork_iam_bootstrap::verify_rs256_jwt(&material, token).ok()?;
+        return oauth_access_token_claims_are_valid(&verified, now_unix).then_some(verified);
+    }
+
+    if algorithm != "HS256" {
+        return None;
+    }
+    let signing_key = load_signing_key_by_kid(pg, kid).await?;
+    verify_oauth_access_token_claims(&signing_key, token, now_unix)
 }
 
 async fn oauth_access_token_grant_is_active(pg: &PgPool, access_token_hash: &str) -> bool {
@@ -257,31 +288,28 @@ fn verify_oauth_access_token_claims(
     if expected_signature != parts[2] {
         return None;
     }
-    let token_type = payload.get("token_type").and_then(Value::as_str)?;
-    if !token_type.eq_ignore_ascii_case("oauth") {
-        return None;
-    }
-    let exp = payload.get("exp").and_then(Value::as_i64)?;
-    if exp < now_unix {
-        return None;
-    }
-    let iss = payload.get("iss").and_then(Value::as_str)?;
-    if iss != oauth_issuer_base_url() {
-        return None;
-    }
-    if claim_string_value(&payload, &["app_id"]).is_none() {
-        return None;
-    }
-    if !claims_login_scope_organization_consistent(&payload) {
-        return None;
-    }
-    if validate_token_version_json(&payload, &TokenVersionPolicy::standard()).is_err() {
+    if !oauth_access_token_claims_are_valid(&payload, now_unix) {
         return None;
     }
     if !signing_key_matches_claims(signing_key, &payload) {
         return None;
     }
     Some(payload)
+}
+
+fn oauth_access_token_claims_are_valid(payload: &Value, now_unix: i64) -> bool {
+    payload
+        .get("token_type")
+        .and_then(Value::as_str)
+        .is_some_and(|value| value.eq_ignore_ascii_case("oauth"))
+        && payload
+            .get("exp")
+            .and_then(Value::as_i64)
+            .is_some_and(|exp| exp >= now_unix)
+        && payload.get("iss").and_then(Value::as_str) == Some(oauth_issuer_base_url().as_str())
+        && claim_string_value(payload, &["app_id"]).is_some()
+        && claims_login_scope_organization_consistent(payload)
+        && validate_token_version_json(payload, &TokenVersionPolicy::standard()).is_ok()
 }
 
 async fn oauth_jwt_session_is_active(pg: &PgPool, context: &IamAppContext) -> bool {

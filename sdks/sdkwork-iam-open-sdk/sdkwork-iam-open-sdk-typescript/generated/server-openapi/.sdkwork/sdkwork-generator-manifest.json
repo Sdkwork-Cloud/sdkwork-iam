@@ -56,7 +56,7 @@
     },
     {
       "path": "src/api/iam-oauth.ts",
-      "sha256": "4ac8f0020603dab961e11fa649f747f136c0a7de4fc9b9393e85dae46c05708c"
+      "sha256": "b7f5a3dfc7ebd61d7de08c538543e23aeef1b9fbab92170c90c3f3f3884f67b5"
     },
     {
       "path": "src/api/index.ts",
@@ -120,11 +120,23 @@
     },
     {
       "path": "src/types/field-error.ts",
-      "sha256": "df70e331e6bff0817bc35428286fa8de5d7274ab83a6c60d7184759bf680a088"
+      "sha256": "7688827a804d5c888fdf626b89e3356832f858e24f0657069b6b842a31ae6907"
+    },
+    {
+      "path": "src/types/iam-oauth-client-create-command.ts",
+      "sha256": "b507acc6502086b77de028f17b3d6b48888eb58b3170f80749ea53f501e4ff4a"
+    },
+    {
+      "path": "src/types/iam-oauth-provider-callbacks-create-request.ts",
+      "sha256": "6dcf613ebecc63abc62d0174a18d9aeff7661901d75ba015a2a6ba5cb537dc4a"
+    },
+    {
+      "path": "src/types/iam-oauth-provider-callbacks-create-response.ts",
+      "sha256": "046de2069836b1f178c04d2bd8a5ece804f438087e97685500d6e74996bbea2b"
     },
     {
       "path": "src/types/index.ts",
-      "sha256": "0fde1844faec15f0ee7072253acc5f5293ef2979c538767d21c94a89b57c1ad1"
+      "sha256": "4181763b3b0ddd8e89131f5b3fa60e1b7811f5f43177488046b4023fdd75a7c1"
     },
     {
       "path": "src/types/page-info.ts",
@@ -132,7 +144,7 @@
     },
     {
       "path": "src/types/problem-detail.ts",
-      "sha256": "deca621176487754cbfa2012aa3eab046131ced5829ddf7cff64de692f8bcb0e"
+      "sha256": "c41fdf6433e1167d2fb1f3ac38fd13eb77178f4c0633c9e27824f1e1687ee4f6"
     },
     {
       "path": "src/types/sdk-work-api-response.ts",
@@ -165,6 +177,10 @@
     {
       "path": "src/types/sdk-work-resource-response.ts",
       "sha256": "89c05f5549bef773335245f56f61ca1a6959978726799391d584a6bd25d12fdc"
+    },
+    {
+      "path": "src/types/wechat-mini-program-session-create-command.ts",
+      "sha256": "313571c4023695a32deae0ad277d03020fb355649c2c145fa7699f0e7bb25ff3"
     },
     {
       "path": "tsconfig.json",

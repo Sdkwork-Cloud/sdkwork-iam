@@ -362,52 +362,6 @@ pub(crate) async fn retrieve_tenant_row(
         .await
 }
 
-pub(crate) async fn delete_tenant_row(
-    pg: &PgPool,
-    tenant_id: &str,
-    table: &str,
-    id: &str,
-) -> Result<bool, sqlx::Error> {
-    let sql = format!("DELETE FROM {table} WHERE tenant_id = $1 AND id = $2");
-    let result = sqlx::query(&sql)
-        .bind(tenant_id)
-        .bind(id)
-        .execute(pg)
-        .await?;
-    Ok(result.rows_affected() > 0)
-}
-
-pub(crate) async fn patch_tenant_row(
-    pg: &PgPool,
-    tenant_id: &str,
-    table: &str,
-    id: &str,
-    assignments: &[(String, String)],
-) -> Result<bool, sqlx::Error> {
-    if assignments.is_empty() {
-        return Ok(false);
-    }
-
-    let mut set_clause = String::new();
-    for (index, (column, _)) in assignments.iter().enumerate() {
-        if index > 0 {
-            set_clause.push_str(", ");
-        }
-        set_clause.push_str(column);
-        set_clause.push_str(" = $");
-        set_clause.push_str(&(index + 3).to_string());
-    }
-
-    let sql = format!("UPDATE {table} SET {set_clause} WHERE tenant_id = $1 AND id = $2");
-    let mut query = sqlx::query(&sql).bind(tenant_id).bind(id);
-    for (_, value) in assignments {
-        query = query.bind(value);
-    }
-
-    let result = query.execute(pg).await?;
-    Ok(result.rows_affected() > 0)
-}
-
 pub(crate) async fn patch_tenant_row_tx<'e, E>(
     executor: E,
     tenant_id: &str,

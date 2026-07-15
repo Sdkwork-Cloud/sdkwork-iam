@@ -46,8 +46,8 @@ export function wrapCredentialEntryClient(
     wrapCredentialEntryMethod(oauth.sessions, 'create', prepareTokens);
     const oauthCallbacks = (oauth as unknown as { callbacks?: Record<string, CredentialEntryMethod> })
       .callbacks;
-    wrapCredentialEntryMethod(oauthCallbacks, 'handleGet', prepareTokens);
-    wrapCredentialEntryMethod(oauthCallbacks, 'handlePost', prepareTokens);
+    wrapCredentialEntryMethod(oauthCallbacks, 'retrieve', prepareTokens);
+    wrapCredentialEntryMethod(oauthCallbacks, 'create', prepareTokens);
   }
 
   return client;

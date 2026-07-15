@@ -1,16 +1,16 @@
 use axum::{
+    body::Bytes,
     extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post},
-    Json, Router,
+    Router,
 };
 use sdkwork_iam_web_adapter::{
     handle_provider_callback_get as process_provider_callback_get,
     handle_provider_callback_post as process_provider_callback_post, iam_api_error,
     ProviderCallbackHttpResponse, ProviderCallbackRequestMeta,
 };
-use serde_json::Value;
 use std::collections::HashMap;
 
 use crate::is_blank;
@@ -95,7 +95,7 @@ async fn handle_provider_callback_post(
     headers: HeaderMap,
     Path(callback_public_id): Path<String>,
     Query(query): Query<HashMap<String, String>>,
-    Json(body): Json<Value>,
+    body: Bytes,
 ) -> Response {
     let Ok(pg) = state.require_pool() else {
         return oauth_provider_callback_unavailable_error();
@@ -111,7 +111,19 @@ async fn handle_provider_callback_post(
     }
 
     let meta = provider_callback_request_meta(&headers);
-    match process_provider_callback_post(pg, &callback_public_id, &query, &body, &meta).await {
+    let content_type = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok());
+    match process_provider_callback_post(
+        pg,
+        &callback_public_id,
+        &query,
+        &body,
+        content_type,
+        &meta,
+    )
+    .await
+    {
         Ok(response) => provider_callback_response(response),
         Err(message) => provider_callback_error(message),
     }

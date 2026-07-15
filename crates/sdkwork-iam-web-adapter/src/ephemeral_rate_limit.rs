@@ -39,6 +39,12 @@ pub async fn check_rate_limit(
     max_requests: u32,
     window_seconds: u32,
 ) -> Result<bool, String> {
+    if max_requests == 0 {
+        return Ok(false);
+    }
+    if window_seconds == 0 {
+        return Err("rate limit window must be greater than zero".to_owned());
+    }
     let now = current_millis();
     let window_ms = (window_seconds as u128) * 1000;
     let storage_key = artifact_key(tenant_id, KIND_RATE_LIMIT, key);
@@ -46,6 +52,14 @@ pub async fn check_rate_limit(
         .begin()
         .await
         .map_err(|error| format!("begin rate limit transaction failed: {error}"))?;
+
+    // Serialize creation and rollover of a key as well as updates to an existing row.
+    // A row lock alone cannot protect the first concurrent INSERT because no row exists yet.
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+        .bind(&storage_key)
+        .execute(&mut *tx)
+        .await
+        .map_err(|error| format!("acquire rate limit key lock failed: {error}"))?;
 
     let row = sqlx::query(
         "SELECT payload_json, expires_at FROM iam_ephemeral_artifact \
@@ -118,6 +132,12 @@ pub async fn check_rate_limit_sqlite(
     max_requests: u32,
     window_seconds: u32,
 ) -> Result<bool, String> {
+    if max_requests == 0 {
+        return Ok(false);
+    }
+    if window_seconds == 0 {
+        return Err("rate limit window must be greater than zero".to_owned());
+    }
     let now = current_millis();
     let window_ms = (window_seconds as u128) * 1000;
     let storage_key = artifact_key(tenant_id, KIND_RATE_LIMIT, key);

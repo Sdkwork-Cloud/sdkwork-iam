@@ -82,7 +82,12 @@ pub async fn bootstrap_iam_database(pool: DatabasePool) -> Result<IamDatabaseHos
     }
 
     run_post_bootstrap_hooks(&pool).await?;
-    allocate_and_init_iam_snowflake_node(&pool).await;
+    if let Err(error) = allocate_and_init_iam_snowflake_node(&pool).await {
+        if sdkwork_iam_web_adapter::is_production_iam_deployment() {
+            return Err(error);
+        }
+        tracing::warn!(%error, "continuing with development IAM snowflake fallback");
+    }
 
     if let Some(pg_pool) = pool.as_postgres() {
         let _ = sdkwork_iam_web_adapter::install_iam_postgres_pool_for_process(Arc::new(
@@ -115,8 +120,8 @@ pub async fn bootstrap_iam_database_from_env() -> Result<IamDatabaseHost, String
 
 /// Allocate a Snowflake node_id from the database and initialize the IAM ID generator.
 ///
-/// Falls back to env/default node id when allocation fails (for example ephemeral dev DB).
-async fn allocate_and_init_iam_snowflake_node(pool: &DatabasePool) {
+/// Node allocation is mandatory in production; a fallback is only permitted for development.
+async fn allocate_and_init_iam_snowflake_node(pool: &DatabasePool) -> Result<(), String> {
     let config = NodeAllocatorConfig::from_service_name("iam-service");
     match SnowflakeNodeAllocator::allocate_generator(pool, &config).await {
         Ok((generator, lease)) => {
@@ -126,14 +131,9 @@ async fn allocate_and_init_iam_snowflake_node(pool: &DatabasePool) {
                 "IAM snowflake node_id allocated from database registry"
             );
             sdkwork_iam_bootstrap::init_iam_id_generator(generator, Some(lease));
+            Ok(())
         }
-        Err(error) => {
-            tracing::warn!(
-                %error,
-                "IAM snowflake database node_id allocation failed; \
-                 falling back to SDKWORK_IAM_SNOWFLAKE_NODE_ID or default node id"
-            );
-        }
+        Err(error) => Err(format!("IAM snowflake node_id allocation failed: {error}")),
     }
 }
 

@@ -13,6 +13,8 @@ import type {
   SdkworkIamH5AuthState,
   SdkworkIamH5LoginCredentials,
   SdkworkIamH5LoginResult,
+  SdkworkIamH5OAuthLoginInput,
+  SdkworkIamH5MiniProgramLoginInput,
 } from "../types/auth-h5-types";
 
 export function createSdkworkIamH5AuthController(
@@ -64,6 +66,42 @@ export function createSdkworkIamH5AuthController(
         setState({ lastError: message, status: "error" });
         throw error;
       }
+    },
+    loginWithOAuth: async (input: SdkworkIamH5OAuthLoginInput) => {
+      setState({ challenge: undefined, lastError: undefined, status: "loading" });
+      try {
+        const response = await service.oauth.sessions.create({
+          code: input.code,
+          provider: input.provider,
+          redirectUri: input.redirectUri,
+          state: input.state,
+        });
+        return completeSession(response);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "OAuth login failed";
+        setState({ lastError: message, status: "error" });
+        throw error;
+      }
+    },
+    loginWithMiniProgram: async (input: SdkworkIamH5MiniProgramLoginInput) => {
+      setState({ challenge: undefined, lastError: undefined, status: "loading" });
+      try {
+        const response = await service.oauth.miniProgramSessions.create(input);
+        return completeSession(response);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Mini program login failed";
+        setState({ lastError: message, status: "error" });
+        throw error;
+      }
+    },
+    createOAuthAuthorizationUrl: async ({ provider, redirectUri }) => {
+      const response = await service.oauth.authorizationUrls.create({ provider, redirectUri });
+      const record = response && typeof response === "object" ? response as Record<string, unknown> : {};
+      const authUrl = optionalString(record.authUrl) || optionalString(record.url);
+      if (!authUrl) {
+        throw new Error("IAM OAuth authorization URL is missing");
+      }
+      return authUrl;
     },
     logout: async () => {
       setState({ status: "loading" });

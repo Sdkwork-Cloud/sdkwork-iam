@@ -1,8 +1,8 @@
 use axum::{
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
-    response::Response,
-    routing::{delete, get, post},
+    response::{IntoResponse, Response},
+    routing::{delete, get, patch, post},
     Json, Router,
 };
 use sdkwork_iam_context_service::{
@@ -169,7 +169,7 @@ fn build_sdkwork_iam_app_api_core_router(state: LocalIamState) -> Router {
         )
         .route(
             "/app/v3/api/iam/users/current/password",
-            post(update_current_user_password),
+            patch(update_current_user_password),
         )
         .route(
             "/app/v3/api/iam/users/current/email_bindings",
@@ -933,7 +933,7 @@ async fn delete_current_session(
             .expect("error response");
     };
     let Some(session) = resolve_session_from_headers(pg, &headers).await else {
-        return appbase_ok(json!({}));
+        return StatusCode::NO_CONTENT.into_response();
     };
     if let Err(error) = remove_session(pg, &state.config, &session).await {
         return appbase_error(
@@ -942,7 +942,7 @@ async fn delete_current_session(
             &error,
         );
     }
-    appbase_ok(json!({}))
+    StatusCode::NO_CONTENT.into_response()
 }
 
 async fn refresh_session(State(state): State<LocalIamState>, Json(body): Json<Value>) -> Response {
@@ -1562,6 +1562,7 @@ async fn create_oauth_authorization_url(
         &state.config,
         &policy,
         &state.oauth_login,
+        tenant_id,
         &provider,
         &redirect_uri,
         Some(oauth_state.as_str()),
@@ -1723,6 +1724,7 @@ async fn create_oauth_session(
         &state.config,
         &policy,
         &state.oauth_login,
+        &tenant_id,
         &provider,
         &code,
         Some(redirect_uri.as_str()),
@@ -1784,7 +1786,6 @@ async fn handle_oauth_callback_get(
             "OAuth authorization code is required",
         );
     };
-
     create_oauth_session(
         State(state),
         ctx,
@@ -1826,16 +1827,87 @@ async fn create_oauth_mini_program_session(
     if let Some(response) = reject_login_credential_headers(&headers) {
         return response;
     }
-
-    let mut payload = body;
-    if payload.get("provider").is_none()
-        && payload.get("providerCode").is_none()
-        && payload.get("provider_code").is_none()
+    let code = optional_string(body.get("jsCode"))
+        .or_else(|| optional_string(body.get("js_code")))
+        .or_else(|| optional_string(body.get("code")));
+    let Some(code) = code else {
+        return appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_wechat_mini_program_code_required",
+            "WeChat mini program jsCode is required",
+        );
+    };
+    let surface_code = optional_string(body.get("surfaceCode"))
+        .or_else(|| optional_string(body.get("surface_code")));
+    let tenant_id = match require_credential_entry_tenant_id(&ctx) {
+        Ok(tenant_id) => tenant_id.to_owned(),
+        Err(response) => return response,
+    };
+    let pg = match postgres_pool_or_error(&state) {
+        Ok(pg) => pg,
+        Err(response) => return response,
+    };
+    let runtime_app_id = match resolve_credential_entry_runtime_app(pg, &ctx, &tenant_id).await {
+        Ok(app_id) => app_id,
+        Err(response) => return response,
+    };
+    if let Some(response) =
+        enforce_rate_limit(&state, &tenant_id, "oauth:wechat_mini_program:session").await
     {
-        payload["provider"] = json!("wechat_mini_program");
+        return response;
     }
-
-    create_oauth_session(State(state), ctx, headers, Json(payload)).await
+    let policy = effective_account_binding_policy(&state, pg, Some(&tenant_id)).await;
+    match crate::oauth_login::resolve_wechat_mini_program_login_user(
+        pg,
+        &policy,
+        &tenant_id,
+        &runtime_app_id,
+        surface_code.as_deref(),
+        &code,
+    )
+    .await
+    {
+        Ok(user) => {
+            crate::security_events::record_login_success(
+                pg,
+                &user.tenant_id,
+                &user.id,
+                "wechat_mini_program",
+                "oauth",
+            )
+            .await;
+            crate::audit_events::record_login_success(
+                pg,
+                &state.config,
+                &user.id,
+                "wechat_mini_program",
+                "oauth",
+                &user.tenant_id,
+            )
+            .await;
+            create_authenticated_session_response(&state, &user, &runtime_app_id).await
+        }
+        Err(error) if error.contains("not configured") => appbase_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "iam_wechat_mini_program_not_configured",
+            &error,
+        ),
+        Err(error) if error.contains("disabled") => appbase_error(
+            StatusCode::FORBIDDEN,
+            "iam_wechat_mini_program_login_disabled",
+            &error,
+        ),
+        Err(error) if error.contains("auto registration") => appbase_error(
+            StatusCode::FORBIDDEN,
+            "iam_oauth_auto_registration_disabled",
+            &error,
+        ),
+        Err(error) => appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_wechat_mini_program_session_create_failed",
+            &error,
+        ),
+    }
 }
 
 async fn list_oauth_account_links(
@@ -1986,9 +2058,7 @@ async fn delete_oauth_account_link(
     .await;
 
     match updated {
-        Ok(result) if result.rows_affected() > 0 => {
-            appbase_ok(json!({ "accountLinkId": account_link_id }))
-        }
+        Ok(result) if result.rows_affected() > 0 => StatusCode::NO_CONTENT.into_response(),
         Ok(_) => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_oauth_account_link_not_found",
@@ -2096,9 +2166,7 @@ async fn delete_oauth_grant(
     .await;
 
     match updated {
-        Ok(result) if result.rows_affected() > 0 => {
-            appbase_ok(json!({ "grantId": grant_id, "status": "revoked" }))
-        }
+        Ok(result) if result.rows_affected() > 0 => StatusCode::NO_CONTENT.into_response(),
         Ok(_) => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_oauth_grant_not_found",
@@ -2155,7 +2223,7 @@ async fn update_current_user(
         .or_else(|| optional_string(body.get("name")));
 
     match update_current_user_profile(pg, &session.user, display_name).await {
-        Ok(user) => appbase_ok(user_to_json(&user)),
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "iam_user_update_failed",

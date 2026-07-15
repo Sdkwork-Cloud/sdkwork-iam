@@ -119,6 +119,7 @@ export function SdkworkIamOauthAdminSettings({
     integrationId: "",
     providerClientId: "",
     providerCode: "",
+    providerTenantId: "",
   });
   const [secretDraft, setSecretDraft] = useState<SdkworkIamOauthSecretDraft>({
     secretKind: "client_secret",
@@ -570,6 +571,17 @@ export function SdkworkIamOauthAdminSettings({
             placeholder="WeChat web client"
             value={clientDraft.displayName}
           />
+          <Label htmlFor="oauth-client-provider-tenant-id">Provider union scope ID (optional)</Label>
+          <input
+            className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
+            id="oauth-client-provider-tenant-id"
+            onChange={(event) => setClientDraft((current) => ({
+              ...current,
+              providerTenantId: event.target.value,
+            }))}
+            placeholder="WeChat Open Platform account ID"
+            value={clientDraft.providerTenantId}
+          />
           <Button
             disabled={status === "loading" || status === "saving" || !canSubmitClient(clientDraft)}
             loading={status === "saving"}
@@ -584,6 +596,7 @@ export function SdkworkIamOauthAdminSettings({
                   integrationId: "",
                   providerClientId: "",
                   providerCode: "",
+                  providerTenantId: "",
                 });
               }).catch(() => {
                 setStatus(controller.getState().status);

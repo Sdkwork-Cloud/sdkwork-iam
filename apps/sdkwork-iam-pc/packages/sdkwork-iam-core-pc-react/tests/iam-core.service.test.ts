@@ -447,8 +447,8 @@ function createStandardOauthClient() {
       },
     },
     callbacks: {
-      handleGet: vi.fn(),
-      handlePost: vi.fn(),
+      create: vi.fn(),
+      retrieve: vi.fn(),
     },
     miniProgramSessions: {
       create: vi.fn(),

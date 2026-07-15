@@ -2,7 +2,7 @@
 
 Status: active
 Owner: SDKWork maintainers
-Updated: 2026-07-06
+Updated: 2026-07-14
 Specs: IAM_SPEC.md, WEB_FRAMEWORK_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, API_SPEC.md
 
 ## 1. Architecture Overview
@@ -44,12 +44,12 @@ Specs: IAM_SPEC.md, WEB_FRAMEWORK_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, API_SPEC.
 
 ## 5. Deployment
 
-- Gateway assembly: `crates/sdkwork-iam-gateway-assembly/` merges app-api, backend-api, and open-api via each crate's async `gateway_mount()` (database pool from env for app/backend/open surfaces)
+- Gateway assembly: `crates/sdkwork-iam-gateway-assembly/` merges app-api, backend-api, and open-api via each crate's async `gateway_mount()` and also ships a standalone binary with graceful shutdown (database pool from env for app/backend/open surfaces)
 - `sdkwork-iam-database-host` allocates Snowflake node IDs from `sdkwork_node_registry` during bootstrap (`init_iam_id_generator`)
 - Deploy manifest: `deployments/deploy.yaml` with package health/readiness paths and proxy upstream overrides
 - Topology: `specs/topology.spec.json`
 - Local runbook: `deployments/runbooks/local-iam-rust.md`
-- Production hardening: `sdkwork-iam-web-adapter::assert_production_hardening()` rejects dev auth fallback, fixed verify codes, bootstrap passwords, OAuth client-secret env overrides, super-admin DB auth bypass, OAuth webhook env overrides, email verification without `SDKWORK_IAM_MESSAGING_VERIFICATION_ENABLED`, and missing `SDKWORK_IAM_SIGNING_MASTER_SECRET` whenever the deployment is **not** an explicit development profile (`SDKWORK_IM_ENVIRONMENT=development`, `SDKWORK_ENV=dev`, or equivalent)
+- Production hardening: `sdkwork-iam-web-adapter::assert_production_hardening()` rejects dev auth fallback, fixed verify codes, bootstrap passwords, OAuth client-secret env overrides, super-admin DB auth bypass, OAuth webhook env overrides, email verification without `SDKWORK_IAM_MESSAGING_VERIFICATION_ENABLED`, missing `SDKWORK_IAM_SIGNING_MASTER_SECRET`, and failed Snowflake node allocation whenever the deployment is **not** an explicit development profile (`SDKWORK_IM_ENVIRONMENT=development`, `SDKWORK_ENV=dev`, or equivalent)
 
 ## 6. Operational Limits
 
@@ -72,6 +72,18 @@ Shared constants in `crates/sdkwork-iam-bootstrap/src/limits.rs`:
 
 Backend-api write mutations are rate-limited via middleware (`backend_write_rate_limit_middleware`) using PostgreSQL ephemeral artifacts.
 
+Password Argon2 work is executed through a bounded blocking pool so CPU-heavy verification cannot starve Tokio workers. PostgreSQL rate-limit key creation and rollover are serialized with transaction-scoped advisory locks to preserve counts under concurrent first requests.
+
+OAuth provider callbacks validate signatures or verification tokens before accepting events, scope WeChat identities by tenant, integration, and union scope, reject duplicate callback event IDs, and decrypt provider payloads only with tenant-scoped secret references.
+
+WeChat inbound login is split into three adapter protocols: `wechat` uses Official Account H5 OAuth (`snsapi_userinfo`), `wechat_open` uses Open Platform QR OAuth (`snsapi_login`), and `wechat_mini_program` uses `jscode2session`. Mini-program integration selection is constrained by the verified credential-entry runtime app and registered `surfaceCode`; `js_code` is one-time and `session_key` is never returned or logged. Account-link uniqueness is enforced by `(tenant, integration, provider, subject)` and, when configured, `(tenant, unionScope, unionId)`.
+
+OAuth authorization-server access tokens use tenant RS256 signing keys and JWKS in production. Bearer resolution verifies `alg`, `kid`, RSA signatures, issuer, expiry, token version, tenant/session claims, and active grant state; HS256 OAuth bearer verification is retained only for explicitly configured development deployments.
+
+The callback route accepts provider wire formats (`application/xml` and `application/json`) and returns provider acknowledgements rather than SDKWork envelopes. Safe-mode WeChat payloads use SHA-1 `msg_signature`, AES-256-CBC with tenant-scoped `EncodingAESKey`, decrypted AppID verification, and accepted-event deduplication.
+
+The PostgreSQL baseline enforces tenant-leading composite foreign keys for users, organizations, memberships, departments, assignments, credentials, sessions, and closure tables. SQLite remains an embedded narrow-path mirror and is governed separately from the PostgreSQL lifecycle.
+
 PC admin audit visibility: `@sdkwork/iam-pc-admin-audit` (`auditEvents.list`/`retrieve`, `securityEvents.list`/`retrieve`) with typed OpenAPI page/resource schemas; list responses omit `detailJson`, retrieve returns `data.item.detailJson` via `sdkwork_resource_json`.
 
 ## 7. Verification
@@ -82,6 +94,8 @@ pnpm run verify
 ```
 
 `pnpm verify` runs structure, database, composition, API envelope, gateway assembly, typecheck, API materialize, governance, and Rust workspace tests.
+
+The static and non-PostgreSQL gates are reproducible locally. PostgreSQL integration gates require a reachable profile with capacity for the configured pool; an auto-discovered but exhausted database is a release blocker, not a test pass.
 
 CI (`.github/workflows/iam-quality-gate.yml`) runs `pnpm check`, `pnpm test:governance-node`, `pnpm test:iam-standard-contracts`, and `pnpm test:rust-workspace` on every push and pull request. PostgreSQL integration suites run when a profile is present locally; CI runs the governed non-Postgres Rust surface plus HTTP route standards.
 

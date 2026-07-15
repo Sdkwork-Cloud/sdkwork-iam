@@ -3,7 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import { createTokenManager } from "@sdkwork/sdk-common";
 import { createTestJwt } from "@sdkwork/runtime-bootstrap";
 
-import { createIamRuntime, createMemoryIamTokenStore } from "../src/index";
+import {
+  createIamRuntime,
+  createMemoryIamTokenStore,
+  isSdkworkIamSessionAuthenticated,
+  requireSdkworkIamAuthenticatedSession,
+} from "../src/index";
 import { BACKEND_OAUTH_RESOURCE_TREE } from "../../sdkwork-iam-sdk-adapter/src/backend-oauth-resource-tree.ts";
 
 const DEFAULT_ACCESS_TOKEN = createTestJwt({
@@ -53,6 +58,23 @@ const ACCESS_TOKEN_ONLY = sessionAccessToken("only");
 const AUTH_TOKEN_ONLY = sessionAuthToken("only");
 
 describe("SDKWork IAM runtime", () => {
+  it("uses one dual-token predicate for reusable authenticated-session guards", () => {
+    expect(isSdkworkIamSessionAuthenticated({
+      accessToken: "access-token",
+      authToken: "auth-token",
+    })).toBe(true);
+    expect(isSdkworkIamSessionAuthenticated({ authToken: "auth-token" })).toBe(false);
+    expect(isSdkworkIamSessionAuthenticated({ accessToken: "access-token" })).toBe(false);
+    expect(isSdkworkIamSessionAuthenticated({
+      accessToken: "  ",
+      authToken: "auth-token",
+    })).toBe(false);
+
+    expect(() => requireSdkworkIamAuthenticatedSession({
+      authToken: "auth-token",
+    }, "Sign in required")).toThrow("Sign in required");
+  });
+
   it("bootstraps SaaS deployments through injected app and backend SDK clients", () => {
     const runtime = createIamRuntime({
       clients: {
@@ -658,8 +680,8 @@ function createStandardAppClient(session: StandardSessionOptions = {}) {
         },
       },
       callbacks: {
-        handleGet: vi.fn(),
-        handlePost: vi.fn(),
+        create: vi.fn(),
+        retrieve: vi.fn(),
       },
       miniProgramSessions: {
         create: vi.fn(),

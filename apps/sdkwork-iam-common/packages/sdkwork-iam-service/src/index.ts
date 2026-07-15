@@ -65,6 +65,12 @@ export interface IamRefreshSessionInput {
   refreshToken?: string;
 }
 
+export interface IamWechatMiniProgramSessionCreateInput {
+  jsCode: string;
+  providerCode?: "wechat_mini_program";
+  surfaceCode?: string;
+}
+
 export interface IamCreateRegistrationInput {
   password: string;
   username: string;
@@ -127,11 +133,11 @@ export interface SdkworkIamService {
       };
     };
     callbacks: {
-      handleGet(params?: Record<string, unknown>): Promise<unknown>;
-      handlePost(body?: Record<string, unknown>): Promise<unknown>;
+      create(body?: Record<string, unknown>): Promise<unknown>;
+      retrieve(params?: Record<string, unknown>): Promise<unknown>;
     };
     miniProgramSessions: {
-      create(body: Record<string, unknown>): Promise<unknown>;
+      create(body: IamWechatMiniProgramSessionCreateInput): Promise<IamSession>;
     };
     authorizations: {
       completions: {
@@ -477,11 +483,22 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
         },
       },
       callbacks: {
-        handleGet: (params) => callRaw(appOauth?.callbacks, "handleGet", "appbaseAppClient.oauth.callbacks.handleGet", params),
-        handlePost: (body) => callRaw(appOauth?.callbacks, "handlePost", "appbaseAppClient.oauth.callbacks.handlePost", body),
+        retrieve: (params) => callRaw(appOauth?.callbacks, "retrieve", "appbaseAppClient.oauth.callbacks.retrieve", params),
+        create: (body) => callRaw(appOauth?.callbacks, "create", "appbaseAppClient.oauth.callbacks.create", body),
       },
       miniProgramSessions: {
-        create: (body) => callRaw(appOauth?.miniProgramSessions, "create", "appbaseAppClient.oauth.miniProgramSessions.create", body),
+        create: async (body) => {
+          await input.clearSession?.();
+          return handleSession(
+            await callResourceMethod(
+              appOauth?.miniProgramSessions,
+              "create",
+              "appbaseAppClient.oauth.miniProgramSessions.create",
+              body,
+            ),
+            input,
+          );
+        },
       },
       authorizations: {
         completions: {

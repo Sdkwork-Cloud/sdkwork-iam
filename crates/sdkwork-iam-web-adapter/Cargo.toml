@@ -11,6 +11,8 @@ path = "src/lib.rs"
 
 [dependencies]
 aes-gcm = "0.10"
+aes = "0.8"
+cbc = "0.1"
 argon2 = "0.5"
 hmac = "0.12"
 async-trait.workspace = true
@@ -22,6 +24,7 @@ sdkwork_iam_context_service.workspace = true
 sdkwork-database-config.workspace = true
 sdkwork_database_sqlx.workspace = true
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+quick-xml = "0.37"
 serde.workspace = true
 serde_json.workspace = true
 password-hash = { version = "0.5", features = ["rand_core"] }

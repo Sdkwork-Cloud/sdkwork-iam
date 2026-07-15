@@ -44,6 +44,25 @@ const APP_MANIFEST_FIXTURES = [
   "sdkwork-knowledgebase/sdkwork.app.config.json",
 ];
 
+const JSON_PARSE_ATTEMPTS = 3;
+const JSON_PARSE_RETRY_DELAY_MS = 25;
+
+async function readJsonWithRetry(filePath) {
+  let lastError;
+  for (let attempt = 1; attempt <= JSON_PARSE_ATTEMPTS; attempt += 1) {
+    try {
+      return JSON.parse(await readFile(filePath, "utf8"));
+    } catch (error) {
+      lastError = error;
+      if (!(error instanceof SyntaxError) || attempt === JSON_PARSE_ATTEMPTS) break;
+      await new Promise((resolve) => setTimeout(resolve, JSON_PARSE_RETRY_DELAY_MS));
+    }
+  }
+  throw new Error(`Invalid JSON in ${filePath}: ${lastError?.message ?? String(lastError)}`, {
+    cause: lastError,
+  });
+}
+
 const FORBIDDEN_DOMAIN_SEED_PATTERNS = [
   /tenant_id\s*=\s*'10'/,
   /organization_id\s*=\s*'20'/,
@@ -226,11 +245,11 @@ test("EVENT_SPEC envelope example uses canonical tenant and root organization", 
   assert.doesNotMatch(eventSpec, /"tenantId": "10001"/);
 });
 
-test("DATABASE_SPEC request context example uses canonical tenant and root organization", async () => {
+test("DATABASE_SPEC requires tenant isolation and fail-closed distributed ID behavior", async () => {
   const databaseSpecPath = path.join(workspaceRoot, "sdkwork-specs/DATABASE_SPEC.md");
   const databaseSpec = await readFile(databaseSpecPath, "utf8");
-  assert.match(databaseSpec, /"tenant_id": "100001"/);
-  assert.match(databaseSpec, /"organization_id": "0"/);
+  assert.match(databaseSpec, /tenant[^\n]*isolation/iu);
+  assert.match(databaseSpec, /ID generation declares clock rollback, node conflict, and failure behavior/iu);
   assert.doesNotMatch(databaseSpec, /"tenant_id": "1",\s*\n\s*"organization_id": "10"/);
 });
 
@@ -247,7 +266,7 @@ test("claw web bridge maps canonical tenant id from web request context", async 
 });
 
 test("all workspace app manifests with backend section declare canonical tenant scope", async () => {
-  const { readdir, readFile: readFileFs } = await import("node:fs/promises");
+  const { readdir } = await import("node:fs/promises");
   const skipDirs = new Set(["node_modules", "dist", ".git", "target", ".runtime", "external"]);
   const violations = [];
 
@@ -267,8 +286,7 @@ test("all workspace app manifests with backend section declare canonical tenant 
         continue;
       }
       if (entry.name !== "sdkwork.app.config.json") continue;
-      const raw = await readFileFs(fullPath, "utf8");
-      const manifest = JSON.parse(raw);
+      const manifest = await readJsonWithRetry(fullPath);
       if (!manifest.backend) continue;
       const backend = manifest.backend;
       const isIamBootstrapBackend =

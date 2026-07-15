@@ -3,7 +3,7 @@
 Status: active
 Owner: SDKWork maintainers
 Application: iam
-Updated: 2026-07-06
+Updated: 2026-07-14
 Specs: REQUIREMENTS_SPEC.md, IAM_SPEC.md, IAM_OAUTH_SPEC.md, IAM_LOGIN_INTEGRATION_SPEC.md
 
 ## 1. Background And Problem
@@ -29,7 +29,7 @@ SDKWork applications require a centralized identity and access management domain
 - Verification-code delivery through `sdkwork-messaging`; IAM validates challenges from the shared `messaging_verification_challenge` store when `SDKWORK_IAM_MESSAGING_VERIFICATION_ENABLED=true`
 - Generated SDK families (`iam-app-sdk`, `iam-backend-sdk`, `iam-open-sdk`) with SdkWorkApiResponse envelopes
 - PC/H5/Flutter client surfaces sharing `@sdkwork/iam-contracts` and `@sdkwork/iam-runtime`
-- Production hardening: fail-closed readiness, no dev auth shortcuts, webhook signature verification
+- Production hardening: fail-closed readiness, no dev auth shortcuts, tenant-scoped WeChat identity keys, XML/AES webhook verification, callback replay protection, and external provider probes
 
 ### Non-Goals
 
@@ -60,12 +60,12 @@ SDKWork applications require a centralized identity and access management domain
 | Production hardening | No dev fallback/env bypass active when `SDKWORK_IM_ENVIRONMENT=production`; `SDKWORK_IAM_SIGNING_MASTER_SECRET` required |
 | List/tree APIs | SQL-level pagination or documented node limits (`IAM_TREE_MAX_NODES`); invalid `page_size` returns `40003` |
 | Audit/security list APIs | Offset and keyset cursor modes (`k:{created_at}\|{id}`) per `PAGINATION_SPEC.md` |
-| OAuth inbound IdP | Userinfo-backed OIDC identity resolution; no unverified `id_token` trust |
+| OAuth inbound IdP | Provider-specific adapters; WeChat official-account OAuth, Open Platform QR OAuth, and Mini Program `jscode2session`; no unverified `id_token` trust |
 | OAuth AS outbound | RS256 JWT signing with tenant-scoped keys; JWKS publishes RS256 public keys; HS256 fallback when RS256 key is absent |
 | Backend 500 errors | Sanitized client messages; SQL/driver details logged server-side only |
 | Tenant admin isolation | Path `tenantId` must match session tenant unless platform tenant (`100001`) |
 | Permission catalog | Global `iam_permission` mutations restricted to platform tenant |
-| OAuth webhook POST | Signature or verify-token validation before accept |
+| OAuth webhook POST | Raw XML/JSON parsing, WeChat SHA-1 or `msg_signature`, AES-256-CBC safe-mode decryption, AppID validation, and MsgId deduplication before accept |
 | Contact bind / password reset | Messaging `verificationCodes.*` delivery + IAM `messaging_verification_challenge` validation when `SDKWORK_IAM_MESSAGING_VERIFICATION_ENABLED` |
 | Backend admin mutations | `iam_audit_event` writes transactional with directory CRUD and OAuth admin creates/updates/deletes |
 | Operator audit visibility | PC admin `@sdkwork/iam-pc-admin-audit`: typed list/retrieve OpenAPI, debounced `q` search, `detailJson` via retrieve |
@@ -76,8 +76,8 @@ SDKWork applications require a centralized identity and access management domain
 | Phase | Status |
 | --- | --- |
 | L3 core auth/session/RBAC | Active |
-| OAuth AS + admin CRUD + diagnostics | Active |
-| Production gateway + deploy manifest | Active (app/backend/open async `gateway_mount`) |
+| OAuth AS + admin CRUD + diagnostics | Active; provider-specific WeChat probes and typed Mini Program exchange included |
+| Production gateway + deploy manifest | Active (standalone binary plus embeddable `gateway_mount`; production security baseline required) |
 | RPC runnable servers | Planned (manifests only today) |
 | Enterprise MFA/SCIM/SAML | Future |
 
@@ -86,11 +86,19 @@ SDKWork applications require a centralized identity and access management domain
 - `../sdkwork-specs/IAM_SPEC.md`
 - `../sdkwork-specs/IAM_OAUTH_SPEC.md`
 - `../sdkwork-specs/IAM_LOGIN_INTEGRATION_SPEC.md`
-- `../sdkwork-specs/API_SPEC.md` sections 4.5, 14–16
+- `../sdkwork-specs/API_SPEC.md` sections 4.5 and 14-16
 - `../sdkwork-specs/PAGINATION_SPEC.md`
 - `../sdkwork-specs/SECURITY_SPEC.md`
 
 ## 9. Open Questions
 
 - RPC server delivery timeline for service discovery integration
-- Optional Redis-backed session store for multi-region SaaS
+- Redis-backed distributed session/rate-limit store is required before multi-region SaaS; PostgreSQL remains the system of record.
+
+## 10. Release Readiness Rules
+
+- Production bootstrap fails closed when the database node lease, signing master secret, migration, or readiness dependency is unavailable.
+- The standalone gateway binary binds through `SDKWORK_IAM_APPLICATION_PUBLIC_INGRESS_BIND`, exposes graceful shutdown, and uses bounded body size, request timeout, concurrency, CORS, CSRF, WAF, rate-limit, metrics, and tracing defaults.
+- PostgreSQL is authoritative. SQLite is intentionally limited to embedded OAuth-device and local narrow paths and is not a production-parity deployment option.
+- Directory writes, password lifecycle changes, signing-key provisioning, and audit events must commit in one transaction; cross-tenant references are rejected by composite database constraints.
+- API authorities are generated from Rust route manifests; `DELETE` is `204` with no body, creates are `201`, and lists use SQL-level pagination under `PAGINATION_SPEC.md`.

@@ -209,6 +209,13 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.2.0"
+  sdkwork_iam_flutter_mobile_core:
+    dependency: "direct main"
+    description:
+      path: "../sdkwork_iam_flutter_mobile_core"
+      relative: true
+    source: path
+    version: "0.1.0"
   shelf:
     dependency: transitive
     description:

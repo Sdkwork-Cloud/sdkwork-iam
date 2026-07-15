@@ -20,16 +20,16 @@ async fn tenant_list(
     spec: &TenantResourceSpec,
 ) -> Response {
     let Ok(pg) = postgres_pool_or_error(state) else {
-        return postgres_pool_or_error(state)
-            .err()
-            .expect("error response");
+        return postgres_pool_or_error(state).err().expect("error response");
     };
     let Ok(tenant_id) = tenant_id_from_context(ctx) else {
         return tenant_id_from_context(ctx).err().expect("error response");
     };
 
     let Ok(params) = list_page_params_or_error(query) else {
-        return list_page_params_or_error(query).err().expect("error response");
+        return list_page_params_or_error(query)
+            .err()
+            .expect("error response");
     };
     let search_pattern = list_search_pattern(query);
     let search_columns = oauth_list_search_columns(spec.table);
@@ -45,11 +45,9 @@ async fn tenant_list(
     )
     .await
     {
-        Ok(rows) => appbase_ok(page_json_from_rows(
-            rows,
-            &params,
-            |row| row_to_json_with_aliases(row, spec.columns, spec.id_aliases),
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| {
+            row_to_json_with_aliases(row, spec.columns, spec.id_aliases)
+        })),
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             spec.list_error,
@@ -96,9 +94,7 @@ async fn tenant_retrieve(
     spec: &TenantResourceSpec,
 ) -> Response {
     let Ok(pg) = postgres_pool_or_error(state) else {
-        return postgres_pool_or_error(state)
-            .err()
-            .expect("error response");
+        return postgres_pool_or_error(state).err().expect("error response");
     };
     let Ok(tenant_id) = tenant_id_from_context(ctx) else {
         return tenant_id_from_context(ctx).err().expect("error response");
@@ -131,9 +127,7 @@ async fn tenant_delete(
     error_code: &str,
 ) -> Response {
     let Ok(pg) = postgres_pool_or_error(state) else {
-        return postgres_pool_or_error(state)
-            .err()
-            .expect("error response");
+        return postgres_pool_or_error(state).err().expect("error response");
     };
     let Ok(tenant_id) = tenant_id_from_context(ctx) else {
         return tenant_id_from_context(ctx).err().expect("error response");
@@ -148,28 +142,24 @@ async fn tenant_delete(
         table,
         id_owned.clone(),
         json!({ "deleted": true }),
-        |tx| Box::pin(async move {
-            let sql = format!("DELETE FROM {table_owned} WHERE tenant_id = $1 AND id = $2");
-            sqlx::query(&sql)
-                .bind(&tenant_id)
-                .bind(&id_owned)
-                .execute(&mut **tx)
-                .await
-                .map(|result| result.rows_affected())
-        }),
+        |tx| {
+            Box::pin(async move {
+                let sql = format!("DELETE FROM {table_owned} WHERE tenant_id = $1 AND id = $2");
+                sqlx::query(&sql)
+                    .bind(&tenant_id)
+                    .bind(&id_owned)
+                    .execute(&mut **tx)
+                    .await
+                    .map(|result| result.rows_affected())
+            })
+        },
         |rows_affected| *rows_affected > 0,
     )
     .await
     {
-        Ok(rows_affected) if rows_affected > 0 => {
-            appbase_ok(json!({ "deleted": true, "id": id }))
-        }
+        Ok(rows_affected) if rows_affected > 0 => StatusCode::NO_CONTENT.into_response(),
         Ok(_) => appbase_error(StatusCode::NOT_FOUND, error_code, "resource not found"),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            error_code,
-            &error,
-        ),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, error_code, &error),
     }
 }
 
@@ -181,9 +171,7 @@ async fn tenant_patch(
     spec: &TenantResourceSpec,
 ) -> Response {
     let Ok(pg) = postgres_pool_or_error(state) else {
-        return postgres_pool_or_error(state)
-            .err()
-            .expect("error response");
+        return postgres_pool_or_error(state).err().expect("error response");
     };
     let Ok(tenant_id) = tenant_id_from_context(ctx) else {
         return tenant_id_from_context(ctx).err().expect("error response");
@@ -213,16 +201,18 @@ async fn tenant_patch(
         spec.table,
         id_owned.clone(),
         audit_detail,
-        |tx| Box::pin(async move {
-            let tenant_id = tenant_id_owned.clone();
-            let table = table_name.clone();
-            let id = id_owned.clone();
-            let assignments = assignments.clone();
+        |tx| {
+            Box::pin(async move {
+                let tenant_id = tenant_id_owned.clone();
+                let table = table_name.clone();
+                let id = id_owned.clone();
+                let assignments = assignments.clone();
 
                 patch_tenant_row_tx(&mut **tx, &tenant_id, &table, &id, &assignments)
                     .await
                     .map(|updated| if updated { 1_u64 } else { 0_u64 })
-            }),
+            })
+        },
         |rows_affected| *rows_affected > 0,
     )
     .await
@@ -247,9 +237,18 @@ fn collect_patch_assignments(body: &Value) -> Vec<(String, String)> {
         ("display_name", ["displayName", "display_name"].as_slice()),
         ("status", ["status"].as_slice()),
         ("enabled", ["enabled"].as_slice()),
-        ("health_status", ["healthStatus", "health_status"].as_slice()),
-        ("authorization_status", ["authorizationStatus", "authorization_status"].as_slice()),
-        ("verification_status", ["verificationStatus", "verification_status"].as_slice()),
+        (
+            "health_status",
+            ["healthStatus", "health_status"].as_slice(),
+        ),
+        (
+            "authorization_status",
+            ["authorizationStatus", "authorization_status"].as_slice(),
+        ),
+        (
+            "verification_status",
+            ["verificationStatus", "verification_status"].as_slice(),
+        ),
     ] {
         if let Some(value) = read_string_field(body, keys) {
             assignments.push((column.to_owned(), value));
@@ -275,7 +274,9 @@ async fn list_provider_catalog(
     };
 
     let Ok(params) = list_page_params_or_error(&query) else {
-        return list_page_params_or_error(&query).err().expect("error response");
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
     let rows = sqlx::query(&format!(
@@ -296,26 +297,22 @@ async fn list_provider_catalog(
     .await;
 
     match rows {
-        Ok(rows) => appbase_ok(page_json_from_rows(
-            rows,
-            &params,
-            |row| {
-                row_to_json_with_aliases(
-                    row,
-                    &[
-                        "id",
-                        "owner_tenant_id",
-                        "provider_code",
-                        "provider_name",
-                        "provider_display_name",
-                        "status",
-                        "created_at",
-                        "updated_at",
-                    ],
-                    &[("providerCatalogId", "id")],
-                )
-            },
-        )),
+        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| {
+            row_to_json_with_aliases(
+                row,
+                &[
+                    "id",
+                    "owner_tenant_id",
+                    "provider_code",
+                    "provider_name",
+                    "provider_display_name",
+                    "status",
+                    "created_at",
+                    "updated_at",
+                ],
+                &[("providerCatalogId", "id")],
+            )
+        })),
         Err(error) => internal_handler_error("iam_oauth_provider_catalog_list_failed", error),
     }
 }
@@ -359,7 +356,10 @@ async fn retrieve_provider_catalog(
                 "created_at",
                 "updated_at",
             ],
-            &[("providerCatalogId", "id"), ("providerCode", "provider_code")],
+            &[
+                ("providerCatalogId", "id"),
+                ("providerCode", "provider_code"),
+            ],
         )),
         Ok(None) => appbase_error(
             StatusCode::NOT_FOUND,
@@ -404,30 +404,46 @@ async fn create_provider_catalog(
     let provider_name = provider_name.expect("validated");
     let display_name = display_name.unwrap_or_else(|| provider_name.clone());
 
-    let result = sqlx::query(
-        "INSERT INTO iam_oauth_provider_catalog \
-            (id, uuid, owner_tenant_id, provider_code, provider_family, provider_name, provider_display_name, \
-             region_group, protocol_family, status, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, 'oidc', $5, $6, 'global', 'oauth2', 'active', $7, $7)",
+    let id_insert = id.clone();
+    let uuid_insert = Uuid::new_v4().to_string();
+    let tenant_id_insert = tenant_id.clone();
+    let provider_code_insert = provider_code.clone();
+    let provider_name_insert = provider_name.clone();
+    let display_name_insert = display_name.clone();
+    let result = directory_create_with_audit(
+        pg,
+        &ctx,
+        "iam_oauth_provider_catalog",
+        id.clone(),
+        json!({ "providerCode": provider_code, "providerName": provider_name }),
+        |tx| Box::pin(async move {
+            sqlx::query(
+                "INSERT INTO iam_oauth_provider_catalog \
+                    (id, uuid, owner_tenant_id, provider_code, provider_family, provider_name, provider_display_name, \
+                     region_group, protocol_family, status, created_at, updated_at) \
+                 VALUES ($1, $2, $3, $4, 'oidc', $5, $6, 'global', 'oauth2', 'active', $7, $7)",
+            )
+            .bind(id_insert)
+            .bind(uuid_insert)
+            .bind(tenant_id_insert)
+            .bind(provider_code_insert)
+            .bind(provider_name_insert)
+            .bind(display_name_insert)
+            .bind(now)
+            .execute(&mut **tx)
+            .await
+            .map(|_| ())
+        }),
     )
-    .bind(&id)
-    .bind(Uuid::new_v4().to_string())
-    .bind(&tenant_id)
-    .bind(&provider_code)
-    .bind(&provider_name)
-    .bind(&display_name)
-    .bind(&now)
-    .execute(pg)
     .await;
 
     match result {
-        Ok(_) => retrieve_provider_catalog(
-            State(state),
-            ctx,
-            Path(provider_code),
-        )
-        .await,
-        Err(error) => internal_handler_error("iam_oauth_provider_catalog_create_failed", error),
+        Ok(_) => retrieve_provider_catalog(State(state), ctx, Path(provider_code)).await,
+        Err(error) => appbase_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "iam_oauth_provider_catalog_create_failed",
+            &error,
+        ),
     }
 }
 
@@ -479,15 +495,34 @@ async fn update_provider_catalog(
         "UPDATE iam_oauth_provider_catalog SET {set_clause} \
          WHERE (owner_tenant_id = $1 OR owner_tenant_id = '0') AND id = $2"
     );
-    let mut query = sqlx::query(&sql)
-        .bind(&tenant_id)
-        .bind(&provider_catalog_id);
-    for (_, value) in &assignments {
-        query = query.bind(value);
-    }
-
-    match query.execute(pg).await {
-        Ok(result) if result.rows_affected() > 0 => {
+    let tenant_id_update = tenant_id.clone();
+    let provider_catalog_id_update = provider_catalog_id.clone();
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam_oauth_provider_catalog.update",
+        "iam_oauth_provider_catalog",
+        provider_catalog_id.clone(),
+        json!({}),
+        |tx| {
+            Box::pin(async move {
+                let mut query = sqlx::query(&sql)
+                    .bind(tenant_id_update)
+                    .bind(provider_catalog_id_update);
+                for (_, value) in assignments {
+                    query = query.bind(value);
+                }
+                query
+                    .execute(&mut **tx)
+                    .await
+                    .map(|result| result.rows_affected())
+            })
+        },
+        |rows_affected| *rows_affected > 0,
+    )
+    .await
+    {
+        Ok(result) if result > 0 => {
             retrieve_provider_catalog(State(state), ctx, Path(provider_catalog_id)).await
         }
         Ok(_) => appbase_error(
@@ -495,7 +530,11 @@ async fn update_provider_catalog(
             "iam_oauth_provider_catalog_not_found",
             "provider catalog entry not found",
         ),
-        Err(error) => internal_handler_error("iam_oauth_provider_catalog_update_failed", error),
+        Err(error) => appbase_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "iam_oauth_provider_catalog_update_failed",
+            &error,
+        ),
     }
 }
 
@@ -551,19 +590,39 @@ macro_rules! oauth_delete_handler {
 oauth_list_handler!(list_integrations, INTEGRATIONS);
 oauth_retrieve_handler!(retrieve_integration, INTEGRATIONS, integration_id);
 oauth_patch_handler!(update_integration, INTEGRATIONS, integration_id);
-oauth_delete_handler!(delete_integration, INTEGRATIONS, integration_id, "iam_oauth_integration_delete_failed");
+oauth_delete_handler!(
+    delete_integration,
+    INTEGRATIONS,
+    integration_id,
+    "iam_oauth_integration_delete_failed"
+);
 
 oauth_list_handler!(list_clients, CLIENTS);
 oauth_retrieve_handler!(retrieve_client, CLIENTS, oauth_client_id);
 oauth_patch_handler!(update_client, CLIENTS, oauth_client_id);
-oauth_delete_handler!(delete_client, CLIENTS, oauth_client_id, "iam_oauth_client_delete_failed");
+oauth_delete_handler!(
+    delete_client,
+    CLIENTS,
+    oauth_client_id,
+    "iam_oauth_client_delete_failed"
+);
 
 oauth_list_handler!(list_secrets, SECRETS);
-oauth_delete_handler!(delete_secret, SECRETS, secret_id, "iam_oauth_secret_delete_failed");
+oauth_delete_handler!(
+    delete_secret,
+    SECRETS,
+    secret_id,
+    "iam_oauth_secret_delete_failed"
+);
 
 oauth_list_handler!(list_surfaces, SURFACES);
 oauth_patch_handler!(update_surface, SURFACES, surface_id);
-oauth_delete_handler!(delete_surface, SURFACES, surface_id, "iam_oauth_surface_delete_failed");
+oauth_delete_handler!(
+    delete_surface,
+    SURFACES,
+    surface_id,
+    "iam_oauth_surface_delete_failed"
+);
 
 oauth_list_handler!(list_flow_configs, FLOW_CONFIGS);
 oauth_patch_handler!(update_flow_config, FLOW_CONFIGS, flow_config_id);
@@ -581,26 +640,52 @@ oauth_list_handler!(list_tenant_bindings, TENANT_BINDINGS);
 oauth_patch_handler!(update_tenant_binding, TENANT_BINDINGS, binding_id);
 
 oauth_list_handler!(list_operator_platforms, OPERATOR_PLATFORMS);
-oauth_patch_handler!(update_operator_platform, OPERATOR_PLATFORMS, operator_platform_id);
+oauth_patch_handler!(
+    update_operator_platform,
+    OPERATOR_PLATFORMS,
+    operator_platform_id
+);
 
 oauth_list_handler!(list_resource_accounts, RESOURCE_ACCOUNTS);
-oauth_patch_handler!(update_resource_account, RESOURCE_ACCOUNTS, resource_account_id);
+oauth_patch_handler!(
+    update_resource_account,
+    RESOURCE_ACCOUNTS,
+    resource_account_id
+);
 
 oauth_list_handler!(list_resource_authorizations, RESOURCE_AUTHORIZATIONS);
-oauth_patch_handler!(update_resource_authorization, RESOURCE_AUTHORIZATIONS, authorization_id);
+oauth_patch_handler!(
+    update_resource_authorization,
+    RESOURCE_AUTHORIZATIONS,
+    authorization_id
+);
 
 oauth_list_handler!(list_webhook_configs, WEBHOOK_CONFIGS);
 oauth_patch_handler!(update_webhook_config, WEBHOOK_CONFIGS, webhook_config_id);
 
 oauth_list_handler!(list_operational_resources, OPERATIONAL_RESOURCES);
-oauth_patch_handler!(update_operational_resource, OPERATIONAL_RESOURCES, resource_id);
-oauth_delete_handler!(delete_operational_resource, OPERATIONAL_RESOURCES, resource_id, "iam_oauth_operational_resource_delete_failed");
+oauth_patch_handler!(
+    update_operational_resource,
+    OPERATIONAL_RESOURCES,
+    resource_id
+);
+oauth_delete_handler!(
+    delete_operational_resource,
+    OPERATIONAL_RESOURCES,
+    resource_id,
+    "iam_oauth_operational_resource_delete_failed"
+);
 
 oauth_list_handler!(list_account_links, ACCOUNT_LINKS);
 oauth_patch_handler!(update_account_link, ACCOUNT_LINKS, account_link_id);
 
 oauth_list_handler!(list_grants, GRANTS);
-oauth_delete_handler!(delete_grant, GRANTS, grant_id, "iam_oauth_grant_delete_failed");
+oauth_delete_handler!(
+    delete_grant,
+    GRANTS,
+    grant_id,
+    "iam_oauth_grant_delete_failed"
+);
 
 oauth_list_handler!(list_callback_events, CALLBACK_EVENTS);
 
@@ -639,9 +724,10 @@ async fn create_integration(
     }
 
     let organization_id = organization_id_from_context(&ctx).unwrap_or_else(|| "0".to_owned());
-    let environment = read_string_field(&body, &["environment"]).unwrap_or_else(|| "dev".to_owned());
-    let deployment_mode =
-        read_string_field(&body, &["deploymentMode", "deployment_mode"]).unwrap_or_else(|| "saas".to_owned());
+    let environment =
+        read_string_field(&body, &["environment"]).unwrap_or_else(|| "dev".to_owned());
+    let deployment_mode = read_string_field(&body, &["deploymentMode", "deployment_mode"])
+        .unwrap_or_else(|| "saas".to_owned());
     let id = format!("iamoi-{}", Uuid::new_v4());
     let insert_id = id.clone();
     let now = Utc::now().to_rfc3339();
@@ -711,8 +797,8 @@ async fn create_client(
     let provider_code = read_string_field(&body, &["providerCode", "provider_code"]);
     let client_code = read_string_field(&body, &["clientCode", "client_code"]);
     let display_name = read_string_field(&body, &["displayName", "display_name"]);
-    let provider_client_id =
-        read_string_field(&body, &["providerClientId", "provider_client_id"]);
+    let provider_client_id = read_string_field(&body, &["providerClientId", "provider_client_id"]);
+    let provider_tenant_id = read_string_field(&body, &["providerTenantId", "provider_tenant_id"]);
     if integration_id.as_deref().unwrap_or("").is_empty()
         || provider_code.as_deref().unwrap_or("").is_empty()
         || client_code.as_deref().unwrap_or("").is_empty()
@@ -735,6 +821,7 @@ async fn create_client(
     let client_code_value = client_code.as_ref().expect("validated").clone();
     let display_name_value = display_name.as_ref().expect("validated").clone();
     let provider_client_id_value = provider_client_id.as_ref().expect("validated").clone();
+    let provider_tenant_id_value = provider_tenant_id.clone();
     let tenant_id_insert = tenant_id.clone();
 
     oauth_commit_create(
@@ -752,27 +839,29 @@ async fn create_client(
             let client_code_value = client_code_value.clone();
             let display_name_value = display_name_value.clone();
             let provider_client_id_value = provider_client_id_value.clone();
+            let provider_tenant_id_value = provider_tenant_id_value.clone();
             let now = now.clone();
-            
-                sqlx::query(
-                    "INSERT INTO iam_oauth_client \
-                        (id, uuid, tenant_id, organization_id, integration_id, provider_code, client_code, display_name, \
-                         provider_client_id, client_auth_method, pkce_default_mode, secret_config_status, status, created_at, updated_at) \
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'client_secret_post', 'required', 'missing', 'active', $10, $10)",
-                )
-                .bind(&insert_id)
-                .bind(Uuid::new_v4().to_string())
-                .bind(&tenant_id)
-                .bind(&organization_id)
-                .bind(&integration_id_value)
-                .bind(&provider_code_value)
-                .bind(&client_code_value)
-                .bind(&display_name_value)
-                .bind(&provider_client_id_value)
-                .bind(&now)
-                .execute(&mut **tx)
-                .await
-                .map(|_| ())
+
+            sqlx::query(
+                "INSERT INTO iam_oauth_client \
+                    (id, uuid, tenant_id, organization_id, integration_id, provider_code, client_code, display_name, \
+                     provider_client_id, provider_tenant_id, client_auth_method, pkce_default_mode, secret_config_status, status, created_at, updated_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'client_secret_post', 'required', 'missing', 'active', $11, $11)",
+            )
+            .bind(&insert_id)
+            .bind(Uuid::new_v4().to_string())
+            .bind(&tenant_id)
+            .bind(&organization_id)
+            .bind(&integration_id_value)
+            .bind(&provider_code_value)
+            .bind(&client_code_value)
+            .bind(&display_name_value)
+            .bind(&provider_client_id_value)
+            .bind(&provider_tenant_id_value)
+            .bind(&now)
+            .execute(&mut **tx)
+            .await
+            .map(|_| ())
             }),
     )
     .await
@@ -899,10 +988,7 @@ async fn create_pre_authorization(
 ) -> Response {
     let mut payload = body;
     if let Value::Object(ref mut map) = payload {
-        map.insert(
-            "operatorPlatformId".to_owned(),
-            json!(operator_platform_id),
-        );
+        map.insert("operatorPlatformId".to_owned(), json!(operator_platform_id));
     }
     insert_diagnostic_run(&state, &ctx, &payload, "pre_authorization").await
 }
@@ -1099,28 +1185,48 @@ async fn verify_oauth_surface_diagnostic(
     tenant_id: &str,
     body: &Value,
 ) -> Result<String, String> {
-    let surface_id = read_string_field(body, &["surfaceId", "surface_id"])
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| "surfaceId is required".to_string())?;
+    let resource_account_id =
+        read_string_field(body, &["resourceAccountId", "resource_account_id"])
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| "resourceAccountId is required".to_string())?;
     let row = sqlx::query(
-        "SELECT surface_kind, status FROM iam_oauth_surface \
-         WHERE tenant_id = $1 AND id = $2 LIMIT 1",
+        "SELECT r.integration_id, i.app_id \
+         FROM iam_oauth_resource_account r \
+         JOIN iam_oauth_integration i ON i.id = r.integration_id AND i.tenant_id = r.tenant_id \
+         WHERE r.tenant_id = $1 AND r.id = $2 AND r.provider_code = 'wechat_mini_program' \
+           AND r.enabled = 1 AND r.status = 'active' AND i.enabled = 1 AND i.status = 'active' \
+         LIMIT 1",
     )
     .bind(tenant_id)
-    .bind(&surface_id)
+    .bind(&resource_account_id)
     .fetch_optional(pg)
     .await
-    .map_err(|error| format!("oauth surface diagnostic failed: {error}"))?
-    .ok_or_else(|| "oauth surface was not found".to_string())?;
-    let surface_kind: String = row.get(0);
-    let status: String = row.get(1);
-    if status != "active" {
-        return Err("oauth surface is not active".to_string());
-    }
-    if surface_kind != "mini_program" {
-        return Err("oauth surface is not configured for mini program login".to_string());
-    }
-    Ok(format!("surface {surface_id} is active for mini program login"))
+    .map_err(|error| format!("oauth mini program diagnostic failed: {error}"))?
+    .ok_or_else(|| "active WeChat mini program resource account was not found".to_string())?;
+    let integration_id: String = row.get(0);
+    let runtime_app_id: String = row.get(1);
+    let surface_code = sqlx::query_scalar::<_, String>(
+        "SELECT surface_code FROM iam_oauth_surface \
+         WHERE tenant_id = $1 AND integration_id = $2 AND surface_kind = 'mini_program' \
+           AND enabled = 1 AND status = 'active' \
+         ORDER BY surface_code LIMIT 1",
+    )
+    .bind(tenant_id)
+    .bind(&integration_id)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("load mini program diagnostic surface failed: {error}"))?
+    .ok_or_else(|| "active WeChat mini program surface was not found".to_string())?;
+    sdkwork_iam_web_adapter::probe_wechat_mini_program_configuration(
+        pg,
+        tenant_id,
+        &runtime_app_id,
+        Some(&surface_code),
+    )
+    .await?;
+    Ok(format!(
+        "WeChat mini program resource account {resource_account_id} passed external configuration probe"
+    ))
 }
 
 async fn verify_oauth_operational_resource_diagnostic(
@@ -1153,9 +1259,7 @@ async fn insert_diagnostic_run(
     default_run_kind: &str,
 ) -> Response {
     let Ok(pg) = postgres_pool_or_error(state) else {
-        return postgres_pool_or_error(state)
-            .err()
-            .expect("error response");
+        return postgres_pool_or_error(state).err().expect("error response");
     };
     let Ok(tenant_id) = tenant_id_from_context(ctx) else {
         return tenant_id_from_context(ctx).err().expect("error response");
@@ -1961,7 +2065,9 @@ async fn generic_integration_child_create<F>(
     read_fields: F,
 ) -> Response
 where
-    F: Fn(&Value) -> (
+    F: Fn(
+        &Value,
+    ) -> (
         Option<String>,
         Option<String>,
         Option<String>,
@@ -1970,9 +2076,7 @@ where
     ),
 {
     let Ok(pg) = postgres_pool_or_error(state) else {
-        return postgres_pool_or_error(state)
-            .err()
-            .expect("error response");
+        return postgres_pool_or_error(state).err().expect("error response");
     };
     let Ok(tenant_id) = tenant_id_from_context(ctx) else {
         return tenant_id_from_context(ctx).err().expect("error response");
@@ -1987,11 +2091,7 @@ where
         .take(required_count)
         .any(|value| value.as_deref().is_none_or(str::is_empty))
     {
-        return appbase_error(
-            StatusCode::BAD_REQUEST,
-            spec.list_error,
-            validation_message,
-        );
+        return appbase_error(StatusCode::BAD_REQUEST, spec.list_error, validation_message);
     }
 
     let (f1, f2, f3, f4, f5) = (
@@ -2009,14 +2109,8 @@ where
     let sql_owned = sql.to_owned();
     let tenant_id_insert = tenant_id.clone();
 
-    oauth_commit_create(
-        state,
-        ctx,
-        pg,
-        &id,
-        spec,
-        json!({}),
-        |tx| Box::pin(async move {
+    oauth_commit_create(state, ctx, pg, &id, spec, json!({}), |tx| {
+        Box::pin(async move {
             let sql = sql_owned.clone();
             let tenant_id = tenant_id_insert.clone();
             let organization_id = organization_id.clone();
@@ -2027,55 +2121,55 @@ where
             let f4 = f4.clone();
             let f5 = f5.clone();
             let now = now.clone();
-            
-                match sql.as_str() {
-                    s if s.contains("iam_oauth_scope_profile") => {
-                        sqlx::query(s)
-                            .bind(&insert_id)
-                            .bind(Uuid::new_v4().to_string())
-                            .bind(&tenant_id)
-                            .bind(&organization_id)
-                            .bind(integration_id.as_ref().or(f1.as_ref()).expect("validated"))
-                            .bind(f2.as_ref().expect("validated"))
-                            .bind(f3.as_ref().expect("validated"))
-                            .bind(f4.as_ref().expect("validated"))
-                            .bind(f5.as_ref().expect("validated"))
-                            .bind(&now)
-                            .execute(&mut **tx)
-                            .await
-                    }
-                    s if s.contains("iam_oauth_claim_mapping") => {
-                        sqlx::query(s)
-                            .bind(&insert_id)
-                            .bind(Uuid::new_v4().to_string())
-                            .bind(&tenant_id)
-                            .bind(&organization_id)
-                            .bind(f1.as_ref().expect("validated"))
-                            .bind(f2.as_ref().expect("validated"))
-                            .bind(f3.as_ref().expect("validated"))
-                            .bind(f4.as_ref().expect("validated"))
-                            .bind(f5.as_ref().expect("validated"))
-                            .bind(&now)
-                            .execute(&mut **tx)
-                            .await
-                    }
-                    _ => {
-                        sqlx::query(&sql)
-                            .bind(&insert_id)
-                            .bind(Uuid::new_v4().to_string())
-                            .bind(&tenant_id)
-                            .bind(&organization_id)
-                            .bind(f1.as_ref().expect("validated"))
-                            .bind(f2.as_ref().expect("validated"))
-                            .bind(f3.as_ref().expect("validated"))
-                            .bind(f4.as_ref().or(f5.as_ref()).expect("validated"))
-                            .bind(&now)
-                            .execute(&mut **tx)
-                            .await
-                    }
+
+            match sql.as_str() {
+                s if s.contains("iam_oauth_scope_profile") => {
+                    sqlx::query(s)
+                        .bind(&insert_id)
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .bind(&organization_id)
+                        .bind(integration_id.as_ref().or(f1.as_ref()).expect("validated"))
+                        .bind(f2.as_ref().expect("validated"))
+                        .bind(f3.as_ref().expect("validated"))
+                        .bind(f4.as_ref().expect("validated"))
+                        .bind(f5.as_ref().expect("validated"))
+                        .bind(&now)
+                        .execute(&mut **tx)
+                        .await
                 }
-                .map(|_| ())
-            }),
-    )
+                s if s.contains("iam_oauth_claim_mapping") => {
+                    sqlx::query(s)
+                        .bind(&insert_id)
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .bind(&organization_id)
+                        .bind(f1.as_ref().expect("validated"))
+                        .bind(f2.as_ref().expect("validated"))
+                        .bind(f3.as_ref().expect("validated"))
+                        .bind(f4.as_ref().expect("validated"))
+                        .bind(f5.as_ref().expect("validated"))
+                        .bind(&now)
+                        .execute(&mut **tx)
+                        .await
+                }
+                _ => {
+                    sqlx::query(&sql)
+                        .bind(&insert_id)
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .bind(&organization_id)
+                        .bind(f1.as_ref().expect("validated"))
+                        .bind(f2.as_ref().expect("validated"))
+                        .bind(f3.as_ref().expect("validated"))
+                        .bind(f4.as_ref().or(f5.as_ref()).expect("validated"))
+                        .bind(&now)
+                        .execute(&mut **tx)
+                        .await
+                }
+            }
+            .map(|_| ())
+        })
+    })
     .await
 }

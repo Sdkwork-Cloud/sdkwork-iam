@@ -30,6 +30,14 @@ Gateway assembly infrastructure smoke test (no database required):
 cargo test -p sdkwork-iam-gateway-assembly --test infra_routes
 ```
 
+## Run Standalone Gateway
+
+```bash
+SDKWORK_IAM_APPLICATION_PUBLIC_INGRESS_BIND=127.0.0.1:3901 cargo run -p sdkwork-iam-gateway-assembly
+```
+
+Production additionally requires the PostgreSQL profile, `SDKWORK_IM_ENVIRONMENT=production`, `SDKWORK_IAM_SIGNING_MASTER_SECRET`, messaging-backed verification when email verification is required, and a successful database Snowflake node lease. Startup remains alive for probe visibility when hardening fails, but `/readyz` stays unavailable and business traffic must not be routed to the instance.
+
 PostgreSQL integration tests (serial execution avoids Windows linker contention):
 
 ```bash
@@ -51,4 +59,4 @@ pnpm run verify
 - If PostgreSQL integration tests fail with `PoolTimedOut`, terminate stale IAM test binaries and release idle connections on the dev database before re-running `pnpm run verify`.
 - Local JWT issuer is `sdkwork-iam-local`.
 - `sdkwork-iam-gateway-assembly` mounts `/healthz`, `/livez`, `/readyz`, and `/metrics` once via `sdkwork-web-bootstrap::assemble_multi_surface_router`.
-- `/readyz` uses SQLx readiness against the IAM database pool when env is configured; otherwise falls back to always-ready for embedded composition hosts.
+- `/readyz` uses SQLx readiness against the IAM database pool. The always-ready fallback is development/embedded-only; production database bootstrap and Snowflake lease failures remain fail-closed.

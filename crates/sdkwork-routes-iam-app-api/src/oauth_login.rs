@@ -4,15 +4,15 @@ use sqlx::{PgPool, Row};
 
 use crate::{
     contacts::load_user_by_id,
-    directory::resolve_open_registration_tenant_id,
     state::{LocalIamConfig, LocalIamUser},
     utils::{canonical_identity, current_timestamp_utc, new_iam_user_id, LOCAL_EPHEMERAL_SCOPE},
 };
 use sdkwork_iam_web_adapter::{
     builtin_oauth_provider_catalog, catalog_entry_for_provider, exchange_oauth_authorization_code,
-    load_oauth_integration_exchange_context, normalize_oauth_provider_code, oauth_login_allowed,
-    oauth_provider_allowed, provider_catalog_entry_to_json, AccountBindingPolicyDocument,
-    LocalOAuthAuthority, LocalOAuthProviderProfile,
+    exchange_wechat_mini_program_code, load_oauth_integration_exchange_context,
+    normalize_oauth_provider_code, oauth_login_allowed, oauth_provider_allowed,
+    provider_catalog_entry_to_json, AccountBindingPolicyDocument, LocalOAuthAuthority,
+    LocalOAuthProviderProfile,
 };
 
 #[derive(Clone)]
@@ -111,6 +111,7 @@ pub(crate) async fn create_oauth_authorization_url(
     _config: &LocalIamConfig,
     policy: &AccountBindingPolicyDocument,
     login_ctx: &OAuthLoginContext,
+    tenant_id: &str,
     provider: &str,
     redirect_uri: &str,
     state: Option<&str>,
@@ -132,7 +133,9 @@ pub(crate) async fn create_oauth_authorization_url(
     }
 
     if let Some(pg) = pg {
-        if let Some(tenant_id) = find_active_integration_tenant(pg, &normalized).await? {
+        if let Some(tenant_id) =
+            find_active_integration_tenant_for_tenant(pg, tenant_id, &normalized).await?
+        {
             if let Some(url) = build_integration_authorization_url(
                 pg,
                 &tenant_id,
@@ -155,6 +158,7 @@ pub(crate) async fn resolve_oauth_login_user(
     _config: &LocalIamConfig,
     policy: &AccountBindingPolicyDocument,
     login_ctx: &OAuthLoginContext,
+    tenant_id: &str,
     provider: &str,
     code: &str,
     redirect_uri: Option<&str>,
@@ -170,9 +174,12 @@ pub(crate) async fn resolve_oauth_login_user(
         .resolve_authorization_code(&normalized, code)
     {
         (profile, format!("local:{}", normalized))
-    } else if let Some(tenant_id) = find_active_integration_tenant(pg, &normalized).await? {
+    } else if let Some(integration_tenant_id) =
+        find_active_integration_tenant_for_tenant(pg, tenant_id, &normalized).await?
+    {
         let Some(ctx) =
-            load_oauth_integration_exchange_context(pg, &tenant_id, &normalized).await?
+            load_oauth_integration_exchange_context(pg, &integration_tenant_id, &normalized)
+                .await?
         else {
             return Err(
                 "OAuth code exchange requires a configured local OAuth profile or provider integration"
@@ -194,27 +201,38 @@ pub(crate) async fn resolve_oauth_login_user(
         );
     };
 
-    resolve_or_create_oauth_user(pg, policy, &profile, &integration_id).await
+    resolve_or_create_oauth_user(pg, policy, tenant_id, &profile, &integration_id).await
+}
+
+pub(crate) async fn resolve_wechat_mini_program_login_user(
+    pg: &PgPool,
+    policy: &AccountBindingPolicyDocument,
+    tenant_id: &str,
+    runtime_app_id: &str,
+    surface_code: Option<&str>,
+    code: &str,
+) -> Result<LocalIamUser, String> {
+    const PROVIDER: &str = "wechat_mini_program";
+    if !oauth_login_allowed(policy, Some(PROVIDER)) {
+        return Err("WeChat mini program login is disabled for this tenant".to_string());
+    }
+    let (profile, integration_id) =
+        exchange_wechat_mini_program_code(pg, tenant_id, runtime_app_id, surface_code, code)
+            .await?;
+    resolve_or_create_oauth_user(pg, policy, tenant_id, &profile, &integration_id).await
 }
 
 async fn resolve_or_create_oauth_user(
     pg: &PgPool,
     policy: &AccountBindingPolicyDocument,
+    tenant_id: &str,
     profile: &LocalOAuthProviderProfile,
     integration_id: &str,
 ) -> Result<LocalIamUser, String> {
-    if let Some((user_id, tenant_id)) =
-        find_user_id_by_oauth_subject_global(pg, &profile.provider, &profile.subject).await?
+    if let Some(user_id) =
+        find_user_id_by_oauth_subject(pg, tenant_id, integration_id, profile).await?
     {
-        if let Some(user) = load_user_by_id(pg, &tenant_id, &user_id).await? {
-            upsert_oauth_account_link(pg, &user, profile, integration_id).await?;
-            return Ok(user);
-        }
-    }
-
-    if let Some(email) = profile.email.as_deref().filter(|value| !value.is_empty()) {
-        if let Some(user) = find_user_by_email_global(pg, email).await? {
-            link_oauth_identity(pg, &user, profile).await?;
+        if let Some(user) = load_user_by_id(pg, tenant_id, &user_id).await? {
             upsert_oauth_account_link(pg, &user, profile, integration_id).await?;
             return Ok(user);
         }
@@ -224,8 +242,7 @@ async fn resolve_or_create_oauth_user(
         return Err("OAuth auto registration is disabled for this tenant".to_string());
     }
 
-    let tenant_id = resolve_open_registration_tenant_id(pg).await?;
-    let user = create_oauth_user(pg, &tenant_id, profile).await?;
+    let user = create_oauth_user(pg, tenant_id, integration_id, profile).await?;
     link_oauth_identity(pg, &user, profile).await?;
     upsert_oauth_account_link(pg, &user, profile, integration_id).await?;
     Ok(user)
@@ -290,9 +307,14 @@ async fn build_integration_authorization_url(
     let scope = serde_json::from_str::<Vec<String>>(&default_scopes_json)
         .unwrap_or_else(|_| sdkwork_iam_web_adapter::builtin_default_scopes(provider_code))
         .join(" ");
+    let client_id_parameter = if matches!(provider_code, "wechat" | "wechat_open") {
+        "appid"
+    } else {
+        "client_id"
+    };
     let mut params = vec![
         ("response_type".to_string(), "code".to_string()),
-        ("client_id".to_string(), client_id),
+        (client_id_parameter.to_string(), client_id),
         ("redirect_uri".to_string(), redirect_uri.to_string()),
     ];
     if let Some(state) = state.map(str::trim).filter(|value| !value.is_empty()) {
@@ -302,72 +324,91 @@ async fn build_integration_authorization_url(
         params.push(("scope".to_string(), scope));
     }
 
-    Ok(Some(append_query_parameters(
-        &authorization_endpoint,
-        &params,
-    )))
+    let mut authorization_url = append_query_parameters(&authorization_endpoint, &params);
+    if provider_code == "wechat" {
+        authorization_url.push_str("#wechat_redirect");
+    }
+    Ok(Some(authorization_url))
 }
 
-async fn find_user_id_by_oauth_subject_global(
+pub(crate) async fn find_active_integration_tenant_for_tenant(
     pg: &PgPool,
-    provider: &str,
-    subject: &str,
-) -> Result<Option<(String, String)>, String> {
-    let subject_hash = hash_subject(subject);
+    tenant_id: &str,
+    provider_code: &str,
+) -> Result<Option<String>, String> {
+    sqlx::query_scalar::<_, String>(
+        "SELECT tenant_id FROM iam_oauth_integration \
+         WHERE tenant_id = $1 AND provider_code = $2 AND enabled = 1 AND status = 'active' \
+         ORDER BY tenant_id LIMIT 1",
+    )
+    .bind(tenant_id)
+    .bind(provider_code)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("lookup tenant oauth integration failed: {error}"))
+}
+
+async fn find_user_id_by_oauth_subject(
+    pg: &PgPool,
+    tenant_id: &str,
+    integration_id: &str,
+    profile: &LocalOAuthProviderProfile,
+) -> Result<Option<String>, String> {
+    let subject_hash = hash_subject(&profile.subject);
     let row = sqlx::query(
-        "SELECT user_id, tenant_id FROM iam_oauth_account_link \
-         WHERE provider_code = $1 AND external_subject_hash = $2 \
+        "SELECT user_id FROM iam_oauth_account_link \
+         WHERE tenant_id = $1 AND integration_id = $2 AND provider_code = $3 \
+           AND external_subject_hash = $4 \
            AND status = 'active' AND unlinked_at IS NULL \
          LIMIT 1",
     )
-    .bind(provider)
+    .bind(tenant_id)
+    .bind(integration_id)
+    .bind(&profile.provider)
     .bind(subject_hash)
     .fetch_optional(pg)
     .await
     .map_err(|error| format!("lookup oauth account link failed: {error}"))?;
     if let Some(row) = row {
-        return Ok(Some((row.get(0), row.get(1))));
+        return Ok(Some(row.get(0)));
     }
 
-    let row = sqlx::query(
-        "SELECT user_id, tenant_id FROM iam_user_identity \
-         WHERE provider = $1 AND subject = $2 \
-         LIMIT 1",
-    )
-    .bind(provider)
-    .bind(subject)
-    .fetch_optional(pg)
-    .await
-    .map_err(|error| format!("lookup oauth user identity failed: {error}"))?;
-    Ok(row.map(|row| (row.get(0), row.get(1))))
-}
+    if let (Some(union_id), Some(union_scope_id)) = (
+        profile.union_id.as_deref(),
+        profile.union_scope_id.as_deref(),
+    ) {
+        let row = sqlx::query(
+            "SELECT user_id FROM iam_oauth_account_link \
+             WHERE tenant_id = $1 AND provider_union_scope_id = $2 \
+               AND external_union_id_hash = $3 \
+               AND status = 'active' AND unlinked_at IS NULL \
+             LIMIT 1",
+        )
+        .bind(tenant_id)
+        .bind(union_scope_id)
+        .bind(hash_subject(union_id))
+        .fetch_optional(pg)
+        .await
+        .map_err(|error| format!("lookup oauth union identity failed: {error}"))?;
+        if let Some(row) = row {
+            return Ok(Some(row.get(0)));
+        }
+    }
 
-async fn find_user_by_email_global(
-    pg: &PgPool,
-    email: &str,
-) -> Result<Option<LocalIamUser>, String> {
-    let row = sqlx::query(
-        "SELECT id, tenant_id, username, display_name, email, phone, email_verified, phone_verified, \
-                last_login_at, password_changed_at \
-         FROM iam_user \
-         WHERE lower(email) = lower($1) AND status = 'active' AND is_deleted = 0 \
-         LIMIT 1",
-    )
-    .bind(email)
-    .fetch_optional(pg)
-    .await
-    .map_err(|error| format!("lookup user by email failed: {error}"))?;
-
-    Ok(row.map(map_user_row))
+    Ok(None)
 }
 
 async fn create_oauth_user(
     pg: &PgPool,
     tenant_id: &str,
+    integration_id: &str,
     profile: &LocalOAuthProviderProfile,
 ) -> Result<LocalIamUser, String> {
     let user_id = new_iam_user_id();
-    let username = format!("{}:{}", profile.provider, profile.subject);
+    let username = format!(
+        "{}:{}:{}",
+        profile.provider, integration_id, profile.subject
+    );
     let display_name = profile
         .name
         .clone()
@@ -447,19 +488,29 @@ async fn upsert_oauth_account_link(
         .await
         .unwrap_or_else(|| format!("org_{}", user.tenant_id));
     let link_id = format!(
-        "{}:{}:{}",
-        user.tenant_id, profile.provider, profile.subject
+        "{}:{}:{}:{}",
+        user.tenant_id, integration_id, profile.provider, profile.subject
     );
     let subject_hash = hash_subject(&profile.subject);
+    let open_id_hash = profile.open_id.as_deref().map(hash_subject);
+    let union_id_hash = profile.union_id.as_deref().map(hash_subject);
     sqlx::query(
         "INSERT INTO iam_oauth_account_link (\
             id, uuid, tenant_id, organization_id, user_id, provider_code, integration_id, \
-            external_subject, external_subject_hash, external_account_display_snapshot, \
-            link_source, linked_at, status, claim_snapshot_json, created_at, updated_at\
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'oauth_login', $11, 'active', $12, $11, $11) \
+            external_subject, external_subject_hash, external_open_id, external_open_id_hash, \
+            external_union_id, external_union_id_hash, provider_union_scope_id, \
+            external_account_display_snapshot, link_source, linked_at, status, claim_snapshot_json, \
+            created_at, updated_at\
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, \
+                   'oauth_login', $16, 'active', $17, $16, $16) \
          ON CONFLICT (id) DO UPDATE SET \
            user_id = EXCLUDED.user_id, \
            integration_id = EXCLUDED.integration_id, \
+           external_open_id = EXCLUDED.external_open_id, \
+           external_open_id_hash = EXCLUDED.external_open_id_hash, \
+           external_union_id = COALESCE(EXCLUDED.external_union_id, iam_oauth_account_link.external_union_id), \
+           external_union_id_hash = COALESCE(EXCLUDED.external_union_id_hash, iam_oauth_account_link.external_union_id_hash), \
+           provider_union_scope_id = COALESCE(EXCLUDED.provider_union_scope_id, iam_oauth_account_link.provider_union_scope_id), \
            external_account_display_snapshot = EXCLUDED.external_account_display_snapshot, \
            status = 'active', \
            unlinked_at = NULL, \
@@ -474,6 +525,11 @@ async fn upsert_oauth_account_link(
     .bind(integration_id)
     .bind(&profile.subject)
     .bind(subject_hash)
+    .bind(&profile.open_id)
+    .bind(open_id_hash)
+    .bind(&profile.union_id)
+    .bind(union_id_hash)
+    .bind(&profile.union_scope_id)
     .bind(profile.name.clone().or_else(|| profile.email.clone()))
     .bind(&now)
     .bind(
@@ -497,21 +553,6 @@ async fn primary_organization_id(pg: &PgPool, tenant_id: &str) -> Option<String>
     .await
     .ok()
     .flatten()
-}
-
-fn map_user_row(row: sqlx::postgres::PgRow) -> LocalIamUser {
-    LocalIamUser {
-        id: row.get(0),
-        tenant_id: row.get(1),
-        username: row.get(2),
-        display_name: row.get(3),
-        email: row.get(4),
-        phone: row.get(5),
-        email_verified: row.get::<i32, _>(6) != 0,
-        phone_verified: row.get::<i32, _>(7) != 0,
-        last_login_at: row.get(8),
-        password_changed_at: row.get(9),
-    }
 }
 
 fn hash_subject(subject: &str) -> String {

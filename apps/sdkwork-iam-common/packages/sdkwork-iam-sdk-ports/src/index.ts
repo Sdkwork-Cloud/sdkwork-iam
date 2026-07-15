@@ -133,8 +133,8 @@ export interface IamAppOAuthResourceClient {
     };
   };
   callbacks?: {
-    handleGet?: IamSdkMethod;
-    handlePost?: IamSdkMethod;
+    create?: IamSdkMethod;
+    retrieve?: IamSdkMethod;
   };
   miniProgramSessions?: {
     create?: IamSdkMethod;

@@ -65,4 +65,41 @@ void main() {
       'organizationId': '0',
     });
   });
+
+  test('OAuth and mini program callbacks create committed sessions', () async {
+    Map<String, String>? miniBody;
+    final controller = IamFlutterMobileAuthSessionController(
+      createSession: (_) async => {},
+      createOAuthSession: (body) async => {
+        'authToken': 'oauth-auth',
+        'accessToken': 'oauth-access',
+      },
+      createMiniProgramSession: (body) async {
+        miniBody = body;
+        return {
+          'authToken': 'mini-auth',
+          'accessToken': 'mini-access',
+        };
+      },
+      logout: () async {},
+    );
+
+    final oauthSession = await controller.loginWithOAuth(
+      provider: 'wechat',
+      code: 'oauth-code',
+      state: 'oauth-state',
+    );
+    expect(oauthSession.authToken, 'oauth-auth');
+
+    final miniSession = await controller.loginWithMiniProgram(
+      jsCode: 'wx-code',
+      surfaceCode: 'consumer-mini',
+    );
+    expect(miniSession.authToken, 'mini-auth');
+    expect(miniBody, {
+      'jsCode': 'wx-code',
+      'providerCode': 'wechat_mini_program',
+      'surfaceCode': 'consumer-mini',
+    });
+  });
 }

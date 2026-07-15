@@ -52,7 +52,7 @@
     },
     {
       "path": "src/api/auth.ts",
-      "sha256": "7c6c49c3fe8eee24cd9dbe219e450bec1625403e3bdae21ee7167eba1cfa3214"
+      "sha256": "e4d1b0d27d64e7a325983b812de4e80c337c496ad51d31f1384510043e0493e9"
     },
     {
       "path": "src/api/base.ts",
@@ -60,7 +60,7 @@
     },
     {
       "path": "src/api/iam.ts",
-      "sha256": "1ecd96f33c5cbe42748b416ebd0aef3d09593d60c1ef2d025d226ec0828f94f5"
+      "sha256": "119075b35cc72c271eda01fb4bac803bcf0d49617d1a2c85d8ac819db9887c33"
     },
     {
       "path": "src/api/index.ts",
@@ -68,7 +68,7 @@
     },
     {
       "path": "src/api/oauth.ts",
-      "sha256": "342e3ca62d0f3c8c647801472d5c16a2f22d53b46616a14142c2adb774aa5b99"
+      "sha256": "97442d1a79855cf9f22390e3a63e72b7d0892c16c553e799c5cab6729539c3b3"
     },
     {
       "path": "src/api/paths.ts",
@@ -132,11 +132,15 @@
     },
     {
       "path": "src/types/field-error.ts",
-      "sha256": "df70e331e6bff0817bc35428286fa8de5d7274ab83a6c60d7184759bf680a088"
+      "sha256": "7688827a804d5c888fdf626b89e3356832f858e24f0657069b6b842a31ae6907"
+    },
+    {
+      "path": "src/types/iam-oauth-client-create-command.ts",
+      "sha256": "b507acc6502086b77de028f17b3d6b48888eb58b3170f80749ea53f501e4ff4a"
     },
     {
       "path": "src/types/index.ts",
-      "sha256": "0fde1844faec15f0ee7072253acc5f5293ef2979c538767d21c94a89b57c1ad1"
+      "sha256": "80f3e51003aefbf14c1e1dc4fa785da39b7f0d292a23661f28d6f5ef2d556f13"
     },
     {
       "path": "src/types/page-info.ts",
@@ -144,7 +148,7 @@
     },
     {
       "path": "src/types/problem-detail.ts",
-      "sha256": "deca621176487754cbfa2012aa3eab046131ced5829ddf7cff64de692f8bcb0e"
+      "sha256": "c41fdf6433e1167d2fb1f3ac38fd13eb77178f4c0633c9e27824f1e1687ee4f6"
     },
     {
       "path": "src/types/sdk-work-api-response.ts",
@@ -177,6 +181,10 @@
     {
       "path": "src/types/sdk-work-resource-response.ts",
       "sha256": "89c05f5549bef773335245f56f61ca1a6959978726799391d584a6bd25d12fdc"
+    },
+    {
+      "path": "src/types/wechat-mini-program-session-create-command.ts",
+      "sha256": "313571c4023695a32deae0ad277d03020fb355649c2c145fa7699f0e7bb25ff3"
     },
     {
       "path": "tsconfig.json",

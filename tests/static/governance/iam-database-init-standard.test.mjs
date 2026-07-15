@@ -122,7 +122,7 @@ test("operational seed profile loads IAM subject and application bootstrap data"
   ]);
 });
 
-test("IAM database seed hooks provision bootstrap admin user when password env is configured", () => {
+test("IAM database seed hooks always provision the bootstrap admin and gate only its credential", () => {
   const databaseModule = readText("crates/sdkwork-iam-database-host/src/iam_database_module.rs");
   const databaseHostLib = readText("crates/sdkwork-iam-database-host/src/lib.rs");
   const bootstrapOperator = readText("crates/sdkwork-iam-bootstrap/src/bootstrap_operator.rs");
@@ -130,8 +130,14 @@ test("IAM database seed hooks provision bootstrap admin user when password env i
   assert.match(databaseModule, /ensure_postgres_bootstrap_admin_user/u);
   assert.match(databaseHostLib, /ensure_postgres_bootstrap_admin_user/u);
   assert.match(bootstrapOperator, /DEFAULT_BOOTSTRAP_ADMIN_USERNAME/u);
+  assert.match(bootstrapOperator, /DEFAULT_BOOTSTRAP_ADMIN_EMAIL/u);
   assert.match(bootstrapOperator, /PLATFORM_SUPER_ADMIN_ROLE_CODE/u);
+  assert.match(bootstrapOperator, /bootstrap_admin_is_fully_provisioned/u);
+  assert.match(bootstrapOperator, /rb\.principal_kind = 'user'/u);
+  assert.match(bootstrapOperator, /rb\.scope_kind = 'tenant'/u);
+  assert.match(bootstrapOperator, /p\.code = '\*'/u);
   assert.match(bootstrapOperator, /SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV/u);
+  assert.match(bootstrapOperator, /if let Some\(password\) = password\.as_deref\(\)/u);
 });
 
 test("IAM component spec declares DATABASE_FRAMEWORK_SPEC and database verification", () => {

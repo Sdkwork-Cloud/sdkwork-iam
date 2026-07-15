@@ -74,6 +74,10 @@ Tenant account-binding policy is stored in `iam_policy.policy_json` (`jsonb`). U
 
 Handlers serialize success through `SdkWorkApiResponse` and errors through `ProblemDetail` (`sdkwork-utils-rust`). OAuth authorization-server endpoints declare `x-sdkwork-wire-protocol: external` on the open-api authority.
 
+WeChat integrations use the provider-specific IAM adapter surfaces. `wechat` is Official Account H5 OAuth, `wechat_open` is Open Platform QR OAuth, and `wechat_mini_program` is the dedicated `jscode2session` flow exposed through the typed app SDK command. Do not call WeChat endpoints from applications. Provider callbacks are external-wire routes accepting raw XML/JSON; they perform signature, optional AES safe-mode, AppID, and replay validation before recording events.
+
+Set the optional OAuth client `providerTenantId` to the shared WeChat Open Platform account identifier when Official Account and Mini Program clients are allowed to merge an identical `unionid`. IAM performs this merge only when the verified tenant and `providerTenantId` both match. An omitted value deliberately keeps identities isolated by tenant, integration, provider, and subject.
+
 TypeScript surfaces use `@sdkwork/utils`; Flutter mobile surfaces use `sdkwork_iam_flutter_mobile_core` string helpers with the same semantics until `sdkwork-utils-dart` ships.
 
 ## Federated Gateway Wiring

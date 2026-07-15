@@ -13,8 +13,8 @@ export class IamUsersCurrentPhoneBindingsApi {
 
 
 /** Users current phone Bindings delete. */
-  async delete(): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(appApiPath(`/iam/users/current/phone_bindings`));
+  async delete(): Promise<void> {
+    return this.client.delete<void>(appApiPath(`/iam/users/current/phone_bindings`));
   }
 
 /** Users current phone Bindings create. */
@@ -32,8 +32,8 @@ export class IamUsersCurrentPasswordApi {
 
 
 /** Users current password update. */
-  async update(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(appApiPath(`/iam/users/current/password`), body, undefined, undefined, 'application/json');
+  async update(body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(appApiPath(`/iam/users/current/password`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -46,8 +46,8 @@ export class IamUsersCurrentEmailBindingsApi {
 
 
 /** Users current email Bindings delete. */
-  async delete(): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(appApiPath(`/iam/users/current/email_bindings`));
+  async delete(): Promise<void> {
+    return this.client.delete<void>(appApiPath(`/iam/users/current/email_bindings`));
   }
 
 /** Users current email Bindings create. */

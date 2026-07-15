@@ -41,8 +41,8 @@ export class AuthSessionsCurrentApi {
 
 
 /** Sessions current delete. */
-  async delete(): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(appApiPath(`/auth/sessions/current`));
+  async delete(): Promise<void> {
+    return this.client.delete<void>(appApiPath(`/auth/sessions/current`));
   }
 
 /** Sessions current retrieve. */

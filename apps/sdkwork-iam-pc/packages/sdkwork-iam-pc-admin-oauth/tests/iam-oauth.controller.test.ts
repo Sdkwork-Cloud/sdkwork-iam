@@ -71,6 +71,23 @@ describe("SDKWork IAM OAuth PC admin controller", () => {
     const service = createOauthServiceMock();
     const controller = createSdkworkIamOauthAdminController({ service: service as never });
 
+    await controller.createClient({
+      clientCode: "mini-program",
+      displayName: "WeChat Mini Program",
+      integrationId: "i1",
+      providerClientId: "wx-mini-1",
+      providerCode: "wechat_mini_program",
+      providerTenantId: "wx-open-platform-1",
+    });
+    expect(service.iam.oauth.clients.create).toHaveBeenCalledWith({
+      clientCode: "mini-program",
+      displayName: "WeChat Mini Program",
+      integrationId: "i1",
+      providerClientId: "wx-mini-1",
+      providerCode: "wechat_mini_program",
+      providerTenantId: "wx-open-platform-1",
+    });
+
     await controller.createPolicy({
       displayName: "Default",
       integrationId: "",

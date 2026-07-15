@@ -470,7 +470,7 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
         HttpMethod::Post,
         "/backend/v3/api/iam/tenant_applications",
         "iam",
-        "tenantApplications.provision",
+        "tenantApplications.create",
     ),
     HttpRoute::dual_token(
         HttpMethod::Get,

@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseOperationCommand, SdkWorkPageData } from '../types';
+import type { AppbaseOperationCommand, SdkWorkPageData, WechatMiniProgramSessionCreateCommand } from '../types';
 
 
 export class OauthSessionsApi {
@@ -56,7 +56,7 @@ export class OauthMiniProgramSessionsApi {
 
 
 /** Oauth mini Program Sessions create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+  async create(body: WechatMiniProgramSessionCreateCommand): Promise<Record<string, unknown>> {
     return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/mini_program_sessions`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
@@ -90,8 +90,8 @@ export class OauthGrantsApi {
   }
 
 /** Oauth grants delete. */
-  async delete(grantId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(appApiPath(`/oauth/grants/${serializePathParameter(grantId, { name: 'grantId', style: 'simple', explode: false })}`));
+  async delete(grantId: string): Promise<void> {
+    return this.client.delete<void>(appApiPath(`/oauth/grants/${serializePathParameter(grantId, { name: 'grantId', style: 'simple', explode: false })}`));
   }
 }
 
@@ -170,13 +170,13 @@ export class OauthCallbacksApi {
   }
 
 
-/** Oauth callbacks handle Get. */
-  async handleGet(providerCode: string): Promise<Record<string, unknown>> {
+/** Oauth callbacks retrieve. */
+  async retrieve(providerCode: string): Promise<Record<string, unknown>> {
     return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/callbacks/${serializePathParameter(providerCode, { name: 'providerCode', style: 'simple', explode: false })}`), { method: 'GET' as any, credentialEntryBootstrap: true });
   }
 
-/** Oauth callbacks handle Post. */
-  async handlePost(providerCode: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
+/** Oauth callbacks create. */
+  async create(providerCode: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
     return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/callbacks/${serializePathParameter(providerCode, { name: 'providerCode', style: 'simple', explode: false })}`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
@@ -249,8 +249,8 @@ export class OauthAccountLinksApi {
   }
 
 /** Oauth account Links delete. */
-  async delete(accountLinkId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(appApiPath(`/oauth/account_links/${serializePathParameter(accountLinkId, { name: 'accountLinkId', style: 'simple', explode: false })}`));
+  async delete(accountLinkId: string): Promise<void> {
+    return this.client.delete<void>(appApiPath(`/oauth/account_links/${serializePathParameter(accountLinkId, { name: 'accountLinkId', style: 'simple', explode: false })}`));
   }
 }
 

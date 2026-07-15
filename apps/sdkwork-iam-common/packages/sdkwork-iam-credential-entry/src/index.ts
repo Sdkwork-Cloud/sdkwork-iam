@@ -4,7 +4,10 @@ export {
   mergeBootstrapAccessTokenEnv,
   type CreateDevBootstrapAccessTokenOptions,
 } from './dev-bootstrap-access-token.ts';
-export { SDKWORK_ACCESS_TOKEN_ENV_KEY } from './constants.ts';
+export {
+  SDKWORK_ACCESS_TOKEN_ENV_KEY,
+  SDKWORK_CREDENTIAL_ENTRY_BOOTSTRAP_ACCESS_TOKEN_GLOBAL_KEY,
+} from './constants.ts';
 export {
   prepareCredentialEntryTokens,
   readBootstrapAccessTokenFromProcessEnv,

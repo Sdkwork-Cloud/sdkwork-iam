@@ -32,6 +32,7 @@ fn backend_context(login_scope: WebLoginScope, organization_id: Option<&str>) ->
         client_kind: None,
         operation: None,
         trace_id: None,
+        idempotency_key: None,
     }
 }
 
@@ -62,6 +63,7 @@ fn app_context(login_scope: WebLoginScope, organization_id: Option<&str>) -> Web
         client_kind: None,
         operation: None,
         trace_id: None,
+        idempotency_key: None,
     }
 }
 

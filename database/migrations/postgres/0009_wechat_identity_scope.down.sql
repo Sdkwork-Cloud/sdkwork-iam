@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS uk_iam_oauth_account_link_union_scope;
+DROP INDEX IF EXISTS uk_iam_oauth_account_link_integration_subject;
+ALTER TABLE iam_oauth_account_link DROP COLUMN IF EXISTS provider_union_scope_id;

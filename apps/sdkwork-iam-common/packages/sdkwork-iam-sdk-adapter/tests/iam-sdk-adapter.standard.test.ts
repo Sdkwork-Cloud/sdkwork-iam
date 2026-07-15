@@ -914,8 +914,8 @@ function createGeneratedAppClient(overrides: AnyRecord = {}): AnyRecord {
         },
       },
       callbacks: {
-        handleGet: vi.fn().mockResolvedValue({ data: null }),
-        handlePost: vi.fn().mockResolvedValue({ data: null }),
+        create: vi.fn().mockResolvedValue({ data: null }),
+        retrieve: vi.fn().mockResolvedValue({ data: null }),
       },
       miniProgramSessions: {
         create: vi.fn().mockResolvedValue({ data: null }),

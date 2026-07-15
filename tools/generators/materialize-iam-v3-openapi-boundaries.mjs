@@ -93,7 +93,7 @@ const publicAppOperationIds = new Set([
 
 const publicBackendBootstrapOperationIds = new Set([
   'applications.register',
-  'tenantApplications.provision',
+  'tenantApplications.create',
   'tenantApplications.update',
   'tenantApplications.enable',
   'accessCredentials.create',
@@ -114,6 +114,8 @@ const openApiAuthorityExternalWireOperations = {
   'iam.oauth.introspect.create': 'oauth-introspect',
   'iam.oauth.jwks.retrieve': 'oauth-jwks',
   'iam.oauth.userinfo.retrieve': 'oidc-userinfo',
+  'iam.oauth.providerCallbacks.create': 'wechat-provider-callback',
+  'iam.oauth.providerCallbacks.retrieve': 'wechat-provider-callback-verification',
 };
 
 const credentialHeaderForbiddenAppOperationIds = new Set([
@@ -392,7 +394,9 @@ function buildOperation(surface, route) {
     503: problemResponse('Service unavailable'),
   };
 
-  if (isCreateOperation(route)) {
+  if (route.method === 'delete') {
+    responses[204] = { description: 'Deleted' };
+  } else if (isCreateOperation(route)) {
     responses[201] = jsonResponse('Created', successSchemaRef);
   } else {
     responses[200] = jsonResponse('Success', successSchemaRef);
@@ -434,6 +438,44 @@ function buildOperation(surface, route) {
     };
   }
 
+  if (route.operationId === 'iam.oauth.providerCallbacks.create') {
+    operation.parameters.push(
+      queryParameter('signature', { type: 'string' }),
+      queryParameter('msg_signature', { type: 'string' }),
+      queryParameter('timestamp', { type: 'string' }),
+      queryParameter('nonce', { type: 'string' }),
+    );
+    operation.requestBody = {
+      required: true,
+      content: {
+        'application/xml': { schema: { type: 'string' } },
+        'application/json': { schema: { type: 'object', additionalProperties: true } },
+      },
+    };
+    operation.responses[200] = {
+      description: 'Provider acknowledgement',
+      content: {
+        'text/plain': { schema: { type: 'string' } },
+        'application/json': { schema: { type: 'object', additionalProperties: true } },
+      },
+    };
+    delete operation.responses[201];
+  }
+
+  if (route.operationId === 'iam.oauth.providerCallbacks.retrieve') {
+    operation.parameters.push(
+      queryParameter('signature', { type: 'string' }),
+      queryParameter('timestamp', { type: 'string' }),
+      queryParameter('nonce', { type: 'string' }),
+      queryParameter('echostr', { type: 'string' }),
+    );
+    operation.responses[200] = {
+      description: 'Provider challenge acknowledgement',
+      content: { 'text/plain': { schema: { type: 'string' } } },
+    };
+    delete operation.responses[201];
+  }
+
   if (isListOperation(route)) {
     operation.parameters.push(
       queryParameter('page', { type: 'integer', minimum: 1, default: 1 }),
@@ -470,7 +512,7 @@ function requestBodySchemaRef(route) {
   if (route.operationId === 'applications.register') {
     return '#/components/schemas/AppbaseApplicationRegisterCommand';
   }
-  if (route.operationId === 'tenantApplications.provision') {
+  if (route.operationId === 'tenantApplications.create') {
     return '#/components/schemas/AppbaseTenantApplicationProvisionCommand';
   }
   if (route.operationId === 'tenantApplications.update') {
@@ -481,6 +523,13 @@ function requestBodySchemaRef(route) {
   }
   if (route.operationId === 'accessCredentials.create') {
     return '#/components/schemas/AppbaseAccessCredentialCreateCommand';
+  }
+
+  if (route.operationId === 'oauth.miniProgramSessions.create') {
+    return '#/components/schemas/WechatMiniProgramSessionCreateCommand';
+  }
+  if (route.operationId === 'iam.oauth.clients.create') {
+    return '#/components/schemas/IamOauthClientCreateCommand';
   }
 
   return '#/components/schemas/AppbaseOperationCommand';
@@ -521,6 +570,57 @@ function buildSchemas() {
       type: 'object',
       additionalProperties: true,
       description: 'Operation-specific command payload defined by the owning IAM Rust module.',
+    },
+    WechatMiniProgramSessionCreateCommand: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['jsCode'],
+      description: 'One-time WeChat Mini Program login-code exchange command.',
+      properties: {
+        jsCode: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 512,
+          writeOnly: true,
+          description: 'One-time code returned by wx.login().',
+        },
+        providerCode: {
+          type: 'string',
+          enum: ['wechat_mini_program'],
+          default: 'wechat_mini_program',
+        },
+        surfaceCode: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 128,
+          description: 'Registered IAM OAuth mini-program surface code.',
+        },
+      },
+    },
+    IamOauthClientCreateCommand: {
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'integrationId',
+        'providerCode',
+        'clientCode',
+        'displayName',
+        'providerClientId',
+      ],
+      description: 'Tenant-scoped OAuth provider client registration command.',
+      properties: {
+        integrationId: { type: 'string', minLength: 1, maxLength: 128 },
+        providerCode: { type: 'string', minLength: 1, maxLength: 64 },
+        clientCode: { type: 'string', minLength: 1, maxLength: 128 },
+        displayName: { type: 'string', minLength: 1, maxLength: 255 },
+        providerClientId: { type: 'string', minLength: 1, maxLength: 255 },
+        providerTenantId: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 255,
+          description: 'Provider-owned identity federation scope, such as a WeChat Open Platform account ID.',
+        },
+      },
     },
     AppbaseSessionCreateCommand: {
       type: 'object',

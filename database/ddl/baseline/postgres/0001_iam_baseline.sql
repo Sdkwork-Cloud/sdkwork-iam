@@ -922,6 +922,7 @@ CREATE TABLE IF NOT EXISTS iam_oauth_account_link (
   external_subject_hash TEXT NOT NULL,
   external_union_id TEXT,
   external_union_id_hash TEXT,
+  provider_union_scope_id TEXT,
   external_open_id TEXT,
   external_open_id_hash TEXT,
   external_tenant_id TEXT,
@@ -1156,6 +1157,15 @@ CREATE INDEX IF NOT EXISTS idx_iam_oauth_callback_event_provider_event
 CREATE INDEX IF NOT EXISTS idx_iam_oauth_callback_event_webhook
   ON iam_oauth_callback_event (tenant_id, webhook_config_id, outcome, created_at);
 
+CREATE UNIQUE INDEX IF NOT EXISTS uk_iam_oauth_account_link_integration_subject
+  ON iam_oauth_account_link (tenant_id, integration_id, provider_code, external_subject_hash)
+  WHERE status = 'active' AND unlinked_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_iam_oauth_account_link_union_scope
+  ON iam_oauth_account_link (tenant_id, provider_union_scope_id, external_union_id_hash)
+  WHERE status = 'active' AND unlinked_at IS NULL
+    AND provider_union_scope_id IS NOT NULL AND external_union_id_hash IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_iam_oauth_operational_resource_account
   ON iam_oauth_operational_resource (tenant_id, resource_account_id, resource_kind, publish_status, status);
 
@@ -1370,6 +1380,68 @@ CREATE INDEX IF NOT EXISTS idx_iam_tenant_application_template
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_iam_tenant_application_org_template
   ON iam_tenant_application (tenant_id, organization_id, template_id);
+
+-- Pre-launch integrity hardening: every directory relation is tenant-bound at the database layer.
+ALTER TABLE iam_tenant
+  ADD CONSTRAINT iam_tenant_id_tenant_unique UNIQUE (id);
+ALTER TABLE iam_user
+  ADD CONSTRAINT iam_user_tenant_id_unique UNIQUE (tenant_id, id),
+  ADD CONSTRAINT iam_user_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id);
+ALTER TABLE iam_tenant_member
+  ADD CONSTRAINT iam_tenant_member_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_tenant_member_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
+ALTER TABLE iam_tenant_signing_key
+  ADD CONSTRAINT iam_tenant_signing_key_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id);
+ALTER TABLE iam_organization
+  ADD CONSTRAINT iam_organization_tenant_id_unique UNIQUE (tenant_id, id),
+  ADD CONSTRAINT iam_organization_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_organization_parent_fk FOREIGN KEY (tenant_id, parent_organization_id) REFERENCES iam_organization(tenant_id, id);
+ALTER TABLE iam_organization_closure
+  ADD CONSTRAINT iam_org_closure_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_org_closure_ancestor_fk FOREIGN KEY (tenant_id, ancestor_organization_id) REFERENCES iam_organization(tenant_id, id),
+  ADD CONSTRAINT iam_org_closure_descendant_fk FOREIGN KEY (tenant_id, descendant_organization_id) REFERENCES iam_organization(tenant_id, id),
+  ADD CONSTRAINT iam_org_closure_depth_check CHECK (depth >= 0);
+ALTER TABLE iam_organization_membership
+  ADD CONSTRAINT iam_org_membership_tenant_id_unique UNIQUE (tenant_id, id),
+  ADD CONSTRAINT iam_org_membership_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_org_membership_org_fk FOREIGN KEY (tenant_id, organization_id) REFERENCES iam_organization(tenant_id, id),
+  ADD CONSTRAINT iam_org_membership_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
+ALTER TABLE iam_department
+  ADD CONSTRAINT iam_department_tenant_id_unique UNIQUE (tenant_id, id),
+  ADD CONSTRAINT iam_department_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_department_org_fk FOREIGN KEY (tenant_id, organization_id) REFERENCES iam_organization(tenant_id, id),
+  ADD CONSTRAINT iam_department_parent_fk FOREIGN KEY (tenant_id, parent_department_id) REFERENCES iam_department(tenant_id, id);
+ALTER TABLE iam_department_closure
+  ADD CONSTRAINT iam_dept_closure_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_dept_closure_ancestor_fk FOREIGN KEY (tenant_id, ancestor_department_id) REFERENCES iam_department(tenant_id, id),
+  ADD CONSTRAINT iam_dept_closure_descendant_fk FOREIGN KEY (tenant_id, descendant_department_id) REFERENCES iam_department(tenant_id, id),
+  ADD CONSTRAINT iam_dept_closure_depth_check CHECK (depth >= 0);
+ALTER TABLE iam_department_assignment
+  ADD CONSTRAINT iam_dept_assignment_tenant_id_unique UNIQUE (tenant_id, id),
+  ADD CONSTRAINT iam_dept_assignment_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_dept_assignment_membership_fk FOREIGN KEY (tenant_id, organization_membership_id) REFERENCES iam_organization_membership(tenant_id, id),
+  ADD CONSTRAINT iam_dept_assignment_department_fk FOREIGN KEY (tenant_id, department_id) REFERENCES iam_department(tenant_id, id),
+  ADD CONSTRAINT iam_dept_assignment_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
+ALTER TABLE iam_position
+  ADD CONSTRAINT iam_position_tenant_id_unique UNIQUE (tenant_id, id),
+  ADD CONSTRAINT iam_position_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_position_org_fk FOREIGN KEY (tenant_id, organization_id) REFERENCES iam_organization(tenant_id, id),
+  ADD CONSTRAINT iam_position_department_fk FOREIGN KEY (tenant_id, department_id) REFERENCES iam_department(tenant_id, id);
+ALTER TABLE iam_position_assignment
+  ADD CONSTRAINT iam_position_assignment_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_position_assignment_dept_fk FOREIGN KEY (tenant_id, department_assignment_id) REFERENCES iam_department_assignment(tenant_id, id),
+  ADD CONSTRAINT iam_position_assignment_position_fk FOREIGN KEY (tenant_id, position_id) REFERENCES iam_position(tenant_id, id),
+  ADD CONSTRAINT iam_position_assignment_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
+ALTER TABLE iam_user_identity
+  ADD CONSTRAINT iam_user_identity_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_user_identity_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
+ALTER TABLE iam_credential
+  ADD CONSTRAINT iam_credential_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_credential_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
+ALTER TABLE iam_session
+  ADD CONSTRAINT iam_session_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+  ADD CONSTRAINT iam_session_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id),
+  ADD CONSTRAINT iam_session_org_fk FOREIGN KEY (tenant_id, organization_id) REFERENCES iam_organization(tenant_id, id);
 
 -- source: database/migrations/postgres/0008_iam_rbac_federation.up.sql
 -- IAM RBAC federation metadata: permission/role governance columns, directory trace columns, registry tables.

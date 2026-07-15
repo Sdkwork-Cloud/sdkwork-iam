@@ -38,8 +38,8 @@ export class IamUsersApi {
   }
 
 /** Users delete. */
-  async delete(userId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/users/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`));
+  async delete(userId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/users/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`));
   }
 
 /** Users retrieve. */
@@ -87,8 +87,8 @@ export class IamTenantsMembersApi {
   }
 
 /** Tenants members delete. */
-  async delete(tenantId: string, userId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/members/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`));
+  async delete(tenantId: string, userId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/members/${serializePathParameter(userId, { name: 'userId', style: 'simple', explode: false })}`));
   }
 
 /** Tenants members update. */
@@ -133,8 +133,8 @@ export class IamTenantsApi {
   }
 
 /** Tenants delete. */
-  async delete(tenantId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}`));
+  async delete(tenantId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}`));
   }
 
 /** Tenants retrieve. */
@@ -156,9 +156,9 @@ export class IamTenantApplicationsApi {
   }
 
 
-/** Tenant Applications provision. */
-  async provision(body: AppbaseTenantApplicationProvisionCommand): Promise<SdkWorkCommandData> {
-    return this.client.post<SdkWorkCommandData>(backendApiPath(`/iam/tenant_applications`), body, undefined, undefined, 'application/json');
+/** Tenant Applications create. */
+  async create(body: AppbaseTenantApplicationProvisionCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/tenant_applications`), body, undefined, undefined, 'application/json');
   }
 
 /** Tenant Applications retrieve. */
@@ -211,8 +211,8 @@ export class IamServiceAccountsApi {
   }
 
 /** Service Accounts delete. */
-  async delete(serviceAccountId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/service_accounts/${serializePathParameter(serviceAccountId, { name: 'serviceAccountId', style: 'simple', explode: false })}`));
+  async delete(serviceAccountId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/service_accounts/${serializePathParameter(serviceAccountId, { name: 'serviceAccountId', style: 'simple', explode: false })}`));
   }
 
 /** Service Accounts retrieve. */
@@ -294,8 +294,8 @@ export class IamRolesPermissionsApi {
   }
 
 /** Roles permissions delete. */
-  async delete(roleId: string, permissionId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`));
+  async delete(roleId: string, permissionId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`));
   }
 }
 
@@ -335,8 +335,8 @@ export class IamRolesApi {
   }
 
 /** Roles delete. */
-  async delete(roleId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}`));
+  async delete(roleId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/roles/${serializePathParameter(roleId, { name: 'roleId', style: 'simple', explode: false })}`));
   }
 
 /** Roles retrieve. */
@@ -384,8 +384,8 @@ export class IamRoleBindingsApi {
   }
 
 /** Role Bindings delete. */
-  async delete(roleBindingId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/role_bindings/${serializePathParameter(roleBindingId, { name: 'roleBindingId', style: 'simple', explode: false })}`));
+  async delete(roleBindingId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/role_bindings/${serializePathParameter(roleBindingId, { name: 'roleBindingId', style: 'simple', explode: false })}`));
   }
 }
 
@@ -423,8 +423,8 @@ export class IamPositionsApi {
   }
 
 /** Positions delete. */
-  async delete(positionId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/positions/${serializePathParameter(positionId, { name: 'positionId', style: 'simple', explode: false })}`));
+  async delete(positionId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/positions/${serializePathParameter(positionId, { name: 'positionId', style: 'simple', explode: false })}`));
   }
 
 /** Positions update. */
@@ -506,8 +506,8 @@ export class IamPoliciesApi {
   }
 
 /** Policies delete. */
-  async delete(policyId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`));
+  async delete(policyId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`));
   }
 
 /** Policies retrieve. */
@@ -555,8 +555,8 @@ export class IamPermissionsApi {
   }
 
 /** Permissions delete. */
-  async delete(permissionId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`));
+  async delete(permissionId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/permissions/${serializePathParameter(permissionId, { name: 'permissionId', style: 'simple', explode: false })}`));
   }
 
 /** Permissions retrieve. */
@@ -620,8 +620,8 @@ export class IamOrganizationsApi {
   }
 
 /** Organizations delete. */
-  async delete(organizationId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/organizations/${serializePathParameter(organizationId, { name: 'organizationId', style: 'simple', explode: false })}`));
+  async delete(organizationId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/organizations/${serializePathParameter(organizationId, { name: 'organizationId', style: 'simple', explode: false })}`));
   }
 
 /** Organizations retrieve. */
@@ -708,8 +708,8 @@ export class IamGroupsMembersApi {
   }
 
 /** Groups members delete. */
-  async delete(groupId: string, memberId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}/members/${serializePathParameter(memberId, { name: 'memberId', style: 'simple', explode: false })}`));
+  async delete(groupId: string, memberId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}/members/${serializePathParameter(memberId, { name: 'memberId', style: 'simple', explode: false })}`));
   }
 }
 
@@ -749,8 +749,8 @@ export class IamGroupsApi {
   }
 
 /** Groups delete. */
-  async delete(groupId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}`));
+  async delete(groupId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/groups/${serializePathParameter(groupId, { name: 'groupId', style: 'simple', explode: false })}`));
   }
 
 /** Groups retrieve. */
@@ -814,8 +814,8 @@ export class IamDepartmentsApi {
   }
 
 /** Departments delete. */
-  async delete(departmentId: string): Promise<Record<string, unknown>> {
-    return this.client.delete<Record<string, unknown>>(backendApiPath(`/iam/departments/${serializePathParameter(departmentId, { name: 'departmentId', style: 'simple', explode: false })}`));
+  async delete(departmentId: string): Promise<void> {
+    return this.client.delete<void>(backendApiPath(`/iam/departments/${serializePathParameter(departmentId, { name: 'departmentId', style: 'simple', explode: false })}`));
   }
 
 /** Departments retrieve. */

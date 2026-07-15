@@ -39,7 +39,7 @@ sdkwork_utils_rust.workspace = true
 
 [dev-dependencies]
 http-body-util = "0.1"
-sdkwork-routes-iam-open-api = { path = "../sdkwork-routes-iam-open-api" }
+sdkwork_routes_iam_open_api.workspace = true
 sqlx = { workspace = true, features = ["sqlite"] }
 tokio.workspace = true
 tower.workspace = true

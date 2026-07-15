@@ -21,6 +21,18 @@ export interface SdkworkIamH5LoginCredentials {
   username: string;
 }
 
+export interface SdkworkIamH5OAuthLoginInput {
+  code: string;
+  provider: string;
+  redirectUri?: string;
+  state: string;
+}
+
+export interface SdkworkIamH5MiniProgramLoginInput {
+  jsCode: string;
+  surfaceCode?: string;
+}
+
 export type SdkworkIamH5LoginResult =
   | { challenge: IamLoginContextSelectionChallenge; kind: "loginContextSelectionRequired" }
   | { kind: "session"; session: SdkworkIamH5AuthSession };
@@ -32,6 +44,9 @@ export interface CreateSdkworkIamH5AuthControllerInput {
 export interface SdkworkIamH5AuthController {
   getState(): SdkworkIamH5AuthState;
   login(credentials: SdkworkIamH5LoginCredentials): Promise<SdkworkIamH5LoginResult>;
+  loginWithOAuth(input: SdkworkIamH5OAuthLoginInput): Promise<SdkworkIamH5AuthSession>;
+  loginWithMiniProgram(input: SdkworkIamH5MiniProgramLoginInput): Promise<SdkworkIamH5AuthSession>;
+  createOAuthAuthorizationUrl(input: { provider: string; redirectUri: string }): Promise<string>;
   logout(): Promise<void>;
   selectOrganization(input: {
     continuationToken: string;

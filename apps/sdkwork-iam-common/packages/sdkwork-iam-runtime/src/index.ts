@@ -20,6 +20,37 @@ export interface IamTokenStore {
   set(session: IamStoredSession): Promise<void> | void;
 }
 
+/**
+ * Minimal session shape accepted by shared IAM authentication guards.
+ *
+ * A SDKWork browser session is authenticated only when it has both tokens:
+ * the auth token establishes the IAM identity and the access token carries
+ * the selected application context. Feature packages must not reinterpret
+ * either token independently.
+ */
+export interface SdkworkIamAuthenticationSession {
+  accessToken?: string | null;
+  authToken?: string | null;
+}
+
+export function isSdkworkIamSessionAuthenticated(
+  session: SdkworkIamAuthenticationSession | null | undefined,
+): boolean {
+  return Boolean(
+    normalizeSdkworkIamAuthenticationToken(session?.authToken)
+      && normalizeSdkworkIamAuthenticationToken(session?.accessToken),
+  );
+}
+
+export function requireSdkworkIamAuthenticatedSession(
+  session: SdkworkIamAuthenticationSession | null | undefined,
+  message = "Authentication required",
+): void {
+  if (!isSdkworkIamSessionAuthenticated(session)) {
+    throw new Error(message);
+  }
+}
+
 export interface IamContextStore {
   clear(): Promise<void> | void;
   getAppContext(): Promise<IamAppContext | undefined> | IamAppContext | undefined;
@@ -193,6 +224,11 @@ export function createMemoryIamContextStore(): IamContextStore {
       };
     },
   };
+}
+
+function normalizeSdkworkIamAuthenticationToken(value: unknown): string | undefined {
+  const token = typeof value === "string" ? value.trim() : "";
+  return token || undefined;
 }
 
 function bindTokenManager(

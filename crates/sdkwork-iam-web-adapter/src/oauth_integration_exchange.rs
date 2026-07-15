@@ -15,6 +15,7 @@ pub struct OAuthIntegrationExchangeContext {
     pub oauth_client_row_id: String,
     pub provider_code: String,
     pub provider_client_id: String,
+    pub provider_union_scope_id: Option<String>,
     pub client_auth_method: String,
     pub client_secret: String,
     pub token_endpoint: String,
@@ -26,6 +27,8 @@ pub struct OAuthIntegrationExchangeContext {
 #[derive(Clone, Debug)]
 struct OAuthTokenResponse {
     access_token: String,
+    open_id: Option<String>,
+    union_id: Option<String>,
     #[allow(dead_code)]
     id_token: Option<String>,
     #[allow(dead_code)]
@@ -37,11 +40,21 @@ pub async fn load_oauth_integration_exchange_context(
     tenant_id: &str,
     provider_code: &str,
 ) -> Result<Option<OAuthIntegrationExchangeContext>, String> {
+    load_oauth_integration_exchange_context_for_app(pg, tenant_id, provider_code, None, None).await
+}
+
+pub async fn load_oauth_integration_exchange_context_for_app(
+    pg: &PgPool,
+    tenant_id: &str,
+    provider_code: &str,
+    runtime_app_id: Option<&str>,
+    surface_code: Option<&str>,
+) -> Result<Option<OAuthIntegrationExchangeContext>, String> {
     let normalized = normalize_oauth_provider_code(provider_code)
         .ok_or_else(|| "OAuth provider is invalid".to_string())?;
 
     let row = sqlx::query(
-        "SELECT i.id, c.id, c.provider_client_id, c.client_auth_method, \
+        "SELECT i.id, c.id, c.provider_client_id, c.provider_tenant_id, c.client_auth_method, \
                 COALESCE(c.token_endpoint_override, cat.token_endpoint) AS token_endpoint, \
                 COALESCE(c.userinfo_endpoint_override, cat.userinfo_endpoint) AS userinfo_endpoint, \
                 COALESCE(i.protocol_family, cat.protocol_family) AS protocol_family, \
@@ -51,10 +64,20 @@ pub async fn load_oauth_integration_exchange_context(
          LEFT JOIN iam_oauth_provider_catalog cat \
            ON cat.provider_code = i.provider_code AND cat.status = 'active' \
          WHERE i.tenant_id = $1 AND i.provider_code = $2 AND i.enabled = 1 AND i.status = 'active' \
+           AND ($3::text IS NULL OR i.app_id = $3 OR i.app_id = '0') \
+           AND ($4::text IS NULL OR EXISTS (\
+             SELECT 1 FROM iam_oauth_surface s \
+             WHERE s.tenant_id = i.tenant_id AND s.integration_id = i.id \
+               AND s.oauth_client_id = c.id AND s.surface_code = $4 \
+               AND s.surface_kind = 'mini_program' AND s.enabled = 1 AND s.status = 'active'\
+           )) \
+         ORDER BY CASE WHEN i.app_id = $3 THEN 0 ELSE 1 END, c.id \
          LIMIT 1",
     )
     .bind(tenant_id)
     .bind(&normalized)
+    .bind(runtime_app_id)
+    .bind(surface_code)
     .fetch_optional(pg)
     .await
     .map_err(|error| format!("load oauth integration exchange context failed: {error}"))?;
@@ -66,11 +89,12 @@ pub async fn load_oauth_integration_exchange_context(
     let integration_id: String = row.get(0);
     let oauth_client_row_id: String = row.get(1);
     let provider_client_id: String = row.get(2);
-    let client_auth_method: String = row.get(3);
-    let token_endpoint: Option<String> = row.get(4);
-    let userinfo_endpoint: Option<String> = row.get(5);
-    let protocol_family: String = row.get(6);
-    let supports_userinfo: i32 = row.get(7);
+    let provider_union_scope_id: Option<String> = row.get(3);
+    let client_auth_method: String = row.get(4);
+    let token_endpoint: Option<String> = row.get(5);
+    let userinfo_endpoint: Option<String> = row.get(6);
+    let protocol_family: String = row.get(7);
+    let supports_userinfo: i32 = row.get(8);
 
     let token_endpoint = token_endpoint
         .map(|value| value.trim().to_string())
@@ -97,6 +121,7 @@ pub async fn load_oauth_integration_exchange_context(
         oauth_client_row_id,
         provider_code: normalized,
         provider_client_id,
+        provider_union_scope_id,
         client_auth_method,
         client_secret,
         token_endpoint,
@@ -122,7 +147,129 @@ pub async fn exchange_oauth_authorization_code(
 
     let token = request_oauth_token(ctx, code, redirect_uri).await?;
     let claims = resolve_identity_claims(ctx, &token).await?;
-    map_claims_to_profile(&ctx.provider_code, claims)
+    map_claims_to_profile(
+        &ctx.provider_code,
+        ctx.provider_union_scope_id.as_deref(),
+        claims,
+    )
+}
+
+pub async fn exchange_wechat_mini_program_code(
+    pg: &PgPool,
+    tenant_id: &str,
+    runtime_app_id: &str,
+    surface_code: Option<&str>,
+    code: &str,
+) -> Result<(LocalOAuthProviderProfile, String), String> {
+    let code = code.trim();
+    if code.is_empty() {
+        return Err("WeChat mini program jsCode is required".to_string());
+    }
+    let Some(ctx) = load_oauth_integration_exchange_context_for_app(
+        pg,
+        tenant_id,
+        "wechat_mini_program",
+        Some(runtime_app_id),
+        surface_code,
+    )
+    .await?
+    else {
+        return Err("WeChat mini program integration is not configured".to_string());
+    };
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|error| format!("create WeChat mini program client failed: {error}"))?;
+    let response = client
+        .get(&ctx.token_endpoint)
+        .query(&[
+            ("appid", ctx.provider_client_id.as_str()),
+            ("secret", ctx.client_secret.as_str()),
+            ("js_code", code),
+            ("grant_type", "authorization_code"),
+        ])
+        .header(ACCEPT, "application/json")
+        .send()
+        .await
+        .map_err(|error| format!("WeChat mini program code exchange failed: {error}"))?;
+    let status = response.status();
+    let body = response
+        .text()
+        .await
+        .map_err(|error| format!("read WeChat mini program response failed: {error}"))?;
+    if !status.is_success() {
+        return Err(format!(
+            "WeChat mini program code exchange failed with status {}",
+            status.as_u16()
+        ));
+    }
+    let profile =
+        parse_wechat_mini_program_response(&body, ctx.provider_union_scope_id.as_deref())?;
+    Ok((profile, ctx.integration_id))
+}
+
+pub async fn probe_wechat_mini_program_configuration(
+    pg: &PgPool,
+    tenant_id: &str,
+    runtime_app_id: &str,
+    surface_code: Option<&str>,
+) -> Result<(), String> {
+    match exchange_wechat_mini_program_code(
+        pg,
+        tenant_id,
+        runtime_app_id,
+        surface_code,
+        "sdkwork-iam-diagnostic-invalid-code",
+    )
+    .await
+    {
+        Err(error) if error.contains("(40029)") => Ok(()),
+        Err(error) => Err(error),
+        Ok(_) => Err("WeChat mini program diagnostic received an unexpected identity".to_string()),
+    }
+}
+
+fn parse_wechat_mini_program_response(
+    body: &str,
+    union_scope_id: Option<&str>,
+) -> Result<LocalOAuthProviderProfile, String> {
+    let value: Value = serde_json::from_str(body)
+        .map_err(|error| format!("parse WeChat mini program response failed: {error}"))?;
+    if let Some(error_code) = value.get("errcode").and_then(Value::as_i64) {
+        if error_code != 0 {
+            let message = value
+                .get("errmsg")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown WeChat error");
+            return Err(format!(
+                "WeChat mini program exchange failed ({error_code}): {message}"
+            ));
+        }
+    }
+    let open_id = value
+        .get("openid")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "WeChat mini program response is missing openid".to_string())?
+        .to_string();
+    let union_id = value
+        .get("unionid")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string);
+    Ok(LocalOAuthProviderProfile {
+        provider: "wechat_mini_program".to_string(),
+        subject: open_id.clone(),
+        open_id: Some(open_id),
+        union_id,
+        union_scope_id: union_scope_id.map(str::to_string),
+        email: None,
+        phone: None,
+        name: None,
+        avatar: None,
+    })
 }
 
 async fn resolve_oauth_client_secret(
@@ -187,6 +334,33 @@ async fn request_oauth_token(
     let mut request = client.post(&ctx.token_endpoint);
     let auth_method = ctx.client_auth_method.trim().to_ascii_lowercase();
 
+    if matches!(ctx.provider_code.as_str(), "wechat" | "wechat_open") {
+        let response = client
+            .get(&ctx.token_endpoint)
+            .query(&[
+                ("appid", ctx.provider_client_id.as_str()),
+                ("secret", ctx.client_secret.as_str()),
+                ("code", code),
+                ("grant_type", "authorization_code"),
+            ])
+            .header(ACCEPT, "application/json")
+            .send()
+            .await
+            .map_err(|error| format!("WeChat OAuth token exchange request failed: {error}"))?;
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .map_err(|error| format!("read WeChat OAuth token response failed: {error}"))?;
+        if !status.is_success() {
+            return Err(format!(
+                "WeChat OAuth token exchange failed with status {}",
+                status.as_u16()
+            ));
+        }
+        return parse_token_response(&body, &ctx.provider_code);
+    }
+
     if auth_method == "client_secret_basic" {
         let credentials =
             BASE64_STANDARD.encode(format!("{}:{}", ctx.provider_client_id, ctx.client_secret));
@@ -234,7 +408,26 @@ async fn resolve_identity_claims(
 ) -> Result<Value, String> {
     if ctx.supports_userinfo {
         if let Some(endpoint) = ctx.userinfo_endpoint.as_deref() {
-            return fetch_userinfo_claims(endpoint, &token.access_token, &ctx.provider_code).await;
+            let mut claims = fetch_userinfo_claims(
+                endpoint,
+                &token.access_token,
+                &ctx.provider_code,
+                token.open_id.as_deref(),
+            )
+            .await?;
+            if let Some(object) = claims.as_object_mut() {
+                if let Some(open_id) = token.open_id.as_deref() {
+                    object
+                        .entry("openid".to_string())
+                        .or_insert_with(|| Value::String(open_id.to_string()));
+                }
+                if let Some(union_id) = token.union_id.as_deref() {
+                    object
+                        .entry("unionid".to_string())
+                        .or_insert_with(|| Value::String(union_id.to_string()));
+                }
+            }
+            return Ok(claims);
         }
     }
 
@@ -249,16 +442,24 @@ async fn fetch_userinfo_claims(
     endpoint: &str,
     access_token: &str,
     provider_code: &str,
+    open_id: Option<&str>,
 ) -> Result<Value, String> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|error| format!("create oauth http client failed: {error}"))?;
 
-    let mut request = client
-        .get(endpoint)
-        .header(AUTHORIZATION, format!("Bearer {access_token}"))
-        .header(ACCEPT, "application/json");
+    let mut request = client.get(endpoint).header(ACCEPT, "application/json");
+
+    if matches!(provider_code, "wechat" | "wechat_open") {
+        request = request.query(&[
+            ("access_token", access_token),
+            ("openid", open_id.unwrap_or_default()),
+            ("lang", "zh_CN"),
+        ]);
+    } else {
+        request = request.header(AUTHORIZATION, format!("Bearer {access_token}"));
+    }
 
     if provider_code == "github" {
         request = request.header("User-Agent", "sdkwork-iam-oauth");
@@ -305,6 +506,8 @@ fn parse_token_response(body: &str, provider_code: &str) -> Result<OAuthTokenRes
         if let Some(access_token) = access_token {
             return Ok(OAuthTokenResponse {
                 access_token,
+                open_id: None,
+                union_id: None,
                 id_token: None,
                 token_type: Some("bearer".to_string()),
             });
@@ -327,6 +530,16 @@ fn extract_token_response(value: Value) -> Result<OAuthTokenResponse, String> {
 
     Ok(OAuthTokenResponse {
         access_token: access_token.to_string(),
+        open_id: value
+            .get("openid")
+            .or_else(|| value.get("open_id"))
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        union_id: value
+            .get("unionid")
+            .or_else(|| value.get("union_id"))
+            .and_then(Value::as_str)
+            .map(str::to_string),
         id_token: value
             .get("id_token")
             .and_then(Value::as_str)
@@ -340,6 +553,7 @@ fn extract_token_response(value: Value) -> Result<OAuthTokenResponse, String> {
 
 fn map_claims_to_profile(
     provider_code: &str,
+    union_scope_id: Option<&str>,
     claims: Value,
 ) -> Result<LocalOAuthProviderProfile, String> {
     let subject = extract_subject(&claims)
@@ -383,13 +597,16 @@ fn map_claims_to_profile(
 
     if provider_code == "twitter" {
         if let Some(data) = claims.get("data") {
-            return map_claims_to_profile(provider_code, data.clone());
+            return map_claims_to_profile(provider_code, union_scope_id, data.clone());
         }
     }
 
     Ok(LocalOAuthProviderProfile {
         provider: provider_code.to_string(),
         subject,
+        open_id: pick_string_claim(&claims, &["open_id", "openid"]),
+        union_id: pick_string_claim(&claims, &["unionid", "union_id"]),
+        union_scope_id: union_scope_id.map(str::to_string),
         email,
         phone,
         name,
@@ -478,6 +695,7 @@ pub fn builtin_token_endpoint(provider_code: &str) -> Option<&'static str> {
         "reddit" => Some("https://www.reddit.com/api/v1/access_token"),
         "paypal" => Some("https://api-m.paypal.com/v1/oauth2/token"),
         "wechat" | "wechat_open" => Some("https://api.weixin.qq.com/sns/oauth2/access_token"),
+        "wechat_mini_program" => Some("https://api.weixin.qq.com/sns/jscode2session"),
         "qq" => Some("https://graph.qq.com/oauth2.0/token"),
         "weibo" => Some("https://api.weibo.com/oauth2/access_token"),
         "baidu" => Some("https://openapi.baidu.com/oauth/2.0/token"),
@@ -531,7 +749,8 @@ pub fn builtin_authorization_endpoint(provider_code: &str) -> Option<&'static st
         "yahoo" => Some("https://api.login.yahoo.com/oauth2/request_auth"),
         "reddit" => Some("https://www.reddit.com/api/v1/authorize"),
         "paypal" => Some("https://www.paypal.com/signin/authorize"),
-        "wechat" | "wechat_open" => Some("https://open.weixin.qq.com/connect/qrconnect"),
+        "wechat" => Some("https://open.weixin.qq.com/connect/oauth2/authorize"),
+        "wechat_open" => Some("https://open.weixin.qq.com/connect/qrconnect"),
         "qq" => Some("https://graph.qq.com/oauth2.0/authorize"),
         "weibo" => Some("https://api.weibo.com/oauth2/authorize"),
         "baidu" => Some("https://openapi.baidu.com/oauth/2.0/authorize"),
@@ -576,7 +795,8 @@ pub fn builtin_default_scopes(provider_code: &str) -> Vec<String> {
         ],
         "tiktok" => vec!["user.info.basic".to_string()],
         "reddit" => vec!["identity".to_string()],
-        "wechat" | "wechat_open" => vec!["snsapi_login".to_string()],
+        "wechat" => vec!["snsapi_userinfo".to_string()],
+        "wechat_open" => vec!["snsapi_login".to_string()],
         "qq" => vec!["get_user_info".to_string()],
         "weibo" => vec!["email".to_string()],
         "douyin" => vec!["user_info".to_string()],
@@ -687,7 +907,6 @@ fn region_group_to_db(
 }
 
 #[cfg(test)]
-#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -697,6 +916,7 @@ mod tests {
     fn maps_standard_oidc_claims_to_profile() {
         let profile = map_claims_to_profile(
             "google",
+            None,
             json!({
                 "sub": "google-user-1",
                 "email": "user@example.com",
@@ -719,5 +939,37 @@ mod tests {
         )
         .expect("token");
         assert_eq!(token.access_token, "ghs_123");
+    }
+
+    #[test]
+    fn parses_wechat_mini_program_identity_without_retaining_session_key() {
+        let profile = parse_wechat_mini_program_response(
+            r#"{"openid":"openid-1","unionid":"unionid-1","session_key":"secret"}"#,
+            Some("wx-open-platform-1"),
+        )
+        .expect("mini program profile");
+
+        assert_eq!(profile.subject, "openid-1");
+        assert_eq!(profile.open_id.as_deref(), Some("openid-1"));
+        assert_eq!(profile.union_id.as_deref(), Some("unionid-1"));
+        assert_eq!(
+            profile.union_scope_id.as_deref(),
+            Some("wx-open-platform-1")
+        );
+        assert!(!serde_json::to_string(&profile)
+            .expect("profile json")
+            .contains("session_key"));
+    }
+
+    #[test]
+    fn rejects_wechat_mini_program_provider_errors() {
+        let error = parse_wechat_mini_program_response(
+            r#"{"errcode":40029,"errmsg":"invalid code"}"#,
+            Some("wx-open-platform-1"),
+        )
+        .expect_err("provider error must fail");
+
+        assert!(error.contains("40029"));
+        assert!(error.contains("invalid code"));
     }
 }

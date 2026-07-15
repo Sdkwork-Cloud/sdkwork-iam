@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::Response,
+    response::{IntoResponse, Response},
     routing::{delete, get, patch, post},
     Json, Router,
 };

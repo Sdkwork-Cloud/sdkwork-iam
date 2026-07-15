@@ -11,6 +11,7 @@ import {
   mergeBootstrapAccessTokenEnv,
   wrapCredentialEntryClient,
   SDKWORK_ACCESS_TOKEN_ENV_KEY,
+  SDKWORK_CREDENTIAL_ENTRY_BOOTSTRAP_ACCESS_TOKEN_GLOBAL_KEY,
 } from '../src/index.ts';
 
 describe('@sdkwork/iam-credential-entry', () => {
@@ -20,6 +21,26 @@ describe('@sdkwork/iam-credential-entry', () => {
         [SDKWORK_ACCESS_TOKEN_ENV_KEY]: ' bootstrap-token ',
       }),
     ).toBe('bootstrap-token');
+  });
+
+  it('prefers the development credential-entry handoff over a process env fallback', () => {
+    const host = globalThis as Record<string, unknown>;
+    const previousValue = host[SDKWORK_CREDENTIAL_ENTRY_BOOTSTRAP_ACCESS_TOKEN_GLOBAL_KEY];
+
+    host[SDKWORK_CREDENTIAL_ENTRY_BOOTSTRAP_ACCESS_TOKEN_GLOBAL_KEY] = ' injected-bootstrap-token ';
+    try {
+      expect(
+        readBootstrapAccessTokenFromProcessEnv({
+          [SDKWORK_ACCESS_TOKEN_ENV_KEY]: 'process-bootstrap-token',
+        }),
+      ).toBe('injected-bootstrap-token');
+    } finally {
+      if (previousValue === undefined) {
+        delete host[SDKWORK_CREDENTIAL_ENTRY_BOOTSTRAP_ACCESS_TOKEN_GLOBAL_KEY];
+      } else {
+        host[SDKWORK_CREDENTIAL_ENTRY_BOOTSTRAP_ACCESS_TOKEN_GLOBAL_KEY] = previousValue;
+      }
+    }
   });
 
   it('prepares credential-entry tokens from bootstrap access token only', () => {

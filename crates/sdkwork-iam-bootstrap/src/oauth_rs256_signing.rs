@@ -178,6 +178,59 @@ pub fn sign_rs256_jwt(
     ))
 }
 
+pub fn verify_rs256_jwt(
+    material: &OAuthRs256SigningMaterial,
+    token: &str,
+) -> Result<Value, String> {
+    use rsa::pkcs1v15::{Signature, VerifyingKey};
+    use rsa::signature::Verifier;
+
+    let mut parts = token.split('.');
+    let header_b64 = parts
+        .next()
+        .ok_or_else(|| "JWT header is missing".to_string())?;
+    let payload_b64 = parts
+        .next()
+        .ok_or_else(|| "JWT payload is missing".to_string())?;
+    let signature_b64 = parts
+        .next()
+        .ok_or_else(|| "JWT signature is missing".to_string())?;
+    if parts.next().is_some() {
+        return Err("JWT must contain exactly three segments".to_string());
+    }
+
+    let header: Value = serde_json::from_slice(
+        &URL_SAFE_NO_PAD
+            .decode(header_b64)
+            .map_err(|error| format!("decode JWT header failed: {error}"))?,
+    )
+    .map_err(|error| format!("parse JWT header failed: {error}"))?;
+    if header.get("alg").and_then(Value::as_str) != Some("RS256") {
+        return Err("JWT alg must be RS256".to_string());
+    }
+    if header.get("kid").and_then(Value::as_str) != Some(material.kid.as_str()) {
+        return Err("JWT kid does not match signing material".to_string());
+    }
+
+    let signature_bytes = URL_SAFE_NO_PAD
+        .decode(signature_b64)
+        .map_err(|error| format!("decode JWT signature failed: {error}"))?;
+    let signature = Signature::try_from(signature_bytes.as_slice())
+        .map_err(|error| format!("parse JWT signature failed: {error}"))?;
+    let signing_input = format!("{header_b64}.{payload_b64}");
+    let verifying_key = VerifyingKey::<sha2::Sha256>::new(material.private_key.to_public_key());
+    verifying_key
+        .verify(signing_input.as_bytes(), &signature)
+        .map_err(|_| "JWT RS256 signature verification failed".to_string())?;
+
+    serde_json::from_slice(
+        &URL_SAFE_NO_PAD
+            .decode(payload_b64)
+            .map_err(|error| format!("decode JWT payload failed: {error}"))?,
+    )
+    .map_err(|error| format!("parse JWT payload failed: {error}"))
+}
+
 fn rsa_public_key_to_jwk(kid: &str, private_key: &RsaPrivateKey) -> Option<Value> {
     let public_key = private_key.to_public_key();
     let n = URL_SAFE_NO_PAD.encode(public_key.n().to_bytes_be());
@@ -226,5 +279,29 @@ mod tests {
         )
         .expect("token");
         assert_eq!(token.split('.').count(), 3);
+    }
+
+    #[test]
+    fn verify_rs256_jwt_rejects_tampering() {
+        let private_key =
+            RsaPrivateKey::new(&mut rsa::rand_core::OsRng, OAUTH_RS256_KEY_BITS).expect("rsa key");
+        let material = OAuthRs256SigningMaterial {
+            tenant_id: "100001".to_string(),
+            kid: oauth_rs256_signing_kid("100001"),
+            public_spki_der: private_key
+                .to_public_key()
+                .to_public_key_der()
+                .expect("public key der")
+                .as_bytes()
+                .to_vec(),
+            private_key,
+        };
+        let token =
+            sign_rs256_jwt(&material, &json!({}), &json!({"sub":"42"})).expect("sign token");
+        assert_eq!(verify_rs256_jwt(&material, &token).unwrap()["sub"], "42");
+
+        let mut parts = token.split('.').map(str::to_string).collect::<Vec<_>>();
+        parts[1].push('A');
+        assert!(verify_rs256_jwt(&material, &parts.join(".")).is_err());
     }
 }

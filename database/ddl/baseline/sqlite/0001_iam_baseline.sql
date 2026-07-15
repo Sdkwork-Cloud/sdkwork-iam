@@ -917,6 +917,7 @@ CREATE TABLE IF NOT EXISTS iam_oauth_account_link (
   external_subject_hash TEXT NOT NULL,
   external_union_id TEXT,
   external_union_id_hash TEXT,
+  provider_union_scope_id TEXT,
   external_open_id TEXT,
   external_open_id_hash TEXT,
   external_tenant_id TEXT,

@@ -11,6 +11,8 @@ export type { SdkWorkResourceResponse } from './sdk-work-resource-response';
 export type { SdkWorkListResponse } from './sdk-work-list-response';
 export type { SdkWorkCommandResponse } from './sdk-work-command-response';
 export type { AppbaseOperationCommand } from './appbase-operation-command';
+export type { WechatMiniProgramSessionCreateCommand } from './wechat-mini-program-session-create-command';
+export type { IamOauthClientCreateCommand } from './iam-oauth-client-create-command';
 export type { AppbaseSessionCreateCommand } from './appbase-session-create-command';
 export type { AppbaseApplicationRegisterCommand } from './appbase-application-register-command';
 export type { AppbaseTenantApplicationProvisionCommand } from './appbase-tenant-application-provision-command';

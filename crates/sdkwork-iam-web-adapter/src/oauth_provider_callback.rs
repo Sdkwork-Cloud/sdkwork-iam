@@ -1,10 +1,17 @@
-use serde_json::{json, Value};
+use aes::Aes256;
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
+use cbc::cipher::{block_padding::Pkcs7, BlockDecryptMut, KeyIvInit};
+use quick_xml::events::Event;
+use quick_xml::Reader;
+use serde_json::{json, Map, Value};
 use sha1::{Digest as Sha1Digest, Sha1};
 use sha2::Sha256;
 use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 
 const SECRET_KIND_VERIFICATION_TOKEN: &str = "verification_token";
+const SECRET_KIND_ENCODING_AES_KEY: &str = "encoding_aes_key";
+type Aes256CbcDec = cbc::Decryptor<Aes256>;
 
 #[derive(Clone, Debug)]
 pub struct OAuthWebhookConfig {
@@ -14,6 +21,7 @@ pub struct OAuthWebhookConfig {
     pub integration_id: String,
     pub provider_code: String,
     pub message_handling_mode: String,
+    pub provider_app_id: Option<String>,
     #[allow(dead_code)]
     pub webhook_kind: String,
 }
@@ -106,16 +114,25 @@ pub async fn handle_provider_callback_post(
     pg: &PgPool,
     callback_public_id: &str,
     query: &HashMap<String, String>,
-    body: &Value,
+    body: &[u8],
+    content_type: Option<&str>,
     meta: &ProviderCallbackRequestMeta,
 ) -> Result<ProviderCallbackHttpResponse, String> {
     let config = load_active_webhook_config(pg, callback_public_id).await?;
     let verification_token = load_webhook_verification_token(pg, &config).await?;
 
+    let mut payload = parse_provider_callback_body(body, content_type)?;
+    let encrypted = payload
+        .get("Encrypt")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string);
     if let Err(error) = verify_provider_callback_post(
         query,
         &verification_token,
         config.message_handling_mode.as_str(),
+        encrypted.as_deref(),
     ) {
         record_callback_event(
             pg,
@@ -130,9 +147,28 @@ pub async fn handle_provider_callback_post(
         return Err(error);
     }
 
-    let provider_event_id = read_query_or_json(body, query, &["MsgId", "msg_id", "id", "event_id"]);
-    let provider_event_type =
-        read_query_or_json(body, query, &["MsgType", "msg_type", "event", "event_type"]);
+    if let Some(encrypted) = encrypted.as_deref() {
+        let aes_key = load_webhook_encoding_aes_key(pg, &config).await?;
+        payload = decrypt_wechat_payload(encrypted, &aes_key, config.provider_app_id.as_deref())?;
+    }
+
+    let provider_event_id =
+        read_query_or_json(&payload, query, &["MsgId", "msg_id", "id", "event_id"]);
+    let provider_event_type = read_query_or_json(
+        &payload,
+        query,
+        &["MsgType", "msg_type", "event", "event_type"],
+    );
+
+    if let Some(event_id) = provider_event_id.as_deref() {
+        if callback_event_exists(pg, &config.id, event_id).await? {
+            return Ok(ProviderCallbackHttpResponse {
+                status_code: 200,
+                content_type: Some("text/plain"),
+                body: "success".to_string(),
+            });
+        }
+    }
 
     record_callback_event(
         pg,
@@ -178,9 +214,11 @@ async fn load_active_webhook_config(
     }
 
     let row = sqlx::query(
-        "SELECT id, tenant_id, organization_id, integration_id, provider_code, webhook_kind, message_handling_mode \
-         FROM iam_oauth_webhook_config \
-         WHERE callback_public_id = $1 AND enabled = 1 AND status = 'active' \
+        "SELECT w.id, w.tenant_id, w.organization_id, w.integration_id, w.provider_code, w.webhook_kind, \
+                w.message_handling_mode, r.provider_account_id \
+         FROM iam_oauth_webhook_config w \
+         LEFT JOIN iam_oauth_resource_account r ON r.id = w.resource_account_id \
+         WHERE w.callback_public_id = $1 AND w.enabled = 1 AND w.status = 'active' \
          LIMIT 1",
     )
     .bind(callback_public_id)
@@ -197,6 +235,7 @@ async fn load_active_webhook_config(
         provider_code: row.get(4),
         webhook_kind: row.get(5),
         message_handling_mode: row.get(6),
+        provider_app_id: row.get(7),
     })
 }
 
@@ -226,6 +265,137 @@ async fn load_webhook_verification_token(
     };
 
     decode_oauth_secret_ref(&secret_ref)
+}
+
+async fn load_webhook_encoding_aes_key(
+    pg: &PgPool,
+    config: &OAuthWebhookConfig,
+) -> Result<String, String> {
+    let secret_ref = sqlx::query_scalar::<_, String>(
+        "SELECT secret_ref FROM iam_oauth_secret \
+         WHERE tenant_id = $1 AND webhook_config_id = $2 AND secret_kind = $3 AND status = 'active' \
+         ORDER BY active_from DESC LIMIT 1",
+    )
+    .bind(&config.tenant_id)
+    .bind(&config.id)
+    .bind(SECRET_KIND_ENCODING_AES_KEY)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("load webhook encoding AES key failed: {error}"))?
+    .ok_or_else(|| "OAuth webhook EncodingAESKey is not configured".to_string())?;
+    decode_oauth_secret_ref(&secret_ref)
+}
+
+fn parse_provider_callback_body(body: &[u8], content_type: Option<&str>) -> Result<Value, String> {
+    let text = std::str::from_utf8(body)
+        .map_err(|error| format!("OAuth provider callback body is not UTF-8: {error}"))?;
+    if content_type
+        .map(|value| value.to_ascii_lowercase().contains("json"))
+        .unwrap_or_else(|| text.trim_start().starts_with('{'))
+    {
+        return serde_json::from_str(text)
+            .map_err(|error| format!("parse OAuth provider JSON callback failed: {error}"));
+    }
+
+    let mut reader = Reader::from_str(text);
+    reader.config_mut().trim_text(true);
+    let mut fields = Map::new();
+    let mut current = None;
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(event)) => {
+                current = Some(String::from_utf8_lossy(event.name().as_ref()).to_string());
+            }
+            Ok(Event::Text(event)) => {
+                if let Some(name) = current.take() {
+                    let value = event
+                        .unescape()
+                        .map_err(|error| {
+                            format!("decode OAuth provider XML field failed: {error}")
+                        })?
+                        .into_owned();
+                    fields.insert(name, Value::String(value));
+                }
+            }
+            Ok(Event::End(_)) => current = None,
+            Ok(Event::Eof) => break,
+            Err(error) => {
+                return Err(format!("parse OAuth provider XML callback failed: {error}"));
+            }
+            _ => {}
+        }
+    }
+    if fields.is_empty() {
+        return Err("OAuth provider callback body is empty or unsupported".to_string());
+    }
+    Ok(Value::Object(fields))
+}
+
+fn decrypt_wechat_payload(
+    encrypted: &str,
+    encoding_aes_key: &str,
+    expected_app_id: Option<&str>,
+) -> Result<Value, String> {
+    let mut key_material = encoding_aes_key.trim().to_string();
+    if !key_material.ends_with('=') {
+        key_material.push('=');
+    }
+    let key = BASE64_STANDARD
+        .decode(key_material)
+        .map_err(|error| format!("decode WeChat EncodingAESKey failed: {error}"))?;
+    if key.len() != 32 {
+        return Err("WeChat EncodingAESKey must decode to 32 bytes".to_string());
+    }
+    let cipher_text = BASE64_STANDARD
+        .decode(encrypted)
+        .map_err(|error| format!("decode WeChat encrypted payload failed: {error}"))?;
+    let iv = &key[..16];
+    let mut buffer = cipher_text;
+    let plain = Aes256CbcDec::new_from_slices(&key, iv)
+        .map_err(|error| format!("create WeChat AES decryptor failed: {error}"))?
+        .decrypt_padded_mut::<Pkcs7>(&mut buffer)
+        .map_err(|_| "decrypt WeChat callback payload failed".to_string())?;
+    if plain.len() < 20 {
+        return Err("WeChat decrypted callback payload is too short".to_string());
+    }
+    let message_length = u32::from_be_bytes([plain[16], plain[17], plain[18], plain[19]]) as usize;
+    let message_end = 20usize
+        .checked_add(message_length)
+        .ok_or_else(|| "WeChat callback message length overflow".to_string())?;
+    if message_end > plain.len() {
+        return Err("WeChat callback message length is invalid".to_string());
+    }
+    let message = std::str::from_utf8(&plain[20..message_end])
+        .map_err(|error| format!("WeChat decrypted callback XML is not UTF-8: {error}"))?;
+    let app_id = std::str::from_utf8(&plain[message_end..])
+        .unwrap_or_default()
+        .trim_matches(char::from(0))
+        .trim();
+    if let Some(expected) = expected_app_id.filter(|value| !value.trim().is_empty()) {
+        if app_id != expected.trim() {
+            return Err(
+                "WeChat callback appid does not match the configured resource account".to_string(),
+            );
+        }
+    }
+    parse_provider_callback_body(message.as_bytes(), Some("application/xml"))
+}
+
+async fn callback_event_exists(
+    pg: &PgPool,
+    webhook_config_id: &str,
+    provider_event_id: &str,
+) -> Result<bool, String> {
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(1)::bigint FROM iam_oauth_callback_event \
+         WHERE webhook_config_id = $1 AND provider_event_id = $2 AND outcome = 'accepted'",
+    )
+    .bind(webhook_config_id)
+    .bind(provider_event_id)
+    .fetch_one(pg)
+    .await
+    .map_err(|error| format!("check OAuth callback event duplicate failed: {error}"))?;
+    Ok(count > 0)
 }
 
 fn decode_oauth_secret_ref(secret_ref: &str) -> Result<String, String> {
@@ -355,18 +525,40 @@ fn verify_wechat_signature(token: &str, timestamp: &str, nonce: &str, signature:
     expected.eq_ignore_ascii_case(signature)
 }
 
+fn verify_wechat_message_signature(
+    token: &str,
+    timestamp: &str,
+    nonce: &str,
+    encrypted_payload: Option<&str>,
+    signature: &str,
+) -> bool {
+    if let Some(encrypted_payload) = encrypted_payload {
+        let mut parts = vec![
+            token.to_string(),
+            timestamp.to_string(),
+            nonce.to_string(),
+            encrypted_payload.to_string(),
+        ];
+        parts.sort();
+        let digest = Sha1::digest(parts.join("").as_bytes());
+        return format!("{:x}", digest).eq_ignore_ascii_case(signature);
+    }
+    verify_wechat_signature(token, timestamp, nonce, signature)
+}
+
 fn verify_provider_callback_post(
     query: &HashMap<String, String>,
     verification_token: &str,
     message_handling_mode: &str,
+    encrypted_payload: Option<&str>,
 ) -> Result<(), String> {
     if matches!(
         message_handling_mode,
         "wechat_ack" | "wechat" | "provider_ack"
     ) {
         let signature = query
-            .get("signature")
-            .or_else(|| query.get("msg_signature"))
+            .get("msg_signature")
+            .or_else(|| query.get("signature"))
             .map(String::as_str)
             .filter(|value| !value.is_empty())
             .ok_or_else(|| {
@@ -382,7 +574,13 @@ fn verify_provider_callback_post(
             .map(String::as_str)
             .filter(|value| !value.is_empty())
             .ok_or_else(|| "OAuth provider callback nonce is required".to_string())?;
-        if !verify_wechat_signature(verification_token, timestamp, nonce, signature) {
+        if !verify_wechat_message_signature(
+            verification_token,
+            timestamp,
+            nonce,
+            encrypted_payload,
+            signature,
+        ) {
             return Err("OAuth provider callback signature is invalid".to_string());
         }
         return Ok(());
@@ -551,5 +749,41 @@ mod tests {
                 .expect("challenge response should exist");
         assert_eq!(response.body, "123456");
         assert_eq!(response.content_type, Some("text/plain"));
+    }
+
+    #[test]
+    fn parses_plaintext_wechat_xml_callback() {
+        let payload = parse_provider_callback_body(
+            br#"<xml><MsgId>42</MsgId><MsgType>event</MsgType><Event>subscribe</Event></xml>"#,
+            Some("text/xml"),
+        )
+        .expect("xml payload");
+        assert_eq!(payload["MsgId"], "42");
+        assert_eq!(payload["MsgType"], "event");
+        assert_eq!(payload["Event"], "subscribe");
+    }
+
+    #[test]
+    fn encrypted_wechat_signature_includes_ciphertext() {
+        let token = "token";
+        let timestamp = "1";
+        let nonce = "2";
+        let encrypted = "ciphertext";
+        let mut parts = vec![
+            token.to_string(),
+            timestamp.to_string(),
+            nonce.to_string(),
+            encrypted.to_string(),
+        ];
+        parts.sort();
+        let digest = Sha1::digest(parts.join("").as_bytes());
+        let signature = format!("{:x}", digest);
+        assert!(verify_wechat_message_signature(
+            token,
+            timestamp,
+            nonce,
+            Some(encrypted),
+            &signature,
+        ));
     }
 }

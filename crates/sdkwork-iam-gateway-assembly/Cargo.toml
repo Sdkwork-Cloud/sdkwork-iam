@@ -11,11 +11,15 @@ path = "src/lib.rs"
 
 [dependencies]
 axum.workspace = true
-tokio = { version = "1.48", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.48", features = ["macros", "rt-multi-thread", "net", "signal"] }
 sdkwork_web_bootstrap = { workspace = true, features = ["sqlx"] }
 sdkwork_iam_database_host = { workspace = true }
 sdkwork_iam_web_adapter = { workspace = true }
 tracing = "0.1"
-sdkwork_routes_iam_app_api = { package = "sdkwork-routes-iam-app-api", path = "../sdkwork-routes-iam-app-api" }
-sdkwork_routes_iam_backend_api = { package = "sdkwork-routes-iam-backend-api", path = "../sdkwork-routes-iam-backend-api" }
-sdkwork_routes_iam_open_api = { package = "sdkwork-routes-iam-open-api", path = "../sdkwork-routes-iam-open-api" }
+tracing-subscriber = "0.3"
+sdkwork_routes_iam_app_api.workspace = true
+sdkwork_routes_iam_backend_api.workspace = true
+sdkwork_routes_iam_open_api.workspace = true
+
+[dev-dependencies]
+tower.workspace = true

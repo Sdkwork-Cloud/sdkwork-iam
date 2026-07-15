@@ -37,6 +37,7 @@ test('iam governance node test catalog publishes the exact governed test surface
       'tests/static/governance/run-rust-workspace-tests.test.mjs',
       'tests/static/governance/iam-apps-layout-standard.test.mjs',
       'tests/static/governance/iam-module-federation-standard.test.mjs',
+      'tests/static/governance/iam-app-permission-surface-alignment.test.mjs',
       'tests/static/governance/iam-bootstrap-subject-workspace-alignment.test.mjs',
       'tests/static/governance/iam-crate-migrations-forbidden.test.mjs',
       'tests/static/governance/request-identity-standard-governance.test.mjs',
