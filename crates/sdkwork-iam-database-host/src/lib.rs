@@ -6,7 +6,7 @@ use std::sync::{Arc, OnceLock};
 
 pub use iam_database_module::IamDatabaseModule;
 use sdkwork_database_id::{NodeAllocatorConfig, SnowflakeNodeAllocator};
-use sdkwork_database_lifecycle::{LifecycleOrchestrator, lifecycle_options_from_env};
+use sdkwork_database_lifecycle::{lifecycle_options_from_env, LifecycleOrchestrator};
 use sdkwork_database_spi::{DatabaseAssetProvider, DatabaseManifest};
 use sdkwork_database_sqlx::DatabasePool;
 use sqlx::PgPool;
