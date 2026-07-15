@@ -23,3 +23,6 @@ uuid = { version = "1", features = ["v7"] }
 sdkwork-database-id.workspace = true
 sdkwork_iam_context_service.workspace = true
 sdkwork_iam_module_registry = { workspace = true }
+
+[dev-dependencies]
+tokio.workspace = true

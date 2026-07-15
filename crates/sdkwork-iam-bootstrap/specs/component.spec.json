@@ -41,7 +41,9 @@
       "sdkwork_iam_bootstrap::resolve_sqlite_iam_scope",
       "sdkwork_iam_bootstrap::IamScopeResolveOptions",
       "sdkwork_iam_bootstrap::tenant_primary_signing_kid",
-      "sdkwork_iam_bootstrap::IAM_STANDARD_PERMISSION_SEEDS"
+      "sdkwork_iam_bootstrap::IAM_STANDARD_PERMISSION_SEEDS",
+      "sdkwork_iam_bootstrap::DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID",
+      "sdkwork_iam_bootstrap::DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_CODE"
     ],
     "runtimeEntrypoints": [],
     "routeManifest": null,

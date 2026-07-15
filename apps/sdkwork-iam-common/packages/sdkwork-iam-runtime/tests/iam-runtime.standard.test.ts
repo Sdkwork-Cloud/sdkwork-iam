@@ -6,6 +6,8 @@ import { createTestJwt } from "@sdkwork/runtime-bootstrap";
 import {
   createIamRuntime,
   createMemoryIamTokenStore,
+  createPersistentIamTokenStore,
+  DEFAULT_IAM_SESSION_RETENTION_DAYS,
   isSdkworkIamSessionAuthenticated,
   requireSdkworkIamAuthenticatedSession,
 } from "../src/index";
@@ -588,6 +590,48 @@ describe("SDKWork IAM runtime", () => {
         tokenStore: createMemoryIamTokenStore(),
       }),
     ).toThrow(/backend SDK client must not expose an auth namespace/);
+  });
+});
+
+describe("persistent IAM token store", () => {
+  it("retains the complete rotating session across runtime recreation", async () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      removeItem: (key: string) => {
+        values.delete(key);
+      },
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+    };
+    const session = {
+      accessToken: DEFAULT_ACCESS_TOKEN,
+      authToken: DEFAULT_AUTH_TOKEN,
+      expiresAt: Date.now() + DEFAULT_IAM_SESSION_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+      refreshToken: "rotating-refresh-token",
+    };
+
+    await createPersistentIamTokenStore({ appId: "birdcoder", storage }).set(session);
+    const restored = await createPersistentIamTokenStore({ appId: "birdcoder", storage }).get();
+
+    expect(restored).toEqual(session);
+    expect([...values.keys()]).toEqual(["sdkwork.birdcoder.iamSession.v1"]);
+  });
+
+  it("clears malformed persisted sessions instead of authenticating from them", async () => {
+    const removeItem = vi.fn();
+    const store = createPersistentIamTokenStore({
+      appId: "birdcoder",
+      storage: {
+        getItem: () => "{not-json",
+        removeItem,
+        setItem: vi.fn(),
+      },
+    });
+
+    await expect(store.get()).resolves.toEqual({});
+    expect(removeItem).toHaveBeenCalledWith("sdkwork.birdcoder.iamSession.v1");
   });
 });
 

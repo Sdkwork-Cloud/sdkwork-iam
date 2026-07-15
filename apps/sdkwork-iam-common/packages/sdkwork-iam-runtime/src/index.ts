@@ -20,6 +20,51 @@ export interface IamTokenStore {
   set(session: IamStoredSession): Promise<void> | void;
 }
 
+export interface IamSessionStringStorage {
+  getItem(key: string): Promise<string | null> | string | null;
+  removeItem(key: string): Promise<void> | void;
+  setItem(key: string, value: string): Promise<void> | void;
+}
+
+export interface CreatePersistentIamTokenStoreInput {
+  appId: string;
+  storage: IamSessionStringStorage;
+}
+
+export const DEFAULT_IAM_SESSION_RETENTION_DAYS = 30;
+
+export function createPersistentIamTokenStore(
+  input: CreatePersistentIamTokenStoreInput,
+): IamTokenStore {
+  const appId = input.appId.trim();
+  if (!appId) {
+    throw new Error("appId is required for persistent IAM session storage");
+  }
+  const storageKey = `sdkwork.${appId}.iamSession.v1`;
+
+  return {
+    clear: () => input.storage.removeItem(storageKey),
+    get: async () => {
+      const raw = await input.storage.getItem(storageKey);
+      if (!raw) {
+        return {};
+      }
+      try {
+        return normalizePersistedIamSession(JSON.parse(raw));
+      } catch {
+        await input.storage.removeItem(storageKey);
+        return {};
+      }
+    },
+    set: async (session) => {
+      await input.storage.setItem(
+        storageKey,
+        JSON.stringify(normalizePersistedIamSession(session)),
+      );
+    },
+  };
+}
+
 /**
  * Minimal session shape accepted by shared IAM authentication guards.
  *
@@ -229,6 +274,23 @@ export function createMemoryIamContextStore(): IamContextStore {
 function normalizeSdkworkIamAuthenticationToken(value: unknown): string | undefined {
   const token = typeof value === "string" ? value.trim() : "";
   return token || undefined;
+}
+
+function normalizePersistedIamSession(value: unknown): IamStoredSession {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  const session = value as Record<string, unknown>;
+  const accessToken = normalizeSdkworkIamAuthenticationToken(session.accessToken);
+  const authToken = normalizeSdkworkIamAuthenticationToken(session.authToken);
+  const refreshToken = normalizeSdkworkIamAuthenticationToken(session.refreshToken);
+  const expiresAt = normalizeExpiresAt(session.expiresAt as IamStoredSession["expiresAt"]);
+  return {
+    ...(accessToken ? { accessToken } : {}),
+    ...(authToken ? { authToken } : {}),
+    ...(expiresAt ? { expiresAt } : {}),
+    ...(refreshToken ? { refreshToken } : {}),
+  };
 }
 
 function bindTokenManager(

@@ -950,6 +950,7 @@ async fn local_app_router_serves_password_login_with_app_context() {
         .is_some_and(|kid| kid.starts_with(tenant_id)));
     assert_eq!(auth_payload["token_type"], "auth");
     assert_eq!(access_payload["token_type"], "access");
+    let expected_session_ttl_seconds = 30 * 24 * 60 * 60;
     for payload in [auth_payload, access_payload] {
         assert_eq!(payload["tenant_id"], tenant_id);
         assert_eq!(payload["session_id"], session_id);
@@ -957,6 +958,9 @@ async fn local_app_router_serves_password_login_with_app_context() {
         assert_eq!(payload["user_id"], body["context"]["userId"]);
         assert_eq!(payload["app_id"], body["context"]["appId"]);
         assert_eq!(payload["organization_id"], CONFIGURED_ORGANIZATION_ID);
+        let issued_at = payload["iat"].as_u64().expect("token issued-at claim");
+        let expires_at = payload["exp"].as_u64().expect("token expiry claim");
+        assert_eq!(expires_at - issued_at, expected_session_ttl_seconds);
     }
 
     let refresh_response = request_json(

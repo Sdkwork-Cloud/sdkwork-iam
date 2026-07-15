@@ -13,7 +13,8 @@ use sqlx::{types::Json, PgPool, Row};
 
 use crate::{responses::*, state::*, utils::*};
 
-pub(crate) const LOCAL_TOKEN_TTL_SECONDS: u128 = 60 * 60;
+pub(crate) const DEFAULT_SESSION_TTL_DAYS: u128 = 30;
+pub(crate) const LOCAL_TOKEN_TTL_SECONDS: u128 = DEFAULT_SESSION_TTL_DAYS * 24 * 60 * 60;
 pub(crate) const SIGNING_KEY_ROTATION_OVERLAP_SECONDS: i64 = LOCAL_TOKEN_TTL_SECONDS as i64;
 
 pub(crate) const LOGIN_CREATION_FORBIDDEN_HEADERS: &[&str] = &["authorization", "x-api-key"];

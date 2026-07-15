@@ -6,7 +6,7 @@ use std::sync::{Arc, OnceLock};
 
 pub use iam_database_module::IamDatabaseModule;
 use sdkwork_database_id::{NodeAllocatorConfig, SnowflakeNodeAllocator};
-use sdkwork_database_lifecycle::{lifecycle_options_from_env, LifecycleOrchestrator};
+use sdkwork_database_lifecycle::{LifecycleOrchestrator, lifecycle_options_from_env};
 use sdkwork_database_spi::{DatabaseAssetProvider, DatabaseManifest};
 use sdkwork_database_sqlx::DatabasePool;
 use sqlx::PgPool;
@@ -123,7 +123,7 @@ pub async fn bootstrap_iam_database_from_env() -> Result<IamDatabaseHost, String
 /// Node allocation is mandatory in production; a fallback is only permitted for development.
 async fn allocate_and_init_iam_snowflake_node(pool: &DatabasePool) -> Result<(), String> {
     let config = NodeAllocatorConfig::from_service_name("iam-service");
-    match SnowflakeNodeAllocator::allocate_generator(pool, &config).await {
+    match SnowflakeNodeAllocator::allocate_process_generator(pool, &config).await {
         Ok((generator, lease)) => {
             let node_id = generator.node_id();
             tracing::info!(
