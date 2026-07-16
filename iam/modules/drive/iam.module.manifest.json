@@ -2,12 +2,48 @@
   "schemaVersion": 1,
   "kind": "sdkwork.iam.module",
   "moduleId": "drive",
-  "catalogVersion": "1.0.0",
+  "catalogVersion": "1.1.0",
   "domain": "drive",
   "owner": "sdkwork-drive",
   "displayName": "drive module",
   "permissions": {
     "catalog": [
+      {
+        "code": "drive.audit.admin",
+        "name": "Administer drive audit",
+        "resource": "drive.audit",
+        "action": "admin",
+        "status": "active",
+        "since": "1.1.0",
+        "replacementCode": null
+      },
+      {
+        "code": "drive.download_packages.admin",
+        "name": "Administer drive download packages",
+        "resource": "drive.download_packages",
+        "action": "admin",
+        "status": "active",
+        "since": "1.1.0",
+        "replacementCode": null
+      },
+      {
+        "code": "drive.labels.admin",
+        "name": "Administer drive labels",
+        "resource": "drive.labels",
+        "action": "admin",
+        "status": "active",
+        "since": "1.1.0",
+        "replacementCode": null
+      },
+      {
+        "code": "drive.maintenance.admin",
+        "name": "Administer drive maintenance",
+        "resource": "drive.maintenance",
+        "action": "admin",
+        "status": "active",
+        "since": "1.1.0",
+        "replacementCode": null
+      },
       {
         "code": "drive.nodes.manage",
         "name": "Manage drive nodes",
@@ -45,6 +81,33 @@
         "replacementCode": null
       },
       {
+        "code": "drive.quota.admin",
+        "name": "Administer drive quotas",
+        "resource": "drive.quota",
+        "action": "admin",
+        "status": "active",
+        "since": "1.1.0",
+        "replacementCode": null
+      },
+      {
+        "code": "drive.sandboxes.admin",
+        "name": "Administer drive sandboxes",
+        "resource": "drive.sandboxes",
+        "action": "admin",
+        "status": "active",
+        "since": "1.1.0",
+        "replacementCode": null
+      },
+      {
+        "code": "drive.spaces.admin",
+        "name": "Administer drive spaces",
+        "resource": "drive.spaces",
+        "action": "admin",
+        "status": "active",
+        "since": "1.1.0",
+        "replacementCode": null
+      },
+      {
         "code": "drive.spaces.manage",
         "name": "Manage drive spaces",
         "resource": "drive.spaces",
@@ -60,6 +123,15 @@
         "action": "read",
         "status": "active",
         "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "drive.storage.admin",
+        "name": "Administer drive storage",
+        "resource": "drive.storage",
+        "action": "admin",
+        "status": "active",
+        "since": "1.1.0",
         "replacementCode": null
       },
       {

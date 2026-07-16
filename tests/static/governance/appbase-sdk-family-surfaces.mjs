@@ -44,7 +44,7 @@ export const APPBASE_MATERIALIZED_FROM_EXPECTATIONS = sdkFamilySurfaces.map(({ a
 }));
 
 export const APPBASE_SDK_FAMILY_ASSEMBLY_MANIFESTS = sdkFamilySurfaces.map(
-  ({ directory }) => `${directory}/.sdkwork-assembly.json`,
+  ({ directory }) => `${directory}/sdk-manifest.json`,
 );
 
 export const APPBASE_OPENAPI_CORE_FILES = sdkFamilySurfaces.flatMap(({ directory, authority }) => [

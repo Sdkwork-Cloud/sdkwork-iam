@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "node scripts/sdkwork-command.mjs dev",
+    "stop": "node ../sdkwork-specs/tools/stop-sdkwork-workspace-processes.mjs --workspace .",    "dev": "node scripts/sdkwork-command.mjs dev",
     "build": "node scripts/sdkwork-command.mjs build",
     "clean": "node scripts/sdkwork-command.mjs clean",
     "test": "node scripts/run-iam-standard-contracts.mjs",
