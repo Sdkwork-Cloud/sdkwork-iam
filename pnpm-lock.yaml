@@ -524,9 +524,6 @@ importers:
       '@sdkwork/iam-service':
         specifier: workspace:*
         version: link:../sdkwork-iam-service
-      '@sdkwork/runtime-bootstrap':
-        specifier: workspace:*
-        version: link:../../../../../sdkwork-appbase/packages/common/foundation/sdkwork-runtime-bootstrap
       '@sdkwork/utils':
         specifier: workspace:*
         version: link:../../../../../sdkwork-utils/packages/sdkwork-utils-typescript

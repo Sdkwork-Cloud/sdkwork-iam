@@ -7,6 +7,7 @@ const workspaceRoot = path.resolve(import.meta.dirname, '../../..');
 const sdkworkSpaceRoot = path.resolve(workspaceRoot, '..');
 
 const BOOTSTRAP_ORCHESTRATION_PATTERNS = [
+  /mergeRepoBootstrapAccessTokenEnv/u,
   /mergeRepoDevBootstrapAccessTokenEnv/u,
   /mergeBootstrapAccessTokenEnvFromManifest/u,
   /mergeSdkworkImBootstrapAccessTokenEnv/u,

@@ -13,6 +13,7 @@ import {
   SDKWORK_ACCESS_TOKEN_ENV_KEY,
   SDKWORK_CREDENTIAL_ENTRY_BOOTSTRAP_ACCESS_TOKEN_GLOBAL_KEY,
 } from '../src/index.ts';
+import { createSdkworkCredentialEntryBootstrapVitePlugin } from '../src/vite.ts';
 
 describe('@sdkwork/iam-credential-entry', () => {
   it('reads bootstrap access token from process env', () => {
@@ -98,4 +99,39 @@ describe('@sdkwork/iam-credential-entry', () => {
       },
     }).SDKWORK_ACCESS_TOKEN).toBe(token);
   });
+
+  it('injects a safely serialized development token through the canonical Vite handoff', () => {
+    const plugin = createSdkworkCredentialEntryBootstrapVitePlugin({
+      accessToken: 'token</script>&value',
+      environment: 'development',
+    });
+    const transformed = plugin?.transformIndexHtml.handler('<html></html>');
+    const script = transformed?.tags[0]?.children ?? '';
+
+    expect(plugin?.apply).toBe('serve');
+    expect(script).toContain(SDKWORK_CREDENTIAL_ENTRY_BOOTSTRAP_ACCESS_TOKEN_GLOBAL_KEY);
+    expect(script).toContain('token\\u003c/script\\u003e\\u0026value');
+    expect(script).not.toContain('</script>');
+  });
+
+  it('does not inject test tokens without explicit test opt-in', () => {
+    expect(createSdkworkCredentialEntryBootstrapVitePlugin({
+      accessToken: 'test-token',
+      environment: 'test',
+    })).toBeUndefined();
+    expect(createSdkworkCredentialEntryBootstrapVitePlugin({
+      accessToken: 'test-token',
+      environment: 'test',
+      allowTestInjection: true,
+    })).toBeDefined();
+  });
+
+  for (const environment of ['staging', 'production'] as const) {
+    it(`never injects bootstrap credentials into ${environment} HTML`, () => {
+      expect(createSdkworkCredentialEntryBootstrapVitePlugin({
+        accessToken: `${environment}-secret-token`,
+        environment,
+      })).toBeUndefined();
+    });
+  }
 });

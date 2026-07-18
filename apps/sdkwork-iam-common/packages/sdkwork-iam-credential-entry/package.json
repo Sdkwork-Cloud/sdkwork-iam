@@ -9,6 +9,16 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./vite": {
+      "types": "./src/vite.ts",
+      "import": "./src/vite.ts",
+      "default": "./src/vite.ts"
+    },
+    "./node-bootstrap": {
+      "types": "./src/node-bootstrap.d.mts",
+      "import": "./src/node-bootstrap.mjs",
+      "default": "./src/node-bootstrap.mjs"
     }
   },
   "files": [
@@ -24,7 +34,6 @@
   },
   "dependencies": {
     "@sdkwork/iam-app-sdk": "workspace:*",
-    "@sdkwork/runtime-bootstrap": "workspace:*",
     "@sdkwork/sdk-common": "^1.0.2",
     "@sdkwork/utils": "workspace:*"
   },

@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "@sdkwork/iam-credential-entry",
+    "displayName": "SDKWork IAM Credential Entry",
+    "version": "0.1.0",
+    "type": "node-package",
+    "root": "sdkwork-iam/apps/sdkwork-iam-common/packages/sdkwork-iam-credential-entry",
+    "domain": "iam",
+    "declaredDomain": "iam",
+    "capability": "iam-credential-entry",
+    "status": "standard",
+    "languages": ["typescript", "javascript"],
+    "generated": false,
+    "private": true,
+    "manifests": ["package.json"]
+  },
+  "canonicalSpecs": [
+    {
+      "file": "IAM_CREDENTIAL_ENTRY_SPEC.md",
+      "path": "../../../../../sdkwork-specs/IAM_CREDENTIAL_ENTRY_SPEC.md",
+      "purpose": "Credential-entry bootstrap transport and shared consumer ownership."
+    },
+    {
+      "file": "ENVIRONMENT_SPEC.md",
+      "path": "../../../../../sdkwork-specs/ENVIRONMENT_SPEC.md",
+      "purpose": "Lifecycle credential policy and public/private environment boundaries."
+    },
+    {
+      "file": "CONFIG_SPEC.md",
+      "path": "../../../../../sdkwork-specs/CONFIG_SPEC.md",
+      "purpose": "Runtime configuration and SDK bootstrap rules."
+    },
+    {
+      "file": "SECURITY_SPEC.md",
+      "path": "../../../../../sdkwork-specs/SECURITY_SPEC.md",
+      "purpose": "Credential secrecy, token replacement, and fail-closed behavior."
+    },
+    {
+      "file": "TEST_SPEC.md",
+      "path": "../../../../../sdkwork-specs/TEST_SPEC.md",
+      "purpose": "Lifecycle matrix, browser handoff, and static governance verification."
+    }
+  ],
+  "contracts": {
+    "publicExports": [".", "./vite", "./node-bootstrap"],
+    "runtimeEntrypoints": [
+      "package.json#scripts.typecheck",
+      "package.json#scripts.test",
+      "sdkwork-iam/scripts/dev/create-dev-bootstrap-access-token-env.mjs"
+    ],
+    "sdkClients": ["@sdkwork/iam-app-sdk"],
+    "events": [],
+    "configKeys": ["SDKWORK_ACCESS_TOKEN"],
+    "routeManifest": null
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative. Local specs may extend but must not contradict them.",
+    "dependencyPolicy": "Applications consume credential-entry behavior only through public package exports and the canonical Node orchestrator helper.",
+    "sdkPolicy": "The shared runtime prepares the global TokenManager before generated IAM app SDK calls; consumers do not build raw HTTP requests or manual auth headers.",
+    "languagePolicy": "Node orchestration and Vite integration share one IAM-owned component boundary and preserve private credential handling."
+  },
+  "verification": {
+    "commands": [
+      "pnpm --filter @sdkwork/iam-credential-entry typecheck",
+      "pnpm --filter @sdkwork/iam-credential-entry test",
+      "node scripts/dev/create-dev-bootstrap-access-token-env.test.mjs"
+    ]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-07-18"
+  }
+}
