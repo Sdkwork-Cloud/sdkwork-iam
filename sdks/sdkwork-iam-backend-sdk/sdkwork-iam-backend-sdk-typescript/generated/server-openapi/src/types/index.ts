@@ -19,3 +19,6 @@ export type { AppbaseTenantApplicationProvisionCommand } from './appbase-tenant-
 export type { AppbaseTenantApplicationUpdateCommand } from './appbase-tenant-application-update-command';
 export type { AppbaseTenantApplicationEnableCommand } from './appbase-tenant-application-enable-command';
 export type { AppbaseAccessCredentialCreateCommand } from './appbase-access-credential-create-command';
+export type { ServiceAccountCredentialCreateCommand } from './service-account-credential-create-command';
+export type { ServiceAccountCredentialRevokeCommand } from './service-account-credential-revoke-command';
+export type { ServiceAccountTokenExchangeCommand } from './service-account-token-exchange-command';

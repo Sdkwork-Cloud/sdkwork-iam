@@ -5,6 +5,8 @@
   "language": "rust",
   "sdkType": "backend",
   "packageName": "sdkwork-iam-backend-sdk",
+  "transportPackageName": "sdkwork-iam-backend-sdk",
+  "consumerPackageName": "sdkwork-iam-backend-sdk",
   "generator": "@sdkwork/sdk-generator",
   "capabilities": {
     "supportsGeneratedTests": true,

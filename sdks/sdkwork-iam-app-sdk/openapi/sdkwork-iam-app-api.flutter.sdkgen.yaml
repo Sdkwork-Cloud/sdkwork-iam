@@ -7046,6 +7046,54 @@
             "type": "string"
           }
         }
+      },
+      "ServiceAccountCredentialCreateCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tenantApplicationId"
+        ],
+        "description": "Create a one-time-returned workload credential bound to a service account and tenant application.",
+        "properties": {
+          "tenantApplicationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ServiceAccountCredentialRevokeCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Revoke a workload credential and all sessions issued from it.",
+        "properties": {}
+      },
+      "ServiceAccountTokenExchangeCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "clientId",
+          "clientSecret"
+        ],
+        "description": "Exchange a workload client credential for short-lived tenant-bound dual tokens.",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "clientSecret": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "format": "password",
+            "writeOnly": true
+          }
+        }
       }
     }
   },

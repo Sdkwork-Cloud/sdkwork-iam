@@ -473,6 +473,18 @@ pub const IAM_STANDARD_PERMISSION_SEEDS: &[PermissionSeed] = &[
         action: "create",
     },
     PermissionSeed {
+        code: "iam.service_account_credentials.create",
+        name: "Create IAM service account credentials",
+        resource: "iam.service_account_credentials",
+        action: "create",
+    },
+    PermissionSeed {
+        code: "iam.service_account_credentials.revoke",
+        name: "Revoke IAM service account credentials",
+        resource: "iam.service_account_credentials",
+        action: "revoke",
+    },
+    PermissionSeed {
         code: "iam.service_accounts.delete",
         name: "Delete IAM service accounts",
         resource: "iam.service_accounts",

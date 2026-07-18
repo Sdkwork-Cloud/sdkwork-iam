@@ -63,6 +63,8 @@ fn explicit_bootstrap_permission(operation_id: &str) -> Option<&'static str> {
         "tenantApplications.update" => Some("iam.tenant_applications.update"),
         "tenantApplications.enable" => Some("iam.tenant_applications.enable"),
         "accessCredentials.create" => Some("iam.access_credentials.create"),
+        "serviceAccounts.credentials.create" => Some("iam.service_account_credentials.create"),
+        "serviceAccountCredentials.revoke" => Some("iam.service_account_credentials.revoke"),
         _ => None,
     }
 }

@@ -34,7 +34,6 @@ for (const permission of manifest.permissions.catalog) {
   lines.push("    },");
 }
 lines.push("];");
-lines.push("");
 
 await writeFile(outputPath, `${lines.join("\n")}\n`, "utf8");
 process.stdout.write(

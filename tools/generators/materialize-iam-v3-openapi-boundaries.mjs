@@ -22,7 +22,7 @@ const routeSources = [
     owner: 'iam',
     packageName: 'sdkwork-routes-iam-backend-api',
     path: resolve(iamRoot, 'crates/sdkwork-routes-iam-backend-api/src/manifest.rs'),
-    constructors: ['HttpRoute::public', 'HttpRoute::dual_token', 'HttpRoute::backend_admin', 'HttpRoute::api_key'],
+    constructors: ['HttpRoute::credential_entry_public', 'HttpRoute::public', 'HttpRoute::dual_token', 'HttpRoute::backend_admin', 'HttpRoute::api_key'],
   },
   {
     owner: 'iam',
@@ -97,6 +97,7 @@ const publicBackendBootstrapOperationIds = new Set([
   'tenantApplications.update',
   'tenantApplications.enable',
   'accessCredentials.create',
+  'serviceAccountTokens.create',
 ]);
 
 const openApiExternalWireOperations = {
@@ -524,6 +525,15 @@ function requestBodySchemaRef(route) {
   if (route.operationId === 'accessCredentials.create') {
     return '#/components/schemas/AppbaseAccessCredentialCreateCommand';
   }
+  if (route.operationId === 'serviceAccounts.credentials.create') {
+    return '#/components/schemas/ServiceAccountCredentialCreateCommand';
+  }
+  if (route.operationId === 'serviceAccountCredentials.revoke') {
+    return '#/components/schemas/ServiceAccountCredentialRevokeCommand';
+  }
+  if (route.operationId === 'serviceAccountTokens.create') {
+    return '#/components/schemas/ServiceAccountTokenExchangeCommand';
+  }
 
   if (route.operationId === 'oauth.miniProgramSessions.create') {
     return '#/components/schemas/WechatMiniProgramSessionCreateCommand';
@@ -751,6 +761,32 @@ function buildSchemas() {
         instanceKey: { type: 'string' },
       },
     },
+    ServiceAccountCredentialCreateCommand: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['tenantApplicationId'],
+      description: 'Create a one-time-returned workload credential bound to a service account and tenant application.',
+      properties: {
+        tenantApplicationId: { type: 'string', minLength: 1, maxLength: 255 },
+        expiresAt: { type: 'string', format: 'date-time' },
+      },
+    },
+    ServiceAccountCredentialRevokeCommand: {
+      type: 'object',
+      additionalProperties: false,
+      description: 'Revoke a workload credential and all sessions issued from it.',
+      properties: {},
+    },
+    ServiceAccountTokenExchangeCommand: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['clientId', 'clientSecret'],
+      description: 'Exchange a workload client credential for short-lived tenant-bound dual tokens.',
+      properties: {
+        clientId: { type: 'string', minLength: 1, maxLength: 255 },
+        clientSecret: { type: 'string', minLength: 1, maxLength: 512, format: 'password', writeOnly: true },
+      },
+    },
   };
 }
 
@@ -802,7 +838,8 @@ function routeIsPublic(surface, route) {
   if (surface.sdkType === 'open') {
     return route.routeKind === 'open_api_flexible' || route.routeKind === 'public';
   }
-  if (surface.sdkType === 'backend' && route.routeKind === 'public') {
+  if (surface.sdkType === 'backend'
+    && (route.routeKind === 'public' || route.routeKind === 'credential_entry_public')) {
     return publicBackendBootstrapOperationIds.has(route.operationId);
   }
   return surface.sdkType === 'app' && publicAppOperationIds.has(route.operationId);
@@ -822,7 +859,9 @@ function operationAuthMode(surface, route) {
     return 'anonymous';
   }
   if (surface.sdkType === 'backend' && publicBackendBootstrapOperationIds.has(route.operationId)) {
-    return 'bootstrap-body';
+    return route.operationId === 'serviceAccountTokens.create'
+      ? 'credential-entry'
+      : 'bootstrap-body';
   }
   if (surface.sdkType === 'app' && route.routeKind === 'credential_entry_public') {
     return 'credential-entry-bootstrap';
@@ -878,7 +917,9 @@ function operationForbidsCredentialHeaders(surface, route) {
   if (surface.sdkType === 'app' && credentialHeaderForbiddenAppOperationIds.has(route.operationId)) {
     return true;
   }
-  return surface.sdkType === 'backend' && publicBackendBootstrapOperationIds.has(route.operationId);
+  return surface.sdkType === 'backend'
+    && (route.routeKind === 'credential_entry_public'
+      || publicBackendBootstrapOperationIds.has(route.operationId));
 }
 
 function usesJsonBody(method) {

@@ -7,6 +7,7 @@ mod oauth_management;
 mod operation_permissions;
 mod paths;
 mod routes;
+mod service_account_credentials;
 mod web_bootstrap;
 
 pub use handlers::build_sdkwork_iam_backend_api_router_from_env;

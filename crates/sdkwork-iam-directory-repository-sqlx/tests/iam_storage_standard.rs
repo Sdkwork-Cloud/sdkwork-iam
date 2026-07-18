@@ -42,8 +42,9 @@ fn exposes_complete_iam_table_catalog() {
     assert!(tables.contains(&"iam_group"));
     assert!(tables.contains(&"iam_group_member"));
     assert!(tables.contains(&"iam_service_account"));
+    assert!(tables.contains(&"iam_service_account_credential"));
     assert!(tables.contains(&"iam_role_exclusion"));
-    assert_eq!(57, tables.len(), "IAM catalog must own 57 canonical tables");
+    assert_eq!(58, tables.len(), "IAM catalog must own 58 canonical tables");
     assert!(!tables.contains(&"iam_user_role"));
 
     for table in tables {
@@ -103,6 +104,10 @@ fn exposes_canonical_iam_table_constants() {
     assert_eq!("iam_group", IamTables::GROUP);
     assert_eq!("iam_group_member", IamTables::GROUP_MEMBER);
     assert_eq!("iam_service_account", IamTables::SERVICE_ACCOUNT);
+    assert_eq!(
+        "iam_service_account_credential",
+        IamTables::SERVICE_ACCOUNT_CREDENTIAL
+    );
     assert_eq!("iam_role_exclusion", IamTables::ROLE_EXCLUSION);
 }
 

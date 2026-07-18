@@ -3,7 +3,8 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use hmac::{Hmac, Mac};
 use sdkwork_iam_context_service::{
-    AuthLevel, DeploymentMode, Environment, IamAppContext, IamUserSurface, LoginScope,
+    AuthLevel, DeploymentMode, Environment, IamAppContext, IamPrincipalKind, IamUserSurface,
+    LoginScope,
 };
 use sdkwork_web_core::{validate_token_version_json, TokenVersionPolicy};
 use serde_json::Value;
@@ -19,7 +20,20 @@ pub(crate) const IAM_SESSION_CONTEXT_SELECT: &str =
      s.data_scope_json, s.permission_scope_json, \
      COALESCE(u.display_name, '') AS user_display_name, \
      COALESCE(u.email, '') AS user_email, \
-     u.email_verified AS user_email_verified";
+     u.email_verified AS user_email_verified, \
+     s.principal_kind, COALESCE(s.principal_id, s.user_id) AS principal_id";
+
+const IAM_SESSION_CONTEXT_JOINS: &str = "LEFT JOIN iam_user u ON s.principal_kind = 'user' \
+       AND u.id = COALESCE(s.principal_id, s.user_id) AND u.tenant_id = s.tenant_id \
+     LEFT JOIN iam_service_account sa ON s.principal_kind = 'service_account' \
+       AND sa.id = s.principal_id AND sa.tenant_id = s.tenant_id \
+     LEFT JOIN iam_service_account_credential sac ON sac.id = s.credential_id";
+
+const IAM_SESSION_PRINCIPAL_ACTIVE: &str =
+    "((s.principal_kind = 'user' AND u.status = 'active' AND u.is_deleted = 0) \
+      OR (s.principal_kind = 'service_account' AND sa.status = 'active' \
+          AND sac.status = 'active' \
+          AND (sac.expires_at IS NULL OR sac.expires_at > $3::timestamptz)))";
 
 pub(crate) fn user_profile_from_session_row(row: &sqlx::postgres::PgRow) -> (String, String, bool) {
     let display_name: String = row.try_get(11).unwrap_or_default();
@@ -91,19 +105,18 @@ async fn find_iam_context_from_dual_tokens(
 
     let row = sqlx::query(&format!(
         "SELECT {IAM_SESSION_CONTEXT_SELECT} \
-         FROM iam_session s \
-         JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
+         FROM iam_session s {IAM_SESSION_CONTEXT_JOINS} \
          WHERE s.auth_token_hash = $1 AND s.access_token_hash = $2 \
            AND s.revoked_at IS NULL AND s.expires_at::timestamptz > $3::timestamptz \
-           AND u.status = 'active' AND u.is_deleted = 0 \
+           AND {IAM_SESSION_PRINCIPAL_ACTIVE} \
          LIMIT 1"
     ))
     .bind(&auth_hash)
     .bind(&access_hash)
     .bind(current_timestamp_utc())
     .fetch_optional(pg)
-    .await
-    .ok()??;
+    .await;
+    let row = row.ok()??;
 
     let context = iam_context_from_session_row(&row)?;
     if !session_claims_match_context(&auth_claims, &context)
@@ -122,11 +135,13 @@ async fn find_iam_context_from_auth_token(pg: &PgPool, auth_token: &str) -> Opti
     let auth_hash = hash_token(auth_token);
     let row = sqlx::query(&format!(
         "SELECT {IAM_SESSION_CONTEXT_SELECT} \
-         FROM iam_session s \
-         JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
+         FROM iam_session s {IAM_SESSION_CONTEXT_JOINS} \
          WHERE s.auth_token_hash = $1 \
            AND s.revoked_at IS NULL AND s.expires_at::timestamptz > $2::timestamptz \
-           AND u.status = 'active' AND u.is_deleted = 0 \
+           AND ((s.principal_kind = 'user' AND u.status = 'active' AND u.is_deleted = 0) \
+             OR (s.principal_kind = 'service_account' AND sa.status = 'active' \
+               AND sac.status = 'active' \
+               AND (sac.expires_at IS NULL OR sac.expires_at > $2::timestamptz))) \
          LIMIT 1"
     ))
     .bind(&auth_hash)
@@ -160,11 +175,13 @@ async fn find_iam_context_from_access_token(
     let access_hash = hash_token(access_token);
     let row = sqlx::query(&format!(
         "SELECT {IAM_SESSION_CONTEXT_SELECT} \
-         FROM iam_session s \
-         JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
+         FROM iam_session s {IAM_SESSION_CONTEXT_JOINS} \
          WHERE s.access_token_hash = $1 \
            AND s.revoked_at IS NULL AND s.expires_at::timestamptz > $2::timestamptz \
-           AND u.status = 'active' AND u.is_deleted = 0 \
+           AND ((s.principal_kind = 'user' AND u.status = 'active' AND u.is_deleted = 0) \
+             OR (s.principal_kind = 'service_account' AND sa.status = 'active' \
+               AND sac.status = 'active' \
+               AND (sac.expires_at IS NULL OR sac.expires_at > $2::timestamptz))) \
          LIMIT 1"
     ))
     .bind(&access_hash)
@@ -388,6 +405,9 @@ fn iam_context_from_token_claims(claims: &Value) -> Option<IamAppContext> {
         organization_id: normalized_organization_id.clone(),
         login_scope,
         user_id,
+        principal_kind: IamPrincipalKind::User,
+        principal_id: claim_string_value(claims, &["principal_id", "user_id", "sub"])
+            .unwrap_or_default(),
         session_id,
         app_id,
         environment,
@@ -496,7 +516,7 @@ fn iam_context_from_session_row(row: &sqlx::postgres::PgRow) -> Option<IamAppCon
     let tenant_id: String = row.get(1);
     let organization_id: Option<String> = row.get(2);
     let login_scope: String = row.get(3);
-    let user_id: String = row.get(4);
+    let user_id: Option<String> = row.get(4);
     let app_id: String = row.get(5);
     let environment: String = row.get(6);
     let deployment_mode: String = row.get(7);
@@ -507,10 +527,18 @@ fn iam_context_from_session_row(row: &sqlx::postgres::PgRow) -> Option<IamAppCon
 
     let (display_name, email, email_verified) = user_profile_from_session_row(row);
 
+    let principal_kind: String = row.get(14);
+    let principal_id: String = row.get(15);
     Some(IamAppContext {
         tenant_id,
         organization_id,
-        user_id,
+        user_id: user_id.unwrap_or_else(|| principal_id.clone()),
+        principal_kind: if principal_kind == "service_account" {
+            IamPrincipalKind::ServiceAccount
+        } else {
+            IamPrincipalKind::User
+        },
+        principal_id,
         session_id,
         app_id,
         environment: environment_from_config(&environment),

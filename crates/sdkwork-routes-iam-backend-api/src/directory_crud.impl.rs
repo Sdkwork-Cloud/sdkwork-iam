@@ -33,6 +33,14 @@ fn patch_fields(body: &Value) -> Vec<(String, String)> {
     assignments
 }
 
+fn read_policy_json(body: &Value) -> Option<String> {
+    read_string_field(body, &["policyJson", "policy_json"]).or_else(|| {
+        body.get("policy")
+            .filter(|value| value.is_object())
+            .map(Value::to_string)
+    })
+}
+
 fn nest_tree(records: Vec<Value>, id_key: &str, parent_key: &str) -> Vec<Value> {
     fn build(
         id: &str,
@@ -169,12 +177,15 @@ async fn soft_delete(
 }
 
 fn policy_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
+    let policy_json = row.get::<String, _>(4);
+    let policy = serde_json::from_str::<Value>(&policy_json).unwrap_or_else(|_| json!({}));
     json!({
         "code": row.get::<String, _>(2),
         "id": row.get::<String, _>(0),
         "name": row.get::<String, _>(3),
+        "policy": policy,
         "policyId": row.get::<String, _>(0),
-        "policyJson": row.get::<String, _>(4),
+        "policyJson": policy_json,
         "status": row.get::<String, _>(5),
         "tenantId": row.get::<String, _>(1),
     })
@@ -911,8 +922,7 @@ async fn create_policy(
     }
     let id = format!("iampol-{}", Uuid::new_v4());
     let now = Utc::now().to_rfc3339();
-    let policy_json = read_string_field(&body, &["policyJson", "policy_json"])
-        .unwrap_or_else(|| "{}".to_owned());
+    let policy_json = read_policy_json(&body).unwrap_or_else(|| "{}".to_owned());
     let id_insert = id.clone();
     let tenant_id_insert = tenant_id.clone();
     let code_insert = code.as_ref().expect("validated").clone();
@@ -962,6 +972,10 @@ async fn update_policy(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
     let mut assignments = patch_fields(&body);
+    if let Some(policy_json) = read_policy_json(&body) {
+        assignments.retain(|(column, _)| column != "policy_json");
+        assignments.push(("policy_json".to_owned(), policy_json));
+    }
     assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
     match patch_directory_row(pg, &ctx, &tenant_id, "iam_policy", &policy_id, &assignments).await {
         Ok(true) => retrieve_policy(State(state), ctx, Path(policy_id)).await,
@@ -2534,4 +2548,29 @@ async fn delete_service_account(
         "iam_service_account_delete_failed",
     )
     .await
+}
+
+#[cfg(test)]
+mod policy_json_tests {
+    use super::read_policy_json;
+    use serde_json::json;
+
+    #[test]
+    fn structured_sdk_policy_is_serialized_for_database_storage() {
+        let body = json!({
+            "policy": {
+                "policyCategory": "code-engine-sandbox",
+                "scopeType": "tenant",
+                "scopeId": "tenant-1",
+                "accessMode": "all-drives",
+                "allowedDirectories": []
+            }
+        });
+
+        let stored = read_policy_json(&body).expect("serialize structured SDK policy");
+        let value: serde_json::Value = serde_json::from_str(&stored).expect("valid policy JSON");
+
+        assert_eq!(value["accessMode"], "all-drives");
+        assert_eq!(value["scopeId"], "tenant-1");
+    }
 }

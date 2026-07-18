@@ -35,6 +35,7 @@ sqlx.workspace = true
 uuid = { version = "1", features = ["v7"] }
 sdkwork_utils_rust.workspace = true
 sdkwork-web-axum.workspace = true
+sdkwork-web-bootstrap.workspace = true
 sdkwork-web-core.workspace = true
 urlencoding = "2"
 

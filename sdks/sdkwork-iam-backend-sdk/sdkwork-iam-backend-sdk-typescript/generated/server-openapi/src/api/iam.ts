@@ -1,7 +1,7 @@
 import { backendApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseAccessCredentialCreateCommand, AppbaseApplicationRegisterCommand, AppbaseOperationCommand, AppbaseTenantApplicationEnableCommand, AppbaseTenantApplicationProvisionCommand, AppbaseTenantApplicationUpdateCommand, SdkWorkCommandData, SdkWorkPageData } from '../types';
+import type { AppbaseAccessCredentialCreateCommand, AppbaseApplicationRegisterCommand, AppbaseOperationCommand, AppbaseTenantApplicationEnableCommand, AppbaseTenantApplicationProvisionCommand, AppbaseTenantApplicationUpdateCommand, SdkWorkCommandData, SdkWorkPageData, ServiceAccountCredentialCreateCommand, ServiceAccountCredentialRevokeCommand, ServiceAccountTokenExchangeCommand } from '../types';
 
 
 export interface IamUsersListParams {
@@ -177,6 +177,20 @@ export class IamTenantApplicationsApi {
   }
 }
 
+export class IamServiceAccountsCredentialsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Service Accounts credentials create. */
+  async create(serviceAccountId: string, body: ServiceAccountCredentialCreateCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/service_accounts/${serializePathParameter(serviceAccountId, { name: 'serviceAccountId', style: 'simple', explode: false })}/credentials`), body, undefined, undefined, 'application/json');
+  }
+}
+
 export interface IamServiceAccountsListParams {
   page?: number;
   pageSize?: number;
@@ -187,9 +201,11 @@ export interface IamServiceAccountsListParams {
 
 export class IamServiceAccountsApi {
   private client: HttpClient;
+  public readonly credentials: IamServiceAccountsCredentialsApi;
 
   constructor(client: HttpClient) {
     this.client = client;
+    this.credentials = new IamServiceAccountsCredentialsApi(client);
   }
 
 
@@ -223,6 +239,34 @@ export class IamServiceAccountsApi {
 /** Service Accounts update. */
   async update(serviceAccountId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
     return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/service_accounts/${serializePathParameter(serviceAccountId, { name: 'serviceAccountId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  }
+}
+
+export class IamServiceAccountTokensApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Service Account Tokens create. */
+  async create(body: ServiceAccountTokenExchangeCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/service_account_tokens`), body, undefined, undefined, 'application/json');
+  }
+}
+
+export class IamServiceAccountCredentialsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Service Account Credentials revoke. */
+  async revoke(credentialId: string, body: ServiceAccountCredentialRevokeCommand): Promise<SdkWorkCommandData> {
+    return this.client.post<SdkWorkCommandData>(backendApiPath(`/iam/service_account_credentials/${serializePathParameter(credentialId, { name: 'credentialId', style: 'simple', explode: false })}/revoke`), body, undefined, undefined, 'application/json');
   }
 }
 
@@ -1002,6 +1046,8 @@ export class IamApi {
   public readonly roleBindings: IamRoleBindingsApi;
   public readonly roles: IamRolesApi;
   public readonly securityEvents: IamSecurityEventsApi;
+  public readonly serviceAccountCredentials: IamServiceAccountCredentialsApi;
+  public readonly serviceAccountTokens: IamServiceAccountTokensApi;
   public readonly serviceAccounts: IamServiceAccountsApi;
   public readonly tenantApplications: IamTenantApplicationsApi;
   public readonly tenants: IamTenantsApi;
@@ -1026,6 +1072,8 @@ export class IamApi {
     this.roleBindings = new IamRoleBindingsApi(client);
     this.roles = new IamRolesApi(client);
     this.securityEvents = new IamSecurityEventsApi(client);
+    this.serviceAccountCredentials = new IamServiceAccountCredentialsApi(client);
+    this.serviceAccountTokens = new IamServiceAccountTokensApi(client);
     this.serviceAccounts = new IamServiceAccountsApi(client);
     this.tenantApplications = new IamTenantApplicationsApi(client);
     this.tenants = new IamTenantsApi(client);

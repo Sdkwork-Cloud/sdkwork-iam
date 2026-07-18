@@ -288,6 +288,24 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
     ),
     HttpRoute::dual_token(
         HttpMethod::Post,
+        "/backend/v3/api/iam/service_accounts/{serviceAccountId}/credentials",
+        "iam",
+        "serviceAccounts.credentials.create",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/iam/service_account_credentials/{credentialId}/revoke",
+        "iam",
+        "serviceAccountCredentials.revoke",
+    ),
+    HttpRoute::credential_entry_public(
+        HttpMethod::Post,
+        "/backend/v3/api/iam/service_account_tokens",
+        "iam",
+        "serviceAccountTokens.create",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
         "/backend/v3/api/iam/role_bindings",
         "iam",
         "roleBindings.create",

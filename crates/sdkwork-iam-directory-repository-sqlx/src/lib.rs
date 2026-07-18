@@ -58,6 +58,7 @@ impl IamTables {
     pub const GROUP: &'static str = "iam_group";
     pub const GROUP_MEMBER: &'static str = "iam_group_member";
     pub const SERVICE_ACCOUNT: &'static str = "iam_service_account";
+    pub const SERVICE_ACCOUNT_CREDENTIAL: &'static str = "iam_service_account_credential";
     pub const ROLE_EXCLUSION: &'static str = "iam_role_exclusion";
 }
 
@@ -119,6 +120,7 @@ pub fn iam_database_tables() -> Vec<&'static str> {
         IamTables::GROUP,
         IamTables::GROUP_MEMBER,
         IamTables::SERVICE_ACCOUNT,
+        IamTables::SERVICE_ACCOUNT_CREDENTIAL,
         IamTables::ROLE_EXCLUSION,
     ]
 }

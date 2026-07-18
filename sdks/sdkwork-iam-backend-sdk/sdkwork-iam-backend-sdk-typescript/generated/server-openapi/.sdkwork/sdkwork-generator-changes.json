@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "@sdkwork/iam-backend-sdk"
   },
-  "changeFingerprint": "495b5c4e4dc6adf0fd33685626205a4b698437a78db33a464740937eca490652",
+  "changeFingerprint": "7a7ec1bb700dfc3716991e6a231bbbcd23def6e739ffa08d8fd32cf965769cb5",
   "changes": {
     "createdGeneratedFiles": [
       "bin/publish-core.mjs",
@@ -53,6 +53,9 @@
       "src/types/sdk-work-platform-error-code.ts",
       "src/types/sdk-work-resource-data.ts",
       "src/types/sdk-work-resource-response.ts",
+      "src/types/service-account-credential-create-command.ts",
+      "src/types/service-account-credential-revoke-command.ts",
+      "src/types/service-account-token-exchange-command.ts",
       "src/types/wechat-mini-program-session-create-command.ts",
       "tsconfig.json"
     ],
@@ -115,6 +118,9 @@
           "src/types/sdk-work-platform-error-code.ts",
           "src/types/sdk-work-resource-data.ts",
           "src/types/sdk-work-resource-response.ts",
+          "src/types/service-account-credential-create-command.ts",
+          "src/types/service-account-credential-revoke-command.ts",
+          "src/types/service-account-token-exchange-command.ts",
           "src/types/wechat-mini-program-session-create-command.ts"
         ]
       },

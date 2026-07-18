@@ -163,7 +163,13 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
 pub fn web_request_principal_from_iam(
     context: sdkwork_iam_context_service::IamAppContext,
 ) -> WebRequestPrincipal {
-    use sdkwork_iam_context_service::{AuthLevel, DeploymentMode, Environment, LoginScope};
+    use sdkwork_iam_context_service::{
+        AuthLevel, DeploymentMode, Environment, IamPrincipalKind, LoginScope,
+    };
+    let subject_type = match context.principal_kind {
+        IamPrincipalKind::User => sdkwork_web_core::WebSubjectType::User,
+        IamPrincipalKind::ServiceAccount => sdkwork_web_core::WebSubjectType::Service,
+    };
     WebRequestPrincipal::builder()
         .tenant_id(context.tenant_id)
         .organization_id(context.organization_id)
@@ -192,7 +198,7 @@ pub fn web_request_principal_from_iam(
         })
         .data_scope(context.data_scope)
         .permission_scope(context.permission_scope)
-        .subject_type(sdkwork_web_core::WebSubjectType::User)
+        .subject_type(subject_type)
         .build()
 }
 
@@ -217,7 +223,13 @@ pub(crate) fn iam_principal_record_from_context(
         deployment_mode: principal.app.deployment_mode,
         data_scope: principal.scopes.data_scope.clone(),
         permission_scope: principal.scopes.permission_scope.clone(),
-        subject_type: Some("user".to_owned()),
+        subject_type: Some(
+            match context.principal_kind {
+                sdkwork_iam_context_service::IamPrincipalKind::User => "user",
+                sdkwork_iam_context_service::IamPrincipalKind::ServiceAccount => "service",
+            }
+            .to_owned(),
+        ),
         metadata: credential.metadata.clone(),
     }
 }

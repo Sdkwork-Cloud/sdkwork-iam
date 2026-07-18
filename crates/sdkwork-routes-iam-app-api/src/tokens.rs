@@ -152,11 +152,11 @@ pub(crate) async fn create_session_record(
 
     sqlx::query(
         "INSERT INTO iam_session (id, tenant_id, organization_id, login_scope, user_id, \
-         app_id, environment, deployment_mode, auth_level, \
+         principal_kind, principal_id, app_id, environment, deployment_mode, auth_level, \
          auth_token_hash, auth_token_kid, access_token_hash, access_token_kid, \
          refresh_token_hash, refresh_token_kid, sharding_key, sharding_strategy, \
          data_scope_json, permission_scope_json, expires_at, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, \
+         VALUES ($1, $2, $3, $4, $5, 'user', $5, $6, $7, $8, $9, \
                  $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)",
     )
     .bind(&session_id)
@@ -471,6 +471,8 @@ fn build_session_from_row(
         tenant_id: tenant_id.clone(),
         organization_id,
         user_id: user_id.clone(),
+        principal_kind: sdkwork_iam_context_service::IamPrincipalKind::User,
+        principal_id: user_id.clone(),
         session_id: session_id.clone(),
         environment: environment_from_config(&environment),
         deployment_mode: match deployment_mode.as_str() {

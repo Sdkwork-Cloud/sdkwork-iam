@@ -35,13 +35,22 @@ describe("session auth unauthorized integration", () => {
     })).toBe("redirect");
   });
 
-  it("handles debug mode without clearing session", () => {
+  it("clears an invalid session in debug mode without redirecting", () => {
     let cleared = false;
+    let reset = false;
     const handled = handleSdkworkSessionAuthUnauthorizedError(
-      { code: "4010", msg: "app session token has expired" },
+      {
+        code: 40103,
+        detail: "invalid or expired IAM session",
+        status: 401,
+        title: "Invalid token",
+      },
       {
         clearSession: () => {
           cleared = true;
+        },
+        resetClients: () => {
+          reset = true;
         },
         readEnv: (name) =>
           name === "VITE_SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE" ? "debug" : undefined,
@@ -49,7 +58,8 @@ describe("session auth unauthorized integration", () => {
     );
 
     expect(handled).toBe(true);
-    expect(cleared).toBe(false);
+    expect(cleared).toBe(true);
+    expect(reset).toBe(true);
   });
 
   it("does not clear an authenticated session for credential-entry or anonymous requests", async () => {

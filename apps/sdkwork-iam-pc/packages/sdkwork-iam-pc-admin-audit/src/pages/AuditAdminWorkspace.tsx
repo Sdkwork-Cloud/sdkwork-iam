@@ -1,6 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
-import { Button, SettingsSection, StatusNotice } from "@sdkwork/ui-pc-react";
+import {
+  Button,
+  DataTable,
+  type DataTableColumn,
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  SettingsSection,
+  StatusNotice,
+} from "@sdkwork/ui-pc-react";
 
 import type { SdkworkIamAuditAdminWorkspaceProps } from "../types/audit-admin-types";
 
@@ -19,6 +31,19 @@ export function SdkworkIamAuditAdminWorkspace({
   const [error, setError] = useState<string | undefined>();
   const [status, setStatus] = useState(controller.getState().status);
   const [eventDetail, setEventDetail] = useState<string | undefined>();
+
+  const eventColumns = useMemo<DataTableColumn<EventListItem>[]>(() => [
+    {
+      cell: (item) => item.primary,
+      header: "Event",
+      id: "event",
+    },
+    {
+      cell: (item) => item.secondary || "—",
+      header: "Context",
+      id: "context",
+    },
+  ], []);
 
   const syncFromController = () => {
     const next = controller.getState();
@@ -91,6 +116,7 @@ export function SdkworkIamAuditAdminWorkspace({
         {tab === "audit" ? (
           <EventList
             busy={busy}
+            columns={eventColumns}
             emptyLabel="No audit events found."
             items={auditEvents.map((event) => ({
               id: event.id,
@@ -117,6 +143,7 @@ export function SdkworkIamAuditAdminWorkspace({
         ) : (
           <EventList
             busy={busy}
+            columns={eventColumns}
             emptyLabel="No security events found."
             items={securityEvents.map((event) => ({
               id: event.id,
@@ -142,12 +169,20 @@ export function SdkworkIamAuditAdminWorkspace({
           />
         )}
 
-        {eventDetail ? (
-          <pre className="max-h-64 overflow-auto rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-[var(--sdk-color-surface-muted)] p-3 text-xs">
-            {eventDetail}
-          </pre>
-        ) : null}
       </SettingsSection>
+      <Drawer open={Boolean(eventDetail)} onOpenChange={(open) => { if (!open) setEventDetail(undefined); }}>
+        <DrawerContent size="lg">
+          <DrawerHeader>
+            <DrawerTitle>Event detail</DrawerTitle>
+            <DrawerDescription>Read-only IAM audit and security event payload.</DrawerDescription>
+          </DrawerHeader>
+          <DrawerBody>
+            <pre className="overflow-auto rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-[var(--sdk-color-surface-muted)] p-3 text-xs">
+              {eventDetail}
+            </pre>
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
@@ -177,6 +212,7 @@ function TabButton({
 
 function EventList({
   busy,
+  columns,
   emptyLabel,
   items,
   onLoadMore,
@@ -184,34 +220,30 @@ function EventList({
   pageInfo,
 }: {
   busy?: boolean;
+  columns: DataTableColumn<EventListItem>[];
   emptyLabel: string;
-  items: Array<{ id: string; primary: string; secondary: string }>;
+  items: EventListItem[];
   onLoadMore: () => void | Promise<void>;
   onSelectItem?: (id: string) => void;
   pageInfo?: import("@sdkwork/iam-contracts").SdkWorkPageInfo;
 }) {
-  if (items.length === 0) {
-    return <p className="text-sm text-[var(--sdk-color-text-muted)]">{emptyLabel}</p>;
-  }
-
   return (
-    <div className="space-y-4">
-      <ul className="divide-y rounded-md border border-[var(--sdk-color-border-default)]">
-        {items.map((item) => (
-          <li className="px-4 py-3" key={item.id}>
-            <button
-              className="w-full text-left"
-              disabled={busy}
-              onClick={() => onSelectItem?.(item.id)}
-              type="button"
-            >
-              <div className="text-sm font-medium">{item.primary}</div>
-              <div className="text-xs text-[var(--sdk-color-text-muted)]">{item.secondary}</div>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <SdkworkIamListPaginationControls busy={busy} onLoadMore={onLoadMore} pageInfo={pageInfo} />
-    </div>
+    <DataTable
+      columns={columns}
+      emptyDescription={emptyLabel}
+      emptyTitle="No events found"
+      footer={<SdkworkIamListPaginationControls busy={busy} onLoadMore={onLoadMore} pageInfo={pageInfo} />}
+      getRowId={(item) => item.id}
+      loading={busy}
+      onRowClick={(item) => onSelectItem?.(item.id)}
+      rowActions={(item) => <Button disabled={busy} onClick={() => onSelectItem?.(item.id)} size="sm" type="button" variant="outline">View detail</Button>}
+      rows={items}
+    />
   );
 }
+
+type EventListItem = {
+  id: string;
+  primary: string;
+  secondary: string;
+};

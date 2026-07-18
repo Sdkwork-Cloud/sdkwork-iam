@@ -60,7 +60,7 @@
     },
     {
       "path": "src/api/iam.ts",
-      "sha256": "72b136c755d65acfb2e1ac70658ffb540460a7f04a7295ba1d1eeb29c4db586b"
+      "sha256": "6b400718ccf3e93cac6e27cf7ed2c133d79ca364993b200a2e6edfd7261467a2"
     },
     {
       "path": "src/api/index.ts",
@@ -132,7 +132,7 @@
     },
     {
       "path": "src/types/index.ts",
-      "sha256": "80f3e51003aefbf14c1e1dc4fa785da39b7f0d292a23661f28d6f5ef2d556f13"
+      "sha256": "5967c9a4b73bd671e9f4b4db0cd8dedcc364c3c4514fa82aa880d4f8514ca4eb"
     },
     {
       "path": "src/types/page-info.ts",
@@ -173,6 +173,18 @@
     {
       "path": "src/types/sdk-work-resource-response.ts",
       "sha256": "89c05f5549bef773335245f56f61ca1a6959978726799391d584a6bd25d12fdc"
+    },
+    {
+      "path": "src/types/service-account-credential-create-command.ts",
+      "sha256": "c38a4b37dc8bc2e72bf0dbf93ea5178c3d66dca1aa891b27ee80ca2bb5149991"
+    },
+    {
+      "path": "src/types/service-account-credential-revoke-command.ts",
+      "sha256": "0a53538fd6b074e59afc6524fdc81bb53b034c6b7483e5ece8b84c5101111d1a"
+    },
+    {
+      "path": "src/types/service-account-token-exchange-command.ts",
+      "sha256": "127b39f15323e7a04a91a509ad55c0753c3e41bda7eab2f0dca14a67c7165bde"
     },
     {
       "path": "src/types/wechat-mini-program-session-create-command.ts",

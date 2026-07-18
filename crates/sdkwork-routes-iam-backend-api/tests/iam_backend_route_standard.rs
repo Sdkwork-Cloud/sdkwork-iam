@@ -340,13 +340,16 @@ fn backend_route_manifest_matches_the_standard_management_operation_surface() {
             "roles.update",
             "securityEvents.list",
             "securityEvents.retrieve",
+            "serviceAccountCredentials.revoke",
+            "serviceAccountTokens.create",
             "serviceAccounts.create",
+            "serviceAccounts.credentials.create",
             "serviceAccounts.delete",
             "serviceAccounts.list",
             "serviceAccounts.retrieve",
             "serviceAccounts.update",
+            "tenantApplications.create",
             "tenantApplications.enable",
-            "tenantApplications.provision",
             "tenantApplications.retrieve",
             "tenantApplications.update",
             "tenants.create",
@@ -375,6 +378,17 @@ fn backend_route_manifest_matches_the_standard_management_operation_surface() {
             .all(|route| !route.path.contains("/users/{userId}/roles")),
         "direct user-role backend routes must be retired; use /iam/role_bindings"
     );
+}
+
+#[test]
+fn service_account_token_exchange_is_a_credential_entry_route() {
+    let routes = backend_routes();
+    let route = routes
+        .iter()
+        .find(|route| route.operation_id == "serviceAccountTokens.create")
+        .expect("service account token exchange route");
+    assert!(route.auth.skips_credential_resolution());
+    assert!(route.forbid_credential_headers);
 }
 
 #[test]

@@ -1,6 +1,12 @@
-import { Button } from "@sdkwork/ui-pc-react";
-import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
+import { useMemo, useState } from "react";
 import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
+import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
+import {
+  Button,
+  ConfirmDialog,
+  DataTable,
+  type DataTableColumn,
+} from "@sdkwork/ui-pc-react";
 
 import {
   formatResourceLabel,
@@ -30,9 +36,19 @@ export interface ManagedOAuthResourceListProps {
   toggleStatus?: (resourceId: string, active: boolean) => Promise<unknown>;
 }
 
-function syncAfterMutation(onChanged: () => void) {
-  onChanged();
-}
+type ManagedRow = {
+  enabled?: boolean;
+  id: string;
+  item: unknown;
+  label: string;
+  status: string;
+};
+
+type PendingAction = {
+  label: string;
+  message: string;
+  run: () => Promise<unknown>;
+};
 
 export function ManagedOAuthResourceList({
   actions = [],
@@ -48,116 +64,61 @@ export function ManagedOAuthResourceList({
   toggleEnabled,
   toggleStatus,
 }: ManagedOAuthResourceListProps) {
-  if (items.length === 0) {
-    return (
-      <>
-        <p className="text-sm text-[var(--sdk-color-text-muted)]">{emptyLabel}</p>
-        <SdkworkIamListPaginationControls
-          busy={disabled}
-          onLoadMore={onLoadMore}
-          pageInfo={pageInfo}
-        />
-      </>
-    );
-  }
+  const [pendingAction, setPendingAction] = useState<PendingAction>();
+  const [actionBusy, setActionBusy] = useState(false);
+  const rows = useMemo<ManagedRow[]>(() => items.map((item, index) => ({
+    enabled: readEnabled(item),
+    id: readId(item) || readResourceKey(item, index),
+    item,
+    label: formatResourceLabel(item),
+    status: readStatus(item),
+  })), [items, readId]);
+  const columns = useMemo<DataTableColumn<ManagedRow>[]>(() => [
+    { id: "resource", header: "Resource", cell: (row) => row.label },
+    { id: "status", header: "Status", cell: (row) => row.status || (row.enabled === undefined ? "—" : row.enabled ? "Enabled" : "Disabled") },
+  ], []);
+
+  const execute = (operation: () => Promise<unknown>) => {
+    setActionBusy(true);
+    void operation().catch(() => undefined).finally(() => {
+      setActionBusy(false);
+      setPendingAction(undefined);
+      onChanged();
+    });
+  };
 
   return (
     <>
-    <ul className="space-y-2">
-      {items.map((item, index) => {
-        const resourceId = readId(item);
-        const enabled = readEnabled(item);
-        const status = readStatus(item);
-        const hasStatus = status.length > 0;
-        const statusIsActive = status === "active";
-        return (
-          <li
-            className="flex flex-wrap items-center justify-between gap-3 rounded-[0.75rem] border border-[var(--sdk-color-border-default)] px-3 py-2 text-sm"
-            key={resourceId || readResourceKey(item, index)}
-          >
-            <span>{formatResourceLabel(item)}</span>
-            <div className="flex flex-wrap gap-2">
-              {toggleEnabled ? (
-                <Button
-                  disabled={disabled || !resourceId || enabled === undefined}
-                  onClick={() => {
-                    if (!resourceId || enabled === undefined) {
-                      return;
-                    }
-                    void toggleEnabled(resourceId, !enabled)
-                      .then(() => syncAfterMutation(onChanged))
-                      .catch(() => syncAfterMutation(onChanged));
-                  }}
-                  type="button"
-                >
-                  {enabled ? "Disable" : "Enable"}
-                </Button>
-              ) : null}
-              {toggleStatus && hasStatus ? (
-                <Button
-                  disabled={disabled || !resourceId}
-                  onClick={() => {
-                    if (!resourceId) {
-                      return;
-                    }
-                    void toggleStatus(resourceId, !statusIsActive)
-                      .then(() => syncAfterMutation(onChanged))
-                      .catch(() => syncAfterMutation(onChanged));
-                  }}
-                  type="button"
-                >
-                  {statusIsActive ? "Deactivate" : "Activate"}
-                </Button>
-              ) : null}
-              {actions.map((action) => (
-                <Button
-                  disabled={disabled || !resourceId}
-                  key={action.label}
-                  onClick={() => {
-                    if (!resourceId) {
-                      return;
-                    }
-                    if (action.confirmMessage && !window.confirm(action.confirmMessage)) {
-                      return;
-                    }
-                    void action.onAction(resourceId)
-                      .then(() => syncAfterMutation(onChanged))
-                      .catch(() => syncAfterMutation(onChanged));
-                  }}
-                  type="button"
-                >
-                  {action.label}
-                </Button>
-              ))}
-              {onDelete ? (
-                <Button
-                  disabled={disabled || !resourceId}
-                  onClick={() => {
-                    if (!resourceId) {
-                      return;
-                    }
-                    if (confirmDeleteMessage && !window.confirm(confirmDeleteMessage)) {
-                      return;
-                    }
-                    void onDelete(resourceId)
-                      .then(() => syncAfterMutation(onChanged))
-                      .catch(() => syncAfterMutation(onChanged));
-                  }}
-                  type="button"
-                >
-                  Delete
-                </Button>
-              ) : null}
-            </div>
-          </li>
-        );
-      })}
-    </ul>
-    <SdkworkIamListPaginationControls
-      busy={disabled}
-      onLoadMore={onLoadMore}
-      pageInfo={pageInfo}
-    />
-  </>
+      <DataTable
+        columns={columns}
+        emptyDescription={emptyLabel}
+        emptyTitle="No resources found"
+        footer={<SdkworkIamListPaginationControls busy={disabled || actionBusy} onLoadMore={onLoadMore} pageInfo={pageInfo} />}
+        getRowId={(row) => row.id}
+        loading={disabled}
+        rowActions={(row) => {
+          const resourceId = readId(row.item);
+          const statusIsActive = row.status === "active";
+          return <div className="flex flex-wrap gap-2">
+            {toggleEnabled ? <Button disabled={disabled || actionBusy || !resourceId || row.enabled === undefined} onClick={() => { if (resourceId && row.enabled !== undefined) execute(() => toggleEnabled(resourceId, !row.enabled)); }} size="sm" type="button" variant="outline">{row.enabled ? "Disable" : "Enable"}</Button> : null}
+            {toggleStatus && row.status ? <Button disabled={disabled || actionBusy || !resourceId} onClick={() => { if (resourceId) execute(() => toggleStatus(resourceId, !statusIsActive)); }} size="sm" type="button" variant="outline">{statusIsActive ? "Deactivate" : "Activate"}</Button> : null}
+            {actions.map((action) => <Button disabled={disabled || actionBusy || !resourceId} key={action.label} onClick={() => { if (!resourceId) return; if (action.confirmMessage) setPendingAction({ label: action.label, message: action.confirmMessage, run: () => action.onAction(resourceId) }); else execute(() => action.onAction(resourceId)); }} size="sm" type="button" variant={action.confirmMessage ? "danger" : "outline"}>{action.label}</Button>)}
+            {onDelete ? <Button disabled={disabled || actionBusy || !resourceId} onClick={() => { if (!resourceId) return; if (confirmDeleteMessage) setPendingAction({ label: "Delete", message: confirmDeleteMessage, run: () => onDelete(resourceId) }); else execute(() => onDelete(resourceId)); }} size="sm" type="button" variant="danger">Delete</Button> : null}
+          </div>;
+        }}
+        rows={rows}
+      />
+      <ConfirmDialog
+        closeOnConfirm={false}
+        confirmLabel={pendingAction?.label ?? "Confirm"}
+        confirmLoading={actionBusy}
+        description={pendingAction?.message}
+        onConfirm={() => { if (pendingAction) execute(pendingAction.run); }}
+        onOpenChange={(open) => { if (!open && !actionBusy) setPendingAction(undefined); }}
+        open={Boolean(pendingAction)}
+        title={`${pendingAction?.label ?? "Confirm"} OAuth resource`}
+        tone="danger"
+      />
+    </>
   );
 }

@@ -75,11 +75,19 @@ pub enum LoginScope {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub enum IamPrincipalKind {
+    User,
+    ServiceAccount,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IamAppContext {
     pub tenant_id: String,
     pub organization_id: Option<String>,
     pub login_scope: LoginScope,
     pub user_id: String,
+    pub principal_kind: IamPrincipalKind,
+    pub principal_id: String,
     pub session_id: String,
     pub app_id: String,
     pub environment: Environment,
@@ -137,11 +145,14 @@ impl IamAppContext {
             organization_member: organization_id.is_some(),
         };
 
+        let user_id = user_id.into();
         Self {
             tenant_id: tenant_id.into(),
             organization_id,
             login_scope,
-            user_id: user_id.into(),
+            user_id: user_id.clone(),
+            principal_kind: IamPrincipalKind::User,
+            principal_id: user_id,
             session_id: session_id.into(),
             app_id: app_id.into(),
             environment,
@@ -155,6 +166,18 @@ impl IamAppContext {
             email: String::new(),
             email_verified: false,
         }
+    }
+
+    pub fn as_service_account(mut self, service_account_id: impl Into<String>) -> Self {
+        let service_account_id = service_account_id.into();
+        self.user_id = service_account_id.clone();
+        self.principal_kind = IamPrincipalKind::ServiceAccount;
+        self.principal_id = service_account_id;
+        self.user_surface = IamUserSurface {
+            app: false,
+            organization_member: self.organization_id.is_some(),
+        };
+        self
     }
 
     pub fn apply_user_profile(

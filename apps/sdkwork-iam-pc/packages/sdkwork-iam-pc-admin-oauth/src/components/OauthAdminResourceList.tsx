@@ -1,4 +1,8 @@
-import { Button } from "@sdkwork/ui-pc-react";
+import {
+  Button,
+  DataTable,
+  type DataTableColumn,
+} from "@sdkwork/ui-pc-react";
 import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 
 import type {
@@ -59,31 +63,25 @@ export function ResourceList({
   listPageInfo?: SdkWorkPageInfo;
   onLoadMore?: () => void | Promise<void>;
 }) {
-  if (items.length === 0) {
-    return (
-      <>
-        <p className="text-sm text-[var(--sdk-color-text-muted)]">{emptyLabel}</p>
-        <SdkworkIamListPaginationControls onLoadMore={onLoadMore} pageInfo={listPageInfo} />
-      </>
-    );
-  }
-
   return (
-    <>
-    <ul className="space-y-2">
-      {items.map((item, index) => (
-        <li
-          className="rounded-[0.75rem] border border-[var(--sdk-color-border-default)] px-3 py-2 text-sm"
-          key={readResourceKey(item, index)}
-        >
-          {formatResourceLabel(item)}
-        </li>
-      ))}
-    </ul>
-    <SdkworkIamListPaginationControls onLoadMore={onLoadMore} pageInfo={listPageInfo} />
-    </>
+    <DataTable
+      columns={RESOURCE_COLUMNS}
+      emptyDescription={emptyLabel}
+      emptyTitle="No resources found"
+      footer={<SdkworkIamListPaginationControls onLoadMore={onLoadMore} pageInfo={listPageInfo} />}
+      getRowId={(item, index) => readResourceKey(item, index)}
+      rows={items}
+    />
   );
 }
+
+const RESOURCE_COLUMNS: DataTableColumn<unknown>[] = [
+  {
+    cell: (item) => formatResourceLabel(item),
+    header: "Resource",
+    id: "resource",
+  },
+];
 
 export function IntegrationResourceList({ controller,
   disabled,
@@ -390,48 +388,38 @@ export function DiagnosticRunResourceList({
   listPageInfo,
   onChanged,
 }: ListProps & { diagnosticRuns: unknown[] }) {
-  if (diagnosticRuns.length === 0) {
-    return (
-      <>
-        <p className="text-sm text-[var(--sdk-color-text-muted)]">{emptyLabel}</p>
+  return (
+    <DataTable
+      columns={RESOURCE_COLUMNS}
+      emptyDescription={emptyLabel}
+      emptyTitle="No diagnostic runs"
+      footer={(
         <SdkworkIamListPaginationControls
           {...managedListPagination({ controller, disabled, emptyLabel, listPageInfo, onChanged }, "diagnosticRuns")}
         />
-      </>
-    );
-  }
-
-  return (
-    <>
-    <ul className="space-y-2">
-      {diagnosticRuns.map((item, index) => {
+      )}
+      getRowId={(item, index) => readDiagnosticRunId(item) || readResourceKey(item, index)}
+      loading={disabled}
+      rowActions={(item) => {
         const diagnosticRunId = readDiagnosticRunId(item);
         return (
-          <li
-            className="flex flex-wrap items-center justify-between gap-3 rounded-[0.75rem] border border-[var(--sdk-color-border-default)] px-3 py-2 text-sm"
-            key={diagnosticRunId || readResourceKey(item, index)}
-          >
-            <span>{formatResourceLabel(item)}</span>
-            <Button
-              disabled={disabled || !diagnosticRunId}
-              onClick={() => {
-                if (!diagnosticRunId) {
-                  return;
-                }
+          <Button
+            disabled={disabled || !diagnosticRunId}
+            onClick={() => {
+              if (diagnosticRunId) {
                 void controller.retrieveDiagnosticRun(diagnosticRunId).then(onChanged).catch(onChanged);
-              }}
-              type="button"
-            >
-              Retrieve
-            </Button>
-          </li>
+              }
+            }}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Retrieve
+          </Button>
         );
-      })}
-    </ul>
-    <SdkworkIamListPaginationControls
-      {...managedListPagination({ controller, disabled, emptyLabel, listPageInfo, onChanged }, "diagnosticRuns")}
+      }}
+      rows={diagnosticRuns}
     />
-    </>
   );
 }
 

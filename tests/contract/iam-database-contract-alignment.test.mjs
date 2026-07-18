@@ -92,7 +92,7 @@ assert.deepEqual(
   registryTables,
   'baseline + postgres migrations must materialize the same IAM tables as contract registries',
 );
-assert.equal(registryTables.length, 57, 'IAM database contract must currently own 57 tables');
+assert.equal(registryTables.length, 58, 'IAM database contract must currently own 58 tables');
 
 for (const tableName of foundationTables) {
   assert.ok(

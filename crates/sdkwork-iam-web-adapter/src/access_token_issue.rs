@@ -44,9 +44,9 @@ pub struct IssuedAccessCredential {
 }
 
 #[derive(Clone)]
-struct TenantSigningKey {
-    kid: String,
-    secret: Vec<u8>,
+pub(crate) struct TenantSigningKey {
+    pub(crate) kid: String,
+    pub(crate) secret: Vec<u8>,
 }
 
 pub fn principal_has_permission(permission_scope: &[String], permission: &str) -> bool {
@@ -155,11 +155,11 @@ pub async fn issue_delegated_access_credential(
 
     sqlx::query(
         "INSERT INTO iam_session (id, tenant_id, organization_id, login_scope, user_id, \
-         app_id, environment, deployment_mode, auth_level, \
+         principal_kind, principal_id, app_id, environment, deployment_mode, auth_level, \
          auth_token_hash, auth_token_kid, access_token_hash, access_token_kid, \
          refresh_token_hash, refresh_token_kid, sharding_key, sharding_strategy, \
          data_scope_json, permission_scope_json, expires_at, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, \
+         VALUES ($1, $2, $3, $4, $5, 'user', $5, $6, $7, $8, $9, \
                  $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)",
     )
     .bind(&session_id)
@@ -263,7 +263,7 @@ async fn resolve_session_scopes(
     bootstrap_resolve_session_scopes(pg, tenant_id, user_id, organization_id).await
 }
 
-async fn ensure_tenant_signing_key(
+pub(crate) async fn ensure_tenant_signing_key(
     pg: &PgPool,
     tenant_id: &str,
 ) -> Result<TenantSigningKey, String> {
@@ -287,8 +287,17 @@ fn sign_local_session_token(
     token_type: &str,
     context: &IamAppContext,
 ) -> String {
+    sign_local_session_token_with_ttl(signing_key, token_type, context, LOCAL_TOKEN_TTL_SECONDS)
+}
+
+pub(crate) fn sign_local_session_token_with_ttl(
+    signing_key: &TenantSigningKey,
+    token_type: &str,
+    context: &IamAppContext,
+    ttl_seconds: u128,
+) -> String {
     let issued_at = current_millis() / 1000;
-    let expires_at = issued_at + LOCAL_TOKEN_TTL_SECONDS;
+    let expires_at = issued_at + ttl_seconds;
     let organization_id = context
         .organization_id
         .as_deref()
@@ -315,6 +324,11 @@ fn sign_local_session_token(
         "session_id": context.session_id,
         "sid": context.session_id,
         "sub": context.user_id,
+        "principal_kind": match context.principal_kind {
+            sdkwork_iam_context_service::IamPrincipalKind::User => "user",
+            sdkwork_iam_context_service::IamPrincipalKind::ServiceAccount => "service_account",
+        },
+        "principal_id": context.principal_id,
         "tenant_id": context.tenant_id,
         "token_type": token_type,
         "token_version": stamp_token_version(),
@@ -332,12 +346,12 @@ fn encode_jwt_json(value: &Value) -> String {
     URL_SAFE_NO_PAD.encode(serde_json::to_vec(value).expect("JWT JSON should serialize"))
 }
 
-fn hash_token(token: &str) -> String {
+pub(crate) fn hash_token(token: &str) -> String {
     let digest = Sha256::digest(token.as_bytes());
     format!("{:x}", digest)
 }
 
-fn generate_opaque_token(kind: &str) -> String {
+pub(crate) fn generate_opaque_token(kind: &str) -> String {
     let mut bytes = [0u8; 32];
     OsRng.fill_bytes(&mut bytes);
     format!("sdkwork-{kind}-{}", URL_SAFE_NO_PAD.encode(bytes))
@@ -364,14 +378,14 @@ fn read_optional_string(body: &Value, keys: &[&str]) -> Option<String> {
     })
 }
 
-fn login_scope_to_string(scope: &LoginScope) -> &'static str {
+pub(crate) fn login_scope_to_string(scope: &LoginScope) -> &'static str {
     match scope {
         LoginScope::Tenant => "TENANT",
         LoginScope::Organization => "ORGANIZATION",
     }
 }
 
-fn environment_to_string(environment: &Environment) -> &'static str {
+pub(crate) fn environment_to_string(environment: &Environment) -> &'static str {
     match environment {
         Environment::Dev => "dev",
         Environment::Test => "test",
@@ -379,7 +393,7 @@ fn environment_to_string(environment: &Environment) -> &'static str {
     }
 }
 
-fn deployment_mode_to_string(deployment_mode: &DeploymentMode) -> &'static str {
+pub(crate) fn deployment_mode_to_string(deployment_mode: &DeploymentMode) -> &'static str {
     match deployment_mode {
         DeploymentMode::Saas => "saas",
         DeploymentMode::Local => "local",
@@ -387,7 +401,7 @@ fn deployment_mode_to_string(deployment_mode: &DeploymentMode) -> &'static str {
     }
 }
 
-fn auth_level_to_string(auth_level: &AuthLevel) -> &'static str {
+pub(crate) fn auth_level_to_string(auth_level: &AuthLevel) -> &'static str {
     match auth_level {
         AuthLevel::Anonymous => "anonymous",
         AuthLevel::Password => "password",

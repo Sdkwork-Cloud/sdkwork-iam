@@ -460,6 +460,8 @@ fn session_from_json(value: &Value) -> Option<LocalSession> {
                 .unwrap_or_else(|| session_id.clone()),
             tenant_id: optional_string(context.get("tenantId"))?,
             user_id: optional_string(context.get("userId")).unwrap_or_else(|| user.id.clone()),
+            principal_kind: sdkwork_iam_context_service::IamPrincipalKind::User,
+            principal_id: optional_string(context.get("userId")).unwrap_or_else(|| user.id.clone()),
             user_surface: IamUserSurface {
                 app: true,
                 organization_member: organization_id.is_some(),

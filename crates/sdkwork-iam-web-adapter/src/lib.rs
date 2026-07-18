@@ -20,6 +20,7 @@ mod oauth_token_lookup;
 mod production_runtime;
 mod resolver;
 mod runtime_auth_metadata;
+mod service_account_credentials;
 mod signing_secrets;
 mod super_admin_auth;
 mod tenant_signing_key_store;
@@ -144,6 +145,15 @@ pub use runtime_auth_metadata::{
     merge_runtime_auth_metadata_input, parse_runtime_auth_policy, ParsedRuntimeAuthPolicy,
     RuntimeAuthMetadataInput,
 };
+pub use service_account_credentials::{
+    create_service_account_credential, created_service_account_credential_to_json,
+    exchange_service_account_credential, issued_service_account_tokens_to_json,
+    parse_service_account_credential_create_request, parse_service_account_token_exchange_request,
+    revoke_service_account_credential, CreatedServiceAccountCredential, IssuedServiceAccountTokens,
+    ServiceAccountCredentialCreateRequest, ServiceAccountTokenExchangeRequest,
+    IAM_SERVICE_ACCOUNT_CREDENTIALS_CREATE_PERMISSION,
+    IAM_SERVICE_ACCOUNT_CREDENTIALS_REVOKE_PERMISSION,
+};
 pub use signing_secrets::{
     decode_signing_secret_ref, encode_signing_secret_ref, ensure_postgres_tenant_signing_key,
     ensure_sqlite_tenant_signing_key, load_postgres_active_tenant_signing_key,
@@ -171,7 +181,7 @@ pub fn iam_app_context_from_web_request(context: &WebRequestContext) -> Option<I
 
 pub fn iam_app_context_from_web_principal(principal: &WebRequestPrincipal) -> IamAppContext {
     use sdkwork_iam_context_service::{AuthLevel, DeploymentMode, Environment};
-    IamAppContext::new(
+    let context = IamAppContext::new(
         principal.tenant_id().to_owned(),
         principal.organization_id(),
         principal.user_id().to_owned(),
@@ -198,7 +208,12 @@ pub fn iam_app_context_from_web_principal(principal: &WebRequestPrincipal) -> Ia
         },
         principal.scopes.data_scope.clone(),
         principal.scopes.permission_scope.clone(),
-    )
+    );
+    if principal.subject.subject_type == sdkwork_web_core::WebSubjectType::Service {
+        context.as_service_account(principal.user_id().to_owned())
+    } else {
+        context
+    }
 }
 
 #[derive(Clone, Default)]
@@ -217,13 +232,18 @@ impl sdkwork_web_core::DomainContextInjector for IamAppContextInjector {
 /// Public routes are resolved from `route_manifest` (`RouteAuth::Public`).
 /// `extra_public_path_prefixes` is for product infra paths only (`/health`, system metadata, etc.).
 fn resolve_web_environment_from_process_env() -> WebEnvironment {
-    match std::env::var("SDKWORK_IM_ENVIRONMENT")
-        .ok()
-        .as_deref()
-        .map(str::trim)
-        .unwrap_or("prod")
-        .to_ascii_lowercase()
-        .as_str()
+    match [
+        "SDKWORK_IAM_ENVIRONMENT",
+        "SDKWORK_IM_ENVIRONMENT",
+        "SDKWORK_ENVIRONMENT",
+    ]
+    .iter()
+    .find_map(|key| std::env::var(key).ok())
+    .as_deref()
+    .map(str::trim)
+    .unwrap_or("prod")
+    .to_ascii_lowercase()
+    .as_str()
     {
         "dev" | "development" => WebEnvironment::Dev,
         "test" | "testing" => WebEnvironment::Test,
@@ -232,13 +252,20 @@ fn resolve_web_environment_from_process_env() -> WebEnvironment {
 }
 
 fn iam_web_security_policy(environment: &WebEnvironment) -> SecurityPolicy {
+    let configured_origins = sdkwork_web_bootstrap::cors_allowed_origins_from_env(&[
+        "SDKWORK_IAM_CORS_ALLOWED_ORIGINS",
+        "SDKWORK_CORS_ALLOWED_ORIGINS",
+    ]);
+    let cors =
+        sdkwork_web_bootstrap::security_policy_for_environment(environment, configured_origins)
+            .cors;
     let mut security_policy = if matches!(environment, WebEnvironment::Dev | WebEnvironment::Test) {
         SecurityPolicy::default()
     } else {
         SecurityPolicy::production()
     };
+    security_policy.cors = cors;
     if matches!(environment, WebEnvironment::Dev | WebEnvironment::Test) {
-        security_policy.cors = sdkwork_web_core::CorsPolicy::development_private_network();
         security_policy
             .cross_site
             .reject_untrusted_state_changing_origins = false;

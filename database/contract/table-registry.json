@@ -3,19 +3,217 @@
   "kind": "sdkwork.database.table-registry",
   "tables": [
     {
-      "table_name": "iam_tenant",
+      "table_name": "iam_api_key",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_tenant_member",
+      "table_name": "iam_application_template",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_tenant_signing_key",
+      "table_name": "iam_application_template_package",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_audit_event",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_catalog_materialization",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_credential",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_department",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_department_assignment",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_department_closure",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_device",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_ephemeral_artifact",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_group",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_group_member",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_mfa_factor",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_module_registry_entry",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_module_registry_snapshot",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_account_link",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_authorization_state",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_callback_event",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_claim_mapping",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_client",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_diagnostic_run",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_flow_config",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_grant",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_integration",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_operational_resource",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_operator_platform",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_policy",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_provider_catalog",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_resource_account",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_resource_authorization",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_scope_profile",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_secret",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_surface",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_tenant_binding",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_oauth_webhook_config",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
@@ -39,73 +237,7 @@
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_department",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_department_closure",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_department_assignment",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_position",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_position_assignment",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_user",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_user_identity",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_credential",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_session",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_mfa_factor",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_device",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_role",
+      "table_name": "iam_password_history",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
@@ -123,7 +255,19 @@
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_role_permission",
+      "table_name": "iam_position",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_position_assignment",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_role",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
@@ -135,7 +279,13 @@
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_api_key",
+      "table_name": "iam_role_exclusion",
+      "owner": "sdkwork-iam",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "iam_role_permission",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
@@ -147,151 +297,25 @@
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_audit_event",
+      "table_name": "iam_service_account",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_oauth_provider_catalog",
+      "table_name": "iam_service_account_credential",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_oauth_integration",
+      "table_name": "iam_session",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_oauth_client",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_secret",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_surface",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_flow_config",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_scope_profile",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_claim_mapping",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_policy",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_tenant_binding",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_operator_platform",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_resource_account",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_resource_authorization",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_webhook_config",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_operational_resource",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_authorization_state",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_account_link",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_grant",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_callback_event",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_oauth_diagnostic_run",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_password_history",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_ephemeral_artifact",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_application_template",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_application_template_package",
+      "table_name": "iam_tenant",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
@@ -303,43 +327,25 @@
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_module_registry_entry",
+      "table_name": "iam_tenant_member",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_module_registry_snapshot",
+      "table_name": "iam_tenant_signing_key",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_catalog_materialization",
+      "table_name": "iam_user",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"
     },
     {
-      "table_name": "iam_group",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_group_member",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_service_account",
-      "owner": "sdkwork-iam",
-      "compliance_level": "L2",
-      "lifecycle_status": "active"
-    },
-    {
-      "table_name": "iam_role_exclusion",
+      "table_name": "iam_user_identity",
       "owner": "sdkwork-iam",
       "compliance_level": "L2",
       "lifecycle_status": "active"

@@ -29,6 +29,10 @@ function explicitBootstrapPermission(operationId: string): string | undefined {
       return "iam.tenant_applications.enable";
     case "accessCredentials.create":
       return "iam.access_credentials.create";
+    case "serviceAccounts.credentials.create":
+      return "iam.service_account_credentials.create";
+    case "serviceAccountCredentials.revoke":
+      return "iam.service_account_credentials.revoke";
     default:
       return undefined;
   }

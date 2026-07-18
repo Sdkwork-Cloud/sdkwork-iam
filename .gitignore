@@ -69,3 +69,11 @@ __pycache__/
 **/.dart_tool/
 *.snapshot
 **/incremental_kernel.*
+
+# Common runtime/build artifacts (auto-aligned)
+*.sqlite-shm
+*.sqlite-wal
+**/test-results/
+**/.turbo/
+**/.cache/
+

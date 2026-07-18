@@ -711,6 +711,24 @@
         "replacementCode": null
       },
       {
+        "code": "iam.service_account_credentials.create",
+        "name": "Create IAM service account credentials",
+        "resource": "iam.service_account_credentials",
+        "action": "create",
+        "status": "active",
+        "since": "1.1.0",
+        "replacementCode": null
+      },
+      {
+        "code": "iam.service_account_credentials.revoke",
+        "name": "Revoke IAM service account credentials",
+        "resource": "iam.service_account_credentials",
+        "action": "revoke",
+        "status": "active",
+        "since": "1.1.0",
+        "replacementCode": null
+      },
+      {
         "code": "iam.service_accounts.delete",
         "name": "Delete IAM service accounts",
         "resource": "iam.service_accounts",

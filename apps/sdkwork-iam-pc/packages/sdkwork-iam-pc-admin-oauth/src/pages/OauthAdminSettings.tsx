@@ -1,10 +1,17 @@
 ﻿import { useEffect, useState } from "react";
 import {
   Button,
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
   Label,
   SettingsSection,
   StatusNotice,
 } from "@sdkwork/ui-pc-react";
+import type { ReactNode } from "react";
 
 import type {
   SdkworkIamOauthAdminController,
@@ -311,7 +318,7 @@ export function SdkworkIamOauthAdminSettings({
             }}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Register an inbound OAuth provider integration." triggerLabel="Add integration">
           <Label htmlFor="oauth-provider-code">Provider code</Label>
           {catalogProviderCodes.length > 0 ? (
             <select
@@ -380,7 +387,7 @@ export function SdkworkIamOauthAdminSettings({
           >
             Add integration
           </Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
       ) : null}
 
@@ -515,7 +522,7 @@ export function SdkworkIamOauthAdminSettings({
             }}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Register an OAuth client for a tenant integration." triggerLabel="Add client">
           <Label htmlFor="oauth-client-integration-id">Integration ID</Label>
           <input
             className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
@@ -607,7 +614,7 @@ export function SdkworkIamOauthAdminSettings({
           >
             Add client
           </Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
 
       <SettingsSection
@@ -631,7 +638,7 @@ export function SdkworkIamOauthAdminSettings({
             secrets={secrets}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Register a secret reference without exposing plaintext credentials." triggerLabel="Add secret">
           <Label htmlFor="oauth-secret-owner-kind">Secret owner kind</Label>
           <input
             className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
@@ -701,7 +708,7 @@ export function SdkworkIamOauthAdminSettings({
           >
             Register secret reference
           </Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
 
       <SettingsSection
@@ -719,7 +726,7 @@ export function SdkworkIamOauthAdminSettings({
             scopeProfiles={scopeProfiles}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Create a reusable OAuth scope profile." triggerLabel="Add scope profile">
           <Label htmlFor="oauth-scope-integration-id">Integration ID</Label>
           <input
             className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
@@ -799,7 +806,7 @@ export function SdkworkIamOauthAdminSettings({
           >
             Add scope profile
           </Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
 
       <SettingsSection
@@ -817,7 +824,7 @@ export function SdkworkIamOauthAdminSettings({
             onChanged={syncLists}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Map an external provider claim into the IAM identity model." triggerLabel="Add claim mapping">
           <Label htmlFor="oauth-claim-integration-id">Integration ID</Label>
           <input
             className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
@@ -897,7 +904,7 @@ export function SdkworkIamOauthAdminSettings({
           >
             Add claim mapping
           </Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
 
       <SettingsSection
@@ -915,7 +922,7 @@ export function SdkworkIamOauthAdminSettings({
             webhookConfigs={webhookConfigs}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Register an OAuth provider webhook configuration." triggerLabel="Add webhook config">
           <Label htmlFor="oauth-webhook-integration-id">Integration ID</Label>
           <input
             className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
@@ -1007,7 +1014,7 @@ export function SdkworkIamOauthAdminSettings({
           >
             Add webhook config
           </Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
 
       <SettingsSection
@@ -1025,7 +1032,7 @@ export function SdkworkIamOauthAdminSettings({
             onChanged={syncLists}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Create an OAuth authorization flow configuration." triggerLabel="Add flow config">
           <Label htmlFor="oauth-flow-integration-id">Integration ID</Label>
           <input
             className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
@@ -1093,7 +1100,7 @@ export function SdkworkIamOauthAdminSettings({
           >
             Add flow config
           </Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
 
       <SettingsSection
@@ -1111,7 +1118,7 @@ export function SdkworkIamOauthAdminSettings({
             surfaces={surfaces}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Register a browser, mobile, or provider OAuth surface." triggerLabel="Add OAuth surface">
           <Label htmlFor="oauth-surface-provider">Provider code</Label>
           <input
             className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
@@ -1174,7 +1181,7 @@ export function SdkworkIamOauthAdminSettings({
           >
             Add surface
           </Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
       </>
       ) : null}
@@ -1196,7 +1203,7 @@ export function SdkworkIamOauthAdminSettings({
             policies={policies}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Create a tenant OAuth policy." triggerLabel="Add OAuth policy">
           <Label htmlFor="oauth-policy-code">Policy code</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-policy-code" onChange={(e) => setPolicyDraft((c) => ({ ...c, policyCode: e.target.value }))} placeholder="default-login-policy" value={policyDraft.policyCode} />
           <Label htmlFor="oauth-policy-name">Display name</Label>
@@ -1204,7 +1211,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label htmlFor="oauth-policy-integration">Integration ID (optional)</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-policy-integration" onChange={(e) => setPolicyDraft((c) => ({ ...c, integrationId: e.target.value }))} placeholder="iamoi-..." value={policyDraft.integrationId} />
           <Button disabled={status === "loading" || status === "saving" || !canSubmitPolicy(policyDraft)} loading={status === "saving"} onClick={() => { void controller.createPolicy(policyDraft).then(() => { setPolicies(controller.getState().policies); setPolicyDraft({ displayName: "", integrationId: "", policyCode: "" }); }); }} type="button">Add policy</Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
 
       <SettingsSection
@@ -1222,7 +1229,7 @@ export function SdkworkIamOauthAdminSettings({
             tenantBindings={tenantBindings}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Map a provider tenant to an SDKWork tenant." triggerLabel="Add tenant binding">
           <Label htmlFor="oauth-binding-provider">Provider code</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-binding-provider" onChange={(e) => setTenantBindingDraft((c) => ({ ...c, providerCode: e.target.value }))} value={tenantBindingDraft.providerCode} />
           <Label htmlFor="oauth-binding-integration">Integration ID</Label>
@@ -1230,7 +1237,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label htmlFor="oauth-binding-kind">Binding kind</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-binding-kind" onChange={(e) => setTenantBindingDraft((c) => ({ ...c, bindingKind: e.target.value }))} value={tenantBindingDraft.bindingKind} />
           <Button disabled={status === "loading" || status === "saving" || !canSubmitTenantBinding(tenantBindingDraft)} loading={status === "saving"} onClick={() => { void controller.createTenantBinding(tenantBindingDraft).then(() => { setTenantBindings(controller.getState().tenantBindings); setTenantBindingDraft({ bindingKind: "tenant_map", integrationId: "", providerCode: "" }); }); }} type="button">Add tenant binding</Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
 
       <SettingsSection
@@ -1248,7 +1255,7 @@ export function SdkworkIamOauthAdminSettings({
             operatorPlatforms={operatorPlatforms}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Register a third-party operator platform." triggerLabel="Add operator platform">
           <Label htmlFor="oauth-op-integration">Integration ID</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-op-integration" onChange={(e) => setOperatorPlatformDraft((c) => ({ ...c, integrationId: e.target.value }))} value={operatorPlatformDraft.integrationId} />
           <Label htmlFor="oauth-op-provider">Provider code</Label>
@@ -1262,7 +1269,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label htmlFor="oauth-op-name">Display name</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-op-name" onChange={(e) => setOperatorPlatformDraft((c) => ({ ...c, displayName: e.target.value }))} value={operatorPlatformDraft.displayName} />
           <Button disabled={status === "loading" || status === "saving" || !canSubmitOperatorPlatform(operatorPlatformDraft)} loading={status === "saving"} onClick={() => { void controller.createOperatorPlatform(operatorPlatformDraft).then(() => { setOperatorPlatforms(controller.getState().operatorPlatforms); setOperatorPlatformDraft({ displayName: "", integrationId: "", operatorMode: "third_party", platformCode: "", providerCode: "", providerPlatformId: "" }); }); }} type="button">Add operator platform</Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
 
       <SettingsSection
@@ -1280,7 +1287,7 @@ export function SdkworkIamOauthAdminSettings({
             resourceAccounts={resourceAccounts}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Register an OAuth provider-side resource account." triggerLabel="Add resource account">
           <Label htmlFor="oauth-ra-integration">Integration ID</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-ra-integration" onChange={(e) => setResourceAccountDraft((c) => ({ ...c, integrationId: e.target.value }))} value={resourceAccountDraft.integrationId} />
           <Label htmlFor="oauth-ra-provider">Provider code</Label>
@@ -1296,7 +1303,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label htmlFor="oauth-ra-access-mode">Access mode</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-ra-access-mode" onChange={(e) => setResourceAccountDraft((c) => ({ ...c, accessMode: e.target.value }))} value={resourceAccountDraft.accessMode} />
           <Button disabled={status === "loading" || status === "saving" || !canSubmitResourceAccount(resourceAccountDraft)} loading={status === "saving"} onClick={() => { void controller.createResourceAccount(resourceAccountDraft).then(() => { setResourceAccounts(controller.getState().resourceAccounts); setResourceAccountDraft({ accessMode: "operator_managed", displayName: "", integrationId: "", providerAccountId: "", providerCode: "", resourceAccountCode: "", resourceAccountKind: "official_account" }); }); }} type="button">Add resource account</Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
 
       <SettingsSection
@@ -1314,7 +1321,7 @@ export function SdkworkIamOauthAdminSettings({
             resourceAuthorizations={resourceAuthorizations}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Bind a resource account to an operator authorization flow." triggerLabel="Add resource authorization">
           <Label htmlFor="oauth-authz-integration">Integration ID</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-authz-integration" onChange={(e) => setResourceAuthorizationDraft((c) => ({ ...c, integrationId: e.target.value }))} value={resourceAuthorizationDraft.integrationId} />
           <Label htmlFor="oauth-authz-resource-account">Resource account ID</Label>
@@ -1324,7 +1331,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label htmlFor="oauth-authz-mode">Authorization mode</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-authz-mode" onChange={(e) => setResourceAuthorizationDraft((c) => ({ ...c, authorizationMode: e.target.value }))} value={resourceAuthorizationDraft.authorizationMode} />
           <Button disabled={status === "loading" || status === "saving" || !canSubmitResourceAuthorization(resourceAuthorizationDraft)} loading={status === "saving"} onClick={() => { void controller.createResourceAuthorization(resourceAuthorizationDraft).then(() => { setResourceAuthorizations(controller.getState().resourceAuthorizations); setResourceAuthorizationDraft({ authorizationMode: "third_party_platform", integrationId: "", providerCode: "", resourceAccountId: "" }); }); }} type="button">Add resource authorization</Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
 
       <SettingsSection
@@ -1342,7 +1349,7 @@ export function SdkworkIamOauthAdminSettings({
             operationalResources={operationalResources}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Register a publishable OAuth operational resource." triggerLabel="Add operational resource">
           <Label htmlFor="oauth-opres-integration">Integration ID</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-opres-integration" onChange={(e) => setOperationalResourceDraft((c) => ({ ...c, integrationId: e.target.value }))} value={operationalResourceDraft.integrationId} />
           <Label htmlFor="oauth-opres-resource-account">Resource account ID</Label>
@@ -1356,7 +1363,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label htmlFor="oauth-opres-name">Display name</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-opres-name" onChange={(e) => setOperationalResourceDraft((c) => ({ ...c, displayName: e.target.value }))} value={operationalResourceDraft.displayName} />
           <Button disabled={listDisabled || !canSubmitOperationalResource(operationalResourceDraft)} loading={status === "saving"} onClick={() => { void controller.createOperationalResource(operationalResourceDraft).then(() => { syncLists(); setOperationalResourceDraft({ displayName: "", integrationId: "", providerCode: "", resourceAccountId: "", resourceCode: "", resourceKind: "mini_program_page" }); }); }} type="button">Add operational resource</Button>
-        </div>
+        </CreateResourceDrawer>
       </SettingsSection>
       </>
       ) : null}
@@ -1418,7 +1425,7 @@ export function SdkworkIamOauthAdminSettings({
             onChanged={syncLists}
           />
         </div>
-        <div className="mt-6 space-y-3">
+        <CreateResourceDrawer description="Queue a new OAuth diagnostic run." triggerLabel="Queue diagnostic run">
           <Label htmlFor="oauth-diag-provider">Provider code</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-diag-provider" onChange={(e) => setDiagnosticRunDraft((c) => ({ ...c, providerCode: e.target.value }))} value={diagnosticRunDraft.providerCode} />
           <Label htmlFor="oauth-diag-integration">Integration ID (optional)</Label>
@@ -1426,7 +1433,7 @@ export function SdkworkIamOauthAdminSettings({
           <Label htmlFor="oauth-diag-kind">Run kind</Label>
           <input className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm" id="oauth-diag-kind" onChange={(e) => setDiagnosticRunDraft((c) => ({ ...c, runKind: e.target.value }))} value={diagnosticRunDraft.runKind} />
           <Button disabled={listDisabled || !canSubmitDiagnosticRun(diagnosticRunDraft)} loading={status === "saving"} onClick={() => { void controller.createDiagnosticRun(diagnosticRunDraft).then(() => { syncLists(); setDiagnosticRunDraft({ integrationId: "", providerCode: "", runKind: "manual" }); }); }} type="button">Queue diagnostic run</Button>
-        </div>
+        </CreateResourceDrawer>
         {diagnosticDetail ? (
           <div className="mt-6 space-y-2">
             <Label>Latest retrieved diagnostic detail</Label>
@@ -1453,6 +1460,32 @@ export function SdkworkIamOauthAdminSettings({
       </SettingsSection>
       </>
       ) : null}
+    </div>
+  );
+}
+
+function CreateResourceDrawer({
+  children,
+  description,
+  triggerLabel,
+}: {
+  children: ReactNode;
+  description: string;
+  triggerLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-4">
+      <Button onClick={() => setOpen(true)} type="button">{triggerLabel}</Button>
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerContent size="md">
+          <DrawerHeader>
+            <DrawerTitle>{triggerLabel}</DrawerTitle>
+            <DrawerDescription>{description}</DrawerDescription>
+          </DrawerHeader>
+          <DrawerBody className="space-y-3">{children}</DrawerBody>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

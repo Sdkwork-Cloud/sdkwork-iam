@@ -126,31 +126,34 @@ pub async fn build_sdkwork_iam_backend_api_router_from_env() -> Router {
 
     let state = BackendIamState { pool };
     let router = oauth_management::apply_oauth_routes(management::apply_management_routes(
-        Router::new()
-            .route(
-                "/backend/v3/api/iam/account_binding_policy",
-                get(retrieve_account_binding_policy).patch(update_account_binding_policy),
-            )
-            .route(
-                "/backend/v3/api/iam/access_credentials",
-                post(create_access_credential),
-            )
-            .route(
-                "/backend/v3/api/iam/applications/register",
-                post(register_application),
-            )
-            .route(
-                "/backend/v3/api/iam/tenant_applications",
-                post(provision_tenant_application_handler),
-            )
-            .route(
-                "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}",
-                get(retrieve_tenant_application_handler).patch(update_tenant_application_handler),
-            )
-            .route(
-                "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}/enable",
-                post(enable_tenant_application_handler),
-            ),
+        crate::service_account_credentials::apply_service_account_credential_routes(
+            Router::new()
+                .route(
+                    "/backend/v3/api/iam/account_binding_policy",
+                    get(retrieve_account_binding_policy).patch(update_account_binding_policy),
+                )
+                .route(
+                    "/backend/v3/api/iam/access_credentials",
+                    post(create_access_credential),
+                )
+                .route(
+                    "/backend/v3/api/iam/applications/register",
+                    post(register_application),
+                )
+                .route(
+                    "/backend/v3/api/iam/tenant_applications",
+                    post(provision_tenant_application_handler),
+                )
+                .route(
+                    "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}",
+                    get(retrieve_tenant_application_handler)
+                        .patch(update_tenant_application_handler),
+                )
+                .route(
+                    "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}/enable",
+                    post(enable_tenant_application_handler),
+                ),
+        ),
     ))
     .with_state(state.clone())
     .layer(middleware::from_fn_with_state(
@@ -323,11 +326,14 @@ async fn create_access_credential(
             "iam_access_credential_create_not_enabled",
             &message,
         ),
-        Err(message) => appbase_error(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "iam_access_credential_create_failed",
-            &message,
-        ),
+        Err(message) => {
+            tracing::warn!(error = %message, "delegated access credential issuance failed");
+            appbase_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "iam_access_credential_create_failed",
+                &message,
+            )
+        }
     }
 }
 
