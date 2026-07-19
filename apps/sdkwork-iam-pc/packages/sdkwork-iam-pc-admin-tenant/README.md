@@ -9,6 +9,11 @@ This package is intentionally transport-free. It consumes `SdkworkIamService` fr
 - `createSdkworkIamTenantController(serviceOrInput)`
 - `listTenants(params)`
 - `listTenantMembers(tenantId, params)`
+- `listTenantApplications(tenantId, params)`
+- `retrieveTenantApplicationSummary(tenantId)`
+- `provisionTenantApplication(tenantId, draft)`
+- `updateTenantApplication(tenantId, tenantApplicationId, draft)`
+- `setTenantApplicationEnabled(tenantId, tenantApplicationId, enabled)`
 - `selectTenant(tenantId)`
 - `getSelectedTenant()`
 - `getState()`
@@ -19,6 +24,11 @@ Protected calls are delegated to the common IAM service and use the canonical du
 - `Access-Token: <access_token>`
 
 This package must not create raw HTTP clients, manually assemble headers, or import a concrete generated SDK.
+
+Tenant application administration uses the authenticated operator methods under
+`service.iam.tenantApplications.management`. Global application-template registration and
+bootstrap credential issuance remain server/CLI bootstrap responsibilities and are never exposed
+through this browser package.
 
 ## SDKWork Documentation Contract
 
