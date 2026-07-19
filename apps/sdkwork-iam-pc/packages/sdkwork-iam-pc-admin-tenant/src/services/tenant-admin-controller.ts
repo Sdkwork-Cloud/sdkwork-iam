@@ -1,4 +1,4 @@
-import { createSdkWorkPagedListSession } from "@sdkwork/iam-contracts";
+import { createSdkWorkPagedListSession, hasPermissionInScope } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 import type {
@@ -6,6 +6,10 @@ import type {
   SdkworkIamTenant,
   SdkworkIamTenantController,
   SdkworkIamTenantDraft,
+  SdkworkIamTenantApplication,
+  SdkworkIamTenantApplicationDraft,
+  SdkworkIamTenantApplicationSummary,
+  SdkworkIamTenantApplicationUpdateDraft,
   SdkworkIamTenantMember,
   SdkworkIamTenantMemberDraft,
   SdkworkIamTenantState,
@@ -16,6 +20,8 @@ export function createSdkworkIamTenantController(
 ): SdkworkIamTenantController {
   const resolved = resolveInput(input);
   let state: SdkworkIamTenantState = {
+    applications: [],
+    applicationSummary: emptyApplicationSummary(),
     listPageInfo: undefined,
     members: [],
     selectedTenant: undefined,
@@ -30,11 +36,20 @@ export function createSdkworkIamTenantController(
 
   let membersSessionTenantId = "";
   let membersSession = createMembersSession("");
+  let applicationsSessionTenantId = "";
+  let applicationsSession = createApplicationsSession("");
 
   function createMembersSession(tenantId: string) {
     return createSdkWorkPagedListSession({
       fetchPage: (query) => resolved.service.iam.tenants.members.list(tenantId, query),
       mapItem: toTenantMember,
+    });
+  }
+
+  function createApplicationsSession(tenantId: string) {
+    return createSdkWorkPagedListSession({
+      fetchPage: (query) => resolved.service.iam.tenantApplications.list(tenantId, query),
+      mapItem: toTenantApplication,
     });
   }
 
@@ -44,6 +59,10 @@ export function createSdkworkIamTenantController(
 
   function syncMembersListPageInfo() {
     return { members: membersSession.getPageInfo() };
+  }
+
+  function syncApplicationsListPageInfo() {
+    return { applications: applicationsSession.getPageInfo() };
   }
 
   const setState = (patch: Partial<SdkworkIamTenantState>) => {
@@ -99,25 +118,68 @@ export function createSdkworkIamTenantController(
         const tenants = state.tenants.filter((tenant) => tenant.tenantId !== normalizedTenantId);
         tenantsSession.setItems(tenants);
         const selectedTenant = state.selectedTenant?.tenantId === normalizedTenantId ? undefined : state.selectedTenant;
-        setState({ members: selectedTenant ? state.members : [], selectedTenant, status: "ready", tenants });
+        setState({
+          applications: selectedTenant ? state.applications : [],
+          applicationSummary: selectedTenant ? state.applicationSummary : emptyApplicationSummary(),
+          members: selectedTenant ? state.members : [],
+          selectedTenant,
+          status: "ready",
+          tenants,
+        });
       } catch (error) {
         setState({ status: "error" });
         throw error;
       }
+    },
+    getApplicationCapabilities: () => {
+      const permissionScope = resolved.permissionScope;
+      const hasPermission = (permission: string) =>
+        permissionScope === undefined || hasPermissionInScope(permissionScope, permission);
+      return {
+        canEnable: hasPermission("iam.tenant_applications.enable"),
+        canProvision: hasPermission("iam.tenant_applications.provision"),
+        canUpdate: hasPermission("iam.tenant_applications.update"),
+      };
     },
     getSelectedTenant: () => state.selectedTenant,
     getState: () => ({
       ...state,
       listPageInfo: state.listPageInfo
         ? {
+            applications: state.listPageInfo.applications ? { ...state.listPageInfo.applications } : undefined,
             members: state.listPageInfo.members ? { ...state.listPageInfo.members } : undefined,
             tenants: state.listPageInfo.tenants ? { ...state.listPageInfo.tenants } : undefined,
           }
         : undefined,
+      applications: state.applications.map((application) => ({
+        ...application,
+        accessPermissions: [...application.accessPermissions],
+      })),
+      applicationSummary: { ...state.applicationSummary },
       members: [...state.members],
       selectedTenant: state.selectedTenant ? { ...state.selectedTenant } : undefined,
       tenants: [...state.tenants],
     }),
+    listTenantApplications: async (tenantId, params) => {
+      const normalizedTenantId = requireId(tenantId, "tenantId");
+      if (applicationsSessionTenantId !== normalizedTenantId) {
+        applicationsSessionTenantId = normalizedTenantId;
+        applicationsSession = createApplicationsSession(normalizedTenantId);
+      }
+      setState({ status: "loading" });
+      try {
+        const applications = await applicationsSession.list(params) as SdkworkIamTenantApplication[];
+        setState({
+          applications,
+          listPageInfo: { ...state.listPageInfo, ...syncApplicationsListPageInfo() },
+          status: "ready",
+        });
+        return applications;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
     listTenantMembers: async (tenantId, params) => {
       const normalizedTenantId = requireId(tenantId, "tenantId");
       if (membersSessionTenantId !== normalizedTenantId) {
@@ -152,6 +214,25 @@ export function createSdkworkIamTenantController(
           tenants,
         });
         return tenants;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    loadMoreTenantApplications: async (tenantId) => {
+      const normalizedTenantId = requireId(tenantId, "tenantId");
+      if (applicationsSessionTenantId !== normalizedTenantId) {
+        return controller.listTenantApplications(normalizedTenantId);
+      }
+      setState({ status: "loading" });
+      try {
+        const applications = await applicationsSession.loadMore() as SdkworkIamTenantApplication[];
+        setState({
+          applications,
+          listPageInfo: { ...state.listPageInfo, ...syncApplicationsListPageInfo() },
+          status: "ready",
+        });
+        return applications;
       } catch (error) {
         setState({ status: "error" });
         throw error;
@@ -212,6 +293,67 @@ export function createSdkworkIamTenantController(
         throw error;
       }
     },
+    provisionTenantApplication: async (tenantId, body) => {
+      const normalizedTenantId = requireId(tenantId, "tenantId");
+      validateApplicationDraft(body);
+      setState({ status: "loading" });
+      try {
+        const application = toTenantApplication(
+          await resolved.service.iam.tenantApplications.management.provision(
+            normalizedTenantId,
+            applicationDraftToRecord(body),
+          ),
+        );
+        if (!application) {
+          throw new Error("SDKWork IAM tenant application provision response is missing tenantApplicationId");
+        }
+        const applications = [
+          application,
+          ...state.applications.filter((item) => item.tenantApplicationId !== application.tenantApplicationId),
+        ];
+        applicationsSession.setItems(applications);
+        setState({ applications, status: "ready" });
+        return application;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    retrieveTenantApplicationSummary: async (tenantId) => {
+      const normalizedTenantId = requireId(tenantId, "tenantId");
+      setState({ status: "loading" });
+      try {
+        const summary = toTenantApplicationSummary(
+          await resolved.service.iam.tenantApplications.summary.retrieve(normalizedTenantId),
+        );
+        setState({ applicationSummary: summary, status: "ready" });
+        return summary;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    setTenantApplicationEnabled: async (tenantId, tenantApplicationId, enabled) => {
+      const normalizedTenantId = requireId(tenantId, "tenantId");
+      const normalizedApplicationId = requireId(tenantApplicationId, "tenantApplicationId");
+      setState({ status: "loading" });
+      try {
+        const resource = resolved.service.iam.tenantApplications.management;
+        const application = toTenantApplication(
+          enabled
+            ? await resource.enable(normalizedTenantId, normalizedApplicationId)
+            : await resource.disable(normalizedTenantId, normalizedApplicationId),
+        );
+        if (!application) {
+          throw new Error("SDKWork IAM tenant application status response is missing tenantApplicationId");
+        }
+        replaceApplicationInState(application);
+        return application;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
     selectTenant: async (tenantId, params) => {
       const normalizedTenantId = requireId(tenantId, "tenantId");
       const tenants = state.tenants.length > 0 ? state.tenants : await controller.listTenants(params);
@@ -233,6 +375,28 @@ export function createSdkworkIamTenantController(
         const selectedTenant = state.selectedTenant?.tenantId === tenant.tenantId ? tenant : state.selectedTenant;
         setState({ selectedTenant, status: "ready", tenants });
         return tenant;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    updateTenantApplication: async (tenantId, tenantApplicationId, body) => {
+      const normalizedTenantId = requireId(tenantId, "tenantId");
+      const normalizedApplicationId = requireId(tenantApplicationId, "tenantApplicationId");
+      setState({ status: "loading" });
+      try {
+        const application = toTenantApplication(
+          await resolved.service.iam.tenantApplications.management.update(
+            normalizedTenantId,
+            normalizedApplicationId,
+            applicationUpdateDraftToRecord(body),
+          ),
+        );
+        if (!application) {
+          throw new Error("SDKWork IAM tenant application update response is missing tenantApplicationId");
+        }
+        replaceApplicationInState(application);
+        return application;
       } catch (error) {
         setState({ status: "error" });
         throw error;
@@ -260,7 +424,46 @@ export function createSdkworkIamTenantController(
     },
   };
 
+  function replaceApplicationInState(application: SdkworkIamTenantApplication) {
+    const applications = state.applications.map((item) =>
+      item.tenantApplicationId === application.tenantApplicationId ? application : item,
+    );
+    applicationsSession.setItems(applications);
+    setState({ applications, status: "ready" });
+  }
+
   return controller;
+}
+
+function emptyApplicationSummary(): SdkworkIamTenantApplicationSummary {
+  return { disabled: 0, enabled: 0, pending: 0, total: 0 };
+}
+
+function applicationDraftToRecord(body: SdkworkIamTenantApplicationDraft): Record<string, unknown> {
+  return {
+    accessPermissions: body.accessPermissions,
+    appKey: body.appKey.trim(),
+    displayName: body.displayName.trim(),
+    environment: body.environment.trim(),
+    instanceKey: body.instanceKey.trim(),
+    organizationId: body.organizationId.trim(),
+    primaryDomain: body.primaryDomain.trim(),
+  };
+}
+
+function applicationUpdateDraftToRecord(body: SdkworkIamTenantApplicationUpdateDraft): Record<string, unknown> {
+  return {
+    accessPermissions: body.accessPermissions,
+    primaryDomain: body.primaryDomain.trim(),
+  };
+}
+
+function validateApplicationDraft(body: SdkworkIamTenantApplicationDraft) {
+  requireId(body.appKey, "appKey");
+  requireId(body.displayName, "displayName");
+  requireId(body.environment, "environment");
+  requireId(body.instanceKey, "instanceKey");
+  requireId(body.organizationId, "organizationId");
 }
 
 function resolveInput(
@@ -306,6 +509,57 @@ function toTenantMember(value: unknown): SdkworkIamTenantMember | undefined {
     userId,
     username: optionalString(record.username),
   };
+}
+
+function toTenantApplication(value: unknown): SdkworkIamTenantApplication | undefined {
+  const record = toRecord(value);
+  const tenantApplicationId = optionalString(record.tenantApplicationId)
+    || optionalString(record.tenant_application_id)
+    || optionalString(record.id);
+  const appId = optionalString(record.appId) || optionalString(record.app_id);
+  const tenantId = optionalString(record.tenantId) || optionalString(record.tenant_id);
+  if (!tenantApplicationId || !appId || !tenantId) {
+    return undefined;
+  }
+
+  return {
+    accessPermissions: toStringArray(record.accessPermissions ?? record.access_permissions),
+    appId,
+    createdAt: optionalString(record.createdAt) || optionalString(record.created_at),
+    displayName: optionalString(record.displayName) || optionalString(record.display_name) || appId,
+    environment: optionalString(record.environment) || "unknown",
+    instanceKey: optionalString(record.instanceKey) || optionalString(record.instance_key) || appId,
+    organizationId: optionalString(record.organizationId) || optionalString(record.organization_id) || "0",
+    primaryDomain: optionalString(record.primaryDomain) || optionalString(record.primary_domain),
+    status: optionalString(record.status) || "pending_config",
+    templateId: optionalString(record.templateId) || optionalString(record.template_id) || "",
+    templateVersion: optionalString(record.templateVersion) || optionalString(record.template_version),
+    tenantApplicationId,
+    tenantId,
+    updatedAt: optionalString(record.updatedAt) || optionalString(record.updated_at),
+  };
+}
+
+function toTenantApplicationSummary(value: unknown): SdkworkIamTenantApplicationSummary {
+  const record = toRecord(value);
+  return {
+    disabled: toNonNegativeNumber(record.disabled),
+    enabled: toNonNegativeNumber(record.enabled),
+    pending: toNonNegativeNumber(record.pending),
+    total: toNonNegativeNumber(record.total),
+  };
+}
+
+function toNonNegativeNumber(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map(optionalString).filter((item): item is string => Boolean(item));
 }
 
 function toRecord(value: unknown): Record<string, unknown> {

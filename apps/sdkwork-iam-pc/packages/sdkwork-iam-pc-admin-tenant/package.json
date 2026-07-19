@@ -22,9 +22,11 @@
     "typescript": "^6.0.2"
   },
   "dependencies": {
+    "@sdkwork/i18n-pc-react": "workspace:*",
     "@sdkwork/iam-pc-admin-core": "workspace:*",
     "@sdkwork/iam-service": "workspace:*",
-    "@sdkwork/ui-pc-react": "workspace:*"
+    "@sdkwork/ui-pc-react": "workspace:*",
+    "lucide-react": "^1.7.0"
   },
   "peerDependencies": {
     "react": ">=18.2.0 <20.0.0",
