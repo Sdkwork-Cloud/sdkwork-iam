@@ -83,21 +83,60 @@ export interface SdkworkIamTenantAdminMessages {
   };
   members: {
     add: string;
+    drawer: {
+      addDescription: string;
+      addTitle: string;
+      editDescription: string;
+      editTitle: string;
+      roleCode: string;
+      userId: string;
+    };
     emptyDescription: string;
     emptyTitle: string;
     loadedMore: string;
+    notices: {
+      addSuccess: string;
+      loadError: string;
+      removeSuccess: string;
+      updateSuccess: string;
+    };
     remove: string;
+    removeDescriptionTemplate: string;
+    removeTitle: string;
+    table: {
+      member: string;
+      role: string;
+      status: string;
+      userId: string;
+    };
     titleTemplate: string;
   };
   tenants: {
     create: string;
     delete: string;
+    deleteDescriptionTemplate: string;
+    deleteTitle: string;
     description: string;
     edit: string;
+    drawer: {
+      code: string;
+      createDescription: string;
+      createTitle: string;
+      editDescription: string;
+      editTitle: string;
+      name: string;
+      status: string;
+    };
     emptyDescription: string;
     emptyTitle: string;
     loadedMore: string;
     manage: string;
+    notices: {
+      createSuccess: string;
+      deleteSuccess: string;
+      loadError: string;
+      updateSuccess: string;
+    };
     selectedDescriptionTemplate: string;
     selectedTitleTemplate: string;
     table: {
