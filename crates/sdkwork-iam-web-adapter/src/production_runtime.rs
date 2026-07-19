@@ -34,7 +34,10 @@ pub fn is_explicit_development_iam_deployment() -> bool {
 
     let env = read_env_value(&["SDKWORK_ENV", "SDKWORK_ENVIRONMENT"])
         .map(|value| value.to_ascii_lowercase());
-    if matches!(env.as_deref(), Some("dev") | Some("test") | Some("local")) {
+    if matches!(
+        env.as_deref(),
+        Some("dev") | Some("development") | Some("test") | Some("testing") | Some("local")
+    ) {
         return true;
     }
 
@@ -236,6 +239,16 @@ mod tests {
         let _env_lock = crate::test_env_lock::lock();
         clear_deployment_env_keys();
         std::env::set_var("SDKWORK_IM_ENVIRONMENT", "development");
+        assert!(is_explicit_development_iam_deployment());
+        assert!(assert_production_hardening().is_ok());
+        clear_deployment_env_keys();
+    }
+
+    #[test]
+    fn generic_development_environment_is_explicit_development() {
+        let _env_lock = crate::test_env_lock::lock();
+        clear_deployment_env_keys();
+        std::env::set_var("SDKWORK_ENVIRONMENT", "development");
         assert!(is_explicit_development_iam_deployment());
         assert!(assert_production_hardening().is_ok());
         clear_deployment_env_keys();

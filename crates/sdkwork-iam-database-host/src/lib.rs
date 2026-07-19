@@ -89,6 +89,7 @@ pub async fn bootstrap_iam_database(pool: DatabasePool) -> Result<IamDatabaseHos
         tracing::warn!(%error, "continuing with development IAM snowflake fallback");
     }
 
+    let _ = sdkwork_iam_web_adapter::install_iam_database_pool_for_process(pool.clone());
     if let Some(pg_pool) = pool.as_postgres() {
         let _ = sdkwork_iam_web_adapter::install_iam_postgres_pool_for_process(Arc::new(
             pg_pool.clone(),
@@ -118,6 +119,37 @@ pub async fn bootstrap_iam_database_from_env() -> Result<IamDatabaseHost, String
     bootstrap_iam_database(pool).await
 }
 
+pub async fn materialize_iam_application_modules(
+    pool: &DatabasePool,
+    manifest_paths: &[PathBuf],
+) -> Result<(), String> {
+    if manifest_paths.is_empty() {
+        return Ok(());
+    }
+    let app_root = resolve_iam_app_root();
+    match pool {
+        DatabasePool::Postgres(pg, _) => {
+            sdkwork_iam_module_registry::materialize_postgres_catalog_with_manifests(
+                pg,
+                Some(&app_root),
+                "operational",
+                manifest_paths,
+            )
+            .await?;
+        }
+        DatabasePool::Sqlite(sqlite, _) => {
+            sdkwork_iam_module_registry::materialize_sqlite_catalog_with_manifests(
+                sqlite,
+                Some(&app_root),
+                "operational",
+                manifest_paths,
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
 /// Allocate a Snowflake node_id from the database and initialize the IAM ID generator.
 ///
 /// Node allocation is mandatory in production; a fallback is only permitted for development.
@@ -138,11 +170,16 @@ async fn allocate_and_init_iam_snowflake_node(pool: &DatabasePool) -> Result<(),
 }
 
 async fn run_post_bootstrap_hooks(pool: &DatabasePool) -> Result<(), String> {
-    let Some(pg) = pool.as_postgres() else {
-        tracing::info!("skipping postgres-only IAM post-bootstrap hooks for sqlite pool");
-        return Ok(());
-    };
+    if let Some(pg) = pool.as_postgres() {
+        return run_postgres_bootstrap_hooks(pg).await;
+    }
+    if let Some(sqlite) = pool.as_sqlite() {
+        return run_sqlite_bootstrap_hooks(sqlite).await;
+    }
+    Err("IAM database pool must provide a PostgreSQL or SQLite connection".to_owned())
+}
 
+async fn run_postgres_bootstrap_hooks(pg: &PgPool) -> Result<(), String> {
     sdkwork_iam_web_adapter::seed_builtin_oauth_provider_catalog(pg)
         .await
         .map_err(|error| format!("seed oauth provider catalog failed: {error}"))?;
@@ -162,6 +199,22 @@ async fn run_post_bootstrap_hooks(pool: &DatabasePool) -> Result<(), String> {
         Err(error) => return Err(format!("ensure bootstrap admin user failed: {error}")),
     }
     match sdkwork_iam_bootstrap::ensure_postgres_bootstrap_manager_user(pg).await {
+        Ok(outcome) => tracing::info!(?outcome, "IAM bootstrap manager user seed finished"),
+        Err(error) => return Err(format!("ensure bootstrap manager user failed: {error}")),
+    }
+    Ok(())
+}
+
+async fn run_sqlite_bootstrap_hooks(sqlite: &sqlx::SqlitePool) -> Result<(), String> {
+    let app_root = resolve_iam_app_root();
+    sdkwork_iam_module_registry::materialize_sqlite_catalog(sqlite, Some(&app_root), "operational")
+        .await
+        .map_err(|error| format!("materialize iam module catalog failed: {error}"))?;
+    match sdkwork_iam_bootstrap::ensure_sqlite_bootstrap_admin_user(sqlite).await {
+        Ok(outcome) => tracing::info!(?outcome, "IAM bootstrap admin user seed finished"),
+        Err(error) => return Err(format!("ensure bootstrap admin user failed: {error}")),
+    }
+    match sdkwork_iam_bootstrap::ensure_sqlite_bootstrap_manager_user(sqlite).await {
         Ok(outcome) => tracing::info!(?outcome, "IAM bootstrap manager user seed finished"),
         Err(error) => return Err(format!("ensure bootstrap manager user failed: {error}")),
     }

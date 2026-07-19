@@ -92,6 +92,9 @@ describe('@sdkwork/iam-credential-entry', () => {
     });
 
     expect(token.split('.')).toHaveLength(3);
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+    expect(payload.token_type).toBe('access');
+    expect(payload.token_kind).toBeUndefined();
     expect(mergeBootstrapAccessTokenEnv({}, {
       manifest: {
         app: { key: 'sdkwork-im-pc' },

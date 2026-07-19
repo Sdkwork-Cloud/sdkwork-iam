@@ -21,8 +21,9 @@ use crate::{
     DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ROOT_CLOSURE_ID,
     DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_SELF_CLOSURE_ID, DEFAULT_BOOTSTRAP_ADMIN_USERNAME,
     DEFAULT_BOOTSTRAP_ADMIN_USER_ID, DEFAULT_BOOTSTRAP_MANAGER_DISPLAY_NAME,
-    DEFAULT_BOOTSTRAP_MANAGER_EMAIL, DEFAULT_BOOTSTRAP_MANAGER_USERNAME,
-    DEFAULT_BOOTSTRAP_MANAGER_USER_ID, DEFAULT_IAM_ORGANIZATION_ID, DEFAULT_IAM_TENANT_ID,
+    DEFAULT_BOOTSTRAP_MANAGER_EMAIL, DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
+    DEFAULT_BOOTSTRAP_MANAGER_USERNAME, DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
+    DEFAULT_IAM_ORGANIZATION_ID, DEFAULT_IAM_TENANT_ID,
 };
 
 pub const SDKWORK_IAM_SUPER_ADMIN_PASSWORD_ENV: &str = "SDKWORK_IAM_SUPER_ADMIN_PASSWORD";
@@ -284,15 +285,14 @@ pub async fn ensure_postgres_bootstrap_manager_user(
     let Some(password) = resolve_bootstrap_manager_password_from_env() else {
         return Ok(BootstrapManagerUserOutcome::SkippedMissingPassword);
     };
-    if postgres_tenant_has_bootstrap_manager(pool, DEFAULT_IAM_TENANT_ID).await? {
-        return Ok(BootstrapManagerUserOutcome::SkippedExistingManager);
-    }
+    let manager_exists = postgres_tenant_has_bootstrap_manager(pool, DEFAULT_IAM_TENANT_ID).await?;
 
     let now = Utc::now();
     let password_hash = hash_password(&password);
-    let membership_id = bootstrap_member_membership_id(DEFAULT_BOOTSTRAP_MANAGER_USER_ID);
+    let root_membership_id = bootstrap_member_membership_id(DEFAULT_BOOTSTRAP_MANAGER_USER_ID);
 
     upsert_postgres_standard_roles(pool, DEFAULT_IAM_TENANT_ID).await?;
+    ensure_postgres_bootstrap_admin_organization(pool, &now).await?;
 
     sqlx::query(
         "INSERT INTO iam_user (id, tenant_id, username, display_name, email, phone, \
@@ -351,7 +351,7 @@ pub async fn ensure_postgres_bootstrap_manager_user(
          ON CONFLICT (tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
            status = 'active', updated_at = EXCLUDED.updated_at",
     )
-    .bind(&membership_id)
+    .bind(&root_membership_id)
     .bind(DEFAULT_IAM_TENANT_ID)
     .bind(DEFAULT_IAM_ORGANIZATION_ID)
     .bind(DEFAULT_BOOTSTRAP_MANAGER_USER_ID)
@@ -359,18 +359,36 @@ pub async fn ensure_postgres_bootstrap_manager_user(
     .execute(pool)
     .await?;
 
+    ensure_postgres_bootstrap_manager_membership(
+        pool,
+        DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
+        DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
+        &now,
+    )
+    .await?;
+    retire_postgres_legacy_manager_tenant_org_admin_binding(
+        pool,
+        DEFAULT_IAM_TENANT_ID,
+        DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
+        &now,
+    )
+    .await?;
     ensure_postgres_bootstrap_manager_role_bindings(
         pool,
         DEFAULT_IAM_TENANT_ID,
-        DEFAULT_IAM_ORGANIZATION_ID,
-        &membership_id,
+        DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID,
+        DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
         DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
         &now,
     )
     .await
     .map_err(|error| sqlx::Error::Protocol(error))?;
 
-    Ok(BootstrapManagerUserOutcome::Created)
+    Ok(if manager_exists {
+        BootstrapManagerUserOutcome::SkippedExistingManager
+    } else {
+        BootstrapManagerUserOutcome::Created
+    })
 }
 
 pub async fn ensure_sqlite_bootstrap_manager_user(
@@ -379,15 +397,14 @@ pub async fn ensure_sqlite_bootstrap_manager_user(
     let Some(password) = resolve_bootstrap_manager_password_from_env() else {
         return Ok(BootstrapManagerUserOutcome::SkippedMissingPassword);
     };
-    if sqlite_tenant_has_bootstrap_manager(pool, DEFAULT_IAM_TENANT_ID).await? {
-        return Ok(BootstrapManagerUserOutcome::SkippedExistingManager);
-    }
+    let manager_exists = sqlite_tenant_has_bootstrap_manager(pool, DEFAULT_IAM_TENANT_ID).await?;
 
     let now = Utc::now().to_rfc3339();
     let password_hash = hash_password(&password);
-    let membership_id = bootstrap_member_membership_id(DEFAULT_BOOTSTRAP_MANAGER_USER_ID);
+    let root_membership_id = bootstrap_member_membership_id(DEFAULT_BOOTSTRAP_MANAGER_USER_ID);
 
     upsert_sqlite_standard_roles(pool, DEFAULT_IAM_TENANT_ID).await?;
+    ensure_sqlite_bootstrap_admin_organization(pool, &now).await?;
 
     sqlx::query(
         "INSERT INTO iam_user (id, tenant_id, username, display_name, email, phone, \
@@ -450,7 +467,7 @@ pub async fn ensure_sqlite_bootstrap_manager_user(
          ON CONFLICT(tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
            status = 'active', updated_at = excluded.updated_at",
     )
-    .bind(&membership_id)
+    .bind(&root_membership_id)
     .bind(DEFAULT_IAM_TENANT_ID)
     .bind(DEFAULT_IAM_ORGANIZATION_ID)
     .bind(DEFAULT_BOOTSTRAP_MANAGER_USER_ID)
@@ -460,18 +477,36 @@ pub async fn ensure_sqlite_bootstrap_manager_user(
     .execute(pool)
     .await?;
 
+    ensure_sqlite_bootstrap_manager_membership(
+        pool,
+        DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
+        DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
+        &now,
+    )
+    .await?;
+    retire_sqlite_legacy_manager_tenant_org_admin_binding(
+        pool,
+        DEFAULT_IAM_TENANT_ID,
+        DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
+        &now,
+    )
+    .await?;
     ensure_sqlite_bootstrap_manager_role_bindings(
         pool,
         DEFAULT_IAM_TENANT_ID,
-        DEFAULT_IAM_ORGANIZATION_ID,
-        &membership_id,
+        DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID,
+        DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
         DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
         &now,
     )
     .await
     .map_err(|error| sqlx::Error::Protocol(error))?;
 
-    Ok(BootstrapManagerUserOutcome::Created)
+    Ok(if manager_exists {
+        BootstrapManagerUserOutcome::SkippedExistingManager
+    } else {
+        BootstrapManagerUserOutcome::Created
+    })
 }
 
 async fn postgres_tenant_has_bootstrap_manager(
@@ -673,6 +708,125 @@ async fn ensure_sqlite_bootstrap_admin_membership(
     Ok(())
 }
 
+async fn ensure_postgres_bootstrap_manager_membership(
+    pool: &PgPool,
+    membership_id: &str,
+    user_id: &str,
+    now: &chrono::DateTime<chrono::Utc>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, \
+         membership_kind, is_primary, status, joined_at, created_at, updated_at) \
+         VALUES ($1, $2, $3, $4, 'admin', 1, 'active', $5, $5, $5) \
+         ON CONFLICT (tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
+         status = 'active', is_primary = 1, updated_at = EXCLUDED.updated_at",
+    )
+    .bind(membership_id)
+    .bind(DEFAULT_IAM_TENANT_ID)
+    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
+    .bind(user_id)
+    .bind(now)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+async fn ensure_sqlite_bootstrap_manager_membership(
+    pool: &SqlitePool,
+    membership_id: &str,
+    user_id: &str,
+    now: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, \
+         membership_kind, is_primary, status, joined_at, created_at, updated_at) \
+         VALUES (?, ?, ?, ?, 'admin', 1, 'active', ?, ?, ?) \
+         ON CONFLICT(tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
+         status = 'active', is_primary = 1, updated_at = excluded.updated_at",
+    )
+    .bind(membership_id)
+    .bind(DEFAULT_IAM_TENANT_ID)
+    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
+    .bind(user_id)
+    .bind(now)
+    .bind(now)
+    .bind(now)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+async fn retire_postgres_legacy_manager_tenant_org_admin_binding(
+    pool: &PgPool,
+    tenant_id: &str,
+    user_id: &str,
+    now: &chrono::DateTime<chrono::Utc>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE iam_role_binding SET status = 'inactive', updated_at = $1 \
+         WHERE tenant_id = $2 AND principal_kind = 'user' AND principal_id = $3 \
+           AND scope_kind = 'tenant' AND scope_id = $2 AND role_id = $4",
+    )
+    .bind(now)
+    .bind(tenant_id)
+    .bind(user_id)
+    .bind(standard_role_id(tenant_id, ORG_ADMIN_ROLE_CODE))
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        "UPDATE iam_role_binding SET status = 'inactive', updated_at = $1 \
+         WHERE tenant_id = $2 AND principal_kind = 'organization_membership' \
+           AND principal_id IN (SELECT id FROM iam_organization_membership \
+             WHERE tenant_id = $2 AND user_id = $3 AND organization_id = $4) \
+           AND scope_kind = 'organization' AND scope_id = $4 AND role_id = $5",
+    )
+    .bind(now)
+    .bind(tenant_id)
+    .bind(user_id)
+    .bind(DEFAULT_IAM_ORGANIZATION_ID)
+    .bind(standard_role_id(tenant_id, ORG_ADMIN_ROLE_CODE))
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+async fn retire_sqlite_legacy_manager_tenant_org_admin_binding(
+    pool: &SqlitePool,
+    tenant_id: &str,
+    user_id: &str,
+    now: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE iam_role_binding SET status = 'inactive', updated_at = ? \
+         WHERE tenant_id = ? AND principal_kind = 'user' AND principal_id = ? \
+           AND scope_kind = 'tenant' AND scope_id = ? AND role_id = ?",
+    )
+    .bind(now)
+    .bind(tenant_id)
+    .bind(user_id)
+    .bind(tenant_id)
+    .bind(standard_role_id(tenant_id, ORG_ADMIN_ROLE_CODE))
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        "UPDATE iam_role_binding SET status = 'inactive', updated_at = ? \
+         WHERE tenant_id = ? AND principal_kind = 'organization_membership' \
+           AND principal_id IN (SELECT id FROM iam_organization_membership \
+             WHERE tenant_id = ? AND user_id = ? AND organization_id = ?) \
+           AND scope_kind = 'organization' AND scope_id = ? AND role_id = ?",
+    )
+    .bind(now)
+    .bind(tenant_id)
+    .bind(tenant_id)
+    .bind(user_id)
+    .bind(DEFAULT_IAM_ORGANIZATION_ID)
+    .bind(DEFAULT_IAM_ORGANIZATION_ID)
+    .bind(standard_role_id(tenant_id, ORG_ADMIN_ROLE_CODE))
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 async fn ensure_postgres_bootstrap_manager_role_bindings(
     pool: &PgPool,
     tenant_id: &str,
@@ -682,7 +836,7 @@ async fn ensure_postgres_bootstrap_manager_role_bindings(
     now: &chrono::DateTime<chrono::Utc>,
 ) -> Result<(), String> {
     for role_code in [ORG_ADMIN_ROLE_CODE, APP_USER_ROLE_CODE] {
-        if role_code == APP_USER_ROLE_CODE {
+        if role_code == APP_USER_ROLE_CODE || organization_id == DEFAULT_IAM_ORGANIZATION_ID {
             ensure_postgres_tenant_user_role_binding(pool, tenant_id, user_id, role_code, now)
                 .await?;
             continue;
@@ -709,7 +863,7 @@ async fn ensure_sqlite_bootstrap_manager_role_bindings(
     now: &str,
 ) -> Result<(), String> {
     for role_code in [ORG_ADMIN_ROLE_CODE, APP_USER_ROLE_CODE] {
-        if role_code == APP_USER_ROLE_CODE {
+        if role_code == APP_USER_ROLE_CODE || organization_id == DEFAULT_IAM_ORGANIZATION_ID {
             ensure_sqlite_tenant_user_role_binding(pool, tenant_id, user_id, role_code, now)
                 .await?;
             continue;
@@ -1099,6 +1253,10 @@ mod tests {
         assert_eq!(bootstrap_owner_membership_id("1"), "iamom_owner_1");
         assert_eq!(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID, "100002");
         assert_eq!(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_MEMBERSHIP_ID, "100003");
+        assert_eq!(
+            DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
+            "100006"
+        );
         assert_eq!(
             DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ROOT_CLOSURE_ID,
             "100004"

@@ -365,6 +365,78 @@ async fn create_session(
         Ok(tenant_id) => tenant_id,
         Err(response) => return response,
     };
+    if let Some(sqlite) = state.pool.as_sqlite() {
+        let runtime_app_id = match ctx
+            .principal
+            .as_ref()
+            .map(|principal| principal.app_id().trim())
+            .filter(|value| !value.is_empty())
+        {
+            Some(app_id) => app_id,
+            None => {
+                return appbase_error(
+                    StatusCode::UNAUTHORIZED,
+                    "iam_credential_entry_app_required",
+                    "credential entry app context is required",
+                )
+            }
+        };
+        let username = resolve_login_username(&body);
+        if username.is_empty() {
+            return appbase_error(
+                StatusCode::BAD_REQUEST,
+                "iam_invalid_login",
+                "username, email, or phone is required",
+            );
+        }
+        if !is_password_grant(&body) {
+            return appbase_error(
+                StatusCode::BAD_REQUEST,
+                "iam_unsupported_grant_type",
+                "unsupported authentication grant type",
+            );
+        }
+        let Some(password) = read_password(body.get("password")) else {
+            return appbase_error(
+                StatusCode::BAD_REQUEST,
+                "iam_password_required",
+                "password is required",
+            );
+        };
+        if let Some(response) = enforce_ephemeral_rate_limit(
+            &state,
+            &format!("auth:login:{}", canonical_identity(&username)),
+        )
+        .await
+        {
+            return response;
+        }
+        return match crate::sqlite_sessions::authenticate_password_and_create_session(
+            sqlite,
+            &state.config,
+            &tenant_id,
+            runtime_app_id,
+            &username,
+            &password,
+        )
+        .await
+        {
+            crate::sqlite_sessions::SqlitePasswordSessionOutcome::Authenticated(session) => {
+                appbase_ok(session_to_json(&session))
+            }
+            crate::sqlite_sessions::SqlitePasswordSessionOutcome::AccountLocked => {
+                account_locked_error()
+            }
+            crate::sqlite_sessions::SqlitePasswordSessionOutcome::InvalidCredentials => {
+                invalid_credentials_error()
+            }
+            crate::sqlite_sessions::SqlitePasswordSessionOutcome::Failed(error) => appbase_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "iam_session_create_failed",
+                &error,
+            ),
+        };
+    }
     let Ok(pg) = postgres_pool_or_error(&state) else {
         return postgres_pool_or_error(&state)
             .err()
@@ -792,6 +864,18 @@ async fn retrieve_current_session(
     State(state): State<LocalIamState>,
     headers: HeaderMap,
 ) -> Response {
+    if let Some(sqlite) = state.pool.as_sqlite() {
+        return match crate::sqlite_sessions::resolve_session_from_headers(
+            &state.pool,
+            sqlite,
+            &headers,
+        )
+        .await
+        {
+            Some(session) => appbase_ok(session_to_json(&session)),
+            None => iam_session_required_error(),
+        };
+    }
     let Ok(pg) = postgres_pool_or_error(&state) else {
         return postgres_pool_or_error(&state)
             .err()
@@ -927,6 +1011,29 @@ async fn delete_current_session(
     State(state): State<LocalIamState>,
     headers: HeaderMap,
 ) -> Response {
+    if let Some(sqlite) = state.pool.as_sqlite() {
+        let Some(session) =
+            crate::sqlite_sessions::resolve_session_from_headers(&state.pool, sqlite, &headers)
+                .await
+        else {
+            return StatusCode::NO_CONTENT.into_response();
+        };
+        return match crate::sqlite_sessions::revoke_session(
+            sqlite,
+            &session.session_id,
+            &session.context.tenant_id,
+            &session.user.id,
+        )
+        .await
+        {
+            Ok(()) => StatusCode::NO_CONTENT.into_response(),
+            Err(error) => appbase_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "iam_session_revoke_failed",
+                &error,
+            ),
+        };
+    }
     let Ok(pg) = postgres_pool_or_error(&state) else {
         return postgres_pool_or_error(&state)
             .err()

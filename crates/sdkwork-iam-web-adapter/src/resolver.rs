@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use sdkwork_database_sqlx::DatabasePool;
 use sdkwork_web_core::{
     DefaultAccessTokenParser, DefaultApiKeyParser, DefaultAuthTokenParser,
     DefaultOAuthBearerParser, DefaultOpenApiWebRequestContextResolver,
@@ -11,8 +12,9 @@ use std::sync::Arc;
 use crate::api_key_lookup::IamApiKeyLookupService;
 use crate::dev_runtime::allows_dev_authentication_fallback;
 use crate::iam_session::{
-    resolve_iam_app_context_from_access_token, resolve_iam_app_context_from_dual_tokens,
-    resolve_iam_app_context_from_oauth_bearer,
+    resolve_iam_app_context_from_access_token, resolve_iam_app_context_from_access_token_pool,
+    resolve_iam_app_context_from_dual_tokens, resolve_iam_app_context_from_dual_tokens_pool,
+    resolve_iam_app_context_from_oauth_bearer, resolve_iam_app_context_from_oauth_bearer_pool,
 };
 use crate::oauth_token_lookup::IamOAuthTokenLookupService;
 
@@ -27,6 +29,7 @@ type IamDatabaseOpenApiResolver = OpenApiWebRequestParserResolver<
 
 #[derive(Clone)]
 pub struct IamDatabaseWebRequestContextResolver {
+    iam_database_pool: Option<DatabasePool>,
     iam_pool: Option<Arc<PgPool>>,
     open_api_database: Option<IamDatabaseOpenApiResolver>,
     open_api_dev_fallback: DefaultOpenApiWebRequestContextResolver,
@@ -51,11 +54,23 @@ impl IamDatabaseWebRequestContextResolver {
             )
         });
         Self {
+            iam_database_pool: None,
             iam_pool,
             open_api_database,
             open_api_dev_fallback: DefaultOpenApiWebRequestContextResolver::default(),
             jwt_fallback: DefaultWebRequestContextResolver::default(),
         }
+    }
+
+    pub fn from_database_pool(iam_database_pool: Option<DatabasePool>) -> Self {
+        let iam_pool = iam_database_pool
+            .as_ref()
+            .and_then(DatabasePool::as_postgres)
+            .cloned()
+            .map(Arc::new);
+        let mut resolver = Self::new(iam_pool);
+        resolver.iam_database_pool = iam_database_pool;
+        resolver
     }
 }
 
@@ -90,6 +105,22 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
         if let Some(resolver) = &self.open_api_database {
             return resolver.resolve_oauth_bearer(raw_bearer_token).await;
         }
+        if let Some(pool) = &self.iam_database_pool {
+            if let Some(context) =
+                resolve_iam_app_context_from_oauth_bearer_pool(pool, raw_bearer_token).await
+            {
+                return Ok(web_request_principal_from_iam(context));
+            }
+            if allows_dev_authentication_fallback() {
+                return self
+                    .open_api_dev_fallback
+                    .resolve_oauth_bearer(raw_bearer_token)
+                    .await;
+            }
+            return Err(WebFrameworkError::invalid_credentials(
+                "invalid or expired IAM OAuth bearer token",
+            ));
+        }
         if let Some(pool) = &self.iam_pool {
             if let Some(context) =
                 resolve_iam_app_context_from_oauth_bearer(pool, raw_bearer_token).await
@@ -114,6 +145,20 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
         raw_auth_token: &str,
         raw_access_token: &str,
     ) -> Result<WebRequestPrincipal, WebFrameworkError> {
+        if let Some(pool) = &self.iam_database_pool {
+            return match resolve_iam_app_context_from_dual_tokens_pool(
+                pool,
+                raw_auth_token,
+                raw_access_token,
+            )
+            .await
+            {
+                Some(context) => Ok(web_request_principal_from_iam(context)),
+                None => Err(WebFrameworkError::invalid_credentials(
+                    "invalid or expired IAM session",
+                )),
+            };
+        }
         let Some(pool) = &self.iam_pool else {
             if allows_dev_authentication_fallback() {
                 return self
@@ -139,6 +184,22 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
     ) -> Result<WebRequestPrincipal, WebFrameworkError> {
         if let Some(resolver) = &self.open_api_database {
             return resolver.resolve_access_token(raw_access_token).await;
+        }
+        if let Some(pool) = &self.iam_database_pool {
+            if let Some(context) =
+                resolve_iam_app_context_from_access_token_pool(pool, raw_access_token).await
+            {
+                return Ok(web_request_principal_from_iam(context));
+            }
+            if allows_dev_authentication_fallback() {
+                return self
+                    .jwt_fallback
+                    .resolve_access_token(raw_access_token)
+                    .await;
+            }
+            return Err(WebFrameworkError::invalid_credentials(
+                "invalid or expired IAM access token",
+            ));
         }
         if let Some(pool) = &self.iam_pool {
             if let Some(context) =

@@ -2,6 +2,7 @@
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use hmac::{Hmac, Mac};
+use sdkwork_database_sqlx::DatabasePool;
 use sdkwork_iam_context_service::{
     AuthLevel, DeploymentMode, Environment, IamAppContext, IamPrincipalKind, IamUserSurface,
     LoginScope,
@@ -9,7 +10,7 @@ use sdkwork_iam_context_service::{
 use sdkwork_web_core::{validate_token_version_json, TokenVersionPolicy};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use sqlx::{types::Json, PgPool, Row};
+use sqlx::{types::Json, PgPool, Row, SqlitePool};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 type HmacSha256 = Hmac<Sha256>;
@@ -81,6 +82,171 @@ pub async fn resolve_iam_app_context_from_oauth_bearer(
         return Some(context);
     }
     find_iam_context_from_oauth_jwt(pg, &token).await
+}
+
+pub async fn resolve_iam_app_context_from_dual_tokens_pool(
+    pool: &DatabasePool,
+    raw_auth_token: &str,
+    raw_access_token: &str,
+) -> Option<IamAppContext> {
+    match pool {
+        DatabasePool::Postgres(pg, _) => {
+            resolve_iam_app_context_from_dual_tokens(pg, raw_auth_token, raw_access_token).await
+        }
+        DatabasePool::Sqlite(sqlite, _) => {
+            resolve_sqlite_iam_app_context_from_dual_tokens(
+                sqlite,
+                raw_auth_token,
+                raw_access_token,
+            )
+            .await
+        }
+    }
+}
+
+pub async fn resolve_iam_app_context_from_access_token_pool(
+    pool: &DatabasePool,
+    raw_access_token: &str,
+) -> Option<IamAppContext> {
+    match pool {
+        DatabasePool::Postgres(pg, _) => {
+            resolve_iam_app_context_from_access_token(pg, raw_access_token).await
+        }
+        DatabasePool::Sqlite(sqlite, _) => {
+            resolve_sqlite_iam_app_context_from_access_token(sqlite, raw_access_token).await
+        }
+    }
+}
+
+pub async fn resolve_iam_app_context_from_oauth_bearer_pool(
+    pool: &DatabasePool,
+    raw_bearer_token: &str,
+) -> Option<IamAppContext> {
+    match pool {
+        DatabasePool::Postgres(pg, _) => {
+            resolve_iam_app_context_from_oauth_bearer(pg, raw_bearer_token).await
+        }
+        DatabasePool::Sqlite(sqlite, _) => {
+            resolve_sqlite_iam_app_context_from_access_token(sqlite, raw_bearer_token).await
+        }
+    }
+}
+
+async fn resolve_sqlite_iam_app_context_from_dual_tokens(
+    sqlite: &SqlitePool,
+    raw_auth_token: &str,
+    raw_access_token: &str,
+) -> Option<IamAppContext> {
+    let auth_token = strip_optional_bearer_prefix(raw_auth_token)?;
+    let access_token = strip_optional_bearer_prefix(raw_access_token)?;
+    let kid = jwt_header_kid(&auth_token).or_else(|| jwt_header_kid(&access_token))?;
+    let signing_key = load_sqlite_signing_key_by_kid(sqlite, &kid).await?;
+    let now_unix = (current_millis() / 1000) as i64;
+    let auth_claims = verify_local_session_token(&signing_key, &auth_token, "auth", now_unix)?;
+    let access_claims =
+        verify_local_session_token(&signing_key, &access_token, "access", now_unix)?;
+    if !session_token_claims_match(&auth_claims, &access_claims) {
+        return None;
+    }
+    let row = sqlx::query(&sqlite_session_context_query(
+        "s.auth_token_hash = ? AND s.access_token_hash = ?",
+    ))
+    .bind(hash_token(&auth_token))
+    .bind(hash_token(&access_token))
+    .bind(current_timestamp_utc().to_rfc3339())
+    .fetch_optional(sqlite)
+    .await
+    .ok()??;
+    let context = iam_context_from_sqlite_session_row(&row)?;
+    if !session_claims_match_context(&auth_claims, &context)
+        || !session_claims_match_context(&access_claims, &context)
+        || !signing_key_matches_claims(&signing_key, &auth_claims)
+    {
+        return None;
+    }
+    Some(context)
+}
+
+async fn resolve_sqlite_iam_app_context_from_access_token(
+    sqlite: &SqlitePool,
+    raw_access_token: &str,
+) -> Option<IamAppContext> {
+    let access_token = strip_optional_bearer_prefix(raw_access_token)?;
+    let kid = jwt_header_kid(&access_token)?;
+    let signing_key = load_sqlite_signing_key_by_kid(sqlite, &kid).await?;
+    let now_unix = (current_millis() / 1000) as i64;
+    let claims = verify_local_session_token(&signing_key, &access_token, "access", now_unix)?;
+    let row = sqlx::query(&sqlite_session_context_query("s.access_token_hash = ?"))
+        .bind(hash_token(&access_token))
+        .bind(current_timestamp_utc().to_rfc3339())
+        .fetch_optional(sqlite)
+        .await
+        .ok()??;
+    let context = iam_context_from_sqlite_session_row(&row)?;
+    if !session_claims_match_context(&claims, &context)
+        || !signing_key_matches_claims(&signing_key, &claims)
+    {
+        return None;
+    }
+    Some(context)
+}
+
+fn sqlite_session_context_query(token_predicate: &str) -> String {
+    format!(
+        "SELECT s.id, s.tenant_id, s.organization_id, s.login_scope, s.user_id, \
+                s.app_id, s.environment, s.deployment_mode, s.auth_level, \
+                s.data_scope_json, s.permission_scope_json, \
+                COALESCE(u.display_name, ''), COALESCE(u.email, ''), \
+                COALESCE(u.email_verified, 0) \
+         FROM iam_session s \
+         JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
+         WHERE {token_predicate} AND s.revoked_at IS NULL AND s.expires_at > ? \
+           AND u.status = 'active' AND u.is_deleted = 0 LIMIT 1"
+    )
+}
+
+fn iam_context_from_sqlite_session_row(row: &sqlx::sqlite::SqliteRow) -> Option<IamAppContext> {
+    let organization_id: Option<String> = row.try_get(2).ok()?;
+    let principal_id: String = row.try_get(4).ok()?;
+    Some(IamAppContext {
+        tenant_id: row.try_get(1).ok()?,
+        organization_id: organization_id.clone(),
+        login_scope: login_scope_from_string(&row.try_get::<String, _>(3).ok()?),
+        user_id: principal_id.clone(),
+        principal_kind: IamPrincipalKind::User,
+        principal_id,
+        session_id: row.try_get(0).ok()?,
+        app_id: row.try_get(5).ok()?,
+        environment: environment_from_config(&row.try_get::<String, _>(6).ok()?),
+        deployment_mode: match row.try_get::<String, _>(7).ok()?.as_str() {
+            "local" => DeploymentMode::Local,
+            "private" => DeploymentMode::Private,
+            _ => DeploymentMode::Saas,
+        },
+        auth_level: match row.try_get::<String, _>(8).ok()?.as_str() {
+            "password" => AuthLevel::Password,
+            "mfa" => AuthLevel::Mfa,
+            "system" => AuthLevel::System,
+            _ => AuthLevel::Anonymous,
+        },
+        data_scope: sqlite_json_string_vec(row, 9),
+        permission_scope: sqlite_json_string_vec(row, 10),
+        user_surface: IamUserSurface {
+            app: true,
+            organization_member: organization_id.is_some(),
+        },
+        standard_role_codes: Vec::new(),
+        display_name: row.try_get(11).unwrap_or_default(),
+        email: row.try_get(12).unwrap_or_default(),
+        email_verified: row.try_get::<i32, _>(13).unwrap_or_default() != 0,
+    })
+}
+
+fn sqlite_json_string_vec(row: &sqlx::sqlite::SqliteRow, index: usize) -> Vec<String> {
+    row.try_get::<String, _>(index)
+        .ok()
+        .and_then(|value| serde_json::from_str(&value).ok())
+        .unwrap_or_default()
 }
 
 async fn find_iam_context_from_dual_tokens(
@@ -615,6 +781,21 @@ fn decode_jwt_json(part: &str) -> Option<Value> {
 
 async fn load_signing_key_by_kid(pg: &PgPool, kid: &str) -> Option<TenantSigningKey> {
     sdkwork_iam_bootstrap::resolve_postgres_tenant_signing_key_by_kid(pg, kid)
+        .await
+        .ok()
+        .flatten()
+        .map(|material| TenantSigningKey {
+            tenant_id: material.tenant_id,
+            kid: material.kid,
+            secret: material.secret,
+        })
+}
+
+async fn load_sqlite_signing_key_by_kid(
+    sqlite: &SqlitePool,
+    kid: &str,
+) -> Option<TenantSigningKey> {
+    sdkwork_iam_bootstrap::resolve_sqlite_tenant_signing_key_by_kid(sqlite, kid)
         .await
         .ok()
         .flatten()

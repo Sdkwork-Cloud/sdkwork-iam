@@ -16,7 +16,9 @@ use crate::bootstrap_subject::{
     DEFAULT_IAM_ORGANIZATION_VERIFICATION_STATUS, DEFAULT_IAM_TENANT_CODE, DEFAULT_IAM_TENANT_ID,
     DEFAULT_IAM_TENANT_NAME,
 };
-use crate::discover::{discover_modules, load_registry_config, merge_discovered};
+use crate::discover::{
+    discover_modules, discover_modules_with_manifests, load_registry_config, merge_discovered,
+};
 use crate::manifest::DepartmentTemplate;
 use crate::validate::validate_catalog;
 
@@ -91,9 +93,19 @@ pub async fn materialize_postgres_catalog(
     app_root: Option<&Path>,
     profile: &str,
 ) -> Result<MaterializeReport, String> {
+    materialize_postgres_catalog_with_manifests(pool, app_root, profile, &[]).await
+}
+
+pub async fn materialize_postgres_catalog_with_manifests(
+    pool: &PgPool,
+    app_root: Option<&Path>,
+    profile: &str,
+    additional_manifest_paths: &[std::path::PathBuf],
+) -> Result<MaterializeReport, String> {
     let root = resolve_app_root(app_root);
     let config = load_registry_config(&root)?;
-    let modules = discover_modules(&root, &config.enabled_modules)?;
+    let modules =
+        discover_modules_with_manifests(&root, &config.enabled_modules, additional_manifest_paths)?;
     validate_catalog(&modules)?;
     let merged = merge_discovered(&modules);
 
@@ -135,9 +147,19 @@ pub async fn materialize_sqlite_catalog(
     app_root: Option<&Path>,
     profile: &str,
 ) -> Result<MaterializeReport, String> {
+    materialize_sqlite_catalog_with_manifests(pool, app_root, profile, &[]).await
+}
+
+pub async fn materialize_sqlite_catalog_with_manifests(
+    pool: &SqlitePool,
+    app_root: Option<&Path>,
+    profile: &str,
+    additional_manifest_paths: &[std::path::PathBuf],
+) -> Result<MaterializeReport, String> {
     let root = resolve_app_root(app_root);
     let config = load_registry_config(&root)?;
-    let modules = discover_modules(&root, &config.enabled_modules)?;
+    let modules =
+        discover_modules_with_manifests(&root, &config.enabled_modules, additional_manifest_paths)?;
     validate_catalog(&modules)?;
     let merged = merge_discovered(&modules);
 

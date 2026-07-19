@@ -30,6 +30,7 @@
   "contracts": {
     "publicExports": [
       "sdkwork_iam_database_host::bootstrap_iam_database",
+      "sdkwork_iam_database_host::materialize_iam_application_modules",
       "sdkwork_iam_database_host::IamDatabaseHost"
     ],
     "runtimeEntrypoints": [],

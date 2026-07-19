@@ -76,12 +76,16 @@ pub use iam_audit::{
     record_security_event,
 };
 pub use iam_database_env::{
-    bridge_iam_database_env_from_im, install_iam_postgres_pool_for_process,
-    installed_iam_postgres_pool_for_process, resolve_iam_postgres_pool_from_env,
+    bridge_iam_database_env_from_im, install_iam_database_pool_for_process,
+    install_iam_postgres_pool_for_process, installed_iam_database_pool_for_process,
+    installed_iam_postgres_pool_for_process, resolve_iam_database_pool_from_env,
+    resolve_iam_postgres_pool_from_env,
 };
 pub use iam_session::{
-    resolve_iam_app_context_from_access_token, resolve_iam_app_context_from_auth_token,
-    resolve_iam_app_context_from_dual_tokens, resolve_iam_app_context_from_oauth_bearer,
+    resolve_iam_app_context_from_access_token, resolve_iam_app_context_from_access_token_pool,
+    resolve_iam_app_context_from_auth_token, resolve_iam_app_context_from_dual_tokens,
+    resolve_iam_app_context_from_dual_tokens_pool, resolve_iam_app_context_from_oauth_bearer,
+    resolve_iam_app_context_from_oauth_bearer_pool,
 };
 pub use messaging_verification::{
     messaging_verification_code_hash, messaging_verification_enabled,
@@ -233,9 +237,9 @@ impl sdkwork_web_core::DomainContextInjector for IamAppContextInjector {
 /// `extra_public_path_prefixes` is for product infra paths only (`/health`, system metadata, etc.).
 fn resolve_web_environment_from_process_env() -> WebEnvironment {
     match [
+        "SDKWORK_ENVIRONMENT",
         "SDKWORK_IAM_ENVIRONMENT",
         "SDKWORK_IM_ENVIRONMENT",
-        "SDKWORK_ENVIRONMENT",
     ]
     .iter()
     .find_map(|key| std::env::var(key).ok())
@@ -253,8 +257,8 @@ fn resolve_web_environment_from_process_env() -> WebEnvironment {
 
 fn iam_web_security_policy(environment: &WebEnvironment) -> SecurityPolicy {
     let configured_origins = sdkwork_web_bootstrap::cors_allowed_origins_from_env(&[
-        "SDKWORK_IAM_CORS_ALLOWED_ORIGINS",
         "SDKWORK_CORS_ALLOWED_ORIGINS",
+        "SDKWORK_IAM_CORS_ALLOWED_ORIGINS",
     ]);
     let cors =
         sdkwork_web_bootstrap::security_policy_for_environment(environment, configured_origins)
@@ -386,6 +390,6 @@ pub fn wrap_router_with_iam_open_api_web_framework(
 }
 
 pub async fn iam_web_request_context_resolver_from_env() -> IamWebRequestContextResolver {
-    let iam_pool = resolve_iam_postgres_pool_from_env().await;
-    IamWebRequestContextResolver::new(iam_pool)
+    let iam_pool = resolve_iam_database_pool_from_env().await;
+    IamWebRequestContextResolver::from_database_pool(iam_pool)
 }

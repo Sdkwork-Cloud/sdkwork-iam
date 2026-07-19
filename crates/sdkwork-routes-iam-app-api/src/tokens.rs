@@ -21,7 +21,7 @@ pub(crate) const LOGIN_CREATION_FORBIDDEN_HEADERS: &[&str] = &["authorization", 
 
 pub(crate) type HmacSha256 = Hmac<Sha256>;
 
-fn hash_token(token: &str) -> String {
+pub(crate) fn hash_token(token: &str) -> String {
     let digest = Sha256::digest(token.as_bytes());
     format!("{:x}", digest)
 }

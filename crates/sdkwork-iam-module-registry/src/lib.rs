@@ -13,18 +13,24 @@ pub use bootstrap_subject::{
     DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ROOT_CLOSURE_ID,
     DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_SELF_CLOSURE_ID, DEFAULT_BOOTSTRAP_ADMIN_USERNAME,
     DEFAULT_BOOTSTRAP_ADMIN_USER_ID, DEFAULT_BOOTSTRAP_MANAGER_DISPLAY_NAME,
-    DEFAULT_BOOTSTRAP_MANAGER_EMAIL, DEFAULT_BOOTSTRAP_MANAGER_USERNAME,
-    DEFAULT_BOOTSTRAP_MANAGER_USER_ID, DEFAULT_IAM_ORGANIZATION_CODE,
-    DEFAULT_IAM_ORGANIZATION_DATA_BOUNDARY_KIND, DEFAULT_IAM_ORGANIZATION_ID,
-    DEFAULT_IAM_ORGANIZATION_KIND, DEFAULT_IAM_ORGANIZATION_NAME, DEFAULT_IAM_ORGANIZATION_PATH,
-    DEFAULT_IAM_ORGANIZATION_TENANT_BOUNDARY_KIND, DEFAULT_IAM_ORGANIZATION_VERIFICATION_STATUS,
-    DEFAULT_IAM_TENANT_CODE, DEFAULT_IAM_TENANT_ID, DEFAULT_IAM_TENANT_NAME,
+    DEFAULT_BOOTSTRAP_MANAGER_EMAIL, DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
+    DEFAULT_BOOTSTRAP_MANAGER_USERNAME, DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
+    DEFAULT_IAM_ORGANIZATION_CODE, DEFAULT_IAM_ORGANIZATION_DATA_BOUNDARY_KIND,
+    DEFAULT_IAM_ORGANIZATION_ID, DEFAULT_IAM_ORGANIZATION_KIND, DEFAULT_IAM_ORGANIZATION_NAME,
+    DEFAULT_IAM_ORGANIZATION_PATH, DEFAULT_IAM_ORGANIZATION_TENANT_BOUNDARY_KIND,
+    DEFAULT_IAM_ORGANIZATION_VERIFICATION_STATUS, DEFAULT_IAM_TENANT_CODE, DEFAULT_IAM_TENANT_ID,
+    DEFAULT_IAM_TENANT_NAME,
 };
-pub use discover::{discover_modules, load_registry_config, merge_discovered, DiscoveredModule};
+pub use discover::{
+    discover_modules, discover_modules_with_manifests, load_registry_config, merge_discovered,
+    DiscoveredModule,
+};
 pub use manifest::IamModuleManifest;
 pub use materialize::{
-    ensure_department_closure_postgres, materialize_postgres_catalog, materialize_sqlite_catalog,
-    upsert_tenant_roles_postgres, upsert_tenant_roles_sqlite, MaterializeReport,
+    ensure_department_closure_postgres, materialize_postgres_catalog,
+    materialize_postgres_catalog_with_manifests, materialize_sqlite_catalog,
+    materialize_sqlite_catalog_with_manifests, upsert_tenant_roles_postgres,
+    upsert_tenant_roles_sqlite, MaterializeReport,
 };
 pub use merge::MergedIamCatalog;
 pub use validate::validate_catalog;

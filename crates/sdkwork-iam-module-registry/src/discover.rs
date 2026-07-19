@@ -53,6 +53,39 @@ pub fn discover_modules(
     Ok(discovered)
 }
 
+pub fn discover_modules_with_manifests(
+    app_root: &Path,
+    enabled_modules: &[String],
+    additional_manifest_paths: &[PathBuf],
+) -> Result<Vec<DiscoveredModule>, String> {
+    let mut discovered = discover_modules(app_root, enabled_modules)?;
+    for manifest_path in additional_manifest_paths {
+        let raw = std::fs::read_to_string(manifest_path).map_err(|error| {
+            format!("read additional module manifest {manifest_path:?} failed: {error}")
+        })?;
+        let manifest = IamModuleManifest::from_json(&raw).map_err(|error| {
+            format!("parse additional module manifest {manifest_path:?} failed: {error}")
+        })?;
+        if discovered
+            .iter()
+            .any(|module| module.module_id == manifest.module_id)
+        {
+            return Err(format!(
+                "additional module manifest duplicates moduleId {}",
+                manifest.module_id
+            ));
+        }
+        discovered.push(DiscoveredModule {
+            module_id: manifest.module_id.clone(),
+            manifest_path: manifest_path.clone(),
+            manifest,
+            manifest_sha256: format!("{:x}", Sha256::digest(raw.as_bytes())),
+        });
+    }
+    topological_sort(&discovered)?;
+    Ok(discovered)
+}
+
 pub fn topological_sort(modules: &[DiscoveredModule]) -> Result<(), String> {
     let ids: BTreeSet<String> = modules.iter().map(|m| m.module_id.clone()).collect();
     let mut indegree: HashMap<String, usize> = ids.iter().map(|id| (id.clone(), 0)).collect();

@@ -9,13 +9,19 @@ use std::path::{Path, PathBuf};
 pub fn apply_unified_claw_postgres_env(app_root: &Path) {
     let _ = dotenvy::dotenv();
 
-    for path in unified_database_env_candidates(app_root) {
-        if path.is_file() {
-            apply_env_file(&path);
-            materialize_iam_database_url_from_unified_profile();
-            return;
+    let has_runtime_database =
+        sdkwork_database_config::claw_database::resolve_claw_router_database_url_from_env()
+            .unwrap_or_else(|error| panic!("resolve Claw Router database URL failed: {error}"))
+            .is_some();
+    if !has_runtime_database {
+        for path in unified_database_env_candidates(app_root) {
+            if path.is_file() {
+                apply_env_file(&path);
+                break;
+            }
         }
     }
+    materialize_iam_database_url_from_unified_profile();
 }
 
 fn materialize_iam_database_url_from_unified_profile() {
@@ -23,10 +29,14 @@ fn materialize_iam_database_url_from_unified_profile() {
         .unwrap_or_else(|error| {
             panic!("resolve IAM database URL from unified postgres profile failed: {error}")
         });
-    let url = sdkwork_database_config::claw_database::postgres_url_with_search_path(
-        url.as_str(),
-        "SDKWORK_IAM",
-    );
+    let url = if url.starts_with("postgres://") || url.starts_with("postgresql://") {
+        sdkwork_database_config::claw_database::postgres_url_with_search_path(
+            url.as_str(),
+            "SDKWORK_IAM",
+        )
+    } else {
+        url
+    };
     // SAFETY: database CLI and bootstrap entrypoints run sequentially on the main thread.
     unsafe { std::env::set_var("SDKWORK_IAM_DATABASE_URL", url) };
 }
@@ -83,6 +93,9 @@ fn strip_optional_quotes(value: &str) -> String {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+    use std::sync::{Mutex, OnceLock};
+
+    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
     #[test]
     fn unified_database_env_candidates_prefer_app_root_profile() {
@@ -98,5 +111,58 @@ mod tests {
             candidates[2],
             app_root.join("../sdkwork-claw-router/.env.postgres")
         );
+    }
+
+    #[test]
+    fn explicit_runtime_database_is_not_overwritten_by_postgres_profile() {
+        let _lock = ENV_LOCK.get_or_init(|| Mutex::new(())).lock().unwrap();
+        let app_root = std::env::temp_dir().join(format!(
+            "sdkwork-iam-unified-database-env-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&app_root).unwrap();
+        std::fs::write(
+            app_root.join(".env.postgres"),
+            "SDKWORK_CLAW_DATABASE_URL=postgresql://ignored/ignored\n",
+        )
+        .unwrap();
+
+        let keys = [
+            "SDKWORK_CLAW_DATABASE_URL",
+            "SDKWORK_IAM_DATABASE_URL",
+            "SDKWORK_DATABASE_URL",
+            "DATABASE_URL",
+        ];
+        let previous = keys.map(|key| (key, std::env::var(key).ok()));
+        unsafe {
+            std::env::set_var(
+                "SDKWORK_CLAW_DATABASE_URL",
+                "sqlite://target/dev/clawrouter.sqlite",
+            );
+            std::env::remove_var("SDKWORK_IAM_DATABASE_URL");
+            std::env::remove_var("SDKWORK_DATABASE_URL");
+            std::env::remove_var("DATABASE_URL");
+        }
+
+        apply_unified_claw_postgres_env(&app_root);
+
+        assert_eq!(
+            std::env::var("SDKWORK_CLAW_DATABASE_URL").unwrap(),
+            "sqlite://target/dev/clawrouter.sqlite"
+        );
+        assert_eq!(
+            std::env::var("SDKWORK_IAM_DATABASE_URL").unwrap(),
+            "sqlite://target/dev/clawrouter.sqlite"
+        );
+
+        for (key, value) in previous {
+            unsafe {
+                match value {
+                    Some(value) => std::env::set_var(key, value),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+        std::fs::remove_dir_all(app_root).unwrap();
     }
 }

@@ -17,6 +17,7 @@ mod permissions;
 mod responses;
 mod routes;
 mod security_events;
+mod sqlite_sessions;
 #[allow(dead_code)]
 mod state;
 mod tokens;

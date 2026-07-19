@@ -94,7 +94,7 @@ export function createDevBootstrapAccessTokenJwt(options = {}) {
     runtime_target: options.runtimeTarget ?? 'browser',
     session_id: options.sessionId ?? `bootstrap-local-${environment}`,
     tenant_id: tenantId,
-    token_kind: 'access',
+    token_type: 'access',
     user_id: options.userId ?? '0',
   });
 }

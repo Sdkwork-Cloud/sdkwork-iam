@@ -452,7 +452,7 @@ async fn hash_password_async(password: String) -> Option<String> {
         .flatten()
 }
 
-async fn verify_password_async(password_hash: String, password: String) -> bool {
+pub(crate) async fn verify_password_async(password_hash: String, password: String) -> bool {
     run_password_cpu_task(move || verify_password(&password_hash, &password))
         .await
         .unwrap_or(false)

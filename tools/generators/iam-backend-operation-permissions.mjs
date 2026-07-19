@@ -15,6 +15,15 @@ export function resolveIamBackendOperationPermission(operationId) {
 
 function explicitBootstrapPermission(operationId) {
   switch (operationId) {
+    case 'users.current.retrieve':
+      return 'iam:self';
+    case 'users.current.update':
+    case 'users.current.password.update':
+    case 'users.current.emailBindings.create':
+    case 'users.current.emailBindings.delete':
+    case 'users.current.phoneBindings.create':
+    case 'users.current.phoneBindings.delete':
+      return 'iam.profile.update';
     case 'applications.register':
       return 'iam.applications.register';
     case 'tenantApplications.provision':
