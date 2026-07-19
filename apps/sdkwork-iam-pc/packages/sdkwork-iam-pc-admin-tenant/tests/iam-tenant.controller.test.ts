@@ -119,4 +119,76 @@ describe("@sdkwork/iam-pc-admin-tenant", () => {
     expect(service.iam.tenants.members.delete).toHaveBeenCalledWith("200001", "user-2");
     expect(service.iam.tenants.delete).toHaveBeenCalledWith("200001");
   });
+
+  it("manages multiple applications within one tenant through the backend IAM service", async () => {
+    const application = {
+      accessPermissions: ["iam.users.read"],
+      appId: "app_crm_prod",
+      displayName: "CRM",
+      environment: "production",
+      instanceKey: "crm-production",
+      organizationId: "0",
+      primaryDomain: "crm.example.com",
+      status: "pending_config",
+      templateId: "tmpl_crm",
+      tenantApplicationId: "tapp_crm",
+      tenantId: "tenant-1",
+    };
+    const service = {
+      iam: {
+        tenantApplications: {
+          list: vi.fn().mockResolvedValue({ items: [application] }),
+          management: {
+            disable: vi.fn().mockResolvedValue({ ...application, status: "disabled" }),
+            enable: vi.fn().mockResolvedValue({ ...application, status: "enabled" }),
+            provision: vi.fn().mockResolvedValue(application),
+            update: vi.fn().mockResolvedValue({ ...application, primaryDomain: "crm.acme.com" }),
+          },
+          summary: {
+            retrieve: vi.fn().mockResolvedValue({ disabled: 0, enabled: 0, pending: 1, total: 1 }),
+          },
+        },
+      },
+    };
+    const controller = createSdkworkIamTenantController({
+      permissionScope: [
+        "iam.tenant_applications.provision",
+        "iam.tenant_applications.update",
+        "iam.tenant_applications.enable",
+      ],
+      service: service as never,
+    });
+
+    await expect(controller.listTenantApplications("tenant-1", { page_size: 20 })).resolves.toMatchObject([
+      { appId: "app_crm_prod", tenantApplicationId: "tapp_crm" },
+    ]);
+    await expect(controller.retrieveTenantApplicationSummary("tenant-1")).resolves.toEqual({
+      disabled: 0,
+      enabled: 0,
+      pending: 1,
+      total: 1,
+    });
+    await expect(controller.provisionTenantApplication("tenant-1", {
+      accessPermissions: ["iam.users.read"],
+      appKey: "crm",
+      displayName: "CRM",
+      environment: "production",
+      instanceKey: "crm-production",
+      organizationId: "0",
+      primaryDomain: "crm.example.com",
+    })).resolves.toMatchObject({ tenantApplicationId: "tapp_crm" });
+    await expect(controller.updateTenantApplication("tenant-1", "tapp_crm", {
+      accessPermissions: ["iam.users.read"],
+      primaryDomain: "crm.acme.com",
+    })).resolves.toMatchObject({ primaryDomain: "crm.acme.com" });
+    await expect(controller.setTenantApplicationEnabled("tenant-1", "tapp_crm", true)).resolves.toMatchObject({ status: "enabled" });
+    await expect(controller.setTenantApplicationEnabled("tenant-1", "tapp_crm", false)).resolves.toMatchObject({ status: "disabled" });
+
+    expect(service.iam.tenantApplications.list).toHaveBeenCalledWith("tenant-1", { page_size: 20 });
+    expect(service.iam.tenantApplications.management.provision).toHaveBeenCalledWith("tenant-1", expect.objectContaining({ appKey: "crm" }));
+    expect(service.iam.tenantApplications.management.update).toHaveBeenCalledWith("tenant-1", "tapp_crm", expect.objectContaining({ primaryDomain: "crm.acme.com" }));
+    expect(service.iam.tenantApplications.management.enable).toHaveBeenCalledWith("tenant-1", "tapp_crm");
+    expect(service.iam.tenantApplications.management.disable).toHaveBeenCalledWith("tenant-1", "tapp_crm");
+    expect(controller.getApplicationCapabilities()).toEqual({ canEnable: true, canProvision: true, canUpdate: true });
+  });
 });

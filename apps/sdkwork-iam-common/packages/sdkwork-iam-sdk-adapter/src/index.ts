@@ -97,7 +97,6 @@ export function createIamAppSdkAdapter(client: unknown): IamAppSdkClient {
   const iamPositions = toRecord(iam.positions);
   const iamPositionAssignments = toRecord(iam.positionAssignments);
   const iamRoleBindings = toRecord(iam.roleBindings);
-  const iamTenantApplications = toRecord(iam.tenantApplications);
   const iamUsers = toRecord(iam.users);
   const iamUsersCurrent = toRecord(iamUsers.current);
   const iamUsersCurrentEmailBindings = toRecord(iamUsersCurrent.emailBindings);
@@ -282,6 +281,7 @@ export function createIamBackendSdkAdapter(client: unknown): IamBackendSdkClient
   const iamPositions = toRecord(iam.positions);
   const iamPositionAssignments = toRecord(iam.positionAssignments);
   const iamRoleBindings = toRecord(iam.roleBindings);
+  const iamTenantApplications = toRecord(iam.tenantApplications);
 
   const iamOauthRoot = toRecord(source.iamOauth);
   const iamOauthIam = toRecord(iamOauthRoot.iam);

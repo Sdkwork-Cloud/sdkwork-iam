@@ -1,4 +1,4 @@
-import type { SdkworkIamTenantAdminMessages } from "../../../../types";
+import type { SdkworkIamTenantAdminMessages } from "../../../types";
 
 export const sdkworkIamTenantAdminMessages: SdkworkIamTenantAdminMessages = {
   applications: {
