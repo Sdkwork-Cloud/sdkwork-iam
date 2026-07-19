@@ -28,6 +28,16 @@ function explicitBootstrapPermission(operationId) {
       return 'iam.applications.register';
     case 'tenantApplications.provision':
       return 'iam.tenant_applications.provision';
+    case 'tenantApplications.list':
+    case 'tenantApplications.summary.retrieve':
+      return 'iam.tenant_applications.update';
+    case 'tenantApplications.management.provision':
+      return 'iam.tenant_applications.provision';
+    case 'tenantApplications.management.update':
+    case 'tenantApplications.management.disable':
+      return 'iam.tenant_applications.update';
+    case 'tenantApplications.management.enable':
+      return 'iam.tenant_applications.enable';
     case 'tenantApplications.update':
       return 'iam.tenant_applications.update';
     case 'tenantApplications.enable':

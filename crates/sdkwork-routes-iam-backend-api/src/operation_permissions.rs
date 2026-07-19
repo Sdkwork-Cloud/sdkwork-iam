@@ -59,6 +59,14 @@ fn explicit_bootstrap_permission(operation_id: &str) -> Option<&'static str> {
     match operation_id {
         "applications.register" => Some("iam.applications.register"),
         "tenantApplications.provision" => Some("iam.tenant_applications.provision"),
+        "tenantApplications.list" | "tenantApplications.summary.retrieve" => {
+            Some("iam.tenant_applications.update")
+        }
+        "tenantApplications.management.provision" => Some("iam.tenant_applications.provision"),
+        "tenantApplications.management.update" | "tenantApplications.management.disable" => {
+            Some("iam.tenant_applications.update")
+        }
+        "tenantApplications.management.enable" => Some("iam.tenant_applications.enable"),
         "tenantApplications.retrieve" => Some("iam.tenant_applications.update"),
         "tenantApplications.update" => Some("iam.tenant_applications.update"),
         "tenantApplications.enable" => Some("iam.tenant_applications.enable"),

@@ -59,6 +59,42 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
         "tenants.members.delete",
     ),
     HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/iam/tenants/{tenantId}/applications",
+        "iam",
+        "tenantApplications.list",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/iam/tenants/{tenantId}/applications",
+        "iam",
+        "tenantApplications.management.provision",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/iam/tenants/{tenantId}/applications/summary",
+        "iam",
+        "tenantApplications.summary.retrieve",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Patch,
+        "/backend/v3/api/iam/tenants/{tenantId}/applications/{tenantApplicationId}",
+        "iam",
+        "tenantApplications.management.update",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/iam/tenants/{tenantId}/applications/{tenantApplicationId}/enable",
+        "iam",
+        "tenantApplications.management.enable",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/iam/tenants/{tenantId}/applications/{tenantApplicationId}/disable",
+        "iam",
+        "tenantApplications.management.disable",
+    ),
+    HttpRoute::dual_token(
         HttpMethod::Post,
         "/backend/v3/api/iam/organizations",
         "iam",
@@ -488,7 +524,7 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
         HttpMethod::Post,
         "/backend/v3/api/iam/tenant_applications",
         "iam",
-        "tenantApplications.create",
+        "tenantApplications.provision",
     ),
     HttpRoute::dual_token(
         HttpMethod::Get,

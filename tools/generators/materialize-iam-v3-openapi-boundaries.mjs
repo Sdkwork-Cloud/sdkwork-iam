@@ -93,7 +93,7 @@ const publicAppOperationIds = new Set([
 
 const publicBackendBootstrapOperationIds = new Set([
   'applications.register',
-  'tenantApplications.create',
+  'tenantApplications.provision',
   'tenantApplications.update',
   'tenantApplications.enable',
   'accessCredentials.create',
@@ -487,6 +487,13 @@ function buildOperation(surface, route) {
     );
   }
 
+  if (route.operationId === 'tenantApplications.list') {
+    operation.parameters.push(
+      queryParameter('status', { type: 'string' }),
+      queryParameter('environment', { type: 'string' }),
+    );
+  }
+
   const externalProtocolId =
     openApiExternalWireOperations[route.operationId]
     ?? openApiAuthorityExternalWireOperations[route.operationId];
@@ -513,8 +520,20 @@ function requestBodySchemaRef(route) {
   if (route.operationId === 'applications.register') {
     return '#/components/schemas/AppbaseApplicationRegisterCommand';
   }
-  if (route.operationId === 'tenantApplications.create') {
+  if (route.operationId === 'tenantApplications.provision') {
     return '#/components/schemas/AppbaseTenantApplicationProvisionCommand';
+  }
+  if (route.operationId === 'tenantApplications.management.provision') {
+    return '#/components/schemas/IamTenantApplicationManagementProvisionCommand';
+  }
+  if (route.operationId === 'tenantApplications.management.update') {
+    return '#/components/schemas/IamTenantApplicationManagementUpdateCommand';
+  }
+  if (
+    route.operationId === 'tenantApplications.management.enable'
+    || route.operationId === 'tenantApplications.management.disable'
+  ) {
+    return '#/components/schemas/IamTenantApplicationStatusCommand';
   }
   if (route.operationId === 'tenantApplications.update') {
     return '#/components/schemas/AppbaseTenantApplicationUpdateCommand';
@@ -701,6 +720,47 @@ function buildSchemas() {
           items: { type: 'object', additionalProperties: true },
         },
       },
+    },
+    IamTenantApplicationManagementProvisionCommand: {
+      type: 'object',
+      additionalProperties: false,
+      description: 'Provision a registered application template for a tenant through an authenticated operator workflow.',
+      required: ['organizationId', 'instanceKey', 'displayName', 'environment'],
+      anyOf: [
+        { required: ['templateId'] },
+        { required: ['appKey'] },
+      ],
+      properties: {
+        organizationId: { type: 'string', minLength: 1, maxLength: 255 },
+        templateId: { type: 'string', minLength: 1, maxLength: 255 },
+        appKey: { type: 'string', minLength: 1, maxLength: 255 },
+        instanceKey: { type: 'string', minLength: 1, maxLength: 255 },
+        displayName: { type: 'string', minLength: 1, maxLength: 255 },
+        environment: { type: 'string', minLength: 1, maxLength: 64 },
+        primaryDomain: { type: 'string', minLength: 1, maxLength: 255 },
+        accessPermissions: {
+          type: 'array',
+          items: { type: 'string', minLength: 1, maxLength: 255 },
+        },
+      },
+    },
+    IamTenantApplicationManagementUpdateCommand: {
+      type: 'object',
+      additionalProperties: false,
+      description: 'Update operator-managed tenant application domain and access permissions.',
+      properties: {
+        primaryDomain: { type: 'string', minLength: 1, maxLength: 255 },
+        accessPermissions: {
+          type: 'array',
+          items: { type: 'string', minLength: 1, maxLength: 255 },
+        },
+      },
+    },
+    IamTenantApplicationStatusCommand: {
+      type: 'object',
+      additionalProperties: false,
+      description: 'Authenticated operator command for a tenant application status transition.',
+      properties: {},
     },
     AppbaseTenantApplicationProvisionCommand: {
       type: 'object',

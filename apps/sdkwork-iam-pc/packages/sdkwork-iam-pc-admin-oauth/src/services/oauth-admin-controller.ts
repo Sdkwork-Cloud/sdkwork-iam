@@ -229,11 +229,11 @@ export function createSdkworkIamOauthAdminController(
         listPageInfo: cloneListPageInfo(state.listPageInfo),
       };
     },
-    async load() {
+    async load(resourceKeys = OAUTH_RESOURCE_KEYS) {
       setState({ status: "loading", lastError: undefined });
       try {
         resourceSessions = createOauthResourceSessions(service);
-        await Promise.all(OAUTH_RESOURCE_KEYS.map((key) => resourceSessions[key].list()));
+        await Promise.all(resourceKeys.map((key) => resourceSessions[key].list()));
         const { listPageInfo, snapshot } = snapshotFromSessions(resourceSessions);
         setState({ ...snapshot, listPageInfo, status: "ready" });
         return snapshot;

@@ -60,7 +60,7 @@
     },
     {
       "path": "src/api/iam.ts",
-      "sha256": "6b400718ccf3e93cac6e27cf7ed2c133d79ca364993b200a2e6edfd7261467a2"
+      "sha256": "4420bdd0814923def62830df6b27d1416ac5b5755d220491d26f8654e1c54747"
     },
     {
       "path": "src/api/index.ts",
@@ -131,8 +131,20 @@
       "sha256": "b507acc6502086b77de028f17b3d6b48888eb58b3170f80749ea53f501e4ff4a"
     },
     {
+      "path": "src/types/iam-tenant-application-management-provision-command.ts",
+      "sha256": "10ac3b4ca35be4f048f8d98d541713eedd19741a704413ec6d168aac157d87fd"
+    },
+    {
+      "path": "src/types/iam-tenant-application-management-update-command.ts",
+      "sha256": "5f347b9009b76268f1dcd6470480e425bf4a1ce3fd91dbb6b43bd5bcf8521f77"
+    },
+    {
+      "path": "src/types/iam-tenant-application-status-command.ts",
+      "sha256": "02963358ae99194c6d5553dc544f2f47cc2fbc34312c5dbbbe696da12796ccf2"
+    },
+    {
       "path": "src/types/index.ts",
-      "sha256": "5967c9a4b73bd671e9f4b4db0cd8dedcc364c3c4514fa82aa880d4f8514ca4eb"
+      "sha256": "f80b673924b1351640784764f2a097ea456bb7ad3c2462eca755dfe2e9af3e7e"
     },
     {
       "path": "src/types/page-info.ts",

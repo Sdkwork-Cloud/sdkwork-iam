@@ -177,9 +177,20 @@ export interface CreateSdkworkIamOauthAdminControllerInput {
 
 export type SdkworkIamOauthAdminTab = "inbound" | "provider" | "extended" | "audit";
 
+export type SdkworkIamOauthAdminView =
+  | "providers"
+  | "applications"
+  | "login-configuration"
+  | "governance"
+  | "authorizations"
+  | "resources"
+  | "activity";
+
 export interface SdkworkIamOauthAdminController {
   getState(): SdkworkIamOauthAdminState;
-  load(): Promise<SdkworkIamOauthAdminResourceSnapshot>;
+  load(
+    resourceKeys?: readonly (keyof SdkworkIamOauthAdminResourceSnapshot)[],
+  ): Promise<SdkworkIamOauthAdminResourceSnapshot>;
   loadMoreResource(resourceKey: keyof SdkworkIamOauthAdminResourceSnapshot): Promise<unknown[]>;
   createIntegration(body: SdkworkIamOauthIntegrationDraft): Promise<unknown>;
   createClient(body: SdkworkIamOauthClientDraft): Promise<unknown>;
@@ -237,6 +248,7 @@ export interface SdkworkIamOauthAdminSettingsProps {
   description?: string;
   tab?: SdkworkIamOauthAdminTab;
   title?: string;
+  view?: SdkworkIamOauthAdminView;
 }
 
 export interface SdkworkIamOauthAdminWorkspaceProps {

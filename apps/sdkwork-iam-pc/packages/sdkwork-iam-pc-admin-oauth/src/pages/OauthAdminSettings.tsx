@@ -15,7 +15,9 @@ import type { ReactNode } from "react";
 
 import type {
   SdkworkIamOauthAdminController,
+  SdkworkIamOauthAdminResourceSnapshot,
   SdkworkIamOauthAdminSettingsProps,
+  SdkworkIamOauthAdminView,
   SdkworkIamOauthClaimMappingDraft,
   SdkworkIamOauthClientDraft,
   SdkworkIamOauthDiagnosticRunDraft,
@@ -77,11 +79,25 @@ import {
   formatResourceDetail,
 } from "../utils/oauth-admin-utils";
 
+const OAUTH_VIEW_RESOURCE_KEYS: Readonly<Record<
+  SdkworkIamOauthAdminView,
+  readonly (keyof SdkworkIamOauthAdminResourceSnapshot)[]
+>> = {
+  activity: ["webhookConfigs", "diagnosticRuns", "callbackEvents"],
+  applications: ["clients", "secrets"],
+  authorizations: ["accountLinks", "grants"],
+  governance: ["policies", "tenantBindings"],
+  "login-configuration": ["scopeProfiles", "claimMappings", "flowConfigs", "surfaces"],
+  providers: ["integrations", "providerCatalog"],
+  resources: ["operatorPlatforms", "resourceAccounts", "resourceAuthorizations", "operationalResources"],
+};
+
 export function SdkworkIamOauthAdminSettings({
   controller,
   description = "Configure OAuth provider integrations and login surfaces for this tenant application.",
   tab,
   title = "OAuth integrations",
+  view,
 }: SdkworkIamOauthAdminSettingsProps) {
   const [integrations, setIntegrations] = useState<unknown[]>(controller.getState().integrations);
   const [providerCatalog, setProviderCatalog] = useState<unknown[]>(controller.getState().providerCatalog);
@@ -227,7 +243,7 @@ export function SdkworkIamOauthAdminSettings({
   });
 
   useEffect(() => {
-    void controller.load().then((result) => {
+    void controller.load(view ? OAUTH_VIEW_RESOURCE_KEYS[view] : undefined).then((result) => {
       setIntegrations(result.integrations);
       setProviderCatalog(result.providerCatalog);
       setClients(result.clients);
@@ -256,12 +272,21 @@ export function SdkworkIamOauthAdminSettings({
       setStatus(controller.getState().status);
       setError(controller.getState().lastError);
     });
-  }, [controller]);
+  }, [controller, view]);
 
   const showInbound = !tab || tab === "inbound";
   const showProvider = !tab || tab === "provider";
   const showExtended = !tab || tab === "extended";
   const showAudit = !tab || tab === "audit";
+  const showProviderConnections = view ? view === "providers" : showInbound;
+  const showApplications = view ? view === "applications" : showInbound;
+  const showRelyingParty = view ? view === "applications" : showProvider;
+  const showLoginConfiguration = view ? view === "login-configuration" : showInbound;
+  const showGovernance = view ? view === "governance" : showExtended;
+  const showAuthorizations = view ? view === "authorizations" : showProvider;
+  const showResources = view ? view === "resources" : showExtended;
+  const showActivityWebhooks = view ? view === "activity" : showInbound;
+  const showActivityAudit = view ? view === "activity" : showAudit;
   const listDisabled = status === "loading" || status === "saving";
   const syncLists = () => {
     setIntegrations(controller.getState().integrations);
@@ -301,7 +326,7 @@ export function SdkworkIamOauthAdminSettings({
           </pre>
         </div>
       ) : null}
-      {showInbound ? (
+      {showProviderConnections ? (
       <SettingsSection description={description} title={title}>
         <div className="space-y-3">
           <Label>Configured integrations ({integrations.length})</Label>
@@ -391,7 +416,7 @@ export function SdkworkIamOauthAdminSettings({
       </SettingsSection>
       ) : null}
 
-      {showInbound ? (
+      {showProviderConnections ? (
       <SettingsSection
         description="Platform provider catalog entries (including sdkwork) available for tenant integrations. Register custom providers before enabling tenant integrations (IAM_OAUTH_SPEC §2)."
         title="Provider catalog"
@@ -434,7 +459,7 @@ export function SdkworkIamOauthAdminSettings({
       </SettingsSection>
       ) : null}
 
-      {showProvider ? (
+      {showRelyingParty ? (
       <SettingsSection
         description="Register this tenant application as a SDKWork OAuth authorization-server relying party. client_id equals the runtime app_id. Secrets must be stored as argon2id hashes only."
         title="SDKWork OAuth relying party"
@@ -502,7 +527,9 @@ export function SdkworkIamOauthAdminSettings({
       </SettingsSection>
       ) : null}
 
-      {showInbound ? (
+      {showApplications || showLoginConfiguration || showActivityWebhooks ? (
+      <>
+      {showApplications ? (
       <>
       <SettingsSection
         description="OAuth clients bind tenant integrations to provider application IDs. Secrets are managed separately and never displayed in plaintext."
@@ -710,7 +737,11 @@ export function SdkworkIamOauthAdminSettings({
           </Button>
         </CreateResourceDrawer>
       </SettingsSection>
+      </>
+      ) : null}
 
+      {showLoginConfiguration ? (
+      <>
       <SettingsSection
         description="Scope profiles define allowed OAuth scopes for provider integrations and SDKWork AS clients."
         title="Scope profiles"
@@ -906,7 +937,10 @@ export function SdkworkIamOauthAdminSettings({
           </Button>
         </CreateResourceDrawer>
       </SettingsSection>
+      </>
+      ) : null}
 
+      {showActivityWebhooks ? (
       <SettingsSection
         description="Provider webhook callback endpoints for OAuth integrations (WeChat, enterprise IdP, etc.)."
         title="Webhook configs"
@@ -1016,7 +1050,10 @@ export function SdkworkIamOauthAdminSettings({
           </Button>
         </CreateResourceDrawer>
       </SettingsSection>
+      ) : null}
 
+      {showLoginConfiguration ? (
+      <>
       <SettingsSection
         description="OAuth flow configuration per integration and client (authorization code, device, mini program)."
         title="Flow configs"
@@ -1185,8 +1222,12 @@ export function SdkworkIamOauthAdminSettings({
       </SettingsSection>
       </>
       ) : null}
+      </>
+      ) : null}
 
-      {showExtended ? (
+      {showGovernance || showResources ? (
+      <>
+      {showGovernance ? (
       <>
       <SettingsSection
         description="OAuth policies govern integration behavior such as login, binding, and token retention."
@@ -1240,6 +1281,11 @@ export function SdkworkIamOauthAdminSettings({
         </CreateResourceDrawer>
       </SettingsSection>
 
+      </>
+      ) : null}
+
+      {showResources ? (
+      <>
       <SettingsSection
         description="Operator platforms register third-party operator consoles (WeChat open platform, enterprise IdP)."
         title="Operator platforms"
@@ -1367,8 +1413,10 @@ export function SdkworkIamOauthAdminSettings({
       </SettingsSection>
       </>
       ) : null}
+      </>
+      ) : null}
 
-      {showProvider ? (
+      {showAuthorizations ? (
       <>
       <SettingsSection
         description="Account links bind external provider subjects to IAM users. Operators may suspend or revoke links per tenant policy."
@@ -1409,7 +1457,7 @@ export function SdkworkIamOauthAdminSettings({
       </>
       ) : null}
 
-      {showAudit ? (
+      {showActivityAudit ? (
       <>
       <SettingsSection
         description="Diagnostic runs validate integration health. Results are redacted in list responses."

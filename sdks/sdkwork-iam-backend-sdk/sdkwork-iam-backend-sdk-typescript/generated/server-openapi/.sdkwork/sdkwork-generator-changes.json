@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "@sdkwork/iam-backend-sdk"
   },
-  "changeFingerprint": "7a7ec1bb700dfc3716991e6a231bbbcd23def6e739ffa08d8fd32cf965769cb5",
+  "changeFingerprint": "1293eb3b4e65da75cb630b7b946475b773bdb5ae1c71c77bd344c0b43fb1abcf",
   "changes": {
     "createdGeneratedFiles": [
       "bin/publish-core.mjs",
@@ -42,6 +42,9 @@
       "src/types/common.ts",
       "src/types/field-error.ts",
       "src/types/iam-oauth-client-create-command.ts",
+      "src/types/iam-tenant-application-management-provision-command.ts",
+      "src/types/iam-tenant-application-management-update-command.ts",
+      "src/types/iam-tenant-application-status-command.ts",
       "src/types/index.ts",
       "src/types/page-info.ts",
       "src/types/problem-detail.ts",
@@ -107,6 +110,9 @@
           "src/types/common.ts",
           "src/types/field-error.ts",
           "src/types/iam-oauth-client-create-command.ts",
+          "src/types/iam-tenant-application-management-provision-command.ts",
+          "src/types/iam-tenant-application-management-update-command.ts",
+          "src/types/iam-tenant-application-status-command.ts",
           "src/types/index.ts",
           "src/types/page-info.ts",
           "src/types/problem-detail.ts",

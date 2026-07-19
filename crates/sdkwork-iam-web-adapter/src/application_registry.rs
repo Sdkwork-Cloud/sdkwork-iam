@@ -1118,6 +1118,32 @@ pub async fn enable_tenant_application(
         .ok_or_else(|| "tenant application enable completed but lookup failed".to_string())
 }
 
+pub async fn disable_tenant_application(
+    pg: &PgPool,
+    tenant_id: &str,
+    tenant_application_id: &str,
+) -> Result<TenantApplication, String> {
+    resolve_tenant_application(pg, tenant_id, Some(tenant_application_id), None, None)
+        .await?
+        .ok_or_else(|| "tenant application was not found".to_string())?;
+
+    let now = chrono::Utc::now();
+    sqlx::query(
+        "UPDATE iam_tenant_application SET status = 'disabled', updated_at = $2 \
+         WHERE id = $1 AND tenant_id = $3",
+    )
+    .bind(tenant_application_id)
+    .bind(&now)
+    .bind(tenant_id)
+    .execute(pg)
+    .await
+    .map_err(|error| format!("disable tenant application failed: {error}"))?;
+
+    resolve_tenant_application(pg, tenant_id, Some(tenant_application_id), None, None)
+        .await?
+        .ok_or_else(|| "tenant application disable completed but lookup failed".to_string())
+}
+
 pub async fn resolve_tenant_application(
     pg: &PgPool,
     tenant_id: &str,

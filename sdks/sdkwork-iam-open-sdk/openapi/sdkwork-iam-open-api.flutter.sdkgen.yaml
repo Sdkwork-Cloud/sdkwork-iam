@@ -1900,6 +1900,100 @@
           }
         }
       },
+      "IamTenantApplicationManagementProvisionCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Provision a registered application template for a tenant through an authenticated operator workflow.",
+        "required": [
+          "organizationId",
+          "instanceKey",
+          "displayName",
+          "environment"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "templateId"
+            ]
+          },
+          {
+            "required": [
+              "appKey"
+            ]
+          }
+        ],
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "templateId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "appKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "instanceKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "environment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "primaryDomain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "accessPermissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        }
+      },
+      "IamTenantApplicationManagementUpdateCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Update operator-managed tenant application domain and access permissions.",
+        "properties": {
+          "primaryDomain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "accessPermissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        }
+      },
+      "IamTenantApplicationStatusCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Authenticated operator command for a tenant application status transition.",
+        "properties": {}
+      },
       "AppbaseTenantApplicationProvisionCommand": {
         "type": "object",
         "additionalProperties": true,

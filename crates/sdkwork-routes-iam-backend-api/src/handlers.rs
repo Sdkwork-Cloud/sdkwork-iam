@@ -13,23 +13,27 @@ use axum::{
 use sdkwork_iam_bootstrap::DEFAULT_IAM_TENANT_ID;
 use sdkwork_iam_database_host;
 use sdkwork_iam_web_adapter::{
-    account_binding_policy_to_json, enable_tenant_application, ensure_actor_tenant_scope,
-    ensure_bootstrap_permission, iam_api_error, iam_api_success, issue_delegated_access_credential,
-    issued_access_credential_to_json, load_account_binding_policy,
-    parse_access_credential_create_request, parse_account_binding_policy,
-    parse_application_register_command, parse_tenant_application_provision_command,
-    parse_tenant_application_update_command, provision_tenant_application,
-    register_application_template, registered_application_template_to_json,
-    resolve_bootstrap_actor, resolve_tenant_application, save_account_binding_policy,
-    tenant_application_to_json, update_tenant_application, AccountBindingPolicyDocument,
-    IAM_ACCESS_CREDENTIALS_CREATE_PERMISSION, IAM_APPLICATIONS_REGISTER_PERMISSION,
-    IAM_TENANT_APPLICATIONS_ENABLE_PERMISSION, IAM_TENANT_APPLICATIONS_PROVISION_PERMISSION,
-    IAM_TENANT_APPLICATIONS_UPDATE_PERMISSION,
+    account_binding_policy_to_json, disable_tenant_application, enable_tenant_application,
+    ensure_actor_tenant_scope, ensure_bootstrap_permission, iam_api_error, iam_api_success,
+    issue_delegated_access_credential, issued_access_credential_to_json,
+    load_account_binding_policy, parse_access_credential_create_request,
+    parse_account_binding_policy, parse_application_register_command,
+    parse_tenant_application_provision_command, parse_tenant_application_update_command,
+    provision_tenant_application, register_application_template,
+    registered_application_template_to_json, resolve_bootstrap_actor, resolve_tenant_application,
+    save_account_binding_policy, tenant_application_to_json, update_tenant_application,
+    AccountBindingPolicyDocument, IAM_ACCESS_CREDENTIALS_CREATE_PERMISSION,
+    IAM_APPLICATIONS_REGISTER_PERMISSION, IAM_TENANT_APPLICATIONS_ENABLE_PERMISSION,
+    IAM_TENANT_APPLICATIONS_PROVISION_PERMISSION, IAM_TENANT_APPLICATIONS_UPDATE_PERMISSION,
 };
 use sdkwork_web_core::WebRequestContext;
 use serde_json::{json, Value};
-use sqlx::PgPool;
+use sqlx::{types::Json as SqlJson, PgPool, Row};
 
+use crate::backend_sql::{
+    internal_handler_error, list_page_params_or_error, list_search_pattern, page_json_from_rows,
+    LIST_TOTAL_COLUMN,
+};
 use crate::manifest::iam_backend_api_route_manifest;
 use crate::web_bootstrap::wrap_router_with_web_framework;
 
@@ -152,6 +156,27 @@ pub async fn build_sdkwork_iam_backend_api_router_from_env() -> Router {
                 .route(
                     "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}/enable",
                     post(enable_tenant_application_handler),
+                )
+                .route(
+                    "/backend/v3/api/iam/tenants/{tenantId}/applications",
+                    get(list_tenant_applications_handler)
+                        .post(provision_tenant_application_management_handler),
+                )
+                .route(
+                    "/backend/v3/api/iam/tenants/{tenantId}/applications/summary",
+                    get(retrieve_tenant_application_summary_handler),
+                )
+                .route(
+                    "/backend/v3/api/iam/tenants/{tenantId}/applications/{tenantApplicationId}",
+                    axum::routing::patch(update_tenant_application_management_handler),
+                )
+                .route(
+                    "/backend/v3/api/iam/tenants/{tenantId}/applications/{tenantApplicationId}/enable",
+                    post(enable_tenant_application_management_handler),
+                )
+                .route(
+                    "/backend/v3/api/iam/tenants/{tenantId}/applications/{tenantApplicationId}/disable",
+                    post(disable_tenant_application_management_handler),
                 ),
         ),
     ))
@@ -646,6 +671,287 @@ async fn retrieve_tenant_application_handler(
             &message,
         ),
     }
+}
+
+async fn list_tenant_applications_handler(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(tenant_id): Path<String>,
+    Query(query): Query<HashMap<String, String>>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
+        return response;
+    }
+    let Ok(params) = list_page_params_or_error(&query) else {
+        return list_page_params_or_error(&query)
+            .err()
+            .expect("error response");
+    };
+    let search_pattern = list_search_pattern(&query);
+    let status = normalized_query_filter(&query, "status");
+    let environment = normalized_query_filter(&query, "environment");
+    let rows = sqlx::query(&format!(
+        "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
+                instance_key, display_name, environment, status, primary_domain, \
+                access_permissions_json, created_at::text, updated_at::text, \
+                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+         FROM iam_tenant_application \
+         WHERE tenant_id = $1 \
+           AND ($4::text IS NULL OR LOWER(display_name) LIKE $4 OR LOWER(app_id) LIKE $4 \
+                OR LOWER(instance_key) LIKE $4 OR LOWER(COALESCE(primary_domain, '')) LIKE $4) \
+           AND ($5::text IS NULL OR status = $5) \
+           AND ($6::text IS NULL OR environment = $6) \
+         ORDER BY updated_at DESC, id \
+         LIMIT $2 OFFSET $3"
+    ))
+    .bind(&tenant_id)
+    .bind(params.page_size)
+    .bind(params.offset)
+    .bind(&search_pattern)
+    .bind(&status)
+    .bind(&environment)
+    .fetch_all(pg)
+    .await;
+
+    match rows {
+        Ok(rows) => appbase_ok(page_json_from_rows(
+            rows,
+            &params,
+            tenant_application_list_row_to_json,
+        )),
+        Err(error) => internal_handler_error("iam_tenant_applications_list_failed", error),
+    }
+}
+
+async fn retrieve_tenant_application_summary_handler(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(tenant_id): Path<String>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
+        return response;
+    }
+
+    let row = sqlx::query(
+        "SELECT COUNT(*)::BIGINT, \
+                COUNT(*) FILTER (WHERE status = 'enabled')::BIGINT, \
+                COUNT(*) FILTER (WHERE status = 'disabled')::BIGINT, \
+                COUNT(*) FILTER (WHERE status NOT IN ('enabled', 'disabled'))::BIGINT \
+         FROM iam_tenant_application WHERE tenant_id = $1",
+    )
+    .bind(&tenant_id)
+    .fetch_one(pg)
+    .await;
+
+    match row {
+        Ok(row) => appbase_ok(json!({
+            "disabled": row.get::<i64, _>(2),
+            "enabled": row.get::<i64, _>(1),
+            "pending": row.get::<i64, _>(3),
+            "tenantId": tenant_id,
+            "total": row.get::<i64, _>(0),
+        })),
+        Err(error) => internal_handler_error("iam_tenant_applications_summary_failed", error),
+    }
+}
+
+async fn provision_tenant_application_management_handler(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(tenant_id): Path<String>,
+    Json(mut body): Json<Value>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
+        return response;
+    }
+    let Some(object) = body.as_object_mut() else {
+        return appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_tenant_application_management_provision_invalid",
+            "request body must be an object",
+        );
+    };
+    object.insert("tenantId".to_string(), Value::String(tenant_id.clone()));
+
+    let command = match parse_tenant_application_provision_command(&body) {
+        Ok(command) => command,
+        Err(message) => {
+            return appbase_error(
+                StatusCode::BAD_REQUEST,
+                "iam_tenant_application_management_provision_invalid",
+                &message,
+            );
+        }
+    };
+
+    match provision_tenant_application(pg, &command).await {
+        Ok(application) => appbase_ok(tenant_application_to_json(&application)),
+        Err(message) if message.contains("not found") => appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_tenant_application_template_not_found",
+            &message,
+        ),
+        Err(message) if message.contains("duplicate") || message.contains("unique") => {
+            appbase_error(
+                StatusCode::CONFLICT,
+                "iam_tenant_application_conflict",
+                &message,
+            )
+        }
+        Err(message) => appbase_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "iam_tenant_application_management_provision_failed",
+            &message,
+        ),
+    }
+}
+
+async fn update_tenant_application_management_handler(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path((tenant_id, tenant_application_id)): Path<(String, String)>,
+    Json(body): Json<Value>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
+        return response;
+    }
+    let command = match parse_tenant_application_update_command(&body) {
+        Ok(command) => command,
+        Err(message) => {
+            return appbase_error(
+                StatusCode::BAD_REQUEST,
+                "iam_tenant_application_management_update_invalid",
+                &message,
+            );
+        }
+    };
+
+    match update_tenant_application(pg, &tenant_id, &tenant_application_id, &command).await {
+        Ok(application) => appbase_ok(tenant_application_to_json(&application)),
+        Err(message) if message.contains("not found") => appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_tenant_application_not_found",
+            &message,
+        ),
+        Err(message) => appbase_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "iam_tenant_application_management_update_failed",
+            &message,
+        ),
+    }
+}
+
+async fn enable_tenant_application_management_handler(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path((tenant_id, tenant_application_id)): Path<(String, String)>,
+    Json(_body): Json<Value>,
+) -> Response {
+    transition_tenant_application_status(&state, &ctx, &tenant_id, &tenant_application_id, true)
+        .await
+}
+
+async fn disable_tenant_application_management_handler(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path((tenant_id, tenant_application_id)): Path<(String, String)>,
+    Json(_body): Json<Value>,
+) -> Response {
+    transition_tenant_application_status(&state, &ctx, &tenant_id, &tenant_application_id, false)
+        .await
+}
+
+async fn transition_tenant_application_status(
+    state: &BackendIamState,
+    ctx: &WebRequestContext,
+    tenant_id: &str,
+    tenant_application_id: &str,
+    enabled: bool,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(state) else {
+        return postgres_pool_or_error(state).err().expect("error response");
+    };
+    if let Err(response) = ensure_target_tenant_access(ctx, tenant_id) {
+        return response;
+    }
+    let result = if enabled {
+        enable_tenant_application(pg, tenant_id, tenant_application_id).await
+    } else {
+        disable_tenant_application(pg, tenant_id, tenant_application_id).await
+    };
+
+    match result {
+        Ok(application) => appbase_ok(tenant_application_to_json(&application)),
+        Err(message) if message.contains("not found") => appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_tenant_application_not_found",
+            &message,
+        ),
+        Err(message) if message.contains("must be configured") => appbase_error(
+            StatusCode::CONFLICT,
+            "iam_tenant_application_not_configured",
+            &message,
+        ),
+        Err(message) => appbase_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            if enabled {
+                "iam_tenant_application_management_enable_failed"
+            } else {
+                "iam_tenant_application_management_disable_failed"
+            },
+            &message,
+        ),
+    }
+}
+
+fn normalized_query_filter(query: &HashMap<String, String>, key: &str) -> Option<String> {
+    query
+        .get(key)
+        .map(|value| value.trim().to_lowercase())
+        .filter(|value| !value.is_empty() && value != "all")
+}
+
+fn tenant_application_list_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
+    let access_permissions = row
+        .try_get::<SqlJson<Vec<String>>, _>(11)
+        .map(|value| value.0)
+        .unwrap_or_default();
+    json!({
+        "accessPermissions": access_permissions,
+        "appId": row.get::<String, _>(1),
+        "createdAt": row.get::<String, _>(12),
+        "displayName": row.get::<String, _>(7),
+        "environment": row.get::<String, _>(8),
+        "instanceKey": row.get::<String, _>(6),
+        "organizationId": row.get::<String, _>(3),
+        "primaryDomain": row.get::<Option<String>, _>(10),
+        "status": row.get::<String, _>(9),
+        "templateId": row.get::<String, _>(4),
+        "templateVersion": row.get::<String, _>(5),
+        "tenantApplicationId": row.get::<String, _>(0),
+        "tenantId": row.get::<String, _>(2),
+        "updatedAt": row.get::<String, _>(13),
+    })
 }
 
 async fn enable_tenant_application_handler(

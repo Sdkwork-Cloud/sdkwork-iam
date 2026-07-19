@@ -611,10 +611,20 @@ export const SDKWORK_IAM_API_ROUTES = {
       register: operation("POST", `${backend}/iam/applications/register`, "iam", "applications.register", "public"),
     },
     tenantApplications: {
+      list: operation("GET", `${backend}/iam/tenants/{tenantId}/applications`, "iam", "tenantApplications.list", "dualToken"),
       provision: operation("POST", `${backend}/iam/tenant_applications`, "iam", "tenantApplications.provision", "public"),
       retrieve: operation("GET", `${backend}/iam/tenant_applications/{tenantApplicationId}`, "iam", "tenantApplications.retrieve", "dualToken"),
       enable: operation("POST", `${backend}/iam/tenant_applications/{tenantApplicationId}/enable`, "iam", "tenantApplications.enable", "public"),
       update: operation("PATCH", `${backend}/iam/tenant_applications/{tenantApplicationId}`, "iam", "tenantApplications.update", "public"),
+      management: {
+        provision: operation("POST", `${backend}/iam/tenants/{tenantId}/applications`, "iam", "tenantApplications.management.provision", "dualToken"),
+        update: operation("PATCH", `${backend}/iam/tenants/{tenantId}/applications/{tenantApplicationId}`, "iam", "tenantApplications.management.update", "dualToken"),
+        enable: operation("POST", `${backend}/iam/tenants/{tenantId}/applications/{tenantApplicationId}/enable`, "iam", "tenantApplications.management.enable", "dualToken"),
+        disable: operation("POST", `${backend}/iam/tenants/{tenantId}/applications/{tenantApplicationId}/disable`, "iam", "tenantApplications.management.disable", "dualToken"),
+      },
+      summary: {
+        retrieve: operation("GET", `${backend}/iam/tenants/{tenantId}/applications/summary`, "iam", "tenantApplications.summary.retrieve", "dualToken"),
+      },
     },
     auditEvents: {
       list: operation("GET", `${backend}/iam/audit_events`, "iam", "auditEvents.list", "dualToken"),
@@ -1011,7 +1021,7 @@ export const SDKWORK_IAM_CAPABILITIES = [
     "apiAccess",
     ["iam"],
     ["apiKey"],
-    ["apiKeys.list", "apiKeys.revoke", "accessCredentials.create", "applications.register", "tenantApplications.provision", "tenantApplications.retrieve", "tenantApplications.update", "tenantApplications.enable"],
+    ["apiKeys.list", "apiKeys.revoke", "accessCredentials.create", "applications.register", "tenantApplications.list", "tenantApplications.provision", "tenantApplications.retrieve", "tenantApplications.update", "tenantApplications.enable", "tenantApplications.management.provision", "tenantApplications.management.update", "tenantApplications.management.enable", "tenantApplications.management.disable", "tenantApplications.summary.retrieve"],
   ),
   capability(
     "securityAudit",

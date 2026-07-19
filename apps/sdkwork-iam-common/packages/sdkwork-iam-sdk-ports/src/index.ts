@@ -236,9 +236,19 @@ export interface IamBackendIamResourceClient {
   };
   tenantApplications?: {
     enable?: IamSdkMethod;
+    list?: IamSdkMethod;
     provision?: IamSdkMethod;
     retrieve?: IamSdkMethod;
     update?: IamSdkMethod;
+    management?: {
+      disable?: IamSdkMethod;
+      enable?: IamSdkMethod;
+      provision?: IamSdkMethod;
+      update?: IamSdkMethod;
+    };
+    summary?: {
+      retrieve?: IamSdkMethod;
+    };
   };
   tenants?: {
     create?: IamSdkMethod;

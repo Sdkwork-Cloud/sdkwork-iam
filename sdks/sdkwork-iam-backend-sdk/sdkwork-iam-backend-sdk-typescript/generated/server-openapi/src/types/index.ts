@@ -15,6 +15,9 @@ export type { WechatMiniProgramSessionCreateCommand } from './wechat-mini-progra
 export type { IamOauthClientCreateCommand } from './iam-oauth-client-create-command';
 export type { AppbaseSessionCreateCommand } from './appbase-session-create-command';
 export type { AppbaseApplicationRegisterCommand } from './appbase-application-register-command';
+export type { IamTenantApplicationManagementProvisionCommand } from './iam-tenant-application-management-provision-command';
+export type { IamTenantApplicationManagementUpdateCommand } from './iam-tenant-application-management-update-command';
+export type { IamTenantApplicationStatusCommand } from './iam-tenant-application-status-command';
 export type { AppbaseTenantApplicationProvisionCommand } from './appbase-tenant-application-provision-command';
 export type { AppbaseTenantApplicationUpdateCommand } from './appbase-tenant-application-update-command';
 export type { AppbaseTenantApplicationEnableCommand } from './appbase-tenant-application-enable-command';

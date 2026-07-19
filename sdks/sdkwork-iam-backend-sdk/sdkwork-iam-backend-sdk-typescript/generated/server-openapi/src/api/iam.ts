@@ -1,7 +1,7 @@
 import { backendApiPath } from './paths';
 import type { HttpClient } from '../http/client';
 
-import type { AppbaseAccessCredentialCreateCommand, AppbaseApplicationRegisterCommand, AppbaseOperationCommand, AppbaseTenantApplicationEnableCommand, AppbaseTenantApplicationProvisionCommand, AppbaseTenantApplicationUpdateCommand, SdkWorkCommandData, SdkWorkPageData, ServiceAccountCredentialCreateCommand, ServiceAccountCredentialRevokeCommand, ServiceAccountTokenExchangeCommand } from '../types';
+import type { AppbaseAccessCredentialCreateCommand, AppbaseApplicationRegisterCommand, AppbaseOperationCommand, AppbaseTenantApplicationEnableCommand, AppbaseTenantApplicationProvisionCommand, AppbaseTenantApplicationUpdateCommand, IamTenantApplicationManagementProvisionCommand, IamTenantApplicationManagementUpdateCommand, IamTenantApplicationStatusCommand, SdkWorkCommandData, SdkWorkPageData, ServiceAccountCredentialCreateCommand, ServiceAccountCredentialRevokeCommand, ServiceAccountTokenExchangeCommand } from '../types';
 
 
 export interface IamUsersListParams {
@@ -148,7 +148,7 @@ export class IamTenantsApi {
   }
 }
 
-export class IamTenantApplicationsApi {
+export class IamTenantApplicationsSummaryApi {
   private client: HttpClient;
 
   constructor(client: HttpClient) {
@@ -156,9 +156,66 @@ export class IamTenantApplicationsApi {
   }
 
 
-/** Tenant Applications create. */
-  async create(body: AppbaseTenantApplicationProvisionCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/tenant_applications`), body, undefined, undefined, 'application/json');
+/** Tenant Applications summary retrieve. */
+  async retrieve(tenantId: string): Promise<Record<string, unknown>> {
+    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/applications/summary`));
+  }
+}
+
+export class IamTenantApplicationsManagementApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Tenant Applications management provision. */
+  async provision(tenantId: string, body: IamTenantApplicationManagementProvisionCommand): Promise<SdkWorkCommandData> {
+    return this.client.post<SdkWorkCommandData>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/applications`), body, undefined, undefined, 'application/json');
+  }
+
+/** Tenant Applications management update. */
+  async update(tenantId: string, tenantApplicationId: string, body?: IamTenantApplicationManagementUpdateCommand): Promise<Record<string, unknown>> {
+    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/applications/${serializePathParameter(tenantApplicationId, { name: 'tenantApplicationId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  }
+
+/** Tenant Applications management disable. */
+  async disable(tenantId: string, tenantApplicationId: string, body: IamTenantApplicationStatusCommand): Promise<SdkWorkCommandData> {
+    return this.client.post<SdkWorkCommandData>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/applications/${serializePathParameter(tenantApplicationId, { name: 'tenantApplicationId', style: 'simple', explode: false })}/disable`), body, undefined, undefined, 'application/json');
+  }
+
+/** Tenant Applications management enable. */
+  async enable(tenantId: string, tenantApplicationId: string, body: IamTenantApplicationStatusCommand): Promise<SdkWorkCommandData> {
+    return this.client.post<SdkWorkCommandData>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/applications/${serializePathParameter(tenantApplicationId, { name: 'tenantApplicationId', style: 'simple', explode: false })}/enable`), body, undefined, undefined, 'application/json');
+  }
+}
+
+export interface IamTenantApplicationsListParams {
+  page?: number;
+  pageSize?: number;
+  cursor?: string;
+  sort?: string;
+  q?: string;
+  status?: string;
+  environment?: string;
+}
+
+export class IamTenantApplicationsApi {
+  private client: HttpClient;
+  public readonly management: IamTenantApplicationsManagementApi;
+  public readonly summary: IamTenantApplicationsSummaryApi;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+    this.management = new IamTenantApplicationsManagementApi(client);
+    this.summary = new IamTenantApplicationsSummaryApi(client);
+  }
+
+
+/** Tenant Applications provision. */
+  async provision(body: AppbaseTenantApplicationProvisionCommand): Promise<SdkWorkCommandData> {
+    return this.client.post<SdkWorkCommandData>(backendApiPath(`/iam/tenant_applications`), body, undefined, undefined, 'application/json');
   }
 
 /** Tenant Applications retrieve. */
@@ -174,6 +231,20 @@ export class IamTenantApplicationsApi {
 /** Tenant Applications enable. */
   async enable(tenantApplicationId: string, body: AppbaseTenantApplicationEnableCommand): Promise<SdkWorkCommandData> {
     return this.client.post<SdkWorkCommandData>(backendApiPath(`/iam/tenant_applications/${serializePathParameter(tenantApplicationId, { name: 'tenantApplicationId', style: 'simple', explode: false })}/enable`), body, undefined, undefined, 'application/json');
+  }
+
+/** Tenant Applications list. */
+  async list(tenantId: string, params?: IamTenantApplicationsListParams): Promise<SdkWorkPageData> {
+    const query = buildQueryString([
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+      { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },
+      { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
+      { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
+      { name: 'status', value: params?.status, style: 'form', explode: true, allowReserved: false },
+      { name: 'environment', value: params?.environment, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/applications`), query));
   }
 }
 

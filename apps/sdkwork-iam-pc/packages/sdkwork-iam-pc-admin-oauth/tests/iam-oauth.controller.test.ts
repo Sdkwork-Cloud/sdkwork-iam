@@ -67,6 +67,19 @@ describe("SDKWork IAM OAuth PC admin controller", () => {
     expect(service.iam.oauth.callbackEvents.list).toHaveBeenCalledOnce();
   });
 
+  it("loads only the resource lists requested by a focused admin view", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    await controller.load(["integrations", "providerCatalog"]);
+
+    expect(service.iam.oauth.integrations.list).toHaveBeenCalledOnce();
+    expect(service.iam.oauth.providerCatalog.list).toHaveBeenCalledOnce();
+    expect(service.iam.oauth.clients.list).not.toHaveBeenCalled();
+    expect(service.iam.oauth.grants.list).not.toHaveBeenCalled();
+    expect(service.iam.oauth.callbackEvents.list).not.toHaveBeenCalled();
+  });
+
   it("creates operational OAuth resources through iam.oauth backend service methods", async () => {
     const service = createOauthServiceMock();
     const controller = createSdkworkIamOauthAdminController({ service: service as never });

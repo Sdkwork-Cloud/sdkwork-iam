@@ -50,8 +50,8 @@ pub use account_binding_policy::{
 pub use api_key_lookup::IamApiKeyLookupService;
 pub use application_registry::{
     dedupe_postgres_tenant_application_org_template_rows,
-    derive_tenant_application_primary_domain_candidate, enable_tenant_application,
-    ensure_platform_tenant_application,
+    derive_tenant_application_primary_domain_candidate, disable_tenant_application,
+    enable_tenant_application, ensure_platform_tenant_application,
     ensure_postgres_tenant_application_org_template_unique_index,
     ensure_tenant_application_runtime, intersect_permission_scopes,
     parse_application_register_command, parse_tenant_application_provision_command,
