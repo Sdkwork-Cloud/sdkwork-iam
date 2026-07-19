@@ -649,9 +649,19 @@ describe("SDKWork IAM generated SDK adapters", () => {
         },
         tenantApplications: {
           enable: vi.fn().mockResolvedValue({ data: { tenantApplicationId: "ta-1" } }),
+          list: vi.fn().mockResolvedValue({ data: { items: [] } }),
           provision: vi.fn().mockResolvedValue({ data: { tenantApplicationId: "ta-1" } }),
           retrieve: vi.fn().mockResolvedValue({ data: { tenantApplicationId: "ta-1", appId: "app-1" } }),
           update: vi.fn().mockResolvedValue({ data: { tenantApplicationId: "ta-1" } }),
+          management: {
+            disable: vi.fn().mockResolvedValue({ data: { tenantApplicationId: "ta-1", status: "disabled" } }),
+            enable: vi.fn().mockResolvedValue({ data: { tenantApplicationId: "ta-1", status: "enabled" } }),
+            provision: vi.fn().mockResolvedValue({ data: { tenantApplicationId: "ta-1" } }),
+            update: vi.fn().mockResolvedValue({ data: { tenantApplicationId: "ta-1" } }),
+          },
+          summary: {
+            retrieve: vi.fn().mockResolvedValue({ data: { enabled: 1, total: 1 } }),
+          },
         },
         tenants: {
           create: vi.fn().mockResolvedValue({ data: { id: "100001" } }),
@@ -697,6 +707,12 @@ describe("SDKWork IAM generated SDK adapters", () => {
     await backendClient.iam?.apiKeys?.revoke?.("api-key-1");
     await backendClient.iam?.auditEvents?.list?.({ tenantId: "100001" });
     await backendClient.iam?.securityEvents?.list?.({ tenantId: "100001" });
+    await backendClient.iam?.tenantApplications?.list?.("t1");
+    await backendClient.iam?.tenantApplications?.management?.provision?.("t1", { appKey: "crm" });
+    await backendClient.iam?.tenantApplications?.management?.update?.("t1", "ta-1", { primaryDomain: "crm.example.com" });
+    await backendClient.iam?.tenantApplications?.management?.enable?.("t1", "ta-1", {});
+    await backendClient.iam?.tenantApplications?.management?.disable?.("t1", "ta-1", {});
+    await backendClient.iam?.tenantApplications?.summary?.retrieve?.("t1");
     await backendClient.iam?.organizations?.create?.({ name: "Org" });
     await backendClient.iam?.organizations?.delete?.("o1");
     await backendClient.iam?.organizations?.retrieve?.("o1");
@@ -754,6 +770,12 @@ describe("SDKWork IAM generated SDK adapters", () => {
     expect(generatedBackendClient.iam.apiKeys.revoke).toHaveBeenCalledWith("api-key-1");
     expect(generatedBackendClient.iam.auditEvents.list).toHaveBeenCalledWith({ tenantId: "100001" });
     expect(generatedBackendClient.iam.securityEvents.list).toHaveBeenCalledWith({ tenantId: "100001" });
+    expect(generatedBackendClient.iam.tenantApplications.list).toHaveBeenCalledWith("t1");
+    expect(generatedBackendClient.iam.tenantApplications.management.provision).toHaveBeenCalledWith("t1", { appKey: "crm" });
+    expect(generatedBackendClient.iam.tenantApplications.management.update).toHaveBeenCalledWith("t1", "ta-1", { primaryDomain: "crm.example.com" });
+    expect(generatedBackendClient.iam.tenantApplications.management.enable).toHaveBeenCalledWith("t1", "ta-1", {});
+    expect(generatedBackendClient.iam.tenantApplications.management.disable).toHaveBeenCalledWith("t1", "ta-1", {});
+    expect(generatedBackendClient.iam.tenantApplications.summary.retrieve).toHaveBeenCalledWith("t1");
     expect(generatedBackendClient.iam.organizations.create).toHaveBeenCalledWith({ name: "Org" });
     expect(generatedBackendClient.iam.organizations.delete).toHaveBeenCalledWith("o1");
     expect(generatedBackendClient.iam.organizations.retrieve).toHaveBeenCalledWith("o1");
@@ -1085,9 +1107,19 @@ function createGeneratedBackendClient(overrides: AnyRecord = {}): AnyRecord {
       },
       tenantApplications: {
         enable: vi.fn().mockResolvedValue({ data: null }),
+        list: vi.fn().mockResolvedValue({ data: null }),
         provision: vi.fn().mockResolvedValue({ data: null }),
         retrieve: vi.fn().mockResolvedValue({ data: null }),
         update: vi.fn().mockResolvedValue({ data: null }),
+        management: {
+          disable: vi.fn().mockResolvedValue({ data: null }),
+          enable: vi.fn().mockResolvedValue({ data: null }),
+          provision: vi.fn().mockResolvedValue({ data: null }),
+          update: vi.fn().mockResolvedValue({ data: null }),
+        },
+        summary: {
+          retrieve: vi.fn().mockResolvedValue({ data: null }),
+        },
       },
       tenants: {
         create: vi.fn().mockResolvedValue({ data: null }),
