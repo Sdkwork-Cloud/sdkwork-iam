@@ -25,6 +25,7 @@ version = "0.1.0"
 license = "Apache-2.0"
 
 [workspace.dependencies]
+sdkwork-api-iam-assembly = { path = "crates/sdkwork-api-iam-assembly" }
 sdkwork-database-config = { path = "../sdkwork-database/crates/sdkwork-database-config" }
 sdkwork_database_config = { package = "sdkwork-database-config", path = "../sdkwork-database/crates/sdkwork-database-config" }
 async-trait = "0.1"

@@ -1934,6 +1934,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
+name = "sdkwork-api-iam-assembly"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "sdkwork-iam-database-host",
+ "sdkwork-iam-web-adapter",
+ "sdkwork-routes-iam-app-api",
+ "sdkwork-routes-iam-backend-api",
+ "sdkwork-routes-iam-open-api",
+ "sdkwork-web-bootstrap",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "sdkwork-api-iam-standalone-gateway"
+version = "0.1.0"
+dependencies = [
+ "sdkwork-api-iam-assembly",
+ "sdkwork-web-bootstrap",
+ "tokio",
+]
+
+[[package]]
 name = "sdkwork-database-config"
 version = "0.1.0"
 dependencies = [
@@ -2111,23 +2136,6 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio",
-]
-
-[[package]]
-name = "sdkwork-iam-gateway-assembly"
-version = "0.1.0"
-dependencies = [
- "axum",
- "sdkwork-iam-database-host",
- "sdkwork-iam-web-adapter",
- "sdkwork-routes-iam-app-api",
- "sdkwork-routes-iam-backend-api",
- "sdkwork-routes-iam-open-api",
- "sdkwork-web-bootstrap",
- "tokio",
- "tower",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
