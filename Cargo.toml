@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/sdkwork-api-iam-standalone-gateway",
     "crates/sdkwork-api-iam-assembly",
     "crates/sdkwork-api-iam-assembly",
     "crates/sdkwork-iam-database-host",

@@ -51,11 +51,13 @@
   "contracts": {
     "publicExports": [
       "sdkwork_api_iam_assembly::assemble_api_router",
+      "sdkwork_api_iam_assembly::assemble_business_router",
       "sdkwork_api_iam_assembly::ApiAssembly",
       "sdkwork_api_iam_assembly::assembly_route_count"
     ],
     "runtimeEntrypoints": [
-      "sdkwork_api_iam_assembly::assemble_api_router"
+      "sdkwork_api_iam_assembly::assemble_api_router",
+      "sdkwork_api_iam_assembly::assemble_business_router"
     ],
     "routeManifest": null,
     "sdkClients": [],
