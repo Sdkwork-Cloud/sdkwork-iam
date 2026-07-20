@@ -1,0 +1,17 @@
+[package]
+name = "sdkwork-api-iam-assembly"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+description = "Generated API assembly for sdkwork-iam application HTTP plane."
+
+[lib]
+name = "sdkwork_api_iam_assembly"
+path = "src/lib.rs"
+
+[dependencies]
+axum.workspace = true
+tokio.workspace = true
+sdkwork-routes-iam-app-api = { path = "../sdkwork-routes-iam-app-api" }
+sdkwork-routes-iam-backend-api = { path = "../sdkwork-routes-iam-backend-api" }
+sdkwork-routes-iam-open-api = { path = "../sdkwork-routes-iam-open-api" }
