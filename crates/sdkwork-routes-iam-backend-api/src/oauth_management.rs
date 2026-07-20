@@ -38,7 +38,7 @@ struct TenantResourceSpec {
 
 const INTEGRATIONS: TenantResourceSpec = TenantResourceSpec {
     table: "iam_oauth_integration",
-    list_select: "id, tenant_id, organization_id, provider_code, integration_code, display_name, status, enabled, health_status, created_at, updated_at",
+    list_select: "id, tenant_id, organization_id, app_id, environment, deployment_mode, provider_code, provider_catalog_id, integration_code, display_name, protocol_family, status, enabled, health_status, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_integrations_list_failed",
     retrieve_error: "iam_oauth_integration_retrieve_failed",
@@ -46,9 +46,14 @@ const INTEGRATIONS: TenantResourceSpec = TenantResourceSpec {
         "id",
         "tenant_id",
         "organization_id",
+        "app_id",
+        "environment",
+        "deployment_mode",
         "provider_code",
+        "provider_catalog_id",
         "integration_code",
         "display_name",
+        "protocol_family",
         "status",
         "enabled",
         "health_status",
@@ -60,7 +65,7 @@ const INTEGRATIONS: TenantResourceSpec = TenantResourceSpec {
 
 const CLIENTS: TenantResourceSpec = TenantResourceSpec {
     table: "iam_oauth_client",
-    list_select: "id, tenant_id, integration_id, provider_code, client_code, display_name, provider_client_id, status, enabled, created_at, updated_at",
+    list_select: "id, tenant_id, integration_id, provider_code, client_code, display_name, provider_client_id, provider_app_id, provider_tenant_id, provider_account_id, secret_config_status, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_clients_list_failed",
     retrieve_error: "iam_oauth_clients_retrieve_failed",
@@ -72,6 +77,10 @@ const CLIENTS: TenantResourceSpec = TenantResourceSpec {
         "client_code",
         "display_name",
         "provider_client_id",
+        "provider_app_id",
+        "provider_tenant_id",
+        "provider_account_id",
+        "secret_config_status",
         "status",
         "enabled",
         "created_at",
@@ -82,7 +91,7 @@ const CLIENTS: TenantResourceSpec = TenantResourceSpec {
 
 const SECRETS: TenantResourceSpec = TenantResourceSpec {
     table: "iam_oauth_secret",
-    list_select: "id, tenant_id, secret_owner_kind, secret_owner_id, secret_kind, status, active_from, active_until, created_at, updated_at",
+    list_select: "id, tenant_id, secret_owner_kind, secret_owner_id, oauth_client_id, secret_kind, status, active_from, active_until, created_at, updated_at",
     list_order: "created_at DESC, id",
     list_error: "iam_oauth_secrets_list_failed",
     retrieve_error: "iam_oauth_secrets_retrieve_failed",
@@ -91,6 +100,7 @@ const SECRETS: TenantResourceSpec = TenantResourceSpec {
         "tenant_id",
         "secret_owner_kind",
         "secret_owner_id",
+        "oauth_client_id",
         "secret_kind",
         "status",
         "active_from",
@@ -103,7 +113,7 @@ const SECRETS: TenantResourceSpec = TenantResourceSpec {
 
 const SURFACES: TenantResourceSpec = TenantResourceSpec {
     table: "iam_oauth_surface",
-    list_select: "id, tenant_id, integration_id, oauth_client_id, surface_kind, surface_code, display_name, status, enabled, created_at, updated_at",
+    list_select: "id, tenant_id, integration_id, oauth_client_id, surface_kind, surface_code, display_name, redirect_uri, callback_path, web_domain, mini_program_app_id, mini_program_original_id, mini_program_environment, mini_program_release_channel, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_surfaces_list_failed",
     retrieve_error: "iam_oauth_surfaces_retrieve_failed",
@@ -115,6 +125,13 @@ const SURFACES: TenantResourceSpec = TenantResourceSpec {
         "surface_kind",
         "surface_code",
         "display_name",
+        "redirect_uri",
+        "callback_path",
+        "web_domain",
+        "mini_program_app_id",
+        "mini_program_original_id",
+        "mini_program_environment",
+        "mini_program_release_channel",
         "status",
         "enabled",
         "created_at",

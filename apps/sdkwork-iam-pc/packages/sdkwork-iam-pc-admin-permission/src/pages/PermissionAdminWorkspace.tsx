@@ -13,6 +13,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   SettingsSection,
+  StatusBadge,
   StatusNotice,
 } from "@sdkwork/ui-pc-react";
 
@@ -97,16 +98,16 @@ export function SdkworkIamPermissionAdminWorkspace({ controller, description = "
   const openPolicyEdit = (policy: SdkworkIamPolicy) => { setSelectedPolicy(policy); setPolicyDraft({ code: policy.code ?? "", name: policy.name, status: policy.status ?? "", tenantId: policy.tenantId ?? "" }); setDrawer({ kind: "policy", mode: "edit" }); };
 
   const roleColumns = useMemo<DataTableColumn<SdkworkIamRole>[]>(() => [
-    { id: "name", header: "Role", cell: (item) => item.name }, { id: "code", header: "Code", cell: (item) => item.code || "—" }, { id: "status", header: "Status", cell: (item) => item.status || "—" },
+    { id: "name", header: "Role", cell: (item) => item.name }, { id: "code", header: "Code", cell: (item) => item.code || "—" }, { id: "status", header: "Status", cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "—" },
   ], []);
   const permissionColumns = useMemo<DataTableColumn<SdkworkIamPermission>[]>(() => [
     { id: "name", header: "Permission", cell: (item) => item.name }, { id: "code", header: "Code", cell: (item) => item.code }, { id: "resource", header: "Resource", cell: (item) => item.resource || "—" }, { id: "action", header: "Action", cell: (item) => item.action || "—" },
   ], []);
   const policyColumns = useMemo<DataTableColumn<SdkworkIamPolicy>[]>(() => [
-    { id: "name", header: "Policy", cell: (item) => item.name }, { id: "code", header: "Code", cell: (item) => item.code || "—" }, { id: "status", header: "Status", cell: (item) => item.status || "—" },
+    { id: "name", header: "Policy", cell: (item) => item.name }, { id: "code", header: "Code", cell: (item) => item.code || "—" }, { id: "status", header: "Status", cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "—" },
   ], []);
   const bindingColumns = useMemo<DataTableColumn<SdkworkIamRoleBinding>[]>(() => [
-    { id: "principal", header: "Principal", cell: (item) => `${item.principalKind}:${item.principalId}` }, { id: "scope", header: "Scope", cell: (item) => `${item.scopeKind}:${item.scopeId}` }, { id: "effect", header: "Effect", cell: (item) => item.effect || "—" }, { id: "status", header: "Status", cell: (item) => item.status || "—" },
+    { id: "principal", header: "Principal", cell: (item) => `${item.principalKind}:${item.principalId}` }, { id: "scope", header: "Scope", cell: (item) => `${item.scopeKind}:${item.scopeId}` }, { id: "effect", header: "Effect", cell: (item) => item.effect || "—" }, { id: "status", header: "Status", cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "—" },
   ], []);
 
   return <div className="space-y-6">

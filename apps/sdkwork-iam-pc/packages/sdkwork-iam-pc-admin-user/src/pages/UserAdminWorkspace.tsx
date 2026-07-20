@@ -13,6 +13,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   SettingsSection,
+  StatusBadge,
   StatusNotice,
 } from "@sdkwork/ui-pc-react";
 
@@ -91,7 +92,7 @@ export function SdkworkIamUserAdminWorkspace({
     { id: "username", header: "Username", cell: (user) => user.username || "—" },
     { id: "email", header: "Email", cell: (user) => user.email || "—" },
     { id: "phone", header: "Phone", cell: (user) => user.phone || "—" },
-    { id: "status", header: "Status", cell: (user) => user.status || "—" },
+    { id: "status", header: "Status", cell: (user) => user.status ? <StatusBadge label={user.status} showIcon status={user.status} /> : "—" },
   ], []);
 
   return (

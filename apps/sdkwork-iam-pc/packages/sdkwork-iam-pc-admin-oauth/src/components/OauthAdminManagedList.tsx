@@ -6,6 +6,7 @@ import {
   ConfirmDialog,
   DataTable,
   type DataTableColumn,
+  StatusBadge,
 } from "@sdkwork/ui-pc-react";
 
 import {
@@ -75,7 +76,7 @@ export function ManagedOAuthResourceList({
   })), [items, readId]);
   const columns = useMemo<DataTableColumn<ManagedRow>[]>(() => [
     { id: "resource", header: "Resource", cell: (row) => row.label },
-    { id: "status", header: "Status", cell: (row) => row.status || (row.enabled === undefined ? "—" : row.enabled ? "Enabled" : "Disabled") },
+    { id: "status", header: "Status", cell: (row) => { const status = row.status || (row.enabled === undefined ? "" : row.enabled ? "enabled" : "disabled"); return status ? <StatusBadge label={status} showIcon status={status} /> : "—"; } },
   ], []);
 
   const execute = (operation: () => Promise<unknown>) => {

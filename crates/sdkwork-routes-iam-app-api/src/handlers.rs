@@ -1521,6 +1521,7 @@ async fn create_password_reset(
 
 async fn list_oauth_providers(
     State(state): State<LocalIamState>,
+    ctx: WebRequestContext,
     Query(query): Query<HashMap<String, String>>,
 ) -> Response {
     let policy = match postgres_pool_or_error(&state) {
@@ -1536,9 +1537,14 @@ async fn list_oauth_providers(
     }
 
     let pg = state.pool.as_postgres();
+    let tenant_id = ctx
+        .tenant_id()
+        .filter(|value| !value.is_empty())
+        .unwrap_or(LOCAL_EPHEMERAL_SCOPE);
     match crate::oauth_login::list_login_enabled_providers(
         pg,
-        LOCAL_EPHEMERAL_SCOPE,
+        tenant_id,
+        ctx.app_id().filter(|value| !value.is_empty()),
         &policy,
         &state.oauth_login,
     )
@@ -1617,17 +1623,23 @@ async fn create_oauth_authorization_url(
         );
     }
 
-    let integration_tenant =
-        match crate::oauth_login::find_active_integration_tenant(pg, &provider).await {
-            Ok(tenant) => tenant,
-            Err(error) => {
-                return appbase_error(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "iam_oauth_provider_lookup_failed",
-                    &error,
-                );
-            }
-        };
+    let integration_tenant = match crate::oauth_login::find_active_integration_tenant_for_tenant(
+        pg,
+        tenant_id,
+        &provider,
+        Some(&runtime_app_id),
+    )
+    .await
+    {
+        Ok(tenant) => tenant,
+        Err(error) => {
+            return appbase_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "iam_oauth_provider_lookup_failed",
+                &error,
+            );
+        }
+    };
     if let Err(error) = sdkwork_iam_web_adapter::validate_oauth_redirect_uri_for_provider(
         Some(pg),
         integration_tenant.as_deref(),
@@ -1652,7 +1664,7 @@ async fn create_oauth_authorization_url(
             redirect_uri: redirect_uri.clone(),
             state: oauth_state.clone(),
             tenant_id: tenant_id.to_owned(),
-            runtime_app_id,
+            runtime_app_id: runtime_app_id.clone(),
         },
     )
     .await
@@ -1670,6 +1682,7 @@ async fn create_oauth_authorization_url(
         &policy,
         &state.oauth_login,
         tenant_id,
+        &runtime_app_id,
         &provider,
         &redirect_uri,
         Some(oauth_state.as_str()),
@@ -1832,6 +1845,7 @@ async fn create_oauth_session(
         &policy,
         &state.oauth_login,
         &tenant_id,
+        &runtime_app_id,
         &provider,
         &code,
         Some(redirect_uri.as_str()),
@@ -2702,6 +2716,7 @@ async fn retrieve_runtime(State(state): State<LocalIamState>, ctx: WebRequestCon
             let oauth_providers = match crate::oauth_login::list_login_enabled_providers(
                 Some(pg),
                 oauth_tenant_id,
+                ctx.app_id().filter(|value| !value.is_empty()),
                 &policy,
                 &crate::oauth_login::OAuthLoginContext::new(),
             )

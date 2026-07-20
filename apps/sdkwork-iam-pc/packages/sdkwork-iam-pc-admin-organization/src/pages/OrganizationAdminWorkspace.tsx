@@ -13,6 +13,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   SettingsSection,
+  StatusBadge,
   StatusNotice,
 } from "@sdkwork/ui-pc-react";
 
@@ -97,30 +98,30 @@ export function SdkworkIamOrganizationAdminWorkspace({ controller, description =
     { id: "name", header: "Organization", cell: (item) => item.name },
     { id: "code", header: "Code", cell: (item) => item.code || "—" },
     { id: "parent", header: "Parent", cell: (item) => item.parentId || "—" },
-    { id: "status", header: "Status", cell: (item) => item.status || "—" },
+    { id: "status", header: "Status", cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "—" },
   ], []);
   const departmentColumns = useMemo<DataTableColumn<SdkworkIamDepartment>[]>(() => [
     { id: "name", header: "Department", cell: (item) => item.name },
     { id: "code", header: "Code", cell: (item) => item.code || "—" },
     { id: "parent", header: "Parent department", cell: (item) => item.parentDepartmentId || "—" },
-    { id: "status", header: "Status", cell: (item) => item.status || "—" },
+    { id: "status", header: "Status", cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "—" },
   ], []);
   const membershipColumns = useMemo<DataTableColumn<SdkworkIamOrganizationMembership>[]>(() => [
     { id: "member", header: "Member", cell: (item) => item.displayName || item.username || item.email || item.userId },
     { id: "role", header: "Role", cell: (item) => item.roleCode || "—" },
     { id: "kind", header: "Membership type", cell: (item) => item.membershipKind || "—" },
-    { id: "status", header: "Status", cell: (item) => item.status || "—" },
+    { id: "status", header: "Status", cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "—" },
   ], []);
   const positionColumns = useMemo<DataTableColumn<SdkworkIamPosition>[]>(() => [
     { id: "name", header: "Position", cell: (item) => item.name },
     { id: "department", header: "Department ID", cell: (item) => item.departmentId || "—" },
-    { id: "status", header: "Status", cell: (item) => item.status || "—" },
+    { id: "status", header: "Status", cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "—" },
   ], []);
   const bindingColumns = useMemo<DataTableColumn<SdkworkIamRoleBinding>[]>(() => [
     { id: "principal", header: "Principal", cell: (item) => `${item.principalKind || "principal"}:${item.principalId || item.id}` },
     { id: "role", header: "Role ID", cell: (item) => item.roleId || "—" },
     { id: "scope", header: "Scope", cell: (item) => `${item.scopeKind || "—"}:${item.scopeId || "—"}` },
-    { id: "status", header: "Status", cell: (item) => item.status || "—" },
+    { id: "status", header: "Status", cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "—" },
   ], []);
 
   return (

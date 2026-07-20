@@ -9,7 +9,7 @@ use crate::{
 };
 use sdkwork_iam_web_adapter::{
     builtin_oauth_provider_catalog, catalog_entry_for_provider, exchange_oauth_authorization_code,
-    exchange_wechat_mini_program_code, load_oauth_integration_exchange_context,
+    exchange_wechat_mini_program_code, load_oauth_integration_exchange_context_for_app,
     normalize_oauth_provider_code, oauth_login_allowed, oauth_provider_allowed,
     provider_catalog_entry_to_json, AccountBindingPolicyDocument, LocalOAuthAuthority,
     LocalOAuthProviderProfile,
@@ -31,6 +31,7 @@ impl OAuthLoginContext {
 pub(crate) async fn list_login_enabled_providers(
     pg: Option<&PgPool>,
     tenant_id: &str,
+    runtime_app_id: Option<&str>,
     policy: &AccountBindingPolicyDocument,
     login_ctx: &OAuthLoginContext,
 ) -> Result<Vec<Value>, String> {
@@ -49,8 +50,10 @@ pub(crate) async fn list_login_enabled_providers(
                 "SELECT DISTINCT provider_code \
                  FROM iam_oauth_integration \
                  WHERE enabled = 1 AND status = 'active' \
+                   AND ($1::text IS NULL OR app_id = $1 OR app_id = '0') \
                  LIMIT 200",
             )
+            .bind(runtime_app_id)
             .fetch_all(pg)
             .await
         } else {
@@ -58,9 +61,11 @@ pub(crate) async fn list_login_enabled_providers(
                 "SELECT DISTINCT provider_code \
                  FROM iam_oauth_integration \
                  WHERE tenant_id = $1 AND enabled = 1 AND status = 'active' \
+                   AND ($2::text IS NULL OR app_id = $2 OR app_id = '0') \
                  LIMIT 200",
             )
             .bind(tenant_id)
+            .bind(runtime_app_id)
             .fetch_all(pg)
             .await
         }
@@ -112,6 +117,7 @@ pub(crate) async fn create_oauth_authorization_url(
     policy: &AccountBindingPolicyDocument,
     login_ctx: &OAuthLoginContext,
     tenant_id: &str,
+    runtime_app_id: &str,
     provider: &str,
     redirect_uri: &str,
     state: Option<&str>,
@@ -133,13 +139,19 @@ pub(crate) async fn create_oauth_authorization_url(
     }
 
     if let Some(pg) = pg {
-        if let Some(tenant_id) =
-            find_active_integration_tenant_for_tenant(pg, tenant_id, &normalized).await?
+        if let Some(tenant_id) = find_active_integration_tenant_for_tenant(
+            pg,
+            tenant_id,
+            &normalized,
+            Some(runtime_app_id),
+        )
+        .await?
         {
             if let Some(url) = build_integration_authorization_url(
                 pg,
                 &tenant_id,
                 &normalized,
+                Some(runtime_app_id),
                 redirect_uri,
                 state,
             )
@@ -159,6 +171,7 @@ pub(crate) async fn resolve_oauth_login_user(
     policy: &AccountBindingPolicyDocument,
     login_ctx: &OAuthLoginContext,
     tenant_id: &str,
+    runtime_app_id: &str,
     provider: &str,
     code: &str,
     redirect_uri: Option<&str>,
@@ -175,11 +188,17 @@ pub(crate) async fn resolve_oauth_login_user(
     {
         (profile, format!("local:{}", normalized))
     } else if let Some(integration_tenant_id) =
-        find_active_integration_tenant_for_tenant(pg, tenant_id, &normalized).await?
+        find_active_integration_tenant_for_tenant(pg, tenant_id, &normalized, Some(runtime_app_id))
+            .await?
     {
-        let Some(ctx) =
-            load_oauth_integration_exchange_context(pg, &integration_tenant_id, &normalized)
-                .await?
+        let Some(ctx) = load_oauth_integration_exchange_context_for_app(
+            pg,
+            &integration_tenant_id,
+            &normalized,
+            Some(runtime_app_id),
+            None,
+        )
+        .await?
         else {
             return Err(
                 "OAuth code exchange requires a configured local OAuth profile or provider integration"
@@ -248,25 +267,11 @@ async fn resolve_or_create_oauth_user(
     Ok(user)
 }
 
-pub(crate) async fn find_active_integration_tenant(
-    pg: &PgPool,
-    provider_code: &str,
-) -> Result<Option<String>, String> {
-    sqlx::query_scalar::<_, String>(
-        "SELECT tenant_id FROM iam_oauth_integration \
-         WHERE provider_code = $1 AND enabled = 1 AND status = 'active' \
-         ORDER BY tenant_id LIMIT 1",
-    )
-    .bind(provider_code)
-    .fetch_optional(pg)
-    .await
-    .map_err(|error| format!("lookup oauth integration tenant failed: {error}"))
-}
-
 async fn build_integration_authorization_url(
     pg: &PgPool,
     tenant_id: &str,
     provider_code: &str,
+    runtime_app_id: Option<&str>,
     redirect_uri: &str,
     state: Option<&str>,
 ) -> Result<Option<String>, String> {
@@ -278,10 +283,12 @@ async fn build_integration_authorization_url(
          JOIN iam_oauth_client c ON c.integration_id = i.id AND c.enabled = 1 AND c.status = 'active' \
          LEFT JOIN iam_oauth_provider_catalog cat ON cat.provider_code = i.provider_code AND cat.status = 'active' \
          WHERE i.tenant_id = $1 AND i.provider_code = $2 AND i.enabled = 1 AND i.status = 'active' \
-         LIMIT 1",
+           AND ($3::text IS NULL OR i.app_id = $3 OR i.app_id = '0') \
+         ORDER BY CASE WHEN i.app_id = $3 THEN 0 ELSE 1 END, c.id LIMIT 1",
     )
     .bind(tenant_id)
     .bind(provider_code)
+    .bind(runtime_app_id)
     .fetch_optional(pg)
     .await
     .map_err(|error| format!("load oauth integration failed: {error}"))?;
@@ -335,14 +342,17 @@ pub(crate) async fn find_active_integration_tenant_for_tenant(
     pg: &PgPool,
     tenant_id: &str,
     provider_code: &str,
+    runtime_app_id: Option<&str>,
 ) -> Result<Option<String>, String> {
     sqlx::query_scalar::<_, String>(
         "SELECT tenant_id FROM iam_oauth_integration \
          WHERE tenant_id = $1 AND provider_code = $2 AND enabled = 1 AND status = 'active' \
-         ORDER BY tenant_id LIMIT 1",
+           AND ($3::text IS NULL OR app_id = $3 OR app_id = '0') \
+         ORDER BY CASE WHEN app_id = $3 THEN 0 ELSE 1 END, tenant_id LIMIT 1",
     )
     .bind(tenant_id)
     .bind(provider_code)
+    .bind(runtime_app_id)
     .fetch_optional(pg)
     .await
     .map_err(|error| format!("lookup tenant oauth integration failed: {error}"))

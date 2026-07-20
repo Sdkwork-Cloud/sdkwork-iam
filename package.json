@@ -5,15 +5,16 @@
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "stop": "node ../sdkwork-specs/tools/stop-sdkwork-workspace-processes.mjs --workspace .",    "dev": "node scripts/sdkwork-command.mjs dev",
-    "build": "node scripts/sdkwork-command.mjs build",
-    "clean": "node scripts/sdkwork-command.mjs clean",
-    "test": "node scripts/run-iam-standard-contracts.mjs",
-    "check": "pnpm run check:pnpm-scripts && pnpm run check:structure && pnpm run check:database && pnpm run check:iam-application-bootstrap && pnpm run check:app-composition && pnpm run check:api-envelope && pnpm run check:pagination && pnpm run check:gateway-assembly",
-    "verify": "pnpm run check:pnpm-scripts && pnpm run check:structure && pnpm run check:database && pnpm run check:iam-application-bootstrap && pnpm run check:app-composition && pnpm run check:api-envelope && pnpm run check:pagination && pnpm run check:gateway-assembly && pnpm run typecheck && pnpm run api:materialize && pnpm run test:governance-node && pnpm run test:rust-workspace",
+    "stop": "pnpm exec sdkwork-app stop",
+    "dev": "pnpm dev:standalone",
+    "build": "pnpm exec sdkwork-app build",
+    "clean": "pnpm exec sdkwork-app clean",
+    "test": "pnpm exec sdkwork-app test",
+    "check": "pnpm exec sdkwork-app check",
+    "verify": "pnpm exec sdkwork-app verify",
     "check:pagination": "node ../sdkwork-specs/tools/check-pagination.mjs --workspace .",
     "check:api-envelope": "node ../sdkwork-specs/tools/check-api-response-envelope.mjs --workspace .",
-    "check:gateway-assembly": "pnpm run gateway:assembly:validate",
+    "check:gateway-assembly": "pnpm run api:assembly:validate",
     "test:rust-workspace": "node scripts/run-rust-workspace-tests.mjs",
     "typecheck": "node scripts/run-workspace-typecheck.mjs",
     "check:pnpm-scripts": "node ../sdkwork-specs/tools/check-pnpm-script-standard.mjs --root .",
@@ -49,15 +50,20 @@
     "admin:iam-modules:reconcile": "node tools/validators/reconcile-iam-module-openapi-permissions.mjs",
     "admin:iam-modules:materialize:manifests": "node tools/generators/materialize-iam-module-manifests.mjs",
     "admin:bootstrap:app": "node scripts/bootstrap/bootstrap-app.mjs",
-    "gateway:assembly:materialize": "node scripts/gateway/assembly-materialize.mjs",
-    "gateway:assembly:validate": "node scripts/gateway/assembly-validate.mjs",
+    "api:assembly:materialize": "node scripts/gateway/assembly-materialize.mjs",
+    "api:assembly:validate": "node scripts/gateway/assembly-validate.mjs",
     "db:postgres:init": "node ../sdkwork-specs/tools/postgres/postgres-db-cli.mjs --mode init --config .env.postgres --app-root .",
     "db:postgres:plan": "node ../sdkwork-specs/tools/postgres/postgres-db-cli.mjs --mode plan --config .env.postgres --app-root . --dry-run",
     "check:app-composition": "node ../sdkwork-specs/tools/verify-repo.mjs --root .",
     "topology:validate": "node ../sdkwork-app-topology/scripts/sdkwork-topology.mjs validate --root . --spec specs/topology.spec.json",
     "topology:plan": "node ../sdkwork-app-topology/scripts/sdkwork-topology.mjs plan --root . --spec specs/topology.spec.json",
-    "gateway:package:cloud": "node ../sdkwork-app-topology/scripts/gateway-cloud-bundle.mjs bundle --root .",
-    "gateway:validate:cloud": "node ../sdkwork-app-topology/scripts/gateway-cloud-bundle.mjs validate --root ."
+    "dev:standalone": "pnpm exec sdkwork-app dev --deployment-profile standalone",
+    "dev:cloud": "pnpm exec sdkwork-app dev --deployment-profile cloud",
+    "_sdkwork:build": "node scripts/sdkwork-command.mjs build",
+    "_sdkwork:test": "node scripts/run-iam-standard-contracts.mjs",
+    "_sdkwork:check": "pnpm run check:pnpm-scripts && pnpm run check:structure && pnpm run check:database && pnpm run check:iam-application-bootstrap && pnpm run check:app-composition && pnpm run check:api-envelope && pnpm run check:pagination && pnpm run check:gateway-assembly",
+    "_sdkwork:verify": "pnpm run check:pnpm-scripts && pnpm run check:structure && pnpm run check:database && pnpm run check:iam-application-bootstrap && pnpm run check:app-composition && pnpm run check:api-envelope && pnpm run check:pagination && pnpm run check:gateway-assembly && pnpm run typecheck && pnpm run api:materialize && pnpm run test:governance-node && pnpm run test:rust-workspace",
+    "_sdkwork:clean": "node scripts/sdkwork-command.mjs clean"
   },
   "devDependencies": {
     "@sdkwork/auth-pc-react": "workspace:*",
@@ -112,7 +118,8 @@
     "react-router-dom": "^7.14.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.3",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "@sdkwork/app-topology": "workspace:*"
   },
   "exports": {
     ".": {
