@@ -26,7 +26,8 @@
     "@sdkwork/iam-pc-admin-core": "workspace:*",
     "@sdkwork/iam-service": "workspace:*",
     "@sdkwork/ui-pc-react": "workspace:*",
-    "@sdkwork/utils": "workspace:*"
+    "@sdkwork/utils": "workspace:*",
+    "lucide-react": "catalog:"
   },
   "peerDependencies": {
     "react": ">=18.2.0 <20.0.0",

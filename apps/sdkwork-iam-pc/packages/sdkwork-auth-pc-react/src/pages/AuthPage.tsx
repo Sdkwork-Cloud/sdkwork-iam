@@ -1353,14 +1353,14 @@ function SdkworkAuthPageContent({
             : null,
           recoveryMethods.includes("phone")
             ? {
-                description: copy.forgot.highlights[0] || "",
+                description: copy.forgot.highlights[1] || "",
                 icon: <Smartphone className="h-5 w-5 text-primary-200" />,
                 key: "reset-phone",
                 title: copy.forgot.phoneMethod,
               }
             : null,
           {
-            description: copy.forgot.highlights[1] || "",
+            description: copy.forgot.highlights[2] || "",
             icon: <KeyRound className="h-5 w-5 text-primary-200" />,
             key: "reset-password",
             title: copy.common.newPasswordLabel,

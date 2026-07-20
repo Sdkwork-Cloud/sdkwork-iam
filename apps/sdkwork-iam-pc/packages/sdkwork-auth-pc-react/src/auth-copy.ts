@@ -238,6 +238,7 @@ const EN_US_MESSAGES: SdkworkAuthMessages = {
     emailMethod: "Recover with email",
     highlights: [
       "Send a reset code through the verified email channel.",
+      "Send a reset code through the verified phone channel.",
       "Finish the reset by confirming a brand-new password.",
     ],
     phoneMethod: "Recover with phone",
@@ -423,6 +424,7 @@ const ZH_CN_MESSAGES: SdkworkAuthMessages = {
     emailMethod: "\u90ae\u7bb1\u627e\u56de",
     highlights: [
       "\u901a\u8fc7\u5df2\u9a8c\u8bc1\u90ae\u7bb1\u63a5\u6536\u91cd\u7f6e\u9a8c\u8bc1\u7801\u3002",
+      "\u901a\u8fc7\u5df2\u9a8c\u8bc1\u624b\u673a\u53f7\u63a5\u6536\u91cd\u7f6e\u9a8c\u8bc1\u7801\u3002",
       "\u901a\u8fc7\u786e\u8ba4\u4e00\u4e2a\u5168\u65b0\u5bc6\u7801\u5b8c\u6210\u91cd\u7f6e\u3002",
     ],
     phoneMethod: "\u624b\u673a\u627e\u56de",

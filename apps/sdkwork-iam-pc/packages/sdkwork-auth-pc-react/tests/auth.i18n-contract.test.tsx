@@ -36,6 +36,14 @@ describe("sdkwork-auth-pc-react i18n contract", () => {
   it("exports a complete IAM auth namespace catalog", () => {
     expect(SDKWORK_AUTH_I18N_CATALOG.namespace).toBe("iam.auth");
     expect(() => assertSdkworkAuthI18nCatalogParity()).not.toThrow();
+    expect(SDKWORK_AUTH_I18N_CATALOG.resolveMessages("en-US").forgot.highlights).toEqual([
+      "Send a reset code through the verified email channel.",
+      "Send a reset code through the verified phone channel.",
+      "Finish the reset by confirming a brand-new password.",
+    ]);
+    expect(SDKWORK_AUTH_I18N_CATALOG.resolveMessages("zh-CN").forgot.highlights[1]).toBe(
+      "\u901a\u8fc7\u5df2\u9a8c\u8bc1\u624b\u673a\u53f7\u63a5\u6536\u91cd\u7f6e\u9a8c\u8bc1\u7801\u3002",
+    );
     expect(SDKWORK_AUTH_I18N_CATALOG.resolveMessages("en-US").qr.defaultDescription).not.toMatch(
       /backend-issued|approval flows/i,
     );
