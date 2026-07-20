@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use sdkwork_iam_gateway_assembly::assemble_application_router;
+use sdkwork_api_iam_assembly::assemble_api_router;
 
 fn bind_address() -> Result<SocketAddr, String> {
     let value = std::env::var("SDKWORK_IAM_APPLICATION_PUBLIC_INGRESS_BIND")
@@ -14,7 +14,7 @@ fn bind_address() -> Result<SocketAddr, String> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
     let address = bind_address()?;
-    let assembly = assemble_application_router().await;
+    let assembly = assemble_api_router().await;
     let listener = tokio::net::TcpListener::bind(address).await?;
     tracing::info!(%address, "sdkwork IAM gateway listening");
     axum::serve(listener, assembly.router)

@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 const root = process.cwd();
 const BOOTSTRAP_PATH = path.join(
   root,
-  'crates/sdkwork-iam-gateway-assembly/src/bootstrap.rs',
+  'crates/sdkwork-api-iam-assembly/src/bootstrap.rs',
 );
 
 test('IAM gateway assembly mounts infrastructure once via sdkwork-web-bootstrap', () => {
@@ -35,7 +35,7 @@ test('IAM gateway assembly mounts infrastructure once via sdkwork-web-bootstrap'
 
 test('IAM gateway assembly depends on sdkwork-web-bootstrap and database host', () => {
   const cargoToml = fs.readFileSync(
-    path.join(root, 'crates/sdkwork-iam-gateway-assembly/Cargo.toml'),
+    path.join(root, 'crates/sdkwork-api-iam-assembly/Cargo.toml'),
     'utf8',
   );
   assert.match(

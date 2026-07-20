@@ -7,7 +7,7 @@
   },
   "backend": {
     "appId": "sdkwork-iam",
-    "serviceId": "sdkwork-iam-gateway-assembly",
+    "serviceId": "sdkwork-api-iam-assembly",
     "defaultBind": "127.0.0.1:3901",
     "profileKey": "backend-root-admin",
     "tenantId": "100001",

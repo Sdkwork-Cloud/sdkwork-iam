@@ -12,6 +12,11 @@ path = "src/lib.rs"
 [dependencies]
 axum.workspace = true
 tokio.workspace = true
+sdkwork_web_bootstrap = { workspace = true, features = ["sqlx"] }
+sdkwork_iam_database_host = { workspace = true }
+sdkwork_iam_web_adapter = { workspace = true }
+tracing = "0.1"
+tracing-subscriber = "0.3"
 sdkwork-routes-iam-app-api = { path = "../sdkwork-routes-iam-app-api" }
 sdkwork-routes-iam-backend-api = { path = "../sdkwork-routes-iam-backend-api" }
 sdkwork-routes-iam-open-api = { path = "../sdkwork-routes-iam-open-api" }

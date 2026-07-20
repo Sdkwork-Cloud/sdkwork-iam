@@ -11,9 +11,9 @@ expose:
     web: adaptive
 
 packages:
-  - id: sdkwork-iam-gateway-assembly
+  - id: sdkwork-api-iam-assembly
     kind: rust-binary
-    crate: sdkwork-iam-gateway-assembly
+    crate: sdkwork-api-iam-assembly
     healthPath: /healthz
     readinessPath: /readyz
 

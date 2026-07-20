@@ -12,7 +12,7 @@ All IAM domain logic lives in the `sdkwork-iam` repository. Consumer application
 | `sdkwork-routes-iam-app-api` | App-surface IAM HTTP routes (login, sessions, tokens) |
 | `sdkwork-routes-iam-backend-api` | Backend IAM management routes |
 | `sdkwork-routes-iam-open-api` | Open API IAM ingress (OAuth authorization server + provider callbacks) |
-| `sdkwork-iam-gateway-assembly` | Federated gateway mount for all three HTTP surfaces; mounts `/healthz`, `/livez`, `/readyz`, `/metrics` once via `sdkwork-web-bootstrap` |
+| `sdkwork-api-iam-assembly` | Federated gateway mount for all three HTTP surfaces; mounts `/healthz`, `/livez`, `/readyz`, `/metrics` once via `sdkwork-web-bootstrap` |
 | `sdkwork-iam-database-host` | Database lifecycle SPI (`migrate`, `seed`, `drift-check`) |
 
 ## Rules For Consumer Repositories
@@ -82,9 +82,9 @@ TypeScript surfaces use `@sdkwork/utils`; Flutter mobile surfaces use `sdkwork_i
 
 ## Federated Gateway Wiring
 
-Consumer application gateways mount IAM through `sdkwork-iam-gateway-assembly`:
+Consumer application gateways mount IAM through `sdkwork-api-iam-assembly`:
 
-- `assemble_application_router()` — merges app-api, backend-api, and open-api business routers
+- `assemble_api_router()` — merges app-api, backend-api, and open-api business routers
 - Infrastructure probes — `/healthz` (liveness) and `/readyz` (readiness via IAM database pool when configured)
 - `bootstrap_iam_database_from_env()` — IAM DDL and migrations via `sdkwork-iam-database-host`
 - Route crate async `gateway_mount()` — per-surface business routers with database pool from env (no duplicate infra routes)

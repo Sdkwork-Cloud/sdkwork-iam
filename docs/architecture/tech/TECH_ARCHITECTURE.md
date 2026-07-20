@@ -44,7 +44,7 @@ Specs: IAM_SPEC.md, WEB_FRAMEWORK_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, API_SPEC.
 
 ## 5. Deployment
 
-- Gateway assembly: `crates/sdkwork-iam-gateway-assembly/` merges app-api, backend-api, and open-api via each crate's async `gateway_mount()` and also ships a standalone binary with graceful shutdown (database pool from env for app/backend/open surfaces)
+- Gateway assembly: `crates/sdkwork-api-iam-assembly/` merges app-api, backend-api, and open-api via each crate's async `gateway_mount()` and also ships a standalone binary with graceful shutdown (database pool from env for app/backend/open surfaces)
 - `sdkwork-iam-database-host` allocates Snowflake node IDs from `sdkwork_node_registry` during bootstrap (`init_iam_id_generator`)
 - Deploy manifest: `deployments/deploy.yaml` with package health/readiness paths and proxy upstream overrides
 - Topology: `specs/topology.spec.json`

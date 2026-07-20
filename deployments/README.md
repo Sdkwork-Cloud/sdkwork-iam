@@ -12,7 +12,7 @@ IAM deployment manifests, topology, and runbooks for gateway assembly and databa
 
 ## Deployment model
 
-`sdkwork-iam` is a **base dependency domain repository**. Consumer applications federate IAM route crates through their own gateways. When IAM ships as a standalone HTTP service, deploy uses `sdkwork-iam-gateway-assembly` to mount app-api, backend-api, and open-api surfaces. Kubernetes and platform probes target `/healthz` (liveness) and `/readyz` (readiness) declared in `deployments/deploy.yaml` per `HEALTH_CHECK_SPEC.md`.
+`sdkwork-iam` is a **base dependency domain repository**. Consumer applications federate IAM route crates through their own gateways. When IAM ships as a standalone HTTP service, deploy uses `sdkwork-api-iam-assembly` to mount app-api, backend-api, and open-api surfaces. Kubernetes and platform probes target `/healthz` (liveness) and `/readyz` (readiness) declared in `deployments/deploy.yaml` per `HEALTH_CHECK_SPEC.md`.
 
 Production deployments MUST set `SDKWORK_IM_ENVIRONMENT=production`, `SDKWORK_IAM_APPLICATION_PUBLIC_INGRESS_BIND`, and `SDKWORK_IAM_SIGNING_MASTER_SECRET`, wire PostgreSQL, obtain a unique Snowflake node lease, and enable `SDKWORK_IAM_MESSAGING_VERIFICATION_ENABLED=true` when `SDKWORK_IAM_EMAIL_VERIFICATION_REQUIRED=true`.
 

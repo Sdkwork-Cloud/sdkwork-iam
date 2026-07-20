@@ -3,17 +3,19 @@
   "kind": "sdkwork.component.spec",
   "component": {
     "name": "sdkwork-api-iam-assembly",
-    "displayName": "SDKWork iam API Assembly",
+    "displayName": "SDKWork IAM Gateway Assembly",
     "version": "0.1.0",
     "type": "rust-api-assembly",
-    "root": "sdkwork-iam/crates/sdkwork-api-iam-assembly",
-    "domain": "application",
+    "root": "crates/sdkwork-api-iam-assembly",
+    "domain": "iam",
     "capability": "api-assembly",
     "surface": "api-assembly",
+    "status": "standard",
     "languages": [
       "rust"
     ],
-    "generated": false,
+    "generated": true,
+    "private": false,
     "manifests": [
       "Cargo.toml",
       "assembly-manifest.json"
@@ -21,43 +23,64 @@
   },
   "canonicalSpecs": [
     {
-      "file": "API_ASSEMBLY_SPEC.md",
-      "path": "../../../sdkwork-specs/API_ASSEMBLY_SPEC.md",
-      "purpose": "API ownership, host-neutral composition, and verification rules."
+      "file": "COMPONENT_SPEC.md",
+      "path": "../../../../sdkwork-specs/COMPONENT_SPEC.md",
+      "purpose": "Component-local contract and discovery rules."
     },
     {
       "file": "APPLICATION_GATEWAY_SPEC.md",
-      "path": "../../../sdkwork-specs/APPLICATION_GATEWAY_SPEC.md",
-      "purpose": "Standalone and cloud gateway host boundaries."
+      "path": "../../../../sdkwork-specs/APPLICATION_GATEWAY_SPEC.md",
+      "purpose": "Gateway assembly layout and verification rules."
+    },
+    {
+      "file": "API_SPEC.md",
+      "path": "../../../../sdkwork-specs/API_SPEC.md",
+      "purpose": "HTTP API surface composition rules."
     },
     {
       "file": "WEB_FRAMEWORK_SPEC.md",
-      "path": "../../../sdkwork-specs/WEB_FRAMEWORK_SPEC.md",
-      "purpose": "Typed request context and HTTP framework composition rules."
+      "path": "../../../../sdkwork-specs/WEB_FRAMEWORK_SPEC.md",
+      "purpose": "Web framework route composition and interceptor chain rules."
     },
     {
-      "file": "DATABASE_FRAMEWORK_SPEC.md",
-      "path": "../../../sdkwork-specs/DATABASE_FRAMEWORK_SPEC.md",
-      "purpose": "Database lifecycle bootstrap ownership for embedded assemblies."
+      "file": "RUST_CODE_SPEC.md",
+      "path": "../../../../sdkwork-specs/RUST_CODE_SPEC.md",
+      "purpose": "Rust crate and module rules."
     }
   ],
   "contracts": {
     "publicExports": [
-      "."
+      "sdkwork_api_iam_assembly::assemble_api_router",
+      "sdkwork_api_iam_assembly::ApiAssembly",
+      "sdkwork_api_iam_assembly::assembly_route_count"
     ],
-    "runtimeEntrypoints": [],
-    "routeManifest": "assembly-manifest.json",
+    "runtimeEntrypoints": [
+      "sdkwork_api_iam_assembly::assemble_api_router"
+    ],
+    "routeManifest": null,
     "sdkClients": [],
     "sdkDependencies": [],
     "dependencyApiExports": [],
     "dependencyApiSurfaces": [],
     "events": [],
-    "configKeys": []
+    "configKeys": [],
+    "layerRole": "runtime-composition"
+  },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative. Local specs may narrow this component but must not contradict them.",
+    "dependencyPolicy": "Assembly composes IAM route crates only; consumers integrate through the published gateway router builder.",
+    "sdkPolicy": "Generated assembly output is materialized by gateway scripts and must not be hand-edited outside approved generators.",
+    "languagePolicy": "Rust code follows Cargo workspace dependencies and the SDKWork Rust crate responsibility split."
   },
   "verification": {
     "commands": [
-      "pnpm run api:assembly:validate",
-      "cargo check -p sdkwork-api-iam-assembly"
+      "cargo test -p sdkwork-api-iam-assembly",
+      "cargo test -p sdkwork-api-iam-assembly --test infra_routes",
+      "pnpm run check:gateway-assembly"
     ]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-06-29"
   }
 }

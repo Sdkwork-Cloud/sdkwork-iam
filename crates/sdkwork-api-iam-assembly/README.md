@@ -1,4 +1,4 @@
-# sdkwork-iam-gateway-assembly
+# sdkwork-api-iam-assembly
 
 Generated HTTP gateway assembly for the `sdkwork-iam` application plane. Composes IAM `app-api`, `backend-api`, and `open-api` route crates into a single Axum router for standalone and cloud gateway hosts.
 
@@ -7,7 +7,7 @@ Infrastructure routes (`/healthz`, `/livez`, `/readyz`, `/metrics`) are mounted 
 ## Verification
 
 ```bash
-cargo test -p sdkwork-iam-gateway-assembly
+cargo test -p sdkwork-api-iam-assembly
 pnpm run check:gateway-assembly
 ```
 ## Canonical Specs
