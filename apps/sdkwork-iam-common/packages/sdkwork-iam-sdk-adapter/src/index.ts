@@ -374,13 +374,13 @@ export function createIamBackendSdkAdapter(client: unknown): IamBackendSdkClient
       tenantApplications: {
         enable: standardResourceMethod(iamTenantApplications, "enable", "appbaseBackend.iam.tenantApplications.enable"),
         list: standardResourceMethod(iamTenantApplications, "list", "appbaseBackend.iam.tenantApplications.list"),
-        provision: standardResourceMethod(iamTenantApplications, "provision", "appbaseBackend.iam.tenantApplications.provision"),
+        create: standardResourceMethod(iamTenantApplications, "create", "appbaseBackend.iam.tenantApplications.create"),
         retrieve: standardResourceMethod(iamTenantApplications, "retrieve", "appbaseBackend.iam.tenantApplications.retrieve"),
         update: standardResourceMethod(iamTenantApplications, "update", "appbaseBackend.iam.tenantApplications.update"),
         management: {
           disable: standardResourceMethod(toRecord(iamTenantApplications.management), "disable", "appbaseBackend.iam.tenantApplications.management.disable"),
           enable: standardResourceMethod(toRecord(iamTenantApplications.management), "enable", "appbaseBackend.iam.tenantApplications.management.enable"),
-          provision: standardResourceMethod(toRecord(iamTenantApplications.management), "provision", "appbaseBackend.iam.tenantApplications.management.provision"),
+          create: standardResourceMethod(toRecord(iamTenantApplications.management), "create", "appbaseBackend.iam.tenantApplications.management.create"),
           update: standardResourceMethod(toRecord(iamTenantApplications.management), "update", "appbaseBackend.iam.tenantApplications.management.update"),
         },
         summary: {

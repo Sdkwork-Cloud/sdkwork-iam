@@ -40,8 +40,8 @@ export function createIamApplicationBootstrapClientFromBackend(
     },
     async provisionTenantApplication(body) {
       return unwrapIamSdkResponse<ProvisionedTenantApplicationResult>(
-        await backend.iam?.tenantApplications?.provision?.(body),
-        "iam.tenantApplications.provision failed",
+        await backend.iam?.tenantApplications?.create?.(body),
+        "iam.tenantApplications.create failed",
       );
     },
     async enableTenantApplication(tenantApplicationId, body) {
@@ -78,7 +78,7 @@ export function createIamApplicationBootstrapClientFromIamService(
   return {
     registerApplication: (body) => service.iam.applications.register(body) as Promise<RegisteredApplicationTemplateResult>,
     provisionTenantApplication: (body) =>
-      service.iam.tenantApplications.provision(body) as Promise<ProvisionedTenantApplicationResult>,
+      service.iam.tenantApplications.create(body) as Promise<ProvisionedTenantApplicationResult>,
     enableTenantApplication: (tenantApplicationId, body) =>
       service.iam.tenantApplications.enable(tenantApplicationId, body) as Promise<EnabledTenantApplicationResult>,
     createAccessCredential: (body) =>

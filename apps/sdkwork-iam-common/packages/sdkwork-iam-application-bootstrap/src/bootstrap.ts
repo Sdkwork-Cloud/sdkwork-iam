@@ -40,7 +40,7 @@ export async function bootstrapApplicationFromManifest(
 
   const tenantApplicationId = String(provisioned.tenantApplicationId ?? "");
   if (!tenantApplicationId) {
-    throw new Error("tenantApplications.provision did not return tenantApplicationId");
+    throw new Error("tenantApplications.create did not return tenantApplicationId");
   }
 
   const enabled = await input.client.enableTenantApplication(

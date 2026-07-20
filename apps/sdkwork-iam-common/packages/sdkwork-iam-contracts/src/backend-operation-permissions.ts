@@ -19,12 +19,12 @@ function explicitBootstrapPermission(operationId: string): string | undefined {
   switch (operationId) {
     case "applications.register":
       return "iam.applications.register";
-    case "tenantApplications.provision":
+    case "tenantApplications.create":
       return "iam.tenant_applications.provision";
     case "tenantApplications.list":
     case "tenantApplications.summary.retrieve":
       return "iam.tenant_applications.update";
-    case "tenantApplications.management.provision":
+    case "tenantApplications.management.create":
       return "iam.tenant_applications.provision";
     case "tenantApplications.management.update":
     case "tenantApplications.management.disable":

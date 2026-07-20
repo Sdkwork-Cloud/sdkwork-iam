@@ -35,7 +35,7 @@ describe("tenant application workspace", () => {
           management: {
             disable: vi.fn(),
             enable: vi.fn(),
-            provision: vi.fn(),
+            create: vi.fn(),
             update: vi.fn(),
           },
           summary: {

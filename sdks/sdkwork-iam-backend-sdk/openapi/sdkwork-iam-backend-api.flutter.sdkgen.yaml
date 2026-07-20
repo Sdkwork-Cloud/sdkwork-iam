@@ -20427,16 +20427,16 @@
         "tags": [
           "iam"
         ],
-        "summary": "Tenant Applications provision.",
-        "operationId": "tenantApplications.provision",
+        "summary": "Tenant Applications create.",
+        "operationId": "tenantApplications.create",
         "parameters": [],
         "responses": {
-          "200": {
-            "description": "Success",
+          "201": {
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SdkWorkCommandResponse"
+                  "$ref": "#/components/schemas/SdkWorkResourceResponse"
                 }
               }
             }
@@ -21891,8 +21891,8 @@
         "tags": [
           "iam"
         ],
-        "summary": "Tenant Applications management provision.",
-        "operationId": "tenantApplications.management.provision",
+        "summary": "Tenant Applications management create.",
+        "operationId": "tenantApplications.management.create",
         "parameters": [
           {
             "name": "tenantId",
@@ -21904,12 +21904,12 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Success",
+          "201": {
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SdkWorkCommandResponse"
+                  "$ref": "#/components/schemas/SdkWorkResourceResponse"
                 }
               }
             }

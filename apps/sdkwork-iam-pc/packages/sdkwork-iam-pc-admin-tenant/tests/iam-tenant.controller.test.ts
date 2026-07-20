@@ -141,7 +141,7 @@ describe("@sdkwork/iam-pc-admin-tenant", () => {
           management: {
             disable: vi.fn().mockResolvedValue({ ...application, status: "disabled" }),
             enable: vi.fn().mockResolvedValue({ ...application, status: "enabled" }),
-            provision: vi.fn().mockResolvedValue(application),
+            create: vi.fn().mockResolvedValue(application),
             update: vi.fn().mockResolvedValue({ ...application, primaryDomain: "crm.acme.com" }),
           },
           summary: {
@@ -185,7 +185,7 @@ describe("@sdkwork/iam-pc-admin-tenant", () => {
     await expect(controller.setTenantApplicationEnabled("tenant-1", "tapp_crm", false)).resolves.toMatchObject({ status: "disabled" });
 
     expect(service.iam.tenantApplications.list).toHaveBeenCalledWith("tenant-1", { page_size: 20 });
-    expect(service.iam.tenantApplications.management.provision).toHaveBeenCalledWith("tenant-1", expect.objectContaining({ appKey: "crm" }));
+    expect(service.iam.tenantApplications.management.create).toHaveBeenCalledWith("tenant-1", expect.objectContaining({ appKey: "crm" }));
     expect(service.iam.tenantApplications.management.update).toHaveBeenCalledWith("tenant-1", "tapp_crm", expect.objectContaining({ primaryDomain: "crm.acme.com" }));
     expect(service.iam.tenantApplications.management.enable).toHaveBeenCalledWith("tenant-1", "tapp_crm");
     expect(service.iam.tenantApplications.management.disable).toHaveBeenCalledWith("tenant-1", "tapp_crm");

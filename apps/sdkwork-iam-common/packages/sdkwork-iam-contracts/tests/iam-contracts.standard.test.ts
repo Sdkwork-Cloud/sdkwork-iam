@@ -117,7 +117,8 @@ describe("SDKWork IAM standard contracts", () => {
     expect(operationIds).not.toContain("qrAuth.sessions.passwords.create");
     expect(operationIds).toContain("apiKeys.list");
     expect(operationIds).toContain("applications.register");
-    expect(operationIds).toContain("tenantApplications.provision");
+    expect(operationIds).toContain("tenantApplications.create");
+    expect(operationIds).toContain("tenantApplications.management.create");
     expect(operationIds).toContain("tenantApplications.retrieve");
     expect(operationIds).toContain("tenantApplications.update");
     expect(operationIds).toContain("accessCredentials.create");

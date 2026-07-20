@@ -232,7 +232,10 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
 
       <ApplicationSummary messages={messages.applications.summary} summary={summary} />
 
-      <form className="flex flex-col gap-3 xl:flex-row xl:items-end" onSubmit={applyFilters}>
+      <form
+        className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_11rem_11rem_auto] xl:items-end"
+        onSubmit={applyFilters}
+      >
         <label className="min-w-0 flex-1 space-y-1.5 text-sm">
           <span className="sr-only">{messages.applications.filters.searchLabel}</span>
           <span className="relative block">
@@ -415,7 +418,7 @@ function ApplicationSummary({ messages, summary }: { messages: { disabled: strin
 function FilterSelect({ ariaLabel, onValueChange, options, value }: { ariaLabel: string; onValueChange: (value: string) => void; options: Array<[string, string]>; value: string }) {
   return (
     <Select onValueChange={onValueChange} value={value}>
-      <SelectTrigger aria-label={ariaLabel} className="w-full xl:w-44">
+      <SelectTrigger aria-label={ariaLabel} className="w-full">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

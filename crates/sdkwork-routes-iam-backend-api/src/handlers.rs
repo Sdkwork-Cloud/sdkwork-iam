@@ -26,6 +26,7 @@ use sdkwork_iam_web_adapter::{
     IAM_APPLICATIONS_REGISTER_PERMISSION, IAM_TENANT_APPLICATIONS_ENABLE_PERMISSION,
     IAM_TENANT_APPLICATIONS_PROVISION_PERMISSION, IAM_TENANT_APPLICATIONS_UPDATE_PERMISSION,
 };
+use sdkwork_utils_rust::sdkwork_resource_json;
 use sdkwork_web_core::WebRequestContext;
 use serde_json::{json, Value};
 use sqlx::{types::Json as SqlJson, PgPool, Row};
@@ -511,7 +512,9 @@ async fn provision_tenant_application_handler(
     }
 
     match provision_tenant_application(pg, &command).await {
-        Ok(application) => appbase_ok(tenant_application_to_json(&application)),
+        Ok(application) => appbase_created(sdkwork_resource_json(tenant_application_to_json(
+            &application,
+        ))),
         Err(message) if message.contains("not found") => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_tenant_application_template_not_found",
@@ -609,7 +612,9 @@ async fn update_tenant_application_handler(
     }
 
     match update_tenant_application(pg, &tenant_id, &tenant_application_id, &command).await {
-        Ok(application) => appbase_ok(tenant_application_to_json(&application)),
+        Ok(application) => appbase_ok(sdkwork_resource_json(tenant_application_to_json(
+            &application,
+        ))),
         Err(message) if message.contains("not found") => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_tenant_application_not_found",
@@ -659,7 +664,9 @@ async fn retrieve_tenant_application_handler(
 
     match resolve_tenant_application(pg, &tenant_id, Some(&tenant_application_id), None, None).await
     {
-        Ok(Some(application)) => appbase_ok(tenant_application_to_json(&application)),
+        Ok(Some(application)) => appbase_ok(sdkwork_resource_json(tenant_application_to_json(
+            &application,
+        ))),
         Ok(None) => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_tenant_application_not_found",
@@ -754,13 +761,13 @@ async fn retrieve_tenant_application_summary_handler(
     .await;
 
     match row {
-        Ok(row) => appbase_ok(json!({
+        Ok(row) => appbase_ok(sdkwork_resource_json(json!({
             "disabled": row.get::<i64, _>(2),
             "enabled": row.get::<i64, _>(1),
             "pending": row.get::<i64, _>(3),
             "tenantId": tenant_id,
             "total": row.get::<i64, _>(0),
-        })),
+        }))),
         Err(error) => internal_handler_error("iam_tenant_applications_summary_failed", error),
     }
 }
@@ -800,7 +807,9 @@ async fn provision_tenant_application_management_handler(
     };
 
     match provision_tenant_application(pg, &command).await {
-        Ok(application) => appbase_ok(tenant_application_to_json(&application)),
+        Ok(application) => appbase_created(sdkwork_resource_json(tenant_application_to_json(
+            &application,
+        ))),
         Err(message) if message.contains("not found") => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_tenant_application_template_not_found",
@@ -847,7 +856,9 @@ async fn update_tenant_application_management_handler(
     };
 
     match update_tenant_application(pg, &tenant_id, &tenant_application_id, &command).await {
-        Ok(application) => appbase_ok(tenant_application_to_json(&application)),
+        Ok(application) => appbase_ok(sdkwork_resource_json(tenant_application_to_json(
+            &application,
+        ))),
         Err(message) if message.contains("not found") => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_tenant_application_not_found",
@@ -1153,6 +1164,12 @@ fn read_required_string(body: &Value, keys: &[&str]) -> Result<String, String> {
 
 pub(crate) fn appbase_ok(data: Value) -> Response {
     iam_api_success(data)
+}
+
+fn appbase_created(data: Value) -> Response {
+    let mut response = iam_api_success(data);
+    *response.status_mut() = StatusCode::CREATED;
+    response
 }
 
 pub(crate) fn appbase_error(status: StatusCode, code: &str, message: &str) -> Response {

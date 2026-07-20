@@ -58,11 +58,11 @@ pub fn iam_backend_permission_for_operation(operation_id: &str) -> Option<&'stat
 fn explicit_bootstrap_permission(operation_id: &str) -> Option<&'static str> {
     match operation_id {
         "applications.register" => Some("iam.applications.register"),
-        "tenantApplications.provision" => Some("iam.tenant_applications.provision"),
+        "tenantApplications.create" => Some("iam.tenant_applications.provision"),
         "tenantApplications.list" | "tenantApplications.summary.retrieve" => {
             Some("iam.tenant_applications.update")
         }
-        "tenantApplications.management.provision" => Some("iam.tenant_applications.provision"),
+        "tenantApplications.management.create" => Some("iam.tenant_applications.provision"),
         "tenantApplications.management.update" | "tenantApplications.management.disable" => {
             Some("iam.tenant_applications.update")
         }

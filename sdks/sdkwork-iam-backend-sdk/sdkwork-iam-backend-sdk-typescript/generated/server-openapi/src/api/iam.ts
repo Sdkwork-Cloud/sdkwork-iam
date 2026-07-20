@@ -170,9 +170,9 @@ export class IamTenantApplicationsManagementApi {
   }
 
 
-/** Tenant Applications management provision. */
-  async provision(tenantId: string, body: IamTenantApplicationManagementProvisionCommand): Promise<SdkWorkCommandData> {
-    return this.client.post<SdkWorkCommandData>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/applications`), body, undefined, undefined, 'application/json');
+/** Tenant Applications management create. */
+  async create(tenantId: string, body: IamTenantApplicationManagementProvisionCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/applications`), body, undefined, undefined, 'application/json');
   }
 
 /** Tenant Applications management update. */
@@ -213,9 +213,9 @@ export class IamTenantApplicationsApi {
   }
 
 
-/** Tenant Applications provision. */
-  async provision(body: AppbaseTenantApplicationProvisionCommand): Promise<SdkWorkCommandData> {
-    return this.client.post<SdkWorkCommandData>(backendApiPath(`/iam/tenant_applications`), body, undefined, undefined, 'application/json');
+/** Tenant Applications create. */
+  async create(body: AppbaseTenantApplicationProvisionCommand): Promise<Record<string, unknown>> {
+    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/tenant_applications`), body, undefined, undefined, 'application/json');
   }
 
 /** Tenant Applications retrieve. */

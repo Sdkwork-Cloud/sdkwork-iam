@@ -93,7 +93,7 @@ const publicAppOperationIds = new Set([
 
 const publicBackendBootstrapOperationIds = new Set([
   'applications.register',
-  'tenantApplications.provision',
+  'tenantApplications.create',
   'tenantApplications.update',
   'tenantApplications.enable',
   'accessCredentials.create',
@@ -520,10 +520,10 @@ function requestBodySchemaRef(route) {
   if (route.operationId === 'applications.register') {
     return '#/components/schemas/AppbaseApplicationRegisterCommand';
   }
-  if (route.operationId === 'tenantApplications.provision') {
+  if (route.operationId === 'tenantApplications.create') {
     return '#/components/schemas/AppbaseTenantApplicationProvisionCommand';
   }
-  if (route.operationId === 'tenantApplications.management.provision') {
+  if (route.operationId === 'tenantApplications.management.create') {
     return '#/components/schemas/IamTenantApplicationManagementProvisionCommand';
   }
   if (route.operationId === 'tenantApplications.management.update') {

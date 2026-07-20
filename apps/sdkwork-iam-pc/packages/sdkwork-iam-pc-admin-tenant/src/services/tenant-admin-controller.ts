@@ -299,7 +299,7 @@ export function createSdkworkIamTenantController(
       setState({ status: "loading" });
       try {
         const application = toTenantApplication(
-          await resolved.service.iam.tenantApplications.management.provision(
+          await resolved.service.iam.tenantApplications.management.create(
             normalizedTenantId,
             applicationDraftToRecord(body),
           ),
