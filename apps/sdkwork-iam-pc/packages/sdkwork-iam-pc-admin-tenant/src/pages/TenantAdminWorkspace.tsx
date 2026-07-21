@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { AppWindow, Building2, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { AppWindow, Building2, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
 import {
   Button,
@@ -39,6 +39,10 @@ const emptyMemberDraft = (): SdkworkIamTenantMemberDraft => ({ roleCode: "", use
 export function SdkworkIamTenantAdminWorkspace({
   controller,
   description,
+  permissions = {
+    members: { create: true, delete: true, read: true, update: true },
+    tenants: { create: true, delete: true, update: true },
+  },
   title,
 }: SdkworkIamTenantAdminWorkspaceProps) {
   const messages = useSdkworkIamTenantAdminMessages();
@@ -59,11 +63,13 @@ export function SdkworkIamTenantAdminWorkspace({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
 
   const syncState = () => setListPageInfo(controller.getState().listPageInfo);
 
-  const refreshTenants = async () => {
-    const items = await controller.listTenants();
+  const refreshTenants = async (query = appliedSearchQuery) => {
+    const items = await controller.listTenants(query ? { q: query } : undefined);
     setTenants(items);
     syncState();
     return items;
@@ -82,6 +88,17 @@ export function SdkworkIamTenantAdminWorkspace({
       .catch((loadError) => setError(toErrorMessage(loadError, messages.tenants.notices.loadError)))
       .finally(() => setLoading(false));
   }, [controller]);
+
+  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    setAppliedSearchQuery(query);
+    setLoading(true);
+    setError(undefined);
+    void refreshTenants(query)
+      .catch((loadError) => setError(toErrorMessage(loadError, messages.tenants.notices.loadError)))
+      .finally(() => setLoading(false));
+  };
 
   const runAction = async (action: () => Promise<void>, successMessage: string, fallbackError: string) => {
     setBusy(true);
@@ -181,24 +198,49 @@ export function SdkworkIamTenantAdminWorkspace({
               <Button onClick={() => void selectTenant(tenant)} size="sm" type="button" variant="outline">
                 {messages.tenants.manage}
               </Button>
-              <IconButton aria-label={messages.tenants.edit} onClick={() => openTenantEditor(tenant)} title={messages.tenants.edit} variant="ghost">
-                <Pencil className="h-3.5 w-3.5" />
-              </IconButton>
-              <IconButton aria-label={messages.tenants.delete} onClick={() => setDeleteTenantTarget(tenant)} title={messages.tenants.delete} variant="ghost">
-                <Trash2 className="h-3.5 w-3.5 text-[var(--sdk-color-state-danger)]" />
-              </IconButton>
+              {permissions.tenants.update ? (
+                <IconButton aria-label={messages.tenants.edit} onClick={() => openTenantEditor(tenant)} title={messages.tenants.edit} variant="ghost">
+                  <Pencil className="h-3.5 w-3.5" />
+                </IconButton>
+              ) : null}
+              {permissions.tenants.delete ? (
+                <IconButton aria-label={messages.tenants.delete} onClick={() => setDeleteTenantTarget(tenant)} title={messages.tenants.delete} variant="ghost">
+                  <Trash2 className="h-3.5 w-3.5 text-[var(--sdk-color-state-danger)]" />
+                </IconButton>
+              ) : null}
             </div>
           )}
           rows={[...tenants]}
           title={messages.tenants.title}
           toolbar={(
-            <Button onClick={() => {
-              setTenantDraft(emptyTenantDraft());
-              setTenantDrawerMode("create");
-            }} type="button">
-              <Plus className="h-4 w-4" />
-              {messages.tenants.create}
-            </Button>
+            <div className="flex w-full flex-wrap items-center gap-2">
+              <form className="flex min-w-[16rem] flex-1 items-center gap-2" onSubmit={submitSearch} role="search">
+                <label className="relative min-w-0 flex-1">
+                  <span className="sr-only">{messages.tenants.searchLabel}</span>
+                  <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sdk-color-text-muted)]" />
+                  <Input
+                    aria-label={messages.tenants.searchLabel}
+                    className="pl-9"
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder={messages.tenants.searchPlaceholder}
+                    value={searchQuery}
+                  />
+                </label>
+                <Button disabled={loading} type="submit" variant="secondary">
+                  <Search className="h-4 w-4" />
+                  {messages.tenants.applySearch}
+                </Button>
+              </form>
+              {permissions.tenants.create ? (
+                <Button onClick={() => {
+                  setTenantDraft(emptyTenantDraft());
+                  setTenantDrawerMode("create");
+                }} type="button">
+                  <Plus className="h-4 w-4" />
+                  {messages.tenants.create}
+                </Button>
+              ) : null}
+            </div>
           )}
         />
 
@@ -225,7 +267,9 @@ export function SdkworkIamTenantAdminWorkspace({
                 onValueChange={switchDetailTab}
                 options={[
                   { icon: <AppWindow className="h-4 w-4" />, label: messages.tabs.applications, value: "applications" },
-                  { icon: <Users className="h-4 w-4" />, label: messages.tabs.members, value: "members" },
+                  ...(permissions.members.read
+                    ? [{ icon: <Users className="h-4 w-4" />, label: messages.tabs.members, value: "members" }]
+                    : []),
                 ]}
                 value={activeTab}
               />
@@ -251,33 +295,37 @@ export function SdkworkIamTenantAdminWorkspace({
                     )}
                     getRowId={(member) => member.id}
                     loading={loading}
-                    onRowClick={(member) => {
+                    onRowClick={permissions.members.update ? (member) => {
                       setSelectedMember(member);
                       setMemberDraft({ roleCode: member.roleCode ?? "", userId: member.userId });
                       setMemberDrawerMode("edit");
-                    }}
-                    rowActions={(member) => (
+                    } : undefined}
+                    rowActions={permissions.members.update || permissions.members.delete ? (member) => (
                       <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
-                        <IconButton
-                          aria-label={messages.common.edit}
-                          onClick={() => {
-                            setSelectedMember(member);
-                            setMemberDraft({ roleCode: member.roleCode ?? "", userId: member.userId });
-                            setMemberDrawerMode("edit");
-                          }}
-                          title={messages.common.edit}
-                          variant="outline"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </IconButton>
-                        <Button onClick={() => setRemoveMemberTarget(member)} size="sm" type="button" variant="danger">
-                          {messages.members.remove}
-                        </Button>
+                        {permissions.members.update ? (
+                          <IconButton
+                            aria-label={messages.common.edit}
+                            onClick={() => {
+                              setSelectedMember(member);
+                              setMemberDraft({ roleCode: member.roleCode ?? "", userId: member.userId });
+                              setMemberDrawerMode("edit");
+                            }}
+                            title={messages.common.edit}
+                            variant="outline"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </IconButton>
+                        ) : null}
+                        {permissions.members.delete ? (
+                          <Button onClick={() => setRemoveMemberTarget(member)} size="sm" type="button" variant="danger">
+                            {messages.members.remove}
+                          </Button>
+                        ) : null}
                       </div>
-                    )}
+                    ) : undefined}
                     rows={[...members]}
                     title={template(messages.members.titleTemplate, { name: selectedTenant.name })}
-                    toolbar={(
+                    toolbar={permissions.members.create ? (
                       <Button onClick={() => {
                         setSelectedMember(undefined);
                         setMemberDraft(emptyMemberDraft());
@@ -286,7 +334,7 @@ export function SdkworkIamTenantAdminWorkspace({
                         <Plus className="h-4 w-4" />
                         {messages.members.add}
                       </Button>
-                    )}
+                    ) : undefined}
                   />
                 )}
             </div>

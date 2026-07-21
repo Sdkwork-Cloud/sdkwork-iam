@@ -1,4 +1,4 @@
-import type { SdkworkIamTenantAdminMessages } from "../../../types";
+import type { SdkworkIamTenantAdminMessages } from "../../../../types/tenant-admin-messages";
 
 export const sdkworkIamTenantAdminMessages: SdkworkIamTenantAdminMessages = {
   applications: {
@@ -79,6 +79,7 @@ export const sdkworkIamTenantAdminMessages: SdkworkIamTenantAdminMessages = {
     titleTemplate: "{name} members",
   },
   tenants: {
+    applySearch: "Search",
     create: "Create tenant",
     delete: "Delete",
     deleteDescriptionTemplate: "Delete {name}? This action cannot be undone.",
@@ -98,6 +99,8 @@ export const sdkworkIamTenantAdminMessages: SdkworkIamTenantAdminMessages = {
     emptyTitle: "No tenants found",
     loadedMore: "More tenants loaded.",
     manage: "Manage",
+    searchLabel: "Search tenants",
+    searchPlaceholder: "Search tenant name, code, or ID",
     notices: { createSuccess: "Tenant created.", deleteSuccess: "Tenant deleted.", loadError: "Tenants could not be loaded.", updateSuccess: "Tenant updated." },
     selectedDescriptionTemplate: "Tenant ID {id} · Review members and registered applications.",
     selectedTitleTemplate: "Managing {name}",

@@ -24,6 +24,16 @@ export interface SdkworkIamOrganizationMembershipDraft {
   userId: string;
 }
 
+export interface SdkworkIamDepartmentAssignmentDraft {
+  departmentId: string;
+  isPrimary?: boolean;
+  organizationMembershipId: string;
+}
+
+export interface SdkworkIamDepartmentAssignmentUpdateDraft {
+  isPrimary: boolean;
+}
+
 export interface SdkworkIamOrganization {
   code?: string;
   id: string;
@@ -70,6 +80,7 @@ export interface SdkworkIamDepartmentAssignment {
   departmentId: string;
   displayName?: string;
   id: string;
+  isPrimary?: boolean;
   organizationId?: string;
   organizationMembershipId?: string;
   positionName?: string;
@@ -132,6 +143,7 @@ export interface SdkworkIamOrganizationController {
   buildDepartmentTree(departments?: readonly SdkworkIamDepartment[]): readonly SdkworkIamDepartmentNode[];
   buildOrganizationTree(organizations?: readonly SdkworkIamOrganization[]): readonly SdkworkIamOrganizationNode[];
   createDepartment(body: SdkworkIamDepartmentDraft): Promise<SdkworkIamDepartment>;
+  createDepartmentAssignment(body: SdkworkIamDepartmentAssignmentDraft): Promise<SdkworkIamDepartmentAssignment>;
   createOrganization(body: SdkworkIamOrganizationDraft): Promise<SdkworkIamOrganization>;
   deleteDepartment(departmentId: string): Promise<void>;
   deleteOrganization(organizationId: string): Promise<void>;
@@ -150,6 +162,10 @@ export interface SdkworkIamOrganizationController {
   loadMoreMemberships(organizationId: string): Promise<readonly SdkworkIamOrganizationMembership[]>;
   selectOrganization(organizationId: string, params?: Record<string, unknown>): Promise<SdkworkIamOrganization | undefined>;
   updateDepartment(departmentId: string, body: Partial<SdkworkIamDepartmentDraft>): Promise<SdkworkIamDepartment>;
+  updateDepartmentAssignment(
+    assignmentId: string,
+    body: SdkworkIamDepartmentAssignmentUpdateDraft,
+  ): Promise<SdkworkIamDepartmentAssignment>;
   updateMembership(membershipId: string, body: Partial<SdkworkIamOrganizationMembershipDraft>): Promise<SdkworkIamOrganizationMembership>;
   updateOrganization(organizationId: string, body: Partial<SdkworkIamOrganizationDraft>): Promise<SdkworkIamOrganization>;
 }
@@ -157,5 +173,51 @@ export interface SdkworkIamOrganizationController {
 export interface SdkworkIamOrganizationAdminWorkspaceProps {
   controller: SdkworkIamOrganizationController;
   description?: string;
+  permissions?: {
+    departments: {
+      create: boolean;
+      delete: boolean;
+      read: boolean;
+      update: boolean;
+    };
+    memberships: {
+      create: boolean;
+      read: boolean;
+      update: boolean;
+    };
+    organizations: {
+      create: boolean;
+      delete: boolean;
+      update: boolean;
+    };
+    positions: {
+      read: boolean;
+    };
+    roleBindings: {
+      read: boolean;
+    };
+  };
+  onOpenStructure?: (organization: SdkworkIamOrganization) => void;
   title?: string;
+}
+
+export interface SdkworkIamOrganizationStructureWorkspaceProps {
+  controller: SdkworkIamOrganizationController;
+  onBack?: () => void;
+  organizationId: string;
+  permissions?: {
+    assignments: {
+      create: boolean;
+      read: boolean;
+      update: boolean;
+    };
+    departments: {
+      create: boolean;
+      delete: boolean;
+      update: boolean;
+    };
+    memberships: {
+      read: boolean;
+    };
+  };
 }

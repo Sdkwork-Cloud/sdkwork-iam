@@ -199,6 +199,7 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
         organizationId: "org-child",
         organizationMembershipId: "membership-1",
         positionName: "Platform Lead",
+        isPrimary: undefined,
         status: undefined,
         userId: "1",
       },
@@ -266,6 +267,28 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
     ]);
   });
 
+  it("retrieves an organization directly for a refreshable structure route", async () => {
+    const retrieve = vi.fn().mockResolvedValue({ name: "Deep-linked organization", organizationId: "org-deep" });
+    const controller = createSdkworkIamOrganizationController({
+      service: {
+        iam: {
+          departmentAssignments: { list: vi.fn() },
+          departments: { list: vi.fn() },
+          organizationMemberships: { list: vi.fn() },
+          organizations: { list: vi.fn(), retrieve },
+          positions: { list: vi.fn() },
+          roleBindings: { list: vi.fn() },
+        },
+      } as never,
+    });
+
+    await expect(controller.selectOrganization("org-deep")).resolves.toMatchObject({
+      name: "Deep-linked organization",
+      organizationId: "org-deep",
+    });
+    expect(retrieve).toHaveBeenCalledWith("org-deep");
+  });
+
   it("creates, updates, and deletes organizations, departments, and memberships", async () => {
     const service = {
       iam: {
@@ -283,6 +306,11 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
         departments: {
           create: vi.fn().mockResolvedValue({ departmentId: "dept-1", name: "Engineering", organizationId: "org-new" }),
           delete: vi.fn().mockResolvedValue(undefined),
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        },
+        departmentAssignments: {
+          create: vi.fn().mockResolvedValue({ assignmentId: "da-1", departmentId: "dept-1", isPrimary: false, organizationMembershipId: "m-1", userId: "1" }),
+          update: vi.fn().mockResolvedValue({ assignmentId: "da-1", departmentId: "dept-1", isPrimary: true, organizationMembershipId: "m-1", userId: "1" }),
           list: vi.fn().mockResolvedValue({ items: [] }),
         },
       },
@@ -305,12 +333,22 @@ describe("@sdkwork/iam-pc-admin-organization", () => {
     await expect(controller.updateMembership("m-1", { status: "inactive" })).resolves.toMatchObject({
       status: "inactive",
     });
+    await expect(controller.createDepartmentAssignment({ departmentId: "dept-1", organizationMembershipId: "m-1" })).resolves.toMatchObject({
+      assignmentId: "da-1",
+      isPrimary: false,
+    });
+    await expect(controller.updateDepartmentAssignment("da-1", { isPrimary: true })).resolves.toMatchObject({
+      assignmentId: "da-1",
+      isPrimary: true,
+    });
     await controller.deleteDepartment("dept-1");
     await controller.deleteOrganization("org-new");
 
     expect(service.iam.organizations.create).toHaveBeenCalledWith({ name: "New Org" });
     expect(service.iam.departments.create).toHaveBeenCalledWith({ name: "Engineering", organizationId: "org-new" });
     expect(service.iam.organizationMemberships.update).toHaveBeenCalledWith("m-1", { status: "inactive" });
+    expect(service.iam.departmentAssignments.create).toHaveBeenCalledWith({ departmentId: "dept-1", organizationMembershipId: "m-1" });
+    expect(service.iam.departmentAssignments.update).toHaveBeenCalledWith("da-1", { isPrimary: true });
     expect(service.iam.organizations.delete).toHaveBeenCalledWith("org-new");
   });
 });

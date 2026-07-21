@@ -1,4 +1,4 @@
-import type { SdkworkIamTenantAdminMessages } from "../../../types";
+import type { SdkworkIamTenantAdminMessages } from "../../../../types/tenant-admin-messages";
 
 export const sdkworkIamTenantAdminMessages: SdkworkIamTenantAdminMessages = {
   applications: {
@@ -79,6 +79,7 @@ export const sdkworkIamTenantAdminMessages: SdkworkIamTenantAdminMessages = {
     titleTemplate: "{name}的成员",
   },
   tenants: {
+    applySearch: "搜索",
     create: "创建租户",
     delete: "删除",
     deleteDescriptionTemplate: "确定删除“{name}”吗？此操作无法撤销。",
@@ -98,6 +99,8 @@ export const sdkworkIamTenantAdminMessages: SdkworkIamTenantAdminMessages = {
     emptyTitle: "暂无租户",
     loadedMore: "已加载更多租户。",
     manage: "管理",
+    searchLabel: "搜索租户",
+    searchPlaceholder: "搜索租户名称、编码或 ID",
     notices: { createSuccess: "租户已创建。", deleteSuccess: "租户已删除。", loadError: "租户列表加载失败。", updateSuccess: "租户已更新。" },
     selectedDescriptionTemplate: "租户 ID {id} · 管理成员与已注册应用。",
     selectedTitleTemplate: "正在管理 {name}",

@@ -148,6 +148,28 @@ export function createSdkworkIamOrganizationController(
         throw error;
       }
     },
+    createDepartmentAssignment: async (body) => {
+      requireId(body.departmentId, "departmentId");
+      requireId(body.organizationMembershipId, "organizationMembershipId");
+      setState({ status: "loading" });
+      try {
+        const assignment = toDepartmentAssignment(
+          await resolved.service.iam.departmentAssignments.create(body as unknown as Record<string, unknown>),
+        );
+        if (!assignment) {
+          throw new Error("SDKWork IAM department assignment response is missing assignmentId, departmentId, or userId");
+        }
+        const departmentAssignments = [
+          ...state.departmentAssignments.filter((item) => item.assignmentId !== assignment.assignmentId),
+          assignment,
+        ];
+        setState({ departmentAssignments, status: "ready" });
+        return assignment;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
     createOrganization: async (body) => {
       requireId(body.name, "name");
       setState({ status: "loading" });
@@ -375,11 +397,13 @@ export function createSdkworkIamOrganizationController(
         roleBindings: roleBindingsSession.getItems() as SdkworkIamRoleBinding[],
       }),
     ),
-    selectOrganization: async (organizationId, params) => {
+    selectOrganization: async (organizationId) => {
       const normalizedOrganizationId = requireId(organizationId, "organizationId");
-      const organizations = state.organizations.length > 0 ? state.organizations : await controller.listOrganizations(params);
-      const selectedOrganization = organizations.find(
+      const selectedFromState = state.organizations.find(
         (organization) => organization.organizationId === normalizedOrganizationId || organization.id === normalizedOrganizationId,
+      );
+      const selectedOrganization = selectedFromState ?? toOrganization(
+        await resolved.service.iam.organizations.retrieve(normalizedOrganizationId),
       );
       setState({ selectedOrganization });
       return selectedOrganization;
@@ -403,6 +427,30 @@ export function createSdkworkIamOrganizationController(
         );
         setState({ departments, departmentTree, status: "ready" });
         return department;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
+    updateDepartmentAssignment: async (assignmentId, body) => {
+      const normalizedAssignmentId = requireId(assignmentId, "assignmentId");
+      setState({ status: "loading" });
+      try {
+        const assignment = toDepartmentAssignment(
+          await resolved.service.iam.departmentAssignments.update(
+            normalizedAssignmentId,
+            body as unknown as Record<string, unknown>,
+          ),
+        );
+        if (!assignment) {
+          throw new Error("SDKWork IAM department assignment response is missing assignmentId, departmentId, or userId");
+        }
+        const departmentAssignments = [
+          ...state.departmentAssignments.filter((item) => item.assignmentId !== assignment.assignmentId),
+          assignment,
+        ];
+        setState({ departmentAssignments, status: "ready" });
+        return assignment;
       } catch (error) {
         setState({ status: "error" });
         throw error;
@@ -726,6 +774,7 @@ function toDepartmentAssignment(value: unknown): SdkworkIamDepartmentAssignment 
     departmentId,
     displayName: optionalString(record.displayName) || optionalString(record.name) || optionalString(record.nickname),
     id: optionalString(record.id) || assignmentId,
+    isPrimary: optionalBoolean(record.isPrimary) ?? optionalBoolean(record.is_primary),
     organizationId: optionalString(record.organizationId) || optionalString(record.organization_id),
     organizationMembershipId:
       optionalString(record.organizationMembershipId)
@@ -804,6 +853,13 @@ function toRecord(value: unknown): Record<string, unknown> {
 function optionalString(value: unknown): string | undefined {
   const normalized = typeof value === "string" ? trim(value) : value === undefined || value === null ? "" : trim(String(value));
   return isBlank(normalized) ? undefined : normalized;
+}
+
+function optionalBoolean(value: unknown): boolean | undefined {
+  if (typeof value === "boolean") return value;
+  if (value === 1 || value === "1" || value === "true") return true;
+  if (value === 0 || value === "0" || value === "false") return false;
+  return undefined;
 }
 
 function requireId(value: unknown, name: string): string {

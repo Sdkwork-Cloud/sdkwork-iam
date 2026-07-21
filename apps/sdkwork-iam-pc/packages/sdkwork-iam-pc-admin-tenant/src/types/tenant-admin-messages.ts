@@ -112,6 +112,7 @@ export interface SdkworkIamTenantAdminMessages {
     titleTemplate: string;
   };
   tenants: {
+    applySearch: string;
     create: string;
     delete: string;
     deleteDescriptionTemplate: string;
@@ -131,6 +132,8 @@ export interface SdkworkIamTenantAdminMessages {
     emptyTitle: string;
     loadedMore: string;
     manage: string;
+    searchLabel: string;
+    searchPlaceholder: string;
     notices: {
       createSuccess: string;
       deleteSuccess: string;
