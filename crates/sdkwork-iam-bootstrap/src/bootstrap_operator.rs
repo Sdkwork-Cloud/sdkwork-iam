@@ -86,7 +86,7 @@ pub async fn ensure_postgres_bootstrap_admin_user(
     .bind(DEFAULT_BOOTSTRAP_ADMIN_USERNAME)
     .bind(DEFAULT_BOOTSTRAP_ADMIN_DISPLAY_NAME)
     .bind(DEFAULT_BOOTSTRAP_ADMIN_EMAIL)
-    .bind(&now)
+    .bind(now)
     .execute(pool)
     .await?;
 
@@ -105,7 +105,7 @@ pub async fn ensure_postgres_bootstrap_admin_user(
         .bind(DEFAULT_IAM_TENANT_ID)
         .bind(DEFAULT_BOOTSTRAP_ADMIN_USER_ID)
         .bind(&password_hash)
-        .bind(&now)
+        .bind(now)
         .execute(pool)
         .await?;
     }
@@ -119,7 +119,7 @@ pub async fn ensure_postgres_bootstrap_admin_user(
     .bind(bootstrap_tenant_member_id(DEFAULT_BOOTSTRAP_ADMIN_USER_ID))
     .bind(DEFAULT_IAM_TENANT_ID)
     .bind(DEFAULT_BOOTSTRAP_ADMIN_USER_ID)
-    .bind(&now)
+    .bind(now)
     .execute(pool)
     .await?;
 
@@ -134,7 +134,7 @@ pub async fn ensure_postgres_bootstrap_admin_user(
     .bind(DEFAULT_IAM_TENANT_ID)
     .bind(DEFAULT_IAM_ORGANIZATION_ID)
     .bind(DEFAULT_BOOTSTRAP_ADMIN_USER_ID)
-    .bind(&now)
+    .bind(now)
     .execute(pool)
     .await?;
 
@@ -155,7 +155,7 @@ pub async fn ensure_postgres_bootstrap_admin_user(
         &now,
     )
     .await
-    .map_err(|error| sqlx::Error::Protocol(error))?;
+    .map_err(sqlx::Error::Protocol)?;
 
     Ok(if password.is_some() {
         BootstrapAdminUserOutcome::Created
@@ -270,7 +270,7 @@ pub async fn ensure_sqlite_bootstrap_admin_user(
         &now,
     )
     .await
-    .map_err(|error| sqlx::Error::Protocol(error))?;
+    .map_err(sqlx::Error::Protocol)?;
 
     Ok(if password.is_some() {
         BootstrapAdminUserOutcome::Created
@@ -310,7 +310,7 @@ pub async fn ensure_postgres_bootstrap_manager_user(
     .bind(DEFAULT_BOOTSTRAP_MANAGER_USERNAME)
     .bind(DEFAULT_BOOTSTRAP_MANAGER_DISPLAY_NAME)
     .bind(DEFAULT_BOOTSTRAP_MANAGER_EMAIL)
-    .bind(&now)
+    .bind(now)
     .execute(pool)
     .await?;
 
@@ -327,7 +327,7 @@ pub async fn ensure_postgres_bootstrap_manager_user(
     .bind(DEFAULT_IAM_TENANT_ID)
     .bind(DEFAULT_BOOTSTRAP_MANAGER_USER_ID)
     .bind(&password_hash)
-    .bind(&now)
+    .bind(now)
     .execute(pool)
     .await?;
 
@@ -340,7 +340,7 @@ pub async fn ensure_postgres_bootstrap_manager_user(
     .bind(bootstrap_member_tenant_member_id(DEFAULT_BOOTSTRAP_MANAGER_USER_ID))
     .bind(DEFAULT_IAM_TENANT_ID)
     .bind(DEFAULT_BOOTSTRAP_MANAGER_USER_ID)
-    .bind(&now)
+    .bind(now)
     .execute(pool)
     .await?;
 
@@ -355,7 +355,7 @@ pub async fn ensure_postgres_bootstrap_manager_user(
     .bind(DEFAULT_IAM_TENANT_ID)
     .bind(DEFAULT_IAM_ORGANIZATION_ID)
     .bind(DEFAULT_BOOTSTRAP_MANAGER_USER_ID)
-    .bind(&now)
+    .bind(now)
     .execute(pool)
     .await?;
 
@@ -382,7 +382,7 @@ pub async fn ensure_postgres_bootstrap_manager_user(
         &now,
     )
     .await
-    .map_err(|error| sqlx::Error::Protocol(error))?;
+    .map_err(sqlx::Error::Protocol)?;
 
     Ok(if manager_exists {
         BootstrapManagerUserOutcome::SkippedExistingManager
@@ -500,7 +500,7 @@ pub async fn ensure_sqlite_bootstrap_manager_user(
         &now,
     )
     .await
-    .map_err(|error| sqlx::Error::Protocol(error))?;
+    .map_err(sqlx::Error::Protocol)?;
 
     Ok(if manager_exists {
         BootstrapManagerUserOutcome::SkippedExistingManager

@@ -456,14 +456,14 @@ pub async fn postgres_default_iam_seed_complete(pool: &PgPool) -> Result<bool, s
 pub async fn import_postgres_default_iam_seed(pool: &PgPool) -> Result<(), sqlx::Error> {
     sdkwork_iam_module_registry::materialize_postgres_catalog(pool, None, "operational")
         .await
-        .map_err(|error| sqlx::Error::Protocol(error))?;
+        .map_err(sqlx::Error::Protocol)?;
     Ok(())
 }
 
 pub async fn import_sqlite_default_iam_seed(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     sdkwork_iam_module_registry::materialize_sqlite_catalog(pool, None, "operational")
         .await
-        .map_err(|error| sqlx::Error::Protocol(error))?;
+        .map_err(sqlx::Error::Protocol)?;
     Ok(())
 }
 
@@ -473,7 +473,7 @@ pub async fn upsert_postgres_standard_roles(
 ) -> Result<(), sqlx::Error> {
     sdkwork_iam_module_registry::materialize::upsert_tenant_roles_postgres(pool, tenant_id, None)
         .await
-        .map_err(|error| sqlx::Error::Protocol(error))
+        .map_err(sqlx::Error::Protocol)
 }
 
 pub async fn upsert_sqlite_standard_roles(
@@ -482,7 +482,7 @@ pub async fn upsert_sqlite_standard_roles(
 ) -> Result<(), sqlx::Error> {
     sdkwork_iam_module_registry::materialize::upsert_tenant_roles_sqlite(pool, tenant_id, None)
         .await
-        .map_err(|error| sqlx::Error::Protocol(error))
+        .map_err(sqlx::Error::Protocol)
 }
 
 pub fn iam_baseline_postgres_sql() -> &'static str {

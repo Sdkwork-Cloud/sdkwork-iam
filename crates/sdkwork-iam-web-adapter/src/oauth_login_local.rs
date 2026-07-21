@@ -195,14 +195,14 @@ fn resolve_local_oauth_code_ttl_seconds() -> u64 {
 fn local_oauth_provider_env_key(provider: &str, suffix: &str) -> Result<String, String> {
     let normalized = normalize_oauth_provider_code(provider)
         .ok_or_else(|| "OAuth provider is invalid".to_string())?;
-    let provider_segment = normalized.to_ascii_uppercase().replace('_', "_");
+    let provider_segment = normalized.to_ascii_uppercase();
     Ok(format!("SDKWORK_IAM_OAUTH_{provider_segment}_{suffix}"))
 }
 
 fn collect_normalized_oauth_provider_identifiers(raw_value: &str) -> Vec<String> {
     raw_value
         .split([',', ';', ' '])
-        .filter_map(|segment| normalize_oauth_provider_code(segment))
+        .filter_map(normalize_oauth_provider_code)
         .collect()
 }
 

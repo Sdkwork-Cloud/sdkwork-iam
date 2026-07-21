@@ -298,27 +298,93 @@ fn parse_provider_callback_body(body: &[u8], content_type: Option<&str>) -> Resu
     }
 
     let mut reader = Reader::from_str(text);
-    reader.config_mut().trim_text(true);
+    reader.config_mut().trim_text(false);
     let mut fields = Map::new();
-    let mut current = None;
+    let mut depth = 0_u8;
+    let mut current_name = None;
+    let mut current_value = String::new();
     loop {
         match reader.read_event() {
             Ok(Event::Start(event)) => {
-                current = Some(String::from_utf8_lossy(event.name().as_ref()).to_string());
-            }
-            Ok(Event::Text(event)) => {
-                if let Some(name) = current.take() {
-                    let value = event
-                        .unescape()
-                        .map_err(|error| {
-                            format!("decode OAuth provider XML field failed: {error}")
-                        })?
-                        .into_owned();
-                    fields.insert(name, Value::String(value));
+                depth = depth
+                    .checked_add(1)
+                    .ok_or_else(|| "OAuth provider XML nesting is too deep".to_string())?;
+                match depth {
+                    1 => {}
+                    2 => {
+                        current_name =
+                            Some(String::from_utf8_lossy(event.name().as_ref()).into_owned());
+                        current_value.clear();
+                    }
+                    _ => {
+                        return Err(
+                            "OAuth provider XML callback fields must not be nested".to_string()
+                        );
+                    }
                 }
             }
-            Ok(Event::End(_)) => current = None,
-            Ok(Event::Eof) => break,
+            Ok(Event::Text(event)) => {
+                if current_name.is_some() {
+                    let decoded = event.xml10_content().map_err(|error| {
+                        format!("decode OAuth provider XML field failed: {error}")
+                    })?;
+                    let value = quick_xml::escape::unescape(&decoded).map_err(|error| {
+                        format!("unescape OAuth provider XML field failed: {error}")
+                    })?;
+                    current_value.push_str(&value);
+                }
+            }
+            Ok(Event::CData(event)) => {
+                if current_name.is_some() {
+                    let value = event.decode().map_err(|error| {
+                        format!("decode OAuth provider XML CDATA field failed: {error}")
+                    })?;
+                    current_value.push_str(&value);
+                }
+            }
+            Ok(Event::GeneralRef(event)) => {
+                if current_name.is_some() {
+                    let reference = event.decode().map_err(|error| {
+                        format!("decode OAuth provider XML entity reference failed: {error}")
+                    })?;
+                    let encoded = format!("&{reference};");
+                    let value = quick_xml::escape::unescape(&encoded).map_err(|error| {
+                        format!("unescape OAuth provider XML entity reference failed: {error}")
+                    })?;
+                    current_value.push_str(&value);
+                }
+            }
+            Ok(Event::Empty(event)) => {
+                if depth != 1 {
+                    return Err(
+                        "OAuth provider XML callback empty fields must be direct children of the root"
+                            .to_string(),
+                    );
+                }
+                let name = String::from_utf8_lossy(event.name().as_ref()).into_owned();
+                fields.insert(name, Value::String(String::new()));
+            }
+            Ok(Event::End(_)) => {
+                if depth == 2 {
+                    let name = current_name.take().ok_or_else(|| {
+                        "OAuth provider XML callback field ended without a start tag".to_string()
+                    })?;
+                    let value = std::mem::take(&mut current_value);
+                    fields.insert(name, Value::String(value.trim().to_owned()));
+                }
+                depth = depth.checked_sub(1).ok_or_else(|| {
+                    "OAuth provider XML callback has an unmatched end tag".to_string()
+                })?;
+            }
+            Ok(Event::DocType(_)) => {
+                return Err("OAuth provider XML document types are not allowed".to_string());
+            }
+            Ok(Event::Eof) => {
+                if depth != 0 || current_name.is_some() {
+                    return Err("OAuth provider XML callback is not fully closed".to_string());
+                }
+                break;
+            }
             Err(error) => {
                 return Err(format!("parse OAuth provider XML callback failed: {error}"));
             }
@@ -517,7 +583,7 @@ fn try_generic_challenge_verification(
 }
 
 fn verify_wechat_signature(token: &str, timestamp: &str, nonce: &str, signature: &str) -> bool {
-    let mut parts = vec![token.to_string(), timestamp.to_string(), nonce.to_string()];
+    let mut parts = [token.to_string(), timestamp.to_string(), nonce.to_string()];
     parts.sort();
     let joined = parts.join("");
     let digest = Sha1::digest(joined.as_bytes());
@@ -533,7 +599,7 @@ fn verify_wechat_message_signature(
     signature: &str,
 ) -> bool {
     if let Some(encrypted_payload) = encrypted_payload {
-        let mut parts = vec![
+        let mut parts = [
             token.to_string(),
             timestamp.to_string(),
             nonce.to_string(),
@@ -727,7 +793,7 @@ mod tests {
         let token = "test-token";
         let timestamp = "1400000000";
         let nonce = "nonce";
-        let mut parts = vec![token.to_string(), timestamp.to_string(), nonce.to_string()];
+        let mut parts = [token.to_string(), timestamp.to_string(), nonce.to_string()];
         parts.sort();
         let digest = Sha1::digest(parts.join("").as_bytes());
         let signature = format!("{:x}", digest);
@@ -754,13 +820,29 @@ mod tests {
     #[test]
     fn parses_plaintext_wechat_xml_callback() {
         let payload = parse_provider_callback_body(
-            br#"<xml><MsgId>42</MsgId><MsgType>event</MsgType><Event>subscribe</Event></xml>"#,
+            br#"<xml><MsgId>42</MsgId><MsgType>event &amp; webhook &#x2B; sync</MsgType><Event><![CDATA[subscribe & notify]]></Event><Optional/></xml>"#,
             Some("text/xml"),
         )
         .expect("xml payload");
         assert_eq!(payload["MsgId"], "42");
-        assert_eq!(payload["MsgType"], "event");
-        assert_eq!(payload["Event"], "subscribe");
+        assert_eq!(payload["MsgType"], "event & webhook + sync");
+        assert_eq!(payload["Event"], "subscribe & notify");
+        assert_eq!(payload["Optional"], "");
+    }
+
+    #[test]
+    fn rejects_ambiguous_or_unsafe_wechat_xml_callback() {
+        assert!(parse_provider_callback_body(
+            br#"<!DOCTYPE xml><xml><MsgId>42</MsgId></xml>"#,
+            Some("text/xml"),
+        )
+        .is_err());
+        assert!(parse_provider_callback_body(
+            br#"<xml><Outer><Inner>42</Inner></Outer></xml>"#,
+            Some("text/xml"),
+        )
+        .is_err());
+        assert!(parse_provider_callback_body(br#"<xml><MsgId>42"#, Some("text/xml"),).is_err());
     }
 
     #[test]
@@ -769,7 +851,7 @@ mod tests {
         let timestamp = "1";
         let nonce = "2";
         let encrypted = "ciphertext";
-        let mut parts = vec![
+        let mut parts = [
             token.to_string(),
             timestamp.to_string(),
             nonce.to_string(),

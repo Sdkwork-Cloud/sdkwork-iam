@@ -328,8 +328,10 @@ mod tests {
             OauthBindingActionKind::Link,
             Some("github")
         ));
-        assert!(
-            oauth_binding_allowed(&policy, OauthBindingActionKind::Link, Some("google")) == false
-        );
+        assert!(!oauth_binding_allowed(
+            &policy,
+            OauthBindingActionKind::Link,
+            Some("google")
+        ));
     }
 }

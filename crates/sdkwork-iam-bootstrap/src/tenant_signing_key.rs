@@ -151,8 +151,7 @@ pub async fn load_sqlite_active_tenant_signing_key(
     let tenant_id: String = row.get(0);
     let kid: String = row.get(1);
     let secret_ref: String = row.get(2);
-    let secret =
-        decode_signing_secret_ref(&secret_ref).map_err(|error| sqlx::Error::Protocol(error))?;
+    let secret = decode_signing_secret_ref(&secret_ref).map_err(sqlx::Error::Protocol)?;
     Ok(Some(TenantSigningKeyMaterial {
         tenant_id,
         kid,
@@ -187,8 +186,7 @@ pub async fn load_postgres_active_tenant_signing_key(
     let tenant_id: String = row.get(0);
     let kid: String = row.get(1);
     let secret_ref: String = row.get(2);
-    let secret =
-        decode_signing_secret_ref(&secret_ref).map_err(|error| sqlx::Error::Protocol(error))?;
+    let secret = decode_signing_secret_ref(&secret_ref).map_err(sqlx::Error::Protocol)?;
     Ok(Some(TenantSigningKeyMaterial {
         tenant_id,
         kid,
@@ -225,8 +223,7 @@ pub async fn resolve_sqlite_tenant_signing_key_by_kid(
 
     let kid: String = row.get(1);
     let secret_ref: String = row.get(2);
-    let secret =
-        decode_signing_secret_ref(&secret_ref).map_err(|error| sqlx::Error::Protocol(error))?;
+    let secret = decode_signing_secret_ref(&secret_ref).map_err(sqlx::Error::Protocol)?;
     Ok(Some(TenantSigningKeyMaterial {
         tenant_id,
         kid,
@@ -263,8 +260,7 @@ pub async fn resolve_postgres_tenant_signing_key_by_kid(
 
     let kid: String = row.get(1);
     let secret_ref: String = row.get(2);
-    let secret =
-        decode_signing_secret_ref(&secret_ref).map_err(|error| sqlx::Error::Protocol(error))?;
+    let secret = decode_signing_secret_ref(&secret_ref).map_err(sqlx::Error::Protocol)?;
     Ok(Some(TenantSigningKeyMaterial {
         tenant_id,
         kid,

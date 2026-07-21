@@ -181,9 +181,9 @@ pub async fn issue_delegated_access_credential(
     .bind("tenant")
     .bind(Json(&context.data_scope))
     .bind(Json(&context.permission_scope))
-    .bind(&expires_at)
-    .bind(&now)
-    .bind(&now)
+    .bind(expires_at)
+    .bind(now)
+    .bind(now)
     .execute(pg)
     .await
     .map_err(|error| format!("insert delegated access token session failed: {error}"))?;

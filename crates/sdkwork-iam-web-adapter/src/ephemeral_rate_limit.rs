@@ -113,8 +113,8 @@ pub async fn check_rate_limit(
     .bind(KIND_RATE_LIMIT)
     .bind(Json(payload))
     .bind(next_expires_at)
-    .bind(&timestamp)
-    .bind(&timestamp)
+    .bind(timestamp)
+    .bind(timestamp)
     .execute(&mut *tx)
     .await
     .map_err(|error| format!("upsert rate limit artifact failed: {error}"))?;

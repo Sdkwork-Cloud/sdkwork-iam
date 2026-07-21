@@ -120,13 +120,13 @@ pub fn permission_matches(granted: &str, required: &str) -> bool {
     if granted == "*" || granted == required {
         return true;
     }
-    if granted.ends_with(".*") {
-        let prefix = granted[..granted.len() - 2].trim_end_matches('.');
+    if let Some(prefix) = granted.strip_suffix(".*") {
+        let prefix = prefix.trim_end_matches('.');
         return required == prefix || required.starts_with(&format!("{prefix}."));
     }
-    if granted.starts_with("*.") {
-        let action = granted[2..].trim_start_matches('.');
-        return required.ends_with(action) && required.split('.').last() == Some(action);
+    if let Some(action) = granted.strip_prefix("*.") {
+        let action = action.trim_start_matches('.');
+        return required.split('.').next_back() == Some(action);
     }
     false
 }
@@ -150,8 +150,8 @@ pub fn expand_permission_patterns(patterns: &[&str], catalog_codes: &[&str]) -> 
             expanded.insert("*".to_string());
             continue;
         }
-        if normalized.ends_with(".*") {
-            let prefix = normalized[..normalized.len() - 2].trim_end_matches('.');
+        if let Some(prefix) = normalized.strip_suffix(".*") {
+            let prefix = prefix.trim_end_matches('.');
             for code in catalog_codes {
                 let code = normalize_code(code);
                 if code == prefix || code.starts_with(&format!("{prefix}.")) {
@@ -160,11 +160,11 @@ pub fn expand_permission_patterns(patterns: &[&str], catalog_codes: &[&str]) -> 
             }
             continue;
         }
-        if normalized.starts_with("*.") {
-            let action = normalized[2..].trim_start_matches('.');
+        if let Some(action) = normalized.strip_prefix("*.") {
+            let action = action.trim_start_matches('.');
             for code in catalog_codes {
                 let code = normalize_code(code);
-                if code.split('.').last() == Some(action) {
+                if code.split('.').next_back() == Some(action) {
                     expanded.insert(code);
                 }
             }

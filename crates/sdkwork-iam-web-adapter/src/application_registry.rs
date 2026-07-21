@@ -151,7 +151,7 @@ pub async fn ensure_platform_tenant_application(
     )
     .bind(PLATFORM_APPLICATION_TEMPLATE_ID)
     .bind(PLATFORM_APPLICATION_KEY)
-    .bind(&now)
+    .bind(now)
     .execute(pg)
     .await
     .map_err(|error| format!("ensure platform application template failed: {error}"))?;
@@ -195,7 +195,7 @@ pub async fn ensure_platform_tenant_application(
     .bind(tenant_id)
     .bind(PLATFORM_APPLICATION_TEMPLATE_ID)
     .bind(&primary_domain)
-    .bind(&now)
+    .bind(now)
     .execute(pg)
     .await
     .map_err(|error| format!("ensure platform tenant application failed: {error}"))?;
@@ -390,8 +390,8 @@ pub async fn register_application_template(
         .bind(Json(&command.artifacts_config))
         .bind(Json(&command.default_access_permissions))
         .bind(&command.manifest_hash)
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
         .execute(pg)
         .await
         .map_err(|error| format!("update application template failed: {error}"))?;
@@ -418,9 +418,9 @@ pub async fn register_application_template(
         .bind(Json(&command.artifacts_config))
         .bind(Json(&command.default_access_permissions))
         .bind(&command.manifest_hash)
-        .bind(&now)
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
+        .bind(now)
         .execute(pg)
         .await
         .map_err(|error| format!("insert application template failed: {error}"))?;
@@ -491,8 +491,8 @@ pub async fn provision_tenant_application(
         .bind(&command.primary_domain)
         .bind(Json(&access_permissions))
         .bind(Json(&command.runtime_config))
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
         .execute(pg)
         .await
         .map_err(|error| format!("update tenant application failed: {error}"))?;
@@ -516,10 +516,10 @@ pub async fn provision_tenant_application(
         .bind(&command.primary_domain)
         .bind(Json(&access_permissions))
         .bind(Json(&command.runtime_config))
-        .bind(&now)
-        .bind(&now)
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
+        .bind(now)
+        .bind(now)
         .execute(pg)
         .await
         .map_err(|error| format!("insert tenant application failed: {error}"))?;
@@ -572,7 +572,7 @@ pub async fn update_tenant_application(
     .bind(Json(&domain_config))
     .bind(Json(&access_permissions))
     .bind(Json(&merged_runtime_config))
-    .bind(&now)
+    .bind(now)
     .bind(tenant_id)
     .execute(pg)
     .await
@@ -974,10 +974,10 @@ async fn upsert_tenant_application_row(
     .bind(&command.environment)
     .bind(&primary_domain)
     .bind(Json(&command.default_access_permissions))
-    .bind(&now)
-    .bind(&now)
-    .bind(&now)
-    .bind(&now)
+    .bind(now)
+    .bind(now)
+    .bind(now)
+    .bind(now)
     .execute(pg)
     .await
     .map_err(|error| format!("upsert tenant application failed: {error}"))?;
@@ -1107,7 +1107,7 @@ pub async fn enable_tenant_application(
          WHERE id = $1 AND tenant_id = $3",
     )
     .bind(tenant_application_id)
-    .bind(&now)
+    .bind(now)
     .bind(tenant_id)
     .execute(pg)
     .await
@@ -1133,7 +1133,7 @@ pub async fn disable_tenant_application(
          WHERE id = $1 AND tenant_id = $3",
     )
     .bind(tenant_application_id)
-    .bind(&now)
+    .bind(now)
     .bind(tenant_id)
     .execute(pg)
     .await
@@ -1404,8 +1404,8 @@ async fn upsert_application_template_with_id(
         .bind(Json(&command.artifacts_config))
         .bind(Json(&command.default_access_permissions))
         .bind(&command.manifest_hash)
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
         .execute(pg)
         .await
         .map_err(|error| format!("update application template failed: {error}"))?;
@@ -1432,9 +1432,9 @@ async fn upsert_application_template_with_id(
         .bind(Json(&command.artifacts_config))
         .bind(Json(&command.default_access_permissions))
         .bind(&command.manifest_hash)
-        .bind(&now)
-        .bind(&now)
-        .bind(&now)
+        .bind(now)
+        .bind(now)
+        .bind(now)
         .execute(pg)
         .await
         .map_err(|error| format!("insert application template failed: {error}"))?;

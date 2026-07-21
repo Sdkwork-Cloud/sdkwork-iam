@@ -3,17 +3,9 @@ use sqlx::{Executor, PgPool, Postgres, Row, Sqlite, SqlitePool};
 use crate::constants::{DEFAULT_IAM_ORGANIZATION_CODE, DEFAULT_IAM_TENANT_CODE};
 use crate::iam_sql_subject::{parse_iam_sql_organization_id, parse_iam_sql_tenant_id};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct IamScopeResolveOptions {
     pub exclude_soft_deleted: bool,
-}
-
-impl Default for IamScopeResolveOptions {
-    fn default() -> Self {
-        Self {
-            exclude_soft_deleted: false,
-        }
-    }
 }
 
 impl IamScopeResolveOptions {

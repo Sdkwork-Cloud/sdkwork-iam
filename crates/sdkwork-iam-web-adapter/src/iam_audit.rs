@@ -4,6 +4,10 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use sqlx::{types::Json, Executor, PgPool};
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "stable public audit adapter signature; changing it requires coordinated API review"
+)]
 pub async fn record_audit_event(
     pg: &PgPool,
     tenant_id: &str,
@@ -46,6 +50,10 @@ pub async fn record_audit_event(
     Ok(())
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "stable public transactional audit adapter signature; changing it requires coordinated API review"
+)]
 pub async fn record_audit_event_tx<'e, E>(
     executor: E,
     tenant_id: &str,
@@ -91,6 +99,10 @@ where
     Ok(())
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "stable public security-event adapter signature; changing it requires coordinated API review"
+)]
 pub async fn record_security_event(
     pg: &PgPool,
     tenant_id: &str,

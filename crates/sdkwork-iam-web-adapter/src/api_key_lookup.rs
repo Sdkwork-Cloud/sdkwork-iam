@@ -41,7 +41,7 @@ impl ApiKeyLookupService for IamApiKeyLookupService {
              LIMIT 1",
         )
         .bind(&key_hash)
-        .bind(&now)
+        .bind(now)
         .fetch_optional(self.pool.as_ref())
         .await
         .map_err(|error| {
@@ -66,7 +66,7 @@ impl ApiKeyLookupService for IamApiKeyLookupService {
 
         validate_enabled_tenant_runtime_app(self.pool.as_ref(), &tenant_id, &app_id)
             .await
-            .map_err(|error| WebFrameworkError::invalid_credentials(error))?;
+            .map_err(WebFrameworkError::invalid_credentials)?;
 
         let organization_id = normalize_organization_id(&organization_id);
         let permission_scope = parse_string_vec_json(&permission_scope_json);

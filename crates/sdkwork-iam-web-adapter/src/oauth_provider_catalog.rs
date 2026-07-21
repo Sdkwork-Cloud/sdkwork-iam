@@ -27,8 +27,7 @@ pub fn normalize_oauth_provider_code(provider: &str) -> Option<String> {
     let normalized = provider
         .trim()
         .to_ascii_lowercase()
-        .replace('.', "_")
-        .replace('-', "_");
+        .replace(['.', '-'], "_");
     if normalized.is_empty() {
         return None;
     }
@@ -84,7 +83,7 @@ pub fn builtin_oauth_provider_catalog() -> Vec<OauthProviderCatalogEntry> {
             "SDKWork",
             "SDKWork",
             OauthProviderRegionGroup::Global,
-            "oidc",
+            "sdkwork_oidc",
             true,
             true,
             false,
@@ -387,17 +386,6 @@ pub fn builtin_oauth_provider_catalog() -> Vec<OauthProviderCatalogEntry> {
             false,
             270,
         ),
-        entry(
-            "sdkwork",
-            "SDKWork",
-            "SDKWork",
-            OauthProviderRegionGroup::Global,
-            "sdkwork_oidc",
-            true,
-            true,
-            false,
-            5,
-        ),
     ]
 }
 
@@ -440,6 +428,10 @@ pub fn oauth_provider_allowed(allowed_providers: &[String], provider_code: &str)
     })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "declarative constructor for fixed built-in provider catalog rows"
+)]
 fn entry(
     provider_code: &str,
     provider_name: &str,
@@ -500,5 +492,18 @@ mod tests {
                 .any(|entry| entry.provider_code == "sdkwork"),
             "sdkwork provider must be present in built-in catalog",
         );
+    }
+
+    #[test]
+    fn builtin_provider_codes_are_unique_and_sdkwork_uses_its_protocol_family() {
+        let catalog = builtin_oauth_provider_catalog();
+        let unique_codes = catalog
+            .iter()
+            .map(|entry| entry.provider_code.as_str())
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(unique_codes.len(), catalog.len());
+
+        let sdkwork = catalog_entry_for_provider("sdkwork").expect("sdkwork provider");
+        assert_eq!(sdkwork.protocol_family, "sdkwork_oidc");
     }
 }
