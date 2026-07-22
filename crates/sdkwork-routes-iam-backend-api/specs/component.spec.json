@@ -6,7 +6,7 @@
     "displayName": "SDKWork Router Iam Backend Api",
     "version": "0.1.0",
     "type": "rust-route-crate",
-    "root": "sdkwork-iam/crates/sdkwork-routes-iam-backend-api",
+    "root": "crates/sdkwork-routes-iam-backend-api",
     "domain": "iam",
     "capability": "iam",
     "surface": "backend-api",
@@ -81,7 +81,7 @@
     "runtimeEntrypoints": [
       "sdkwork_routes_iam_backend_api::build_sdkwork_iam_backend_api_router"
     ],
-    "routeManifest": "sdkwork_routes_iam_backend_api::backend_routes",
+    "routeManifest": "src/manifest.rs#iam_backend_api_route_manifest",
     "sdkClients": [],
     "sdkDependencies": [],
     "dependencyApiExports": [],

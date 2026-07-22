@@ -14,7 +14,7 @@
       "pathPrefix": null,
       "mountOrder": 0,
       "componentRef": "crates/sdkwork-routes-iam-app-api/specs/component.spec.json",
-      "routeManifestRef": "crates/sdkwork-routes-iam-app-api/sdkwork_routes_iam_app_api::app_routes",
+      "routeManifestRef": "crates/sdkwork-routes-iam-app-api/src/manifest.rs#iam_app_api_route_manifest",
       "sourceRef": "crates/sdkwork-routes-iam-app-api/Cargo.toml"
     },
     {
@@ -25,7 +25,7 @@
       "pathPrefix": null,
       "mountOrder": 1,
       "componentRef": "crates/sdkwork-routes-iam-backend-api/specs/component.spec.json",
-      "routeManifestRef": "crates/sdkwork-routes-iam-backend-api/sdkwork_routes_iam_backend_api::backend_routes",
+      "routeManifestRef": "crates/sdkwork-routes-iam-backend-api/src/manifest.rs#iam_backend_api_route_manifest",
       "sourceRef": "crates/sdkwork-routes-iam-backend-api/Cargo.toml"
     },
     {
@@ -36,7 +36,7 @@
       "pathPrefix": null,
       "mountOrder": 2,
       "componentRef": "crates/sdkwork-routes-iam-open-api/specs/component.spec.json",
-      "routeManifestRef": "crates/sdkwork-routes-iam-open-api/sdkwork_routes_iam_open_api::open_routes",
+      "routeManifestRef": "crates/sdkwork-routes-iam-open-api/src/manifest.rs#open_route_manifest",
       "sourceRef": "crates/sdkwork-routes-iam-open-api/Cargo.toml"
     }
   ]

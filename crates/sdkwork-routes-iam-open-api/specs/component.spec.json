@@ -6,7 +6,7 @@
     "displayName": "SDKWork Router Iam Open Api",
     "version": "0.1.0",
     "type": "rust-route-crate",
-    "root": "sdkwork-iam/crates/sdkwork-routes-iam-open-api",
+    "root": "crates/sdkwork-routes-iam-open-api",
     "domain": "iam",
     "capability": "iam",
     "surface": "open-api",
@@ -88,7 +88,7 @@
       "sdkwork_routes_iam_open_api::build_sdkwork_iam_open_api_router",
       "sdkwork_routes_iam_open_api::build_sdkwork_iam_open_api_router_from_env"
     ],
-    "routeManifest": "sdkwork_routes_iam_open_api::open_routes",
+    "routeManifest": "src/manifest.rs#open_route_manifest",
     "sdkClients": [],
     "sdkDependencies": [],
     "dependencyApiExports": [],

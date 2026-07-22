@@ -6,7 +6,7 @@
     "displayName": "SDKWork Router Iam App Api",
     "version": "0.1.0",
     "type": "rust-route-crate",
-    "root": "sdkwork-iam/crates/sdkwork-routes-iam-app-api",
+    "root": "crates/sdkwork-routes-iam-app-api",
     "domain": "iam",
     "capability": "iam",
     "surface": "app-api",
@@ -83,7 +83,7 @@
     "runtimeEntrypoints": [
       "sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_router"
     ],
-    "routeManifest": "sdkwork_routes_iam_app_api::app_routes",
+    "routeManifest": "src/manifest.rs#iam_app_api_route_manifest",
     "sdkClients": [],
     "sdkDependencies": [],
     "dependencyApiExports": [],
