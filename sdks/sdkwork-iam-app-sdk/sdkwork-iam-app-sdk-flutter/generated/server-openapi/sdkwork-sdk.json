@@ -5,6 +5,8 @@
   "language": "flutter",
   "sdkType": "app",
   "packageName": "sdkwork_iam_app_sdk",
+  "transportPackageName": "sdkwork_iam_app_sdk",
+  "consumerPackageName": "sdkwork_iam_app_sdk",
   "generator": "@sdkwork/sdk-generator",
   "capabilities": {
     "supportsGeneratedTests": true,

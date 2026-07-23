@@ -12,7 +12,7 @@
   "mode": "apply",
   "hasChanges": true,
   "hasDestructiveChanges": false,
-  "changeFingerprint": "430ecdb4f9396d6c3b1db14fb6a4d7a79385729398915d47d075aa1f9f4527eb",
+  "changeFingerprint": "debf444e37329d6ad8d634b5896b68a8c5da60fe70c5e3a802099215ae193149",
   "changeImpact": {
     "schemaVersion": 1,
     "areas": [
@@ -171,7 +171,7 @@
   },
   "stats": {
     "totalFiles": 21,
-    "models": 9,
+    "models": 24,
     "apis": 4,
     "types": 1
   },
@@ -184,7 +184,7 @@
     "skippedUnchangedGeneratedFiles": 0,
     "deletedGeneratedFiles": 0,
     "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
-    "changeFingerprint": "430ecdb4f9396d6c3b1db14fb6a4d7a79385729398915d47d075aa1f9f4527eb",
+    "changeFingerprint": "debf444e37329d6ad8d634b5896b68a8c5da60fe70c5e3a802099215ae193149",
     "changes": {
       "createdGeneratedFiles": [
         "bin/publish-core.mjs",
