@@ -27,7 +27,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "pnpm --dir ../../../.. exec vitest run apps/sdkwork-iam-common/packages/sdkwork-iam-credential-entry/tests --config vitest.config.ts --configLoader native --pool vmThreads"
+    "test": "pnpm --dir ../../../.. exec vitest run apps/sdkwork-iam-common/packages/sdkwork-iam-credential-entry/tests --config vitest.node.config.ts --configLoader native --pool vmThreads"
   },
   "devDependencies": {
     "typescript": "^6.0.2"

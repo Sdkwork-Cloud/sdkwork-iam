@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -13,6 +13,20 @@ import {
 } from './create-dev-bootstrap-access-token-env.mjs';
 
 const sdkworkImRepoRoot = path.resolve(import.meta.dirname, '../../../sdkwork-im');
+
+const clientArchitectureIds = [
+  'pc',
+  'h5',
+  'flutter-mobile',
+  'ios',
+  'android',
+  'harmony',
+  'mini-program',
+];
+
+function decodeJwtPayload(token) {
+  return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+}
 
 test('resolveRepoApplicationManifestPath resolves repo-root manifest by default', () => {
   const manifestPath = resolveRepoApplicationManifestPath(sdkworkImRepoRoot);
@@ -42,6 +56,67 @@ test('mergeRepoDevBootstrapAccessTokenEnv preserves configured bootstrap token',
     },
   });
   assert.equal(merged.SDKWORK_ACCESS_TOKEN, 'configured-bootstrap-token');
+});
+
+test('surface manifest paths generate architecture-specific bootstrap identities', () => {
+  const tempRoot = mkdtempSync(path.join(os.tmpdir(), 'sdkwork-credential-entry-matrix-'));
+  try {
+    for (const architecture of clientArchitectureIds) {
+      const appId = `sdkwork-example-${architecture}`;
+      const surfaceRoot = path.join(tempRoot, 'apps', appId);
+      mkdirSync(surfaceRoot, { recursive: true });
+      writeFileSync(
+        path.join(surfaceRoot, 'sdkwork.app.config.json'),
+        JSON.stringify({
+          app: { key: appId },
+          backend: {
+            appId,
+            tenantId: '100001',
+            organizationId: '0',
+            accessTokenPermissionScope: ['iam.credential_entry'],
+          },
+        }),
+        'utf8',
+      );
+
+      const manifestPath = `apps/${appId}/sdkwork.app.config.json`;
+      const merged = mergeRepoDevBootstrapAccessTokenEnv({
+        env: {},
+        manifestPath,
+        repoRoot: tempRoot,
+      });
+      const payload = decodeJwtPayload(merged.SDKWORK_ACCESS_TOKEN);
+      assert.equal(payload.app_id, appId);
+      assert.equal(payload.tenant_id, '100001');
+      assert.equal(payload.organization_id, '0');
+    }
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('bootstrap token generation fails closed instead of falling back to app.key', () => {
+  const tempRoot = mkdtempSync(path.join(os.tmpdir(), 'sdkwork-credential-entry-strict-'));
+  try {
+    writeFileSync(
+      path.join(tempRoot, 'sdkwork.app.config.json'),
+      JSON.stringify({
+        app: { key: 'sdkwork-example-pc' },
+        backend: {
+          tenantId: '100001',
+          organizationId: '0',
+          accessTokenPermissionScope: ['iam.credential_entry'],
+        },
+      }),
+      'utf8',
+    );
+    assert.throws(
+      () => mergeRepoDevBootstrapAccessTokenEnv({ env: {}, repoRoot: tempRoot }),
+      /backend\.appId is required/u,
+    );
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
 
 test('bootstrap environment aliases normalize to canonical lifecycle names', () => {

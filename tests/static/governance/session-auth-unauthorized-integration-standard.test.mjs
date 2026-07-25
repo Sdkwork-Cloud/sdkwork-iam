@@ -72,6 +72,7 @@ for (const appRoot of IAM_PC_APP_ROOTS) {
       "packages/sdkwork-birdcoder-pc-shell/src/application/app/AppRoot.tsx",
       "packages/sdkwork-terminal-pc-core/src/bootstrap/renderApp.tsx",
       "src/bootstrap/routes.tsx",
+      "src/AuthGate.tsx",
       "src/main.tsx",
       "src/App.tsx",
     ]);

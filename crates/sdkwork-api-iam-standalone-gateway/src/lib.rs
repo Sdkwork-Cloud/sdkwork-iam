@@ -26,12 +26,8 @@ pub async fn build_standalone_runtime() -> Result<StandaloneRuntime, String> {
     let route_manifest = assembly.route_manifest.clone();
     let openapi = assembly.openapi.clone();
     let resolver = IamWebRequestContextResolver::from_database_pool(Some(host.pool().clone()));
-    let layer = build_web_framework_layer(
-        resolver,
-        assembly.route_manifest.clone(),
-        Vec::new(),
-    )
-    .with_metrics(metrics.clone());
+    let layer = build_web_framework_layer(resolver, assembly.route_manifest.clone(), Vec::new())
+        .with_metrics(metrics.clone());
     let router = with_web_request_context(assembly.router, layer);
     let router = mount_openapi_json(
         router,

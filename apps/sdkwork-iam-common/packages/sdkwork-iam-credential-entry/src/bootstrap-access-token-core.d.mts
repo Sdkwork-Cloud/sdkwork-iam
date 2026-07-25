@@ -1,8 +1,9 @@
 export type SdkworkEnvironment = 'development' | 'test' | 'staging' | 'production';
 
 export interface CredentialEntryBootstrapManifest {
-  app?: { id?: string; key?: string };
+  app?: { key?: string };
   backend?: {
+    appId?: string;
     accessTokenPermissionScope?: string[];
     organizationId?: string;
     tenantId?: string;

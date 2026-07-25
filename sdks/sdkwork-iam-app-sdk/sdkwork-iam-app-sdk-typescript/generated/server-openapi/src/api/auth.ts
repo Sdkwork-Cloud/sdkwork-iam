@@ -14,7 +14,7 @@ export class AuthSessionsOrganizationSelectionApi {
 
 /** Sessions organization Selection create. */
   async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/sessions/organization_selection`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/sessions/organization_selection`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', accessTokenOnly: true });
   }
 }
 
@@ -28,7 +28,7 @@ export class AuthSessionsLoginContextSelectionApi {
 
 /** Sessions login Context Selection create. */
   async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/sessions/login_context_selection`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/sessions/login_context_selection`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', accessTokenOnly: true });
   }
 }
 
@@ -72,12 +72,12 @@ export class AuthSessionsApi {
 
 /** Sessions create. */
   async create(body: AppbaseSessionCreateCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/sessions`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/sessions`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', accessTokenOnly: true });
   }
 
 /** Sessions refresh. */
   async refresh(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<SdkWorkCommandData> {
-    return this.client.request<SdkWorkCommandData>(appApiPath(`/auth/sessions/refresh`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+    return this.client.request<SdkWorkCommandData>(appApiPath(`/auth/sessions/refresh`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', accessTokenOnly: true });
   }
 }
 
@@ -91,7 +91,7 @@ export class AuthRegistrationsApi {
 
 /** Registrations create. */
   async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/registrations`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/registrations`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', accessTokenOnly: true });
   }
 }
 
@@ -105,7 +105,7 @@ export class AuthPasswordResetsApi {
 
 /** Password Resets create. */
   async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/password_resets`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/password_resets`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', accessTokenOnly: true });
   }
 }
 
@@ -119,7 +119,7 @@ export class AuthPasswordResetRequestsApi {
 
 /** Password Reset Requests create. */
   async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/password_reset_requests`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/password_reset_requests`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', accessTokenOnly: true });
   }
 }
 

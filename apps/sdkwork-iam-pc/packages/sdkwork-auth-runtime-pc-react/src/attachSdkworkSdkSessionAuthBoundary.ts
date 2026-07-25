@@ -19,6 +19,7 @@ export interface SdkworkSdkHttpRequestBoundary {
 }
 
 interface SdkworkSdkRequestAuthOptions {
+  accessTokenOnly?: boolean;
   credentialEntryBootstrap?: boolean;
   skipAuth?: boolean;
 }
@@ -29,7 +30,9 @@ function shouldHandleSessionAuthUnauthorized(options: unknown): boolean {
   }
 
   const authOptions = options as SdkworkSdkRequestAuthOptions;
-  return authOptions.credentialEntryBootstrap !== true && authOptions.skipAuth !== true;
+  return authOptions.accessTokenOnly !== true
+    && authOptions.credentialEntryBootstrap !== true
+    && authOptions.skipAuth !== true;
 }
 
 export function attachSdkworkSdkSessionAuthBoundary<TClient extends SdkworkSdkClientWithHttp>(

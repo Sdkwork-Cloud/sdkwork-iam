@@ -62,115 +62,115 @@ const IAM_APP_API_ROUTES: &[HttpRoute] = &[
         "auth",
         "registrations.create",
     ),
-    HttpRoute::public(
+    HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/oauth/providers",
         "oauth",
-        "oauth.providers.list",
+        "providers.list",
     ),
     HttpRoute::credential_entry_bootstrap(
         HttpMethod::Post,
         "/app/v3/api/oauth/authorization_urls",
         "oauth",
-        "oauth.authorizationUrls.create",
+        "authorizationUrls.create",
     ),
-    HttpRoute::credential_entry_bootstrap(
+    HttpRoute::public(
         HttpMethod::Post,
         "/app/v3/api/oauth/device_authorizations",
         "oauth",
-        "oauth.deviceAuthorizations.create",
+        "deviceAuthorizations.create",
     ),
     HttpRoute::public(
         HttpMethod::Get,
         "/app/v3/api/oauth/device_authorizations/{deviceAuthorizationId}",
         "oauth",
-        "oauth.deviceAuthorizations.retrieve",
+        "deviceAuthorizations.retrieve",
     ),
-    HttpRoute::public(
+    HttpRoute::credential_entry_bootstrap(
         HttpMethod::Post,
         "/app/v3/api/oauth/device_authorizations/{deviceAuthorizationId}/scans",
         "oauth",
-        "oauth.deviceAuthorizations.scans.create",
+        "deviceAuthorizations.scans.create",
     ),
     HttpRoute::credential_entry_bootstrap(
         HttpMethod::Post,
         "/app/v3/api/oauth/device_authorizations/{deviceAuthorizationId}/password_completions",
         "oauth",
-        "oauth.deviceAuthorizations.passwordCompletions.create",
+        "deviceAuthorizations.passwordCompletions.create",
     ),
     HttpRoute::public(
         HttpMethod::Post,
         "/app/v3/api/oauth/device_authorizations/{deviceAuthorizationId}/session_exchanges",
         "oauth",
-        "oauth.deviceAuthorizations.sessionExchanges.create",
+        "deviceAuthorizations.sessionExchanges.create",
     ),
     HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/oauth/callbacks/{providerCode}",
         "oauth",
-        "oauth.callbacks.retrieve",
+        "callbacks.retrieve",
     ),
     HttpRoute::credential_entry_bootstrap(
         HttpMethod::Post,
         "/app/v3/api/oauth/callbacks/{providerCode}",
         "oauth",
-        "oauth.callbacks.create",
+        "callbacks.create",
     ),
     HttpRoute::credential_entry_bootstrap(
         HttpMethod::Post,
         "/app/v3/api/oauth/mini_program_sessions",
         "oauth",
-        "oauth.miniProgramSessions.create",
+        "miniProgramSessions.create",
     ),
     HttpRoute::credential_entry_bootstrap(
         HttpMethod::Post,
         "/app/v3/api/oauth/sessions",
         "oauth",
-        "oauth.sessions.create",
+        "sessions.create",
     ),
     HttpRoute::dual_token(
         HttpMethod::Get,
         "/app/v3/api/oauth/account_links",
         "oauth",
-        "oauth.accountLinks.list",
+        "accountLinks.list",
     ),
     HttpRoute::dual_token(
         HttpMethod::Delete,
         "/app/v3/api/oauth/account_links/{accountLinkId}",
         "oauth",
-        "oauth.accountLinks.delete",
+        "accountLinks.delete",
     ),
     HttpRoute::dual_token(
         HttpMethod::Get,
         "/app/v3/api/oauth/grants",
         "oauth",
-        "oauth.grants.list",
+        "grants.list",
     ),
     HttpRoute::dual_token(
         HttpMethod::Delete,
         "/app/v3/api/oauth/grants/{grantId}",
         "oauth",
-        "oauth.grants.delete",
+        "grants.delete",
     ),
     HttpRoute::dual_token(
         HttpMethod::Post,
         "/app/v3/api/oauth/authorizations/{authorizationStateId}/completions",
         "oauth",
-        "oauth.authorizations.completions.create",
+        "authorizations.completions.create",
     ),
-    HttpRoute::public(
+    HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/system/iam/runtime",
         "system",
         "iam.runtime.retrieve",
     ),
-    HttpRoute::public(
+    HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/system/iam/verification_policy",
         "system",
         "iam.verificationPolicy.retrieve",
     ),
-    HttpRoute::public(
+    HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/system/iam/account_binding_policy",
         "system",
@@ -283,13 +283,9 @@ const IAM_APP_API_ROUTES: &[HttpRoute] = &[
 
 /// IAM operations that intentionally accept no framework credential.
 pub const IAM_ANONYMOUS_OPERATION_IDS: &[&str] = &[
-    "oauth.providers.list",
-    "oauth.deviceAuthorizations.retrieve",
-    "oauth.deviceAuthorizations.scans.create",
-    "oauth.deviceAuthorizations.sessionExchanges.create",
-    "iam.runtime.retrieve",
-    "iam.verificationPolicy.retrieve",
-    "iam.accountBindingPolicy.retrieve",
+    "deviceAuthorizations.create",
+    "deviceAuthorizations.retrieve",
+    "deviceAuthorizations.sessionExchanges.create",
 ];
 
 /// Session routes resolved by the framework before handler execution.
@@ -307,13 +303,17 @@ pub const IAM_CREDENTIAL_ENTRY_OPERATION_IDS: &[&str] = &[
     "passwordResetRequests.create",
     "passwordResets.create",
     "registrations.create",
-    "oauth.authorizationUrls.create",
-    "oauth.deviceAuthorizations.create",
-    "oauth.deviceAuthorizations.passwordCompletions.create",
-    "oauth.callbacks.retrieve",
-    "oauth.callbacks.create",
-    "oauth.miniProgramSessions.create",
-    "oauth.sessions.create",
+    "authorizationUrls.create",
+    "providers.list",
+    "deviceAuthorizations.scans.create",
+    "deviceAuthorizations.passwordCompletions.create",
+    "callbacks.retrieve",
+    "callbacks.create",
+    "miniProgramSessions.create",
+    "sessions.create",
+    "iam.runtime.retrieve",
+    "iam.verificationPolicy.retrieve",
+    "iam.accountBindingPolicy.retrieve",
 ];
 
 pub fn app_routes() -> Vec<HttpRoute> {

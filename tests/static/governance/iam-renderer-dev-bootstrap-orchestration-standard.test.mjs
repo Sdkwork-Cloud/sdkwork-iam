@@ -14,8 +14,8 @@ const BOOTSTRAP_ORCHESTRATION_PATTERNS = [
   /ensureClawRouterBrowserDevelopmentEnv/u,
 ];
 
-const STANDALONE_PC_RENDERER_DEV_SCRIPT_PATTERN =
-  /run-pc-renderer-dev-with-bootstrap\.mjs/u;
+const STANDALONE_RENDERER_DEV_SCRIPT_PATTERN =
+  /run-(?:pc-)?renderer-dev-with-bootstrap\.mjs/u;
 
 const IAM_PC_RENDERER_DEV_ORCHESTRATORS = Object.freeze([
   { repo: 'sdkwork-im', relativePath: 'scripts/lib/im-pc-dev.mjs' },
@@ -27,7 +27,6 @@ const IAM_PC_RENDERER_DEV_ORCHESTRATORS = Object.freeze([
   { repo: 'sdkwork-terminal', relativePath: 'scripts/terminal-dev.mjs' },
   { repo: 'sdkwork-documents', relativePath: 'scripts/documents-dev.mjs' },
   { repo: 'sdkwork-github', relativePath: 'scripts/github-dev.mjs' },
-  { repo: 'sdkwork-birdcoder', relativePath: 'scripts/birdcoder-iam-env.mjs' },
   { repo: 'sdkwork-notes', relativePath: 'scripts/notes-dev.mjs' },
 ]);
 
@@ -55,11 +54,38 @@ function hasBootstrapOrchestrationPattern(source) {
 
 test('shared repo bootstrap helper is available for application dev orchestrators', () => {
   const helperPath = path.join(workspaceRoot, 'scripts/dev/create-dev-bootstrap-access-token-env.mjs');
-  const runnerPath = path.join(workspaceRoot, 'scripts/dev/run-pc-renderer-dev-with-bootstrap.mjs');
+  const runnerPath = path.join(workspaceRoot, 'scripts/dev/run-renderer-dev-with-bootstrap.mjs');
+  const compatibilityRunnerPath = path.join(
+    workspaceRoot,
+    'scripts/dev/run-pc-renderer-dev-with-bootstrap.mjs',
+  );
   const source = fs.readFileSync(helperPath, 'utf8');
   assert.ok(fs.existsSync(runnerPath));
+  assert.ok(fs.existsSync(compatibilityRunnerPath));
   assert.match(source, /mergeRepoDevBootstrapAccessTokenEnv/u);
   assert.match(source, /resolveRepoApplicationManifestPath/u);
+});
+
+test('BirdCoder delegates renderer bootstrap to sdkwork-app topology application roots', () => {
+  const repoRoot = path.join(sdkworkSpaceRoot, 'sdkwork-birdcoder');
+  const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  const topology = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'specs/topology.spec.json'), 'utf8'),
+  );
+  assert.match(packageJson.scripts['dev:standalone'], /sdkwork-app dev/u);
+
+  const clients = topology.orchestration.profiles['standalone.development'].processes
+    .filter((processEntry) => processEntry.role === 'client');
+  for (const applicationRoot of [
+    'apps/sdkwork-birdcoder-pc',
+    'apps/sdkwork-birdcoder-h5',
+    'apps/sdkwork-birdcoder-flutter-mobile',
+  ]) {
+    assert.ok(
+      clients.some((processEntry) => processEntry.applicationRoot === applicationRoot),
+      `BirdCoder topology must bind renderer bootstrap to ${applicationRoot}`,
+    );
+  }
 });
 
 for (const orchestrator of IAM_PC_RENDERER_DEV_ORCHESTRATORS) {
@@ -80,8 +106,8 @@ for (const packageEntry of STANDALONE_IAM_PC_RENDERER_PACKAGES) {
     const devScript = String(packageJson.scripts?.dev ?? '');
     assert.match(
       devScript,
-      STANDALONE_PC_RENDERER_DEV_SCRIPT_PATTERN,
-      `${packageEntry.repo}/${packageEntry.relativePath} dev script must call run-pc-renderer-dev-with-bootstrap.mjs`,
+      STANDALONE_RENDERER_DEV_SCRIPT_PATTERN,
+      `${packageEntry.repo}/${packageEntry.relativePath} dev script must call the shared renderer bootstrap runner`,
     );
   });
 }

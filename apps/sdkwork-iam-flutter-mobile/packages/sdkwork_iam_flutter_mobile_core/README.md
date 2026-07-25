@@ -17,3 +17,13 @@ final config = resolveSdkworkAuthRuntimeConfigFromMetadata({
 ```
 
 Owner: `sdkwork-iam` maintainers.
+
+## Credential entry bootstrap
+
+Flutter applications resolve the pre-session bootstrap `Access-Token` through
+`resolveSdkworkFlutterCredentialEntryBootstrapAccessToken(...)`. Development builds may receive
+the private `SDKWORK_ACCESS_TOKEN` through a Dart define prepared by the canonical IAM Node
+bootstrap helper. Staging and production artifacts reject embedded credentials and require a
+trusted native host channel. Call
+`requireSdkworkFlutterCredentialEntryBootstrapAccessToken(...)` before constructing or invoking a
+credential-entry SDK client so a missing bootstrap token fails before network dispatch.

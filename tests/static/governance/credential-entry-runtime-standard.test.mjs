@@ -59,12 +59,14 @@ function walkDirectory(directory, visitFile) {
   }
 }
 
-test('auth-runtime factory wraps credential-entry IAM app SDK methods by default', () => {
+test('auth-runtime factory initializes credential-entry bootstrap Access-Token by default', () => {
   const runtimeSource = readText(
     'apps/sdkwork-iam-pc/packages/sdkwork-auth-runtime-pc-react/src/appbasePcAuthRuntime.ts',
   );
-  assert.match(runtimeSource, /wrapCredentialEntryClient/u);
-  assert.match(runtimeSource, /credentialEntry\?\.skipWrap/u);
+  assert.match(runtimeSource, /initializeCredentialEntryTokenManager/u);
+  assert.match(runtimeSource, /readBootstrapAccessTokenFromProcessEnv/u);
+  assert.match(runtimeSource, /bootstrapAccessToken/u);
+  assert.doesNotMatch(runtimeSource, /wrapCredentialEntryClient/u);
 });
 
 test('iam-credential-entry exposes bootstrap access token helpers for dev orchestration', () => {
@@ -84,12 +86,12 @@ test('shared dev bootstrap env helper is available for application orchestrators
   assert.match(source, /SDKWORK_ACCESS_TOKEN_ENV_KEY/u);
 });
 
-test('product IAM runtimes do not duplicate wrapCredentialEntryClient without skipWrap', () => {
+test('product IAM runtimes do not duplicate request-time credential-entry wrappers', () => {
   const offenders = listWorkspaceIamRuntimeSources();
   assert.deepEqual(
     offenders,
     [],
-    `Duplicate credential-entry wraps must use credentialEntry.skipWrap or rely on createSdkworkAppbasePcAuthRuntime:\n${offenders.join('\n')}`,
+    `Duplicate credential-entry wraps must rely on createSdkworkAppbasePcAuthRuntime bootstrap token initialization:\n${offenders.join('\n')}`,
   );
 });
 

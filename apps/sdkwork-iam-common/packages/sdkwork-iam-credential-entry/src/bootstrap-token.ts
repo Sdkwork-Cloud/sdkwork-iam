@@ -28,13 +28,19 @@ export function readBootstrapAccessTokenFromProcessEnv(
     ?? coalesce(env?.[SDKWORK_ACCESS_TOKEN_ENV_KEY]);
 }
 
-export function prepareCredentialEntryTokens(
+export function initializeCredentialEntryTokenManager(
   tokenManager: AuthTokenManager,
   readBootstrapToken: () => string | undefined = readBootstrapAccessTokenFromProcessEnv,
 ): void {
-  tokenManager.clearTokens?.();
+  if (tokenManager.hasAccessToken()) {
+    return;
+  }
+
   const bootstrapAccessToken = readBootstrapToken();
   if (bootstrapAccessToken) {
-    tokenManager.setTokens?.({ accessToken: bootstrapAccessToken });
+    tokenManager.setAccessToken(bootstrapAccessToken);
   }
 }
+
+/** @deprecated Initialize the application TokenManager once during runtime bootstrap. */
+export const prepareCredentialEntryTokens = initializeCredentialEntryTokenManager;

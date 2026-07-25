@@ -1349,7 +1349,11 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
         "x-sdkwork-auth-mode": "refresh-token",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
@@ -3766,8 +3770,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth account Links list.",
-        "operationId": "oauth.accountLinks.list",
+        "summary": "Account Links list.",
+        "operationId": "accountLinks.list",
         "parameters": [
           {
             "name": "page",
@@ -3928,7 +3932,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.accountLinks",
+        "x-sdkwork-resource": "accountLinks",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
@@ -3939,8 +3943,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth account Links delete.",
-        "operationId": "oauth.accountLinks.delete",
+        "summary": "Account Links delete.",
+        "operationId": "accountLinks.delete",
         "parameters": [
           {
             "name": "accountLinkId",
@@ -4057,7 +4061,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.accountLinks",
+        "x-sdkwork-resource": "accountLinks",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
@@ -4068,8 +4072,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth authorization Urls create.",
-        "operationId": "oauth.authorizationUrls.create",
+        "summary": "Authorization Urls create.",
+        "operationId": "authorizationUrls.create",
         "parameters": [],
         "responses": {
           "201": {
@@ -4183,7 +4187,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.authorizationUrls",
+        "x-sdkwork-resource": "authorizationUrls",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
@@ -4204,8 +4208,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth authorizations completions create.",
-        "operationId": "oauth.authorizations.completions.create",
+        "summary": "Authorizations completions create.",
+        "operationId": "authorizations.completions.create",
         "parameters": [
           {
             "name": "authorizationStateId",
@@ -4329,7 +4333,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.authorizations.completions",
+        "x-sdkwork-resource": "authorizations.completions",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
@@ -4350,8 +4354,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth callbacks retrieve.",
-        "operationId": "oauth.callbacks.retrieve",
+        "summary": "Callbacks retrieve.",
+        "operationId": "callbacks.retrieve",
         "parameters": [
           {
             "name": "providerCode",
@@ -4474,7 +4478,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.callbacks",
+        "x-sdkwork-resource": "callbacks",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
@@ -4483,8 +4487,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth callbacks create.",
-        "operationId": "oauth.callbacks.create",
+        "summary": "Callbacks create.",
+        "operationId": "callbacks.create",
         "parameters": [
           {
             "name": "providerCode",
@@ -4607,7 +4611,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.callbacks",
+        "x-sdkwork-resource": "callbacks",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
@@ -4628,8 +4632,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth device Authorizations create.",
-        "operationId": "oauth.deviceAuthorizations.create",
+        "summary": "Device Authorizations create.",
+        "operationId": "deviceAuthorizations.create",
         "parameters": [],
         "responses": {
           "201": {
@@ -4733,17 +4737,13 @@
             }
           }
         },
-        "security": [
-          {
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-auth-mode": "credential-entry-bootstrap",
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.deviceAuthorizations",
+        "x-sdkwork-resource": "deviceAuthorizations",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
@@ -4764,8 +4764,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth device Authorizations retrieve.",
-        "operationId": "oauth.deviceAuthorizations.retrieve",
+        "summary": "Device Authorizations retrieve.",
+        "operationId": "deviceAuthorizations.retrieve",
         "parameters": [
           {
             "name": "deviceAuthorizationId",
@@ -4884,7 +4884,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.deviceAuthorizations",
+        "x-sdkwork-resource": "deviceAuthorizations",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
@@ -4895,8 +4895,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth device Authorizations password Completions create.",
-        "operationId": "oauth.deviceAuthorizations.passwordCompletions.create",
+        "summary": "Device Authorizations password Completions create.",
+        "operationId": "deviceAuthorizations.passwordCompletions.create",
         "parameters": [
           {
             "name": "deviceAuthorizationId",
@@ -5019,7 +5019,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.deviceAuthorizations.passwordCompletions",
+        "x-sdkwork-resource": "deviceAuthorizations.passwordCompletions",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
@@ -5040,8 +5040,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth device Authorizations scans create.",
-        "operationId": "oauth.deviceAuthorizations.scans.create",
+        "summary": "Device Authorizations scans create.",
+        "operationId": "deviceAuthorizations.scans.create",
         "parameters": [
           {
             "name": "deviceAuthorizationId",
@@ -5154,13 +5154,17 @@
             }
           }
         },
-        "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.deviceAuthorizations.scans",
+        "x-sdkwork-resource": "deviceAuthorizations.scans",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
@@ -5181,8 +5185,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth device Authorizations session Exchanges create.",
-        "operationId": "oauth.deviceAuthorizations.sessionExchanges.create",
+        "summary": "Device Authorizations session Exchanges create.",
+        "operationId": "deviceAuthorizations.sessionExchanges.create",
         "parameters": [
           {
             "name": "deviceAuthorizationId",
@@ -5301,7 +5305,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.deviceAuthorizations.sessionExchanges",
+        "x-sdkwork-resource": "deviceAuthorizations.sessionExchanges",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
@@ -5322,8 +5326,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth grants list.",
-        "operationId": "oauth.grants.list",
+        "summary": "Grants list.",
+        "operationId": "grants.list",
         "parameters": [
           {
             "name": "page",
@@ -5484,7 +5488,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.grants",
+        "x-sdkwork-resource": "grants",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
@@ -5495,8 +5499,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth grants delete.",
-        "operationId": "oauth.grants.delete",
+        "summary": "Grants delete.",
+        "operationId": "grants.delete",
         "parameters": [
           {
             "name": "grantId",
@@ -5613,7 +5617,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.grants",
+        "x-sdkwork-resource": "grants",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
@@ -5624,8 +5628,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth mini Program Sessions create.",
-        "operationId": "oauth.miniProgramSessions.create",
+        "summary": "Mini Program Sessions create.",
+        "operationId": "miniProgramSessions.create",
         "parameters": [],
         "responses": {
           "201": {
@@ -5739,7 +5743,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.miniProgramSessions",
+        "x-sdkwork-resource": "miniProgramSessions",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
@@ -5760,8 +5764,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth providers list.",
-        "operationId": "oauth.providers.list",
+        "summary": "Providers list.",
+        "operationId": "providers.list",
         "parameters": [
           {
             "name": "page",
@@ -5911,13 +5915,17 @@
             }
           }
         },
-        "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.providers",
+        "x-sdkwork-resource": "providers",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
@@ -5928,8 +5936,8 @@
         "tags": [
           "oauth"
         ],
-        "summary": "Oauth sessions create.",
-        "operationId": "oauth.sessions.create",
+        "summary": "Sessions create.",
+        "operationId": "sessions.create",
         "parameters": [],
         "responses": {
           "201": {
@@ -6043,7 +6051,7 @@
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
-        "x-sdkwork-resource": "oauth.sessions",
+        "x-sdkwork-resource": "sessions",
         "x-sdkwork-request-context": "WebRequestContext",
         "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
@@ -6052,7 +6060,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AppbaseOperationCommand"
+                "$ref": "#/components/schemas/AppbaseSessionCreateCommand"
               }
             }
           }
@@ -6169,8 +6177,12 @@
             }
           }
         },
-        "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
@@ -6291,8 +6303,12 @@
             }
           }
         },
-        "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
@@ -6413,8 +6429,12 @@
             }
           }
         },
-        "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",

@@ -29,15 +29,11 @@ function createLocalFixtureJwt(claims) {
 }
 
 function resolveAppIdFromManifest(manifest) {
-  const appKey = normalizeText(manifest?.app?.key);
-  if (appKey) {
-    return appKey;
+  const backendAppId = normalizeText(manifest?.backend?.appId);
+  if (backendAppId) {
+    return backendAppId;
   }
-  const legacyAppId = normalizeText(manifest?.app?.id);
-  if (legacyAppId) {
-    return legacyAppId;
-  }
-  throw new Error('sdkwork.app.config.json app.key is required for IAM bootstrap access token generation');
+  throw new Error('sdkwork.app.config.json backend.appId is required for IAM bootstrap access token generation');
 }
 
 function resolveTenantIdFromManifest(manifest) {
@@ -76,7 +72,14 @@ export function createDevBootstrapAccessTokenJwt(options = {}) {
   const tenantId = normalizeText(options.tenantId) ?? resolveTenantIdFromManifest(manifest);
   const organizationId = normalizeText(options.organizationId)
     ?? resolveOrganizationIdFromManifest(manifest);
-  const appId = normalizeText(options.appId) ?? resolveAppIdFromManifest(manifest);
+  const declaredAppId = normalizeText(manifest?.backend?.appId);
+  const requestedAppId = normalizeText(options.appId);
+  if (declaredAppId && requestedAppId && declaredAppId !== requestedAppId) {
+    throw new Error(
+      `bootstrap appId override ${requestedAppId} does not match manifest backend.appId ${declaredAppId}`,
+    );
+  }
+  const appId = declaredAppId ?? requestedAppId ?? resolveAppIdFromManifest(manifest);
   const environment = normalizeBootstrapEnvironment(options.environment ?? 'development');
   if (environment === 'staging' || environment === 'production') {
     throw new Error(`${environment} bootstrap access tokens must be provisioned by a private secret source`);

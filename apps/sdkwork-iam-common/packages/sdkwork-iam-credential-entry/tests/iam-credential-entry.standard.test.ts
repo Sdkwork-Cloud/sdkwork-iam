@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AuthTokenManager } from '@sdkwork/sdk-common';
 
 import {
+  initializeCredentialEntryTokenManager,
   prepareCredentialEntryTokens,
   readBootstrapAccessTokenFromProcessEnv,
   resolveAppIdFromManifest,
@@ -44,16 +45,28 @@ describe('@sdkwork/iam-credential-entry', () => {
     }
   });
 
-  it('prepares credential-entry tokens from bootstrap access token only', () => {
+  it('initializes an empty token manager from the bootstrap access token', () => {
     const tokenManager = {
-      clearTokens: vi.fn(),
-      setTokens: vi.fn(),
+      hasAccessToken: vi.fn(() => false),
+      setAccessToken: vi.fn(),
     } as unknown as AuthTokenManager;
 
-    prepareCredentialEntryTokens(tokenManager, () => 'bootstrap-token');
+    initializeCredentialEntryTokenManager(tokenManager, () => 'bootstrap-token');
 
-    expect(tokenManager.clearTokens).toHaveBeenCalledTimes(1);
-    expect(tokenManager.setTokens).toHaveBeenCalledWith({ accessToken: 'bootstrap-token' });
+    expect(tokenManager.setAccessToken).toHaveBeenCalledWith('bootstrap-token');
+  });
+
+  it('preserves an existing application access token', () => {
+    const readBootstrapToken = vi.fn(() => 'bootstrap-token');
+    const tokenManager = {
+      hasAccessToken: vi.fn(() => true),
+      setAccessToken: vi.fn(),
+    } as unknown as AuthTokenManager;
+
+    prepareCredentialEntryTokens(tokenManager, readBootstrapToken);
+
+    expect(readBootstrapToken).not.toHaveBeenCalled();
+    expect(tokenManager.setAccessToken).not.toHaveBeenCalled();
   });
 
   it('wraps credential-entry methods and prepares bootstrap tokens before invocation', async () => {
@@ -75,7 +88,12 @@ describe('@sdkwork/iam-credential-entry', () => {
   it('resolves manifest identity for IAM runtime bootstrap', () => {
     const manifest = {
       app: { key: 'sdkwork-iam-demo', name: 'SDKWork IAM Demo', appType: 'APP_HTML' },
-      backend: { tenantId: '100001', organizationId: '0', accessTokenPermissionScope: ['iam.users.read'] },
+      backend: {
+        appId: 'sdkwork-iam-demo',
+        tenantId: '100001',
+        organizationId: '0',
+        accessTokenPermissionScope: ['iam.users.read'],
+      },
     };
 
     expect(resolveAppIdFromManifest(manifest)).toBe('sdkwork-iam-demo');
@@ -83,11 +101,50 @@ describe('@sdkwork/iam-credential-entry', () => {
     expect(resolveOrganizationIdFromManifest(manifest)).toBe('0');
   });
 
+  it('resolves runtime app id exclusively from backend.appId', () => {
+    const manifest = {
+      app: { key: 'sdkwork-birdcoder' },
+      backend: { appId: 'sdkwork-birdcoder-pc', tenantId: '100001', organizationId: '0' },
+    };
+
+    expect(resolveAppIdFromManifest(manifest)).toBe('sdkwork-birdcoder-pc');
+    const token = createDevBootstrapAccessTokenJwt({ manifest });
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+    expect(payload.app_id).toBe('sdkwork-birdcoder-pc');
+  });
+
+  it('rejects credential-entry manifests without backend.appId', () => {
+    expect(() => resolveAppIdFromManifest({
+      app: { key: 'sdkwork-birdcoder-pc' },
+      backend: { tenantId: '100001', organizationId: '0' },
+    })).toThrow(/backend\.appId is required/u);
+    expect(() => createDevBootstrapAccessTokenJwt({
+      manifest: {
+        app: { key: 'sdkwork-birdcoder-pc' },
+        backend: { tenantId: '100001', organizationId: '0' },
+      },
+    })).toThrow(/backend\.appId is required/u);
+  });
+
+  it('rejects appId overrides that contradict the selected surface manifest', () => {
+    expect(() => createDevBootstrapAccessTokenJwt({
+      appId: 'sdkwork-birdcoder-h5',
+      manifest: {
+        app: { key: 'sdkwork-birdcoder-pc' },
+        backend: {
+          appId: 'sdkwork-birdcoder-pc',
+          tenantId: '100001',
+          organizationId: '0',
+        },
+      },
+    })).toThrow(/does not match manifest backend\.appId/u);
+  });
+
   it('creates dev bootstrap access token JWT from manifest identity', () => {
     const token = createDevBootstrapAccessTokenJwt({
       manifest: {
         app: { key: 'sdkwork-im-pc' },
-        backend: { tenantId: '100001', organizationId: '0' },
+        backend: { appId: 'sdkwork-im-pc', tenantId: '100001', organizationId: '0' },
       },
     });
 
@@ -98,7 +155,7 @@ describe('@sdkwork/iam-credential-entry', () => {
     expect(mergeBootstrapAccessTokenEnv({}, {
       manifest: {
         app: { key: 'sdkwork-im-pc' },
-        backend: { tenantId: '100001', organizationId: '0' },
+        backend: { appId: 'sdkwork-im-pc', tenantId: '100001', organizationId: '0' },
       },
     }).SDKWORK_ACCESS_TOKEN).toBe(token);
   });

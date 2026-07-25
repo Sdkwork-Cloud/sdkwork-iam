@@ -114,10 +114,8 @@ async fn assemble_owner_api_surfaces_with_host(
     routes.extend_from_slice(sdkwork_routes_iam_open_api::open_route_manifest().routes());
     let route_manifest = HttpRouteManifest::from_owned_routes(routes);
     let routes = route_manifest.routes();
-    let openapi = sdkwork_web_contract::build_openapi_document(
-        "SDKWork IAM Owner API Surfaces",
-        routes,
-    );
+    let openapi =
+        sdkwork_web_contract::build_openapi_document("SDKWork IAM Owner API Surfaces", routes);
     let permission_catalog = permission_catalog(routes);
 
     Ok(ApiAssembly {

@@ -111,9 +111,9 @@ const credentialHeaderForbiddenAppOperationIds = new Set([
   'passwordResetRequests.create',
   'passwordResets.create',
   'registrations.create',
-  'oauth.deviceAuthorizations.create',
-  'oauth.deviceAuthorizations.passwordCompletions.create',
-  'oauth.sessions.create',
+  'deviceAuthorizations.create',
+  'deviceAuthorizations.passwordCompletions.create',
+  'sessions.create',
 ]);
 
 const methodNames = {
@@ -579,7 +579,7 @@ function requestBodySchemaRef(route) {
     return '#/components/schemas/ServiceAccountTokenExchangeCommand';
   }
 
-  if (route.operationId === 'oauth.miniProgramSessions.create') {
+  if (route.operationId === 'miniProgramSessions.create') {
     return '#/components/schemas/WechatMiniProgramSessionCreateCommand';
   }
   if (route.operationId === 'iam.oauth.clients.create') {
@@ -951,7 +951,7 @@ function operationAuthMode(surface, route) {
 
 function resolveOperationSecurity(surface, route) {
   const authMode = operationAuthMode(surface, route);
-  if (authMode === 'anonymous' || authMode === 'refresh-token') {
+  if (authMode === 'anonymous') {
     return [];
   }
   if (surface.sdkType === 'open') {
@@ -963,7 +963,7 @@ function resolveOperationSecurity(surface, route) {
     }
     return [{ ApiKey: [] }, { OAuthBearer: [] }];
   }
-  if (authMode === 'credential-entry-bootstrap') {
+  if (authMode === 'credential-entry-bootstrap' || authMode === 'refresh-token') {
     return [{ AccessToken: [] }];
   }
   return [{ AuthToken: [], AccessToken: [] }];

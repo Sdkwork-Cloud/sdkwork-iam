@@ -104,6 +104,7 @@ export interface IamContextStore {
 }
 
 export interface IamRuntime {
+  clearSession(): Promise<void>;
   config: IamRuntimeConfig;
   contextStore: IamContextStore;
   getAuthHeaders(): Promise<Record<string, string>>;
@@ -130,6 +131,7 @@ export interface IamRuntimeClients {
 }
 
 export interface CreateIamRuntimeInput {
+  bootstrapAccessToken?: string;
   clients: IamRuntimeClients;
   config: IamRuntimeConfig;
   contextStore?: IamContextStore;
@@ -140,6 +142,10 @@ export interface CreateIamRuntimeInput {
 
 export function createIamRuntime(input: CreateIamRuntimeInput): IamRuntime {
   const tokenManager = input.tokenManager ?? createTokenManager();
+  const bootstrapAccessToken = resolveBootstrapAccessToken(
+    tokenManager,
+    input.bootstrapAccessToken,
+  );
   const bootstrap = createSdkworkRuntimeBootstrap({
     clients: {
       app: input.clients.appbaseApp,
@@ -156,19 +162,24 @@ export function createIamRuntime(input: CreateIamRuntimeInput): IamRuntime {
   for (const client of input.clients.sdkClients ?? []) {
     bindTokenManager(tokenManager, client);
   }
-  seedTokenManagerFromStore(input.tokenStore, tokenManager);
+  seedTokenManagerFromStore(input.tokenStore, tokenManager, bootstrapAccessToken);
 
   const contextStore = input.contextStore ?? createMemoryIamContextStore();
-  const service = createSdkworkIamService({
-    appbaseAppClient: bootstrap.clients.app as IamAppSdkClient,
-    appbaseBackendClient: bootstrap.clients.backend as IamBackendSdkClient | undefined,
-    clearSession: async () => {
-      tokenManager.clearTokens();
+  const clearSession = async () => {
+    resetTokenManagerToBootstrapAccessToken(tokenManager, bootstrapAccessToken);
+    try {
       await Promise.all([
         input.tokenStore.clear(),
         contextStore.clear(),
       ]);
-    },
+    } finally {
+      resetTokenManagerToBootstrapAccessToken(tokenManager, bootstrapAccessToken);
+    }
+  };
+  const service = createSdkworkIamService({
+    appbaseAppClient: bootstrap.clients.app as IamAppSdkClient,
+    appbaseBackendClient: bootstrap.clients.backend as IamBackendSdkClient | undefined,
+    clearSession,
     commitSession: async (session, options) => {
       const currentSession = options?.preserveRefreshToken
         ? await readCurrentRefreshSession(input.tokenStore, tokenManager)
@@ -191,24 +202,25 @@ export function createIamRuntime(input: CreateIamRuntimeInput): IamRuntime {
           await contextStore.clear();
         }
       } catch (error) {
-        tokenManager.clearTokens();
-        await Promise.all([
+        await Promise.allSettled([
           input.tokenStore.clear(),
           contextStore.clear(),
         ]);
+        resetTokenManagerToBootstrapAccessToken(tokenManager, bootstrapAccessToken);
         throw error;
       }
-      syncTokenManager(tokenManager, storedSession);
+      syncTokenManager(tokenManager, storedSession, bootstrapAccessToken);
     },
   });
 
   const hydrateTokenManager = async () => {
     const storedSession = await input.tokenStore.get();
-    syncTokenManager(tokenManager, storedSession);
+    syncTokenManager(tokenManager, storedSession, bootstrapAccessToken);
     return tokenManager.getTokens();
   };
 
   return {
+    clearSession,
     config: { ...bootstrap.config },
     contextStore,
     getAuthHeaders: async () => {
@@ -302,8 +314,12 @@ function bindTokenManager(
   }
 }
 
-function seedTokenManagerFromStore(tokenStore: IamTokenStore, tokenManager: AuthTokenManager): void {
-  if (tokenManager.hasToken()) {
+function seedTokenManagerFromStore(
+  tokenStore: IamTokenStore,
+  tokenManager: AuthTokenManager,
+  bootstrapAccessToken: string | undefined,
+): void {
+  if (tokenManager.hasAuthToken()) {
     return;
   }
 
@@ -312,23 +328,27 @@ function seedTokenManagerFromStore(tokenStore: IamTokenStore, tokenManager: Auth
     if (isPromiseLike(storedSession)) {
       void Promise.resolve(storedSession)
         .then((session) => {
-          if (!tokenManager.hasToken()) {
-            syncTokenManager(tokenManager, session);
+          if (!tokenManager.hasAuthToken()) {
+            syncTokenManager(tokenManager, session, bootstrapAccessToken);
           }
         })
         .catch(() => undefined);
       return;
     }
 
-    syncTokenManager(tokenManager, storedSession);
+    syncTokenManager(tokenManager, storedSession, bootstrapAccessToken);
   } catch {
     // Synchronous construction should never fail because storage is unavailable.
   }
 }
 
-function syncTokenManager(tokenManager: AuthTokenManager, session: IamStoredSession): void {
+function syncTokenManager(
+  tokenManager: AuthTokenManager,
+  session: IamStoredSession,
+  bootstrapAccessToken: string | undefined,
+): void {
   if (isStoredSessionExpired(session)) {
-    tokenManager.clearTokens();
+    resetTokenManagerToBootstrapAccessToken(tokenManager, bootstrapAccessToken);
     return;
   }
 
@@ -345,7 +365,41 @@ function syncTokenManager(tokenManager: AuthTokenManager, session: IamStoredSess
     return;
   }
 
+  resetTokenManagerToBootstrapAccessToken(tokenManager, bootstrapAccessToken);
+}
+
+export function resetTokenManagerToBootstrapAccessToken(
+  tokenManager: AuthTokenManager,
+  bootstrapAccessToken?: string,
+): void {
   tokenManager.clearTokens();
+  const normalizedAccessToken = normalizeSdkworkIamAuthenticationToken(bootstrapAccessToken);
+  if (normalizedAccessToken) {
+    tokenManager.setAccessToken(normalizedAccessToken);
+  }
+}
+
+function resolveBootstrapAccessToken(
+  tokenManager: AuthTokenManager,
+  configuredAccessToken: string | undefined,
+): string | undefined {
+  const configured = normalizeSdkworkIamAuthenticationToken(configuredAccessToken);
+  if (configured) {
+    assertSdkworkJwtCredential(configured, "Access-Token");
+    return configured;
+  }
+
+  if (tokenManager.hasAuthToken()) {
+    return undefined;
+  }
+
+  const currentAccessToken = normalizeSdkworkIamAuthenticationToken(
+    tokenManager.getAccessToken(),
+  );
+  if (currentAccessToken) {
+    assertSdkworkJwtCredential(currentAccessToken, "Access-Token");
+  }
+  return currentAccessToken;
 }
 
 function mergeStoredSession(

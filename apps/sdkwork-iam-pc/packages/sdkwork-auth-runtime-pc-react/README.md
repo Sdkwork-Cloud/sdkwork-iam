@@ -82,7 +82,7 @@ Rules:
 - Applications that already wrap the IAM app SDK manually must pass `credentialEntry: { skipWrap: true }`.
 - After interactive login succeeds, runtime session tokens supersede bootstrap credentials.
 
-Shared helpers live in `@sdkwork/iam-credential-entry` (`createDevBootstrapAccessTokenJwt`, `mergeBootstrapAccessTokenEnv`) and `sdkwork-iam/scripts/dev/create-dev-bootstrap-access-token-env.mjs` (`mergeRepoDevBootstrapAccessTokenEnv` for topology dev orchestrators, `run-pc-renderer-dev-with-bootstrap.mjs` for standalone PC package `dev` scripts).
+Shared helpers live in `@sdkwork/iam-credential-entry` (`createDevBootstrapAccessTokenJwt`, `mergeBootstrapAccessTokenEnv`) and `sdkwork-iam/scripts/dev/create-dev-bootstrap-access-token-env.mjs`. Topology dev orchestrators use `mergeRepoDevBootstrapAccessTokenEnv`; standalone renderers use `run-renderer-dev-with-bootstrap.mjs` (`run-pc-renderer-dev-with-bootstrap.mjs` is the PC compatibility entrypoint).
 
 ## AuthGate Route Protection
 

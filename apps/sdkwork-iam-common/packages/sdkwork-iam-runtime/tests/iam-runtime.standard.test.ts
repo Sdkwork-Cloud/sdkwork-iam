@@ -58,6 +58,7 @@ const NEXT_ACCESS_TOKEN = sessionAccessToken("next");
 const NEXT_AUTH_TOKEN = sessionAuthToken("next");
 const ACCESS_TOKEN_ONLY = sessionAccessToken("only");
 const AUTH_TOKEN_ONLY = sessionAuthToken("only");
+const BOOTSTRAP_ACCESS_TOKEN = sessionAccessToken("bootstrap");
 
 describe("SDKWork IAM runtime", () => {
   it("uses one dual-token predicate for reusable authenticated-session guards", () => {
@@ -145,6 +146,78 @@ describe("SDKWork IAM runtime", () => {
       "Accept-Language": "zh-CN",
       Authorization: `Bearer ${DEFAULT_AUTH_TOKEN}`,
       "Access-Token": DEFAULT_ACCESS_TOKEN,
+    });
+  });
+
+  it("keeps the bootstrap Access-Token available before login request dispatch", async () => {
+    const tokenManager = createTokenManager({
+      accessToken: OLD_ACCESS_TOKEN,
+      authToken: OLD_AUTH_TOKEN,
+      refreshToken: "old-refresh-token",
+    });
+    const appbaseApp = createStandardAppClient({
+      accessToken: NEW_ACCESS_TOKEN,
+      authToken: NEW_AUTH_TOKEN,
+    });
+    appbaseApp.auth.sessions.create = vi.fn().mockImplementation(async () => {
+      expect(tokenManager.getTokens()).toEqual({
+        accessToken: BOOTSTRAP_ACCESS_TOKEN,
+      });
+      return {
+        data: {
+          accessToken: NEW_ACCESS_TOKEN,
+          authToken: NEW_AUTH_TOKEN,
+          sessionId: "session-id",
+        },
+      };
+    });
+    const runtime = createIamRuntime({
+      bootstrapAccessToken: BOOTSTRAP_ACCESS_TOKEN,
+      clients: {
+        appbaseApp,
+      },
+      config: {
+        appId: "sdkwork-router",
+        deploymentMode: "saas",
+        environment: "test",
+      },
+      tokenManager,
+      tokenStore: createMemoryIamTokenStore({
+        accessToken: OLD_ACCESS_TOKEN,
+        authToken: OLD_AUTH_TOKEN,
+        refreshToken: "old-refresh-token",
+      }),
+    });
+
+    await runtime.service.auth.sessions.create({
+      password: "secret",
+      username: "alice",
+    });
+
+    expect(tokenManager.getTokens()).toEqual({
+      accessToken: NEW_ACCESS_TOKEN,
+      authToken: NEW_AUTH_TOKEN,
+    });
+  });
+
+  it("does not overwrite the bootstrap Access-Token when hydrating an empty session store", async () => {
+    const tokenManager = createTokenManager({ accessToken: BOOTSTRAP_ACCESS_TOKEN });
+    const runtime = createIamRuntime({
+      bootstrapAccessToken: BOOTSTRAP_ACCESS_TOKEN,
+      clients: {
+        appbaseApp: createStandardAppClient(),
+      },
+      config: {
+        appId: "sdkwork-router",
+        deploymentMode: "saas",
+        environment: "test",
+      },
+      tokenManager,
+      tokenStore: createMemoryIamTokenStore(),
+    });
+
+    expect(await runtime.hydrateTokenManager()).toEqual({
+      accessToken: BOOTSTRAP_ACCESS_TOKEN,
     });
   });
 
@@ -289,6 +362,40 @@ describe("SDKWork IAM runtime", () => {
     expect(await runtime.contextStore.getAppContext()).toBeUndefined();
     expect(await runtime.getAuthHeaders()).toEqual({});
     expect(runtime.tokenManager.getTokens()).toEqual({});
+  });
+
+  it("clears the user session but restores the application bootstrap Access-Token on logout", async () => {
+    const tokenManager = createTokenManager({ accessToken: BOOTSTRAP_ACCESS_TOKEN });
+    const runtime = createIamRuntime({
+      bootstrapAccessToken: BOOTSTRAP_ACCESS_TOKEN,
+      clients: {
+        appbaseApp: createStandardAppClient({
+          accessToken: DEFAULT_ACCESS_TOKEN,
+          authToken: DEFAULT_AUTH_TOKEN,
+          refreshToken: "refresh-token",
+        }),
+      },
+      config: {
+        appId: "sdkwork-router",
+        deploymentMode: "saas",
+        environment: "test",
+      },
+      tokenManager,
+      tokenStore: createMemoryIamTokenStore(),
+    });
+
+    await runtime.service.auth.sessions.create({
+      password: "secret",
+      username: "alice",
+    });
+    await runtime.service.auth.sessions.current.delete();
+
+    expect(await runtime.tokenStore.get()).toEqual({});
+    expect(await runtime.contextStore.getAppContext()).toBeUndefined();
+    expect(await runtime.getAuthHeaders()).toEqual({});
+    expect(tokenManager.getTokens()).toEqual({
+      accessToken: BOOTSTRAP_ACCESS_TOKEN,
+    });
   });
 
   it("does not update the global token manager when session persistence fails", async () => {
@@ -888,9 +995,20 @@ function createStandardBackendIamClient() {
       retrieve: vi.fn(),
     },
     tenantApplications: {
+      create: vi.fn(),
       enable: vi.fn(),
+      list: vi.fn(),
+      management: {
+        create: vi.fn(),
+        disable: vi.fn(),
+        enable: vi.fn(),
+        update: vi.fn(),
+      },
       provision: vi.fn(),
       retrieve: vi.fn(),
+      summary: {
+        retrieve: vi.fn(),
+      },
       update: vi.fn(),
     },
     tenants: {

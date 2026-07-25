@@ -2,7 +2,10 @@ import {
   createClient as createAppbaseAppClient,
   type SdkworkAppClient as AppbaseAppSdkClient,
 } from "@sdkwork/iam-app-sdk";
-import { wrapCredentialEntryClient } from "@sdkwork/iam-credential-entry";
+import {
+  initializeCredentialEntryTokenManager,
+  readBootstrapAccessTokenFromProcessEnv,
+} from "@sdkwork/iam-credential-entry";
 import {
   createIamRuntime,
   createMemoryIamTokenStore,
@@ -83,6 +86,7 @@ export interface SdkworkAppbasePcAuthRuntimeHooks {
 
 export interface SdkworkAppbasePcAuthRuntimeCredentialEntryOptions {
   prepareTokens?: () => void;
+  /** @deprecated Credential-entry clients no longer need request-time wrapping. */
   skipWrap?: boolean;
 }
 
@@ -117,12 +121,22 @@ export function createSdkworkAppbasePcAuthRuntime(
   options: CreateSdkworkAppbasePcAuthRuntimeOptions,
 ): SdkworkAppbasePcAuthRuntimeComposition {
   const tokenManager = options.tokenManager ?? createTokenManager();
+  const bootstrapAccessToken = readBootstrapAccessTokenFromProcessEnv();
+  if (options.credentialEntry?.prepareTokens) {
+    options.credentialEntry.prepareTokens();
+  } else {
+    initializeCredentialEntryTokenManager(tokenManager, () => bootstrapAccessToken);
+  }
   const sessionBridge = options.sessionBridge
     ? createSdkworkAppbasePcAuthSessionBridge(options.sessionBridge)
     : undefined;
   const tokenStore = options.tokenStore ?? sessionBridge?.tokenStore ?? createMemoryIamTokenStore();
   const platform = options.app.platform ?? "pc";
   const appSdkBaseUrl = resolveAppSdkBaseUrl(options.baseUrls.appbaseAppApiBaseUrl);
+  let runtimeForSessionAuth: IamRuntime | undefined;
+  const clearRuntimeSession = () => {
+    void runtimeForSessionAuth?.clearSession();
+  };
   const rawAppbaseApp = (options.createAppbaseAppClient ?? createAppbaseAppClient)({
     authMode: "dual-token",
     baseUrl: appSdkBaseUrl,
@@ -130,37 +144,39 @@ export function createSdkworkAppbasePcAuthRuntime(
     tokenManager,
   });
   const appbaseApp = wrapAppbaseAppClientWithSessionAuth(
-    options.credentialEntry?.skipWrap
-      ? rawAppbaseApp
-      : wrapCredentialEntryClient(rawAppbaseApp, {
-          tokenManager,
-          ...(options.credentialEntry?.prepareTokens
-            ? { prepareTokens: options.credentialEntry.prepareTokens }
-            : {}),
-        }),
+    rawAppbaseApp,
     options,
+    clearRuntimeSession,
   );
-  const sdkClients = wrapSdkClientsWithSessionAuth(options.sdkClients, options);
+  const sdkClients = wrapSdkClientsWithSessionAuth(
+    options.sdkClients,
+    options,
+    clearRuntimeSession,
+  );
 
+  const baseRuntime = createIamRuntime({
+    bootstrapAccessToken,
+    clients: {
+      appbaseApp,
+      sdkClients,
+    },
+    config: {
+      appApiBaseUrl: options.baseUrls.appbaseAppApiBaseUrl,
+      appId: options.app.appId,
+      deploymentMode: options.app.deploymentMode,
+      environment: options.app.environment,
+    },
+    contextStore: options.contextStore ?? sessionBridge?.contextStore,
+    localeProvider: options.localeProvider,
+    tokenManager,
+    tokenStore,
+  });
+  runtimeForSessionAuth = baseRuntime;
   const runtime = createRuntimeWithHooks(
-    createIamRuntime({
-      clients: {
-        appbaseApp,
-        sdkClients,
-      },
-      config: {
-        appApiBaseUrl: options.baseUrls.appbaseAppApiBaseUrl,
-        appId: options.app.appId,
-        deploymentMode: options.app.deploymentMode,
-        environment: options.app.environment,
-      },
-      contextStore: options.contextStore ?? sessionBridge?.contextStore,
-      localeProvider: options.localeProvider,
-      tokenManager,
-      tokenStore,
-    }),
+    baseRuntime,
     options.hooks,
   );
+  runtimeForSessionAuth = runtime;
 
   return {
     appbaseApp,
@@ -308,6 +324,7 @@ function shouldEnableSessionAuth(
 
 function resolveSessionAuthIntegrationOptions(
   options: CreateSdkworkAppbasePcAuthRuntimeOptions,
+  clearRuntimeSession?: () => void,
 ): CreateSdkworkSessionAuthUnauthorizedIntegrationOptions {
   const sessionAuth = options.sessionAuth;
   const integrationOptions =
@@ -317,32 +334,37 @@ function resolveSessionAuthIntegrationOptions(
 
   return {
     ...integrationOptions,
-    clearSession: integrationOptions.clearSession ?? options.sessionBridge?.clearSession,
+    clearSession:
+      integrationOptions.clearSession
+      ?? clearRuntimeSession
+      ?? options.sessionBridge?.clearSession,
   };
 }
 
 function wrapAppbaseAppClientWithSessionAuth(
   client: AppbaseAppSdkClient,
   options: CreateSdkworkAppbasePcAuthRuntimeOptions,
+  clearRuntimeSession?: () => void,
 ): AppbaseAppSdkClient {
   if (!shouldEnableSessionAuth(options.sessionAuth)) {
     return client;
   }
   return attachSdkworkSdkSessionAuthBoundary(
     client as AppbaseAppSdkClient & SdkworkSdkClientWithHttp,
-    resolveSessionAuthIntegrationOptions(options),
+    resolveSessionAuthIntegrationOptions(options, clearRuntimeSession),
   ) as AppbaseAppSdkClient;
 }
 
 function wrapSdkClientsWithSessionAuth(
   sdkClients: readonly SdkworkAppbasePcAuthRuntimeSdkClient[] | undefined,
   options: CreateSdkworkAppbasePcAuthRuntimeOptions,
+  clearRuntimeSession?: () => void,
 ): readonly SdkworkAppbasePcAuthRuntimeSdkClient[] | undefined {
   if (!sdkClients?.length || !shouldEnableSessionAuth(options.sessionAuth)) {
     return sdkClients;
   }
 
-  const integrationOptions = resolveSessionAuthIntegrationOptions(options);
+  const integrationOptions = resolveSessionAuthIntegrationOptions(options, clearRuntimeSession);
   return sdkClients.map((client) =>
     attachSdkworkSdkSessionAuthBoundary(
       client as SdkworkAppbasePcAuthRuntimeSdkClient & SdkworkSdkClientWithHttp,

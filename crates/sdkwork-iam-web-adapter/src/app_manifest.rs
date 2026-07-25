@@ -3,6 +3,7 @@
 //! Maps `sdkwork.app.config.json` to [`EnsureTenantApplicationCommand`] using the same
 //! manifest fields as `@sdkwork/iam-application-bootstrap`, without raw SQL or per-app copies.
 
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use sdkwork_iam_bootstrap::{DEFAULT_IAM_ORGANIZATION_ID, DEFAULT_IAM_TENANT_ID};
@@ -147,26 +148,49 @@ pub fn manifest_to_ensure_commands(
 ) -> Result<Vec<EnsureTenantApplicationCommand>, String> {
     validate_manifest_for_embedded_bootstrap(manifest)?;
 
-    if primary_runtime.is_some() || !additional_runtimes.is_empty() {
-        let mut commands = Vec::new();
-        if let Some(binding) = primary_runtime {
-            commands.push(manifest_to_ensure_command(
-                manifest,
-                options,
-                Some(binding),
-            )?);
-        }
-        for binding in additional_runtimes {
-            commands.push(manifest_to_ensure_command(
-                manifest,
-                options,
-                Some(binding),
-            )?);
-        }
-        return Ok(commands);
+    let has_explicit_runtime_bindings =
+        primary_runtime.is_some() || !additional_runtimes.is_empty();
+    let runtime_bindings = if has_explicit_runtime_bindings {
+        normalize_runtime_bindings(primary_runtime, additional_runtimes)
+    } else {
+        resolve_manifest_runtime_app_bindings(manifest)
+    };
+    if runtime_bindings.is_empty() {
+        return Ok(vec![manifest_to_ensure_command(manifest, options, None)?]);
     }
 
-    Ok(vec![manifest_to_ensure_command(manifest, options, None)?])
+    runtime_bindings
+        .into_iter()
+        .map(|mut binding| {
+            // Explicit runtime identities must remain stable when an app later adds surfaces.
+            // They also need distinct templates because tenant applications are unique by
+            // tenant, organization, and template.
+            if has_explicit_runtime_bindings && binding.app_key_override.is_none() {
+                binding.app_key_override = Some(binding.runtime_app_id.clone());
+            }
+            manifest_to_ensure_command(manifest, options, Some(&binding))
+        })
+        .collect()
+}
+
+fn normalize_runtime_bindings(
+    primary_runtime: Option<&EmbeddedApplicationRuntimeBinding>,
+    additional_runtimes: &[EmbeddedApplicationRuntimeBinding],
+) -> Vec<EmbeddedApplicationRuntimeBinding> {
+    let mut runtime_app_ids = BTreeSet::new();
+    primary_runtime
+        .into_iter()
+        .chain(additional_runtimes.iter())
+        .filter_map(|binding| {
+            let runtime_app_id = binding.runtime_app_id.trim();
+            if runtime_app_id.is_empty() || !runtime_app_ids.insert(runtime_app_id.to_owned()) {
+                return None;
+            }
+            let mut normalized = binding.clone();
+            normalized.runtime_app_id = runtime_app_id.to_owned();
+            Some(normalized)
+        })
+        .collect()
 }
 
 pub fn manifest_to_ensure_command(
@@ -260,6 +284,26 @@ fn backend_runtime_app_id(manifest: &SdkworkAppManifest) -> Option<&str> {
         .as_deref()
         .map(str::trim)
         .filter(|value| !value.is_empty())
+}
+
+pub fn resolve_manifest_runtime_app_bindings(
+    manifest: &SdkworkAppManifest,
+) -> Vec<EmbeddedApplicationRuntimeBinding> {
+    backend_runtime_app_id(manifest)
+        .map(|runtime_app_id| EmbeddedApplicationRuntimeBinding {
+            runtime_app_id: runtime_app_id.to_owned(),
+            display_name: None,
+            app_key_override: None,
+            instance_key_override: None,
+        })
+        .into_iter()
+        .collect()
+}
+
+pub fn manifest_runtime_bindings(
+    manifest: &SdkworkAppManifest,
+) -> Vec<EmbeddedApplicationRuntimeBinding> {
+    resolve_manifest_runtime_app_bindings(manifest)
 }
 
 fn default_access_permissions(manifest: &SdkworkAppManifest) -> Vec<String> {
@@ -387,5 +431,133 @@ mod tests {
 
         assert_eq!("sdkwork-clawrouter", command.runtime_app_id);
         assert_eq!("sdkwork_clawrouter_prod", command.instance_key);
+    }
+
+    #[test]
+    fn manifest_runtime_bindings_use_backend_app_id_without_guessing_surface_ids() {
+        let manifest = SdkworkAppManifest {
+            app: ManifestAppSection {
+                key: "sdkwork-birdcoder".to_owned(),
+                name: "SDKWork BirdCoder".to_owned(),
+                display_name: None,
+                app_type: Some("APP_REACT".to_owned()),
+            },
+            backend: ManifestBackendSection {
+                app_id: Some("sdkwork-birdcoder".to_owned()),
+                access_token_permission_scope: Some(vec!["iam.self".to_owned()]),
+                ..ManifestBackendSection::default()
+            },
+            release: ManifestReleaseSection::default(),
+        };
+
+        let app_ids = resolve_manifest_runtime_app_bindings(&manifest)
+            .into_iter()
+            .map(|binding| binding.runtime_app_id)
+            .collect::<Vec<_>>();
+
+        assert_eq!(app_ids, vec!["sdkwork-birdcoder".to_owned()]);
+    }
+
+    #[test]
+    fn multi_surface_commands_use_distinct_template_keys() {
+        let manifest = SdkworkAppManifest {
+            app: ManifestAppSection {
+                key: "chat".to_owned(),
+                name: "SDKWork IM".to_owned(),
+                display_name: None,
+                app_type: Some("APP_REACT".to_owned()),
+            },
+            backend: ManifestBackendSection {
+                app_id: Some("sdkwork-im-pc".to_owned()),
+                access_token_permission_scope: Some(vec!["iam.self".to_owned()]),
+                ..ManifestBackendSection::default()
+            },
+            release: ManifestReleaseSection::default(),
+        };
+        let primary = EmbeddedApplicationRuntimeBinding {
+            runtime_app_id: "sdkwork-im-pc".to_owned(),
+            display_name: None,
+            app_key_override: None,
+            instance_key_override: None,
+        };
+        let additional = [
+            EmbeddedApplicationRuntimeBinding {
+                runtime_app_id: "sdkwork-im-h5".to_owned(),
+                display_name: None,
+                app_key_override: None,
+                instance_key_override: None,
+            },
+            EmbeddedApplicationRuntimeBinding {
+                runtime_app_id: "sdkwork-im-flutter-mobile".to_owned(),
+                display_name: None,
+                app_key_override: None,
+                instance_key_override: None,
+            },
+        ];
+
+        let commands = manifest_to_ensure_commands(
+            &manifest,
+            &EmbeddedApplicationBootstrapOptions {
+                environment: "development".to_owned(),
+                ..EmbeddedApplicationBootstrapOptions::default()
+            },
+            Some(&primary),
+            &additional,
+        )
+        .expect("commands");
+        let identities = commands
+            .into_iter()
+            .map(|command| (command.app_key, command.runtime_app_id))
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            identities,
+            vec![
+                ("sdkwork-im-pc".to_owned(), "sdkwork-im-pc".to_owned()),
+                ("sdkwork-im-h5".to_owned(), "sdkwork-im-h5".to_owned()),
+                (
+                    "sdkwork-im-flutter-mobile".to_owned(),
+                    "sdkwork-im-flutter-mobile".to_owned(),
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn explicit_runtime_binding_uses_a_stable_template_key_before_more_surfaces_are_added() {
+        let manifest = SdkworkAppManifest {
+            app: ManifestAppSection {
+                key: "chat".to_owned(),
+                name: "SDKWork IM".to_owned(),
+                display_name: None,
+                app_type: Some("APP_REACT".to_owned()),
+            },
+            backend: ManifestBackendSection {
+                access_token_permission_scope: Some(vec!["iam.self".to_owned()]),
+                ..ManifestBackendSection::default()
+            },
+            release: ManifestReleaseSection::default(),
+        };
+        let primary = EmbeddedApplicationRuntimeBinding {
+            runtime_app_id: "sdkwork-im-pc".to_owned(),
+            display_name: None,
+            app_key_override: None,
+            instance_key_override: None,
+        };
+
+        let commands = manifest_to_ensure_commands(
+            &manifest,
+            &EmbeddedApplicationBootstrapOptions {
+                environment: "development".to_owned(),
+                ..EmbeddedApplicationBootstrapOptions::default()
+            },
+            Some(&primary),
+            &[],
+        )
+        .expect("command");
+
+        assert_eq!(commands.len(), 1);
+        assert_eq!(commands[0].app_key, "sdkwork-im-pc");
+        assert_eq!(commands[0].runtime_app_id, "sdkwork-im-pc");
     }
 }

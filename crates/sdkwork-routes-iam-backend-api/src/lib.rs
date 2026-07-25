@@ -19,8 +19,7 @@ pub use operation_permissions::iam_backend_permission_for_operation;
 pub use paths::BACKEND_API_PREFIX;
 #[allow(deprecated)]
 pub use routes::{
-    build_sdkwork_iam_backend_api_business_router_with_pool,
-    build_sdkwork_iam_backend_api_router,
+    build_sdkwork_iam_backend_api_business_router_with_pool, build_sdkwork_iam_backend_api_router,
 };
 pub use sdkwork_web_contract::{HttpMethod, HttpRoute, HttpRoute as IamHttpRoute};
 

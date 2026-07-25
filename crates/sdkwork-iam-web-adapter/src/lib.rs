@@ -1,9 +1,11 @@
 mod access_token_issue;
 mod account_binding_policy;
 mod api_key_lookup;
+mod app_manifest;
 mod application_registry;
 mod authorization_policy;
 mod dev_runtime;
+mod embedded_bootstrap;
 mod ephemeral_rate_limit;
 mod http_responses;
 mod iam_audit;
@@ -48,6 +50,13 @@ pub use account_binding_policy::{
     IAM_ACCOUNT_BINDING_POLICY_CODE,
 };
 pub use api_key_lookup::IamApiKeyLookupService;
+pub use app_manifest::{
+    load_manifest_from_app_root, load_manifest_from_path, manifest_runtime_bindings,
+    manifest_to_ensure_command, manifest_to_ensure_commands, normalize_bootstrap_environment,
+    resolve_manifest_runtime_app_bindings, validate_manifest_for_embedded_bootstrap,
+    EmbeddedApplicationBootstrapOptions, EmbeddedApplicationRuntimeBinding, ManifestAppSection,
+    ManifestBackendSection, ManifestReleaseNote, ManifestReleaseSection, SdkworkAppManifest,
+};
 pub use application_registry::{
     dedupe_postgres_tenant_application_org_template_rows,
     derive_tenant_application_primary_domain_candidate, disable_tenant_application,
@@ -69,6 +78,15 @@ pub use application_registry::{
 };
 pub use authorization_policy::IamAuthorizationPolicy;
 pub use dev_runtime::allows_dev_authentication_fallback;
+pub use embedded_bootstrap::{
+    connect_iam_postgres_bootstrap_pool, discover_application_manifest_roots,
+    ensure_tenant_application_from_app_root, ensure_tenant_application_from_app_root_if_configured,
+    ensure_tenant_application_from_app_root_with_env,
+    ensure_tenant_application_from_app_root_with_env_and_fallback,
+    ensure_tenant_applications_from_app_root_on_pool, ensure_tenant_applications_on_pool,
+    postgres_iam_foundation_schema_ready, resolve_application_app_root,
+    resolve_application_app_root_with_fallback, resolve_bootstrap_environment,
+};
 pub use ephemeral_rate_limit::{check_rate_limit, check_rate_limit_sqlite};
 pub use http_responses::{iam_api_error, iam_api_success, iam_wire_result_code};
 pub use iam_audit::{
@@ -398,5 +416,8 @@ pub fn wrap_router_with_iam_open_api_web_framework(
 
 pub async fn iam_web_request_context_resolver_from_env() -> IamWebRequestContextResolver {
     let iam_pool = resolve_iam_database_pool_from_env().await;
+    if let Some(pg) = iam_pool.as_ref().and_then(|pool| pool.as_postgres()) {
+        embedded_bootstrap::try_auto_provision_tenant_application(pg).await;
+    }
     IamWebRequestContextResolver::from_database_pool(iam_pool)
 }

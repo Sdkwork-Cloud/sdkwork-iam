@@ -49,7 +49,7 @@ fn auth_manifest_profiles_cover_path_templates() {
         (
             "POST",
             "/app/v3/api/oauth/device_authorizations",
-            RouteAuth::CredentialEntryBootstrap,
+            RouteAuth::Public,
         ),
         (
             "GET",
@@ -59,7 +59,7 @@ fn auth_manifest_profiles_cover_path_templates() {
         (
             "POST",
             "/app/v3/api/oauth/device_authorizations/qr_session_key/scans",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         (
             "POST",
@@ -76,7 +76,11 @@ fn auth_manifest_profiles_cover_path_templates() {
             "/app/v3/api/oauth/sessions",
             RouteAuth::CredentialEntryBootstrap,
         ),
-        ("GET", "/app/v3/api/system/iam/runtime", RouteAuth::Public),
+        (
+            "GET",
+            "/app/v3/api/system/iam/runtime",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
     ];
 
     for (method, path, expected_auth) in expected_requests {
@@ -91,24 +95,21 @@ fn auth_manifest_profiles_cover_path_templates() {
 }
 
 #[test]
-fn iam_anonymous_operation_ids_are_public() {
-    use sdkwork_web_contract::RouteAuth;
-
-    let routes = app_routes();
-    for operation_id in IAM_ANONYMOUS_OPERATION_IDS {
-        let matched = routes
-            .iter()
-            .filter(|route| route.operation_id == *operation_id)
-            .collect::<Vec<_>>();
-        assert!(
-            !matched.is_empty(),
-            "missing manifest row for anonymous operation {operation_id}"
-        );
-        assert!(
-            matched.iter().all(|route| route.auth == RouteAuth::Public),
-            "anonymous operation {operation_id} must use RouteAuth::Public"
-        );
-    }
+fn iam_app_api_limits_anonymous_operations_to_qr_login_component_requests() {
+    assert_eq!(
+        IAM_ANONYMOUS_OPERATION_IDS,
+        &[
+            "deviceAuthorizations.create",
+            "deviceAuthorizations.retrieve",
+            "deviceAuthorizations.sessionExchanges.create",
+        ]
+    );
+    let anonymous_operation_ids = app_routes()
+        .iter()
+        .filter(|route| route.auth.is_anonymous())
+        .map(|route| route.operation_id)
+        .collect::<Vec<_>>();
+    assert_eq!(anonymous_operation_ids, IAM_ANONYMOUS_OPERATION_IDS);
 }
 
 #[test]
@@ -234,7 +235,7 @@ fn mounted_app_api_routes_have_manifest_rows_with_expected_auth() {
         (
             "POST",
             "/app/v3/api/oauth/device_authorizations",
-            RouteAuth::CredentialEntryBootstrap,
+            RouteAuth::Public,
         ),
         (
             "GET",
@@ -244,7 +245,7 @@ fn mounted_app_api_routes_have_manifest_rows_with_expected_auth() {
         (
             "POST",
             "/app/v3/api/oauth/device_authorizations/qr_key/scans",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         (
             "POST",
@@ -257,7 +258,11 @@ fn mounted_app_api_routes_have_manifest_rows_with_expected_auth() {
             RouteAuth::Public,
         ),
         // OAuth login bootstrap
-        ("GET", "/app/v3/api/oauth/providers", RouteAuth::Public),
+        (
+            "GET",
+            "/app/v3/api/oauth/providers",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
         (
             "POST",
             "/app/v3/api/oauth/authorization_urls",
@@ -283,17 +288,21 @@ fn mounted_app_api_routes_have_manifest_rows_with_expected_auth() {
             "/app/v3/api/oauth/callbacks/github",
             RouteAuth::CredentialEntryBootstrap,
         ),
-        // Public runtime metadata
-        ("GET", "/app/v3/api/system/iam/runtime", RouteAuth::Public),
+        // Access-token-only runtime metadata
+        (
+            "GET",
+            "/app/v3/api/system/iam/runtime",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
         (
             "GET",
             "/app/v3/api/system/iam/verification_policy",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         (
             "GET",
             "/app/v3/api/system/iam/account_binding_policy",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         // Framework-resolved session routes.
         (
@@ -399,19 +408,19 @@ fn app_routes_own_auth_sessions_and_current_user() {
         )
         .with_required_permission("iam:self")
     ));
-    assert!(routes.contains(&HttpRoute::public(
+    assert!(routes.contains(&HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/system/iam/runtime",
         "system",
         "iam.runtime.retrieve",
     )));
-    assert!(routes.contains(&HttpRoute::public(
+    assert!(routes.contains(&HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/system/iam/verification_policy",
         "system",
         "iam.verificationPolicy.retrieve",
     )));
-    assert!(routes.contains(&HttpRoute::public(
+    assert!(routes.contains(&HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/system/iam/account_binding_policy",
         "system",
@@ -518,101 +527,101 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
         "appbase OAuth must not expose legacy open_platform SDK tags",
     );
     for route in [
-        HttpRoute::public(
+        HttpRoute::credential_entry_bootstrap(
             HttpMethod::Get,
             "/app/v3/api/oauth/providers",
             "oauth",
-            "oauth.providers.list",
+            "providers.list",
         ),
         HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/authorization_urls",
             "oauth",
-            "oauth.authorizationUrls.create",
+            "authorizationUrls.create",
         ),
         HttpRoute::dual_token(
             HttpMethod::Post,
             "/app/v3/api/oauth/authorizations/{authorizationStateId}/completions",
             "oauth",
-            "oauth.authorizations.completions.create",
+            "authorizations.completions.create",
         ),
-        HttpRoute::credential_entry_bootstrap(
+        HttpRoute::public(
             HttpMethod::Post,
             "/app/v3/api/oauth/device_authorizations",
             "oauth",
-            "oauth.deviceAuthorizations.create",
+            "deviceAuthorizations.create",
         ),
         HttpRoute::public(
             HttpMethod::Get,
             "/app/v3/api/oauth/device_authorizations/{deviceAuthorizationId}",
             "oauth",
-            "oauth.deviceAuthorizations.retrieve",
+            "deviceAuthorizations.retrieve",
         ),
-        HttpRoute::public(
+        HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/device_authorizations/{deviceAuthorizationId}/scans",
             "oauth",
-            "oauth.deviceAuthorizations.scans.create",
+            "deviceAuthorizations.scans.create",
         ),
         HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/device_authorizations/{deviceAuthorizationId}/password_completions",
             "oauth",
-            "oauth.deviceAuthorizations.passwordCompletions.create",
+            "deviceAuthorizations.passwordCompletions.create",
         ),
         HttpRoute::public(
             HttpMethod::Post,
             "/app/v3/api/oauth/device_authorizations/{deviceAuthorizationId}/session_exchanges",
             "oauth",
-            "oauth.deviceAuthorizations.sessionExchanges.create",
+            "deviceAuthorizations.sessionExchanges.create",
         ),
         HttpRoute::credential_entry_bootstrap(
             HttpMethod::Get,
             "/app/v3/api/oauth/callbacks/{providerCode}",
             "oauth",
-            "oauth.callbacks.retrieve",
+            "callbacks.retrieve",
         ),
         HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/callbacks/{providerCode}",
             "oauth",
-            "oauth.callbacks.create",
+            "callbacks.create",
         ),
         HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/mini_program_sessions",
             "oauth",
-            "oauth.miniProgramSessions.create",
+            "miniProgramSessions.create",
         ),
         HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/sessions",
             "oauth",
-            "oauth.sessions.create",
+            "sessions.create",
         ),
         HttpRoute::dual_token(
             HttpMethod::Get,
             "/app/v3/api/oauth/account_links",
             "oauth",
-            "oauth.accountLinks.list",
+            "accountLinks.list",
         ),
         HttpRoute::dual_token(
             HttpMethod::Delete,
             "/app/v3/api/oauth/account_links/{accountLinkId}",
             "oauth",
-            "oauth.accountLinks.delete",
+            "accountLinks.delete",
         ),
         HttpRoute::dual_token(
             HttpMethod::Get,
             "/app/v3/api/oauth/grants",
             "oauth",
-            "oauth.grants.list",
+            "grants.list",
         ),
         HttpRoute::dual_token(
             HttpMethod::Delete,
             "/app/v3/api/oauth/grants/{grantId}",
             "oauth",
-            "oauth.grants.delete",
+            "grants.delete",
         ),
     ] {
         assert!(
@@ -636,56 +645,56 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
     let mut operation_ids: Vec<&str> = routes.iter().map(|route| route.operation_id).collect();
     operation_ids.sort();
 
-    assert_eq!(
-        operation_ids,
-        vec![
-            "departmentAssignments.list",
-            "departments.list",
-            "departments.tree.retrieve",
-            "iam.accountBindingPolicy.retrieve",
-            "iam.runtime.retrieve",
-            "iam.verificationPolicy.retrieve",
-            "oauth.accountLinks.delete",
-            "oauth.accountLinks.list",
-            "oauth.authorizationUrls.create",
-            "oauth.authorizations.completions.create",
-            "oauth.callbacks.create",
-            "oauth.callbacks.retrieve",
-            "oauth.deviceAuthorizations.create",
-            "oauth.deviceAuthorizations.passwordCompletions.create",
-            "oauth.deviceAuthorizations.retrieve",
-            "oauth.deviceAuthorizations.scans.create",
-            "oauth.deviceAuthorizations.sessionExchanges.create",
-            "oauth.grants.delete",
-            "oauth.grants.list",
-            "oauth.miniProgramSessions.create",
-            "oauth.providers.list",
-            "oauth.sessions.create",
-            "organizationMemberships.list",
-            "organizations.list",
-            "organizations.tree.retrieve",
-            "passwordResetRequests.create",
-            "passwordResets.create",
-            "positionAssignments.list",
-            "positions.list",
-            "registrations.create",
-            "roleBindings.list",
-            "sessions.create",
-            "sessions.current.delete",
-            "sessions.current.retrieve",
-            "sessions.current.update",
-            "sessions.loginContextSelection.create",
-            "sessions.organizationSelection.create",
-            "sessions.refresh",
-            "users.current.emailBindings.create",
-            "users.current.emailBindings.delete",
-            "users.current.password.update",
-            "users.current.phoneBindings.create",
-            "users.current.phoneBindings.delete",
-            "users.current.retrieve",
-            "users.current.update",
-        ]
-    );
+    let mut expected_operation_ids = vec![
+        "departmentAssignments.list",
+        "departments.list",
+        "departments.tree.retrieve",
+        "iam.accountBindingPolicy.retrieve",
+        "iam.runtime.retrieve",
+        "iam.verificationPolicy.retrieve",
+        "accountLinks.delete",
+        "accountLinks.list",
+        "authorizationUrls.create",
+        "authorizations.completions.create",
+        "callbacks.create",
+        "callbacks.retrieve",
+        "deviceAuthorizations.create",
+        "deviceAuthorizations.passwordCompletions.create",
+        "deviceAuthorizations.retrieve",
+        "deviceAuthorizations.scans.create",
+        "deviceAuthorizations.sessionExchanges.create",
+        "grants.delete",
+        "grants.list",
+        "miniProgramSessions.create",
+        "providers.list",
+        "sessions.create",
+        "organizationMemberships.list",
+        "organizations.list",
+        "organizations.tree.retrieve",
+        "passwordResetRequests.create",
+        "passwordResets.create",
+        "positionAssignments.list",
+        "positions.list",
+        "registrations.create",
+        "roleBindings.list",
+        "sessions.create",
+        "sessions.current.delete",
+        "sessions.current.retrieve",
+        "sessions.current.update",
+        "sessions.loginContextSelection.create",
+        "sessions.organizationSelection.create",
+        "sessions.refresh",
+        "users.current.emailBindings.create",
+        "users.current.emailBindings.delete",
+        "users.current.password.update",
+        "users.current.phoneBindings.create",
+        "users.current.phoneBindings.delete",
+        "users.current.retrieve",
+        "users.current.update",
+    ];
+    expected_operation_ids.sort();
+
+    assert_eq!(operation_ids, expected_operation_ids);
 }
 
 #[test]
@@ -866,10 +875,8 @@ async fn build_postgres_integration_router() -> axum::Router {
 }
 
 #[tokio::test]
-async fn anonymous_login_route_does_not_require_framework_credentials() {
-    if !postgres_integration_ready("anonymous_login_route_does_not_require_framework_credentials")
-        .await
-    {
+async fn credential_entry_login_requires_only_access_token() {
+    if !postgres_integration_ready("credential_entry_login_requires_only_access_token").await {
         return;
     }
     let _guard = lock_local_iam_env();
@@ -901,8 +908,8 @@ async fn anonymous_login_route_does_not_require_framework_credentials() {
 }
 
 #[tokio::test]
-async fn parameterized_public_oauth_device_routes_skip_framework_auth() {
-    if !postgres_integration_ready("parameterized_public_oauth_device_routes_skip_framework_auth")
+async fn qr_login_component_requests_reach_handlers_without_credentials() {
+    if !postgres_integration_ready("qr_login_component_requests_reach_handlers_without_credentials")
         .await
     {
         return;
@@ -911,14 +918,12 @@ async fn parameterized_public_oauth_device_routes_skip_framework_auth() {
     unified_database_env::apply_unified_claw_postgres_env();
     ensure_credential_entry_bootstrap_runtime_app().await;
     let router = build_postgres_integration_router().await;
-    let bootstrap_access_token = test_bootstrap_access_token();
-
     let (create_status, create_body, create_payload) = request_app_route_with_headers(
         router.clone(),
         Method::POST,
         "/app/v3/api/oauth/device_authorizations",
         Some(r#"{"purpose":"login"}"#),
-        &[("access-token", bootstrap_access_token.as_str())],
+        &[("origin", "https://chat.example.test")],
     )
     .await;
     assert_eq!(
@@ -929,27 +934,46 @@ async fn parameterized_public_oauth_device_routes_skip_framework_auth() {
     let session_key = create_payload["data"]["sessionKey"]
         .as_str()
         .expect("session key");
+    let poll_secret = create_payload["data"]["pollSecret"]
+        .as_str()
+        .expect("poll secret");
 
     let (poll_status, poll_body, _) = request_app_route_with_headers(
-        router,
+        router.clone(),
         Method::GET,
         &format!("/app/v3/api/oauth/device_authorizations/{session_key}"),
         None,
-        &[
-            ("origin", "https://chat.example.test"),
-            ("access-token", bootstrap_access_token.as_str()),
-        ],
+        &[("origin", "https://chat.example.test")],
     )
     .await;
     assert_ne!(
         StatusCode::UNAUTHORIZED,
         poll_status,
-        "QR poll route must not require framework credentials: {poll_body}"
+        "QR poll route must reach the handler without credentials: {poll_body}"
     );
     assert_ne!(
         StatusCode::FORBIDDEN,
         poll_status,
         "QR poll route must not fail CORS before handler: {poll_body}"
+    );
+
+    let (exchange_status, exchange_body, _) = request_app_route_with_headers(
+        router,
+        Method::POST,
+        &format!("/app/v3/api/oauth/device_authorizations/{session_key}/session_exchanges"),
+        Some(&format!(r#"{{"pollSecret":"{poll_secret}"}}"#)),
+        &[("origin", "https://chat.example.test")],
+    )
+    .await;
+    assert_ne!(
+        StatusCode::UNAUTHORIZED,
+        exchange_status,
+        "QR session exchange must reach the handler without credentials: {exchange_body}"
+    );
+    assert_ne!(
+        StatusCode::FORBIDDEN,
+        exchange_status,
+        "QR session exchange must not fail CORS before handler: {exchange_body}"
     );
 }
 
@@ -984,10 +1008,8 @@ async fn app_router_does_not_seed_default_local_credentials() {
 }
 
 #[tokio::test]
-async fn anonymous_auth_entry_routes_reject_inbound_credential_headers() {
-    if !postgres_integration_ready("anonymous_auth_entry_routes_reject_inbound_credential_headers")
-        .await
-    {
+async fn credential_entry_routes_reject_contaminating_headers() {
+    if !postgres_integration_ready("credential_entry_routes_reject_contaminating_headers").await {
         return;
     }
     let (_guard, _snapshot) = set_real_local_iam_runtime_env();
@@ -1055,7 +1077,7 @@ async fn anonymous_auth_entry_routes_reject_inbound_credential_headers() {
         assert_eq!(
             StatusCode::BAD_REQUEST,
             status,
-            "{path} must reject credential headers before anonymous auth entry handling: {body_text}"
+            "{path} must reject contaminating headers before credential-entry handling: {body_text}"
         );
         assert_credential_entry_header_rejection(path, &payload, &body_text);
     }

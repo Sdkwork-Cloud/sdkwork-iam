@@ -8,7 +8,10 @@ async fn runtime_http_openapi_matches_bound_manifest() {
         .await
         .expect("build IAM standalone runtime");
     let expected = route_inventory_from_routes(runtime.route_manifest.routes());
-    assert!(!expected.is_empty(), "IAM standalone manifest must serve routes");
+    assert!(
+        !expected.is_empty(),
+        "IAM standalone manifest must serve routes"
+    );
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
@@ -25,10 +28,8 @@ async fn runtime_http_openapi_matches_bound_manifest() {
         .expect("connect to IAM runtime probe");
     stream
         .write_all(
-            format!(
-                "GET /openapi.json HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n\r\n"
-            )
-            .as_bytes(),
+            format!("GET /openapi.json HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n\r\n")
+                .as_bytes(),
         )
         .await
         .expect("write runtime OpenAPI request");
@@ -48,8 +49,8 @@ async fn runtime_http_openapi_matches_bound_manifest() {
         headers.starts_with("HTTP/1.1 200"),
         "runtime OpenAPI request failed: {headers}"
     );
-    let served: serde_json::Value = serde_json::from_slice(&response[separator + 4..])
-        .expect("runtime OpenAPI JSON response");
+    let served: serde_json::Value =
+        serde_json::from_slice(&response[separator + 4..]).expect("runtime OpenAPI JSON response");
 
     assert_eq!(
         route_inventory_from_openapi(&served).expect("served OpenAPI inventory"),

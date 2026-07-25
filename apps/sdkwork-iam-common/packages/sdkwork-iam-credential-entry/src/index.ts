@@ -9,6 +9,7 @@ export {
   SDKWORK_CREDENTIAL_ENTRY_BOOTSTRAP_ACCESS_TOKEN_GLOBAL_KEY,
 } from './constants.ts';
 export {
+  initializeCredentialEntryTokenManager,
   prepareCredentialEntryTokens,
   readBootstrapAccessTokenFromProcessEnv,
 } from './bootstrap-token.ts';

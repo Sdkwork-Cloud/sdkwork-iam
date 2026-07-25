@@ -44,7 +44,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "371e1d4e8904a56c2c1c96943ba9d90017c6ffc0ee4fcdb120eaaf3236fc90b7"
+      "sha256": "3bada505c707625992b25285d345b246eb0bdbadcd25a4f6838db78d92c8565e"
     },
     {
       "path": "sdkwork-sdk.json",
@@ -52,7 +52,7 @@
     },
     {
       "path": "src/api/auth.ts",
-      "sha256": "508f1a5aa6c3a7ce4f08710b2d3f337afddb2e243df6bc52f0f1e6be7b541510"
+      "sha256": "c34fdc843c1972005e724c30a6a95edcb0bf3a88f02d32ca701fe419b5698dd8"
     },
     {
       "path": "src/api/base.ts",
@@ -68,7 +68,7 @@
     },
     {
       "path": "src/api/oauth.ts",
-      "sha256": "95a89e1c88b8a86a3906f1dba1d69176e1d9c7e2e6a93fb6ca50041e20f4a980"
+      "sha256": "208d142ef11ce2189c71d8ded6adae72d21d61f8f3a381305e63ec7ad68581b9"
     },
     {
       "path": "src/api/paths.ts",
@@ -76,7 +76,7 @@
     },
     {
       "path": "src/api/system.ts",
-      "sha256": "d6641e49bb9758099d243e579543ebaa029147954f5796c3edd2ae04f37adb3c"
+      "sha256": "e40476002138034cbda3674cd1ae392c463dc447ba8823923c8f3a8886fc8a5d"
     },
     {
       "path": "src/auth/index.ts",
@@ -84,7 +84,7 @@
     },
     {
       "path": "src/http/client.ts",
-      "sha256": "8839b850d906d757356241de57a3fc65beaa03287dad8e52965378164e860a57"
+      "sha256": "a26a75200b81060fc4909aae258d337967ccd196c2b69d9a2e183aa2e1f80162"
     },
     {
       "path": "src/http/index.ts",

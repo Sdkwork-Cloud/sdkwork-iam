@@ -62,7 +62,7 @@ describe("session auth unauthorized integration", () => {
     expect(reset).toBe(true);
   });
 
-  it("does not clear an authenticated session for credential-entry or anonymous requests", async () => {
+  it("does not clear an authenticated session for Access-Token-only or anonymous requests", async () => {
     let clearCalls = 0;
     const client: SdkworkSdkClientWithHttp = {
       http: {
@@ -83,6 +83,9 @@ describe("session auth unauthorized integration", () => {
       credentialEntryBootstrap: true,
     })).rejects.toMatchObject({ httpStatus: 401 });
     await expect(client.http!.request("/oauth/device_authorizations/qr-1", {
+      accessTokenOnly: true,
+    })).rejects.toMatchObject({ httpStatus: 401 });
+    await expect(client.http!.request("/oauth/providers", {
       skipAuth: true,
     })).rejects.toMatchObject({ httpStatus: 401 });
 

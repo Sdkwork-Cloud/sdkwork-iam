@@ -35,7 +35,7 @@ The environment-aware helper preserves configured credentials in all four lifecy
 
 The browser-facing package entry depends only on the pure bootstrap-token core. Manifest and private env-file I/O stay behind the Node-only subpath, so browser bundles do not pull `node:fs` or `node:path` compatibility shims.
 
-Standalone PC packages should route `dev` through `sdkwork-iam/scripts/dev/run-pc-renderer-dev-with-bootstrap.mjs` when no topology orchestrator owns renderer startup.
+Standalone renderer packages should route `dev` through `sdkwork-iam/scripts/dev/run-renderer-dev-with-bootstrap.mjs` when no topology orchestrator owns renderer startup. `run-pc-renderer-dev-with-bootstrap.mjs` remains a compatibility entrypoint for migrated PC package scripts.
 
 ## Governance
 
