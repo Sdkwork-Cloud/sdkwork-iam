@@ -139,12 +139,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "compatibility",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.wellKnown.authorizationServerMetadata",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.read",
         "x-sdkwork-wire-protocol": "external",
@@ -267,12 +268,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "compatibility",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.wellKnown.openidConfiguration",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.read",
         "x-sdkwork-wire-protocol": "external",
@@ -391,12 +393,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.authorize",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.manage",
         "x-sdkwork-wire-protocol": "external",
@@ -515,12 +518,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.introspect",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.manage",
         "requestBody": {
@@ -649,12 +653,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.jwks",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.read",
         "x-sdkwork-wire-protocol": "external",
@@ -812,14 +817,22 @@
             }
           }
         },
-        "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "OAuthBearer": []
+          }
+        ],
+        "x-sdkwork-auth-mode": "open-api-flexible",
         "x-sdkwork-forbid-credential-headers": false,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.providerCallbacks",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.read",
         "x-sdkwork-wire-protocol": "external",
@@ -981,14 +994,22 @@
             }
           }
         },
-        "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "OAuthBearer": []
+          }
+        ],
+        "x-sdkwork-auth-mode": "open-api-flexible",
         "x-sdkwork-forbid-credential-headers": false,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.providerCallbacks",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.manage",
         "requestBody": {
@@ -1123,12 +1144,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.revoke",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.manage",
         "requestBody": {
@@ -1257,12 +1279,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.token",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.manage",
         "requestBody": {
@@ -1389,14 +1412,22 @@
             }
           }
         },
-        "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "OAuthBearer": []
+          }
+        ],
+        "x-sdkwork-auth-mode": "open-api-flexible",
         "x-sdkwork-forbid-credential-headers": false,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.userinfo",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.read",
         "x-sdkwork-wire-protocol": "external",
@@ -1515,12 +1546,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.authorizationServerMetadata",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.read",
         "x-sdkwork-wire-protocol": "external",
@@ -1639,12 +1671,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-open-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.oauth.openidConfiguration",
         "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "open-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.oauth.read",
         "x-sdkwork-wire-protocol": "external",
@@ -1708,87 +1741,6 @@
             "type": "object",
             "additionalProperties": true,
             "description": "Typed domain resource for the operation."
-          }
-        }
-      },
-      "SdkWorkPageData": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "items",
-          "pageInfo"
-        ],
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          },
-          "pageInfo": {
-            "$ref": "#/components/schemas/PageInfo"
-          }
-        }
-      },
-      "SdkWorkCommandData": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "accepted"
-        ],
-        "properties": {
-          "accepted": {
-            "type": "boolean",
-            "const": true
-          },
-          "resourceId": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          }
-        }
-      },
-      "PageInfo": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "mode"
-        ],
-        "properties": {
-          "mode": {
-            "type": "string",
-            "enum": [
-              "offset",
-              "cursor"
-            ]
-          },
-          "page": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "pageSize": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 200
-          },
-          "totalItems": {
-            "type": "string",
-            "pattern": "^[0-9]+$"
-          },
-          "totalPages": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "nextCursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "hasMore": {
-            "type": "boolean"
           }
         }
       },
@@ -1914,578 +1866,10 @@
           }
         ]
       },
-      "SdkWorkListResponse": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/SdkWorkApiResponse"
-          },
-          {
-            "type": "object",
-            "required": [
-              "data"
-            ],
-            "properties": {
-              "data": {
-                "$ref": "#/components/schemas/SdkWorkPageData"
-              }
-            }
-          }
-        ]
-      },
-      "SdkWorkCommandResponse": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/SdkWorkApiResponse"
-          },
-          {
-            "type": "object",
-            "required": [
-              "data"
-            ],
-            "properties": {
-              "data": {
-                "$ref": "#/components/schemas/SdkWorkCommandData"
-              }
-            }
-          }
-        ]
-      },
       "AppbaseOperationCommand": {
         "type": "object",
         "additionalProperties": true,
         "description": "Operation-specific command payload defined by the owning IAM Rust module."
-      },
-      "WechatMiniProgramSessionCreateCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "jsCode"
-        ],
-        "description": "One-time WeChat Mini Program login-code exchange command.",
-        "properties": {
-          "jsCode": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 512,
-            "writeOnly": true,
-            "description": "One-time code returned by wx.login()."
-          },
-          "providerCode": {
-            "type": "string",
-            "enum": [
-              "wechat_mini_program"
-            ],
-            "default": "wechat_mini_program"
-          },
-          "surfaceCode": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "description": "Registered IAM OAuth mini-program surface code."
-          }
-        }
-      },
-      "IamOauthClientCreateCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "integrationId",
-          "providerCode",
-          "clientCode",
-          "displayName",
-          "providerClientId"
-        ],
-        "description": "Tenant-scoped OAuth provider client registration command.",
-        "properties": {
-          "integrationId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "providerCode": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "clientCode": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "displayName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "providerClientId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "providerTenantId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255,
-            "description": "Provider-owned identity federation scope, such as a WeChat Open Platform account ID."
-          }
-        }
-      },
-      "AppbaseSessionCreateCommand": {
-        "type": "object",
-        "additionalProperties": true,
-        "description": "Session creation command for credential login and external user-center session exchange.",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "Email credential used by standard password login."
-          },
-          "username": {
-            "type": "string",
-            "description": "Username credential used by standard password login."
-          },
-          "phone": {
-            "type": "string",
-            "description": "Phone credential used by standard password login."
-          },
-          "password": {
-            "type": "string",
-            "description": "Write-only password credential used by standard password login.",
-            "format": "password"
-          },
-          "externalToken": {
-            "type": "string",
-            "description": "Opaque upstream credential used only by an external user-center session exchange."
-          },
-          "providerKey": {
-            "type": "string",
-            "description": "External authority provider key used to select the configured bridge."
-          },
-          "tenantId": {
-            "type": "string",
-            "description": "Verified tenant id supplied by an external user-center session exchange after upstream identity validation."
-          },
-          "organizationId": {
-            "type": "string",
-            "description": "Verified organization id supplied by an external user-center session exchange when the upstream identity resolved an organization scope."
-          }
-        }
-      },
-      "AppbaseApplicationRegisterCommand": {
-        "type": "object",
-        "additionalProperties": true,
-        "description": "Super-admin registered application command for startup bootstrap.",
-        "required": [
-          "appKey",
-          "name",
-          "appType",
-          "version",
-          "defaultAccessPermissions"
-        ],
-        "properties": {
-          "authToken": {
-            "type": "string",
-            "description": "Super-admin auth token used for bootstrap body authentication."
-          },
-          "username": {
-            "type": "string",
-            "description": "Super-admin username credential for bootstrap body authentication."
-          },
-          "email": {
-            "type": "string",
-            "description": "Super-admin email credential for bootstrap body authentication."
-          },
-          "phone": {
-            "type": "string",
-            "description": "Super-admin phone credential for bootstrap body authentication."
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "Super-admin password credential for bootstrap body authentication."
-          },
-          "ownerTenantId": {
-            "type": "string"
-          },
-          "appKey": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "appType": {
-            "type": "string"
-          },
-          "packageName": {
-            "type": "string"
-          },
-          "bundleId": {
-            "type": "string"
-          },
-          "desktopAppId": {
-            "type": "string"
-          },
-          "version": {
-            "type": "string"
-          },
-          "channel": {
-            "type": "string"
-          },
-          "manifestHash": {
-            "type": "string"
-          },
-          "defaultAccessPermissions": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "string"
-            }
-          },
-          "config": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "packages": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          }
-        }
-      },
-      "IamTenantApplicationManagementProvisionCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Provision a registered application template for a tenant through an authenticated operator workflow.",
-        "required": [
-          "organizationId",
-          "instanceKey",
-          "displayName",
-          "environment"
-        ],
-        "anyOf": [
-          {
-            "required": [
-              "templateId"
-            ]
-          },
-          {
-            "required": [
-              "appKey"
-            ]
-          }
-        ],
-        "properties": {
-          "organizationId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "templateId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "appKey": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "instanceKey": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "displayName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "environment": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "primaryDomain": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "accessPermissions": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            }
-          }
-        }
-      },
-      "IamTenantApplicationManagementUpdateCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Update operator-managed tenant application domain and access permissions.",
-        "properties": {
-          "primaryDomain": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "accessPermissions": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            }
-          }
-        }
-      },
-      "IamTenantApplicationStatusCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Authenticated operator command for a tenant application status transition.",
-        "properties": {}
-      },
-      "AppbaseTenantApplicationProvisionCommand": {
-        "type": "object",
-        "additionalProperties": true,
-        "description": "Provision a tenant application from a registered application template.",
-        "required": [
-          "tenantId",
-          "organizationId",
-          "instanceKey",
-          "displayName",
-          "environment"
-        ],
-        "properties": {
-          "authToken": {
-            "type": "string",
-            "description": "Super-admin auth token used for bootstrap body authentication."
-          },
-          "username": {
-            "type": "string",
-            "description": "Super-admin username credential for bootstrap body authentication."
-          },
-          "email": {
-            "type": "string",
-            "description": "Super-admin email credential for bootstrap body authentication."
-          },
-          "phone": {
-            "type": "string",
-            "description": "Super-admin phone credential for bootstrap body authentication."
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "Super-admin password credential for bootstrap body authentication."
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "organizationId": {
-            "type": "string"
-          },
-          "templateId": {
-            "type": "string"
-          },
-          "appKey": {
-            "type": "string"
-          },
-          "instanceKey": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "environment": {
-            "type": "string"
-          },
-          "primaryDomain": {
-            "type": "string"
-          },
-          "accessPermissions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "runtimeConfig": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        }
-      },
-      "AppbaseTenantApplicationUpdateCommand": {
-        "type": "object",
-        "additionalProperties": true,
-        "description": "Update tenant application access and runtime configuration.",
-        "properties": {
-          "authToken": {
-            "type": "string",
-            "description": "Super-admin auth token used for bootstrap body authentication."
-          },
-          "username": {
-            "type": "string",
-            "description": "Super-admin username credential for bootstrap body authentication."
-          },
-          "email": {
-            "type": "string",
-            "description": "Super-admin email credential for bootstrap body authentication."
-          },
-          "phone": {
-            "type": "string",
-            "description": "Super-admin phone credential for bootstrap body authentication."
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "Super-admin password credential for bootstrap body authentication."
-          },
-          "primaryDomain": {
-            "type": "string"
-          },
-          "domainConfig": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "accessPermissions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "runtimeConfig": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        }
-      },
-      "AppbaseTenantApplicationEnableCommand": {
-        "type": "object",
-        "additionalProperties": true,
-        "description": "Enable a provisioned tenant application before access credential issuance.",
-        "properties": {
-          "authToken": {
-            "type": "string",
-            "description": "Super-admin auth token used for bootstrap body authentication."
-          },
-          "username": {
-            "type": "string",
-            "description": "Super-admin username credential for bootstrap body authentication."
-          },
-          "email": {
-            "type": "string",
-            "description": "Super-admin email credential for bootstrap body authentication."
-          },
-          "phone": {
-            "type": "string",
-            "description": "Super-admin phone credential for bootstrap body authentication."
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "Super-admin password credential for bootstrap body authentication."
-          }
-        }
-      },
-      "AppbaseAccessCredentialCreateCommand": {
-        "type": "object",
-        "additionalProperties": true,
-        "description": "Issue a delegated access credential for an enabled tenant application.",
-        "required": [
-          "tenantId",
-          "organizationId"
-        ],
-        "properties": {
-          "authToken": {
-            "type": "string",
-            "description": "Super-admin auth token used for bootstrap body authentication."
-          },
-          "username": {
-            "type": "string",
-            "description": "Super-admin username credential for bootstrap body authentication."
-          },
-          "email": {
-            "type": "string",
-            "description": "Super-admin email credential for bootstrap body authentication."
-          },
-          "phone": {
-            "type": "string",
-            "description": "Super-admin phone credential for bootstrap body authentication."
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "Super-admin password credential for bootstrap body authentication."
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "organizationId": {
-            "type": "string"
-          },
-          "tenantApplicationId": {
-            "type": "string"
-          },
-          "appId": {
-            "type": "string"
-          },
-          "instanceKey": {
-            "type": "string"
-          }
-        }
-      },
-      "ServiceAccountCredentialCreateCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "tenantApplicationId"
-        ],
-        "description": "Create a one-time-returned workload credential bound to a service account and tenant application.",
-        "properties": {
-          "tenantApplicationId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "ServiceAccountCredentialRevokeCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Revoke a workload credential and all sessions issued from it.",
-        "properties": {}
-      },
-      "ServiceAccountTokenExchangeCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "clientId",
-          "clientSecret"
-        ],
-        "description": "Exchange a workload client credential for short-lived tenant-bound dual tokens.",
-        "properties": {
-          "clientId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "clientSecret": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 512,
-            "format": "password",
-            "writeOnly": true
-          }
-        }
       }
     }
   },

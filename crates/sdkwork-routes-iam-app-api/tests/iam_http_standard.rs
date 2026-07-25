@@ -4,8 +4,8 @@ use http_body_util::BodyExt;
 use sdkwork_iam_web_adapter::{ensure_platform_tenant_application, iam_wire_result_code};
 use sdkwork_routes_iam_app_api::{
     app_routes, build_sdkwork_iam_app_api_router_with_pool, required_dual_token_headers,
-    HttpMethod, HttpRoute, APP_API_PREFIX, IAM_ANONYMOUS_BOOTSTRAP_OPERATION_IDS,
-    IAM_CREDENTIAL_ENTRY_OPERATION_IDS, IAM_HANDLER_SESSION_OPERATION_IDS,
+    HttpMethod, HttpRoute, APP_API_PREFIX, IAM_ANONYMOUS_OPERATION_IDS,
+    IAM_CREDENTIAL_ENTRY_OPERATION_IDS, IAM_FRAMEWORK_SESSION_OPERATION_IDS,
 };
 use sdkwork_web_core::bootstrap_access_token_jwt;
 use serde_json::{json, Value};
@@ -30,66 +30,91 @@ fn app_api_authored_source() -> String {
 }
 
 #[test]
-fn auth_bootstrap_manifest_routes_are_public_including_path_templates() {
+fn auth_manifest_profiles_cover_path_templates() {
     use sdkwork_web_contract::RouteAuth;
     use sdkwork_web_core::route_path_matches;
 
     let routes = app_routes();
-    let required_public_requests = [
-        ("POST", "/app/v3/api/auth/sessions"),
-        ("POST", "/app/v3/api/auth/registrations"),
-        ("POST", "/app/v3/api/oauth/device_authorizations"),
+    let expected_requests = [
+        (
+            "POST",
+            "/app/v3/api/auth/sessions",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
+        (
+            "POST",
+            "/app/v3/api/auth/registrations",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
+        (
+            "POST",
+            "/app/v3/api/oauth/device_authorizations",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
         (
             "GET",
             "/app/v3/api/oauth/device_authorizations/qr_session_key",
+            RouteAuth::Public,
         ),
         (
             "POST",
             "/app/v3/api/oauth/device_authorizations/qr_session_key/scans",
+            RouteAuth::Public,
         ),
         (
             "POST",
             "/app/v3/api/oauth/device_authorizations/qr_session_key/session_exchanges",
+            RouteAuth::Public,
         ),
-        ("GET", "/app/v3/api/oauth/callbacks/github"),
-        ("POST", "/app/v3/api/oauth/sessions"),
-        ("GET", "/app/v3/api/system/iam/runtime"),
+        (
+            "GET",
+            "/app/v3/api/oauth/callbacks/github",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
+        (
+            "POST",
+            "/app/v3/api/oauth/sessions",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
+        ("GET", "/app/v3/api/system/iam/runtime", RouteAuth::Public),
     ];
 
-    for (method, path) in required_public_requests {
+    for (method, path, expected_auth) in expected_requests {
         let matched = routes.iter().find(|route| {
             http_method_matches_route(route.method, method) && route_path_matches(route.path, path)
         });
         assert!(
-            matched.is_some_and(|route| route.auth == RouteAuth::Public),
-            "{method} {path} must match a manifest RouteAuth::Public entry"
+            matched.is_some_and(|route| route.auth == expected_auth),
+            "{method} {path} must match manifest auth {expected_auth:?}"
         );
     }
 }
 
 #[test]
-fn iam_anonymous_bootstrap_operation_ids_are_public() {
+fn iam_anonymous_operation_ids_are_public() {
     use sdkwork_web_contract::RouteAuth;
 
     let routes = app_routes();
-    for operation_id in IAM_ANONYMOUS_BOOTSTRAP_OPERATION_IDS {
+    for operation_id in IAM_ANONYMOUS_OPERATION_IDS {
         let matched = routes
             .iter()
             .filter(|route| route.operation_id == *operation_id)
             .collect::<Vec<_>>();
         assert!(
             !matched.is_empty(),
-            "missing manifest row for anonymous bootstrap operation {operation_id}"
+            "missing manifest row for anonymous operation {operation_id}"
         );
         assert!(
             matched.iter().all(|route| route.auth == RouteAuth::Public),
-            "anonymous bootstrap operation {operation_id} must use RouteAuth::Public"
+            "anonymous operation {operation_id} must use RouteAuth::Public"
         );
     }
 }
 
 #[test]
 fn iam_credential_entry_operation_ids_declare_forbid_credential_headers() {
+    use sdkwork_web_contract::RouteAuth;
+
     let routes = app_routes();
     for operation_id in IAM_CREDENTIAL_ENTRY_OPERATION_IDS {
         let matched = routes
@@ -104,26 +129,34 @@ fn iam_credential_entry_operation_ids_declare_forbid_credential_headers() {
             matched.iter().all(|route| route.forbid_credential_headers),
             "credential-entry route {operation_id} must declare forbidCredentialHeaders"
         );
+        assert!(
+            matched
+                .iter()
+                .all(|route| route.auth == RouteAuth::CredentialEntryBootstrap),
+            "credential-entry route {operation_id} must use RouteAuth::CredentialEntryBootstrap"
+        );
     }
 }
 
 #[test]
-fn iam_handler_session_operation_ids_stay_public_for_handler_auth() {
+fn iam_current_session_operation_ids_use_framework_dual_token_auth() {
     use sdkwork_web_contract::RouteAuth;
 
     let routes = app_routes();
-    for operation_id in IAM_HANDLER_SESSION_OPERATION_IDS {
+    for operation_id in IAM_FRAMEWORK_SESSION_OPERATION_IDS {
         let matched = routes
             .iter()
             .filter(|route| route.operation_id == *operation_id)
             .collect::<Vec<_>>();
         assert!(
             !matched.is_empty(),
-            "missing handler-session route {operation_id}"
+            "missing current-session route {operation_id}"
         );
         assert!(
-            matched.iter().all(|route| route.auth == RouteAuth::Public),
-            "handler-session route {operation_id} must stay RouteAuth::Public"
+            matched
+                .iter()
+                .all(|route| route.auth == RouteAuth::DualToken),
+            "current-session route {operation_id} must use RouteAuth::DualToken"
         );
     }
 }
@@ -161,39 +194,47 @@ fn mounted_app_api_routes_have_manifest_rows_with_expected_auth() {
 
     let routes = app_routes();
     let expectations: &[(&str, &str, RouteAuth)] = &[
-        // Anonymous auth bootstrap (IAM_LOGIN_INTEGRATION_SPEC §5)
-        ("POST", "/app/v3/api/auth/sessions", RouteAuth::Public),
-        ("POST", "/app/v3/api/auth/registrations", RouteAuth::Public),
+        // Credential-entry and refresh profiles.
+        (
+            "POST",
+            "/app/v3/api/auth/sessions",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
+        (
+            "POST",
+            "/app/v3/api/auth/registrations",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
         (
             "POST",
             "/app/v3/api/auth/sessions/login_context_selection",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         (
             "POST",
             "/app/v3/api/auth/sessions/organization_selection",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         (
             "POST",
             "/app/v3/api/auth/sessions/refresh",
-            RouteAuth::Public,
+            RouteAuth::RefreshToken,
         ),
         (
             "POST",
             "/app/v3/api/auth/password_reset_requests",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         (
             "POST",
             "/app/v3/api/auth/password_resets",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         // QR / OAuth device authorization flow
         (
             "POST",
             "/app/v3/api/oauth/device_authorizations",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         (
             "GET",
@@ -208,7 +249,7 @@ fn mounted_app_api_routes_have_manifest_rows_with_expected_auth() {
         (
             "POST",
             "/app/v3/api/oauth/device_authorizations/qr_key/password_completions",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         (
             "POST",
@@ -220,23 +261,27 @@ fn mounted_app_api_routes_have_manifest_rows_with_expected_auth() {
         (
             "POST",
             "/app/v3/api/oauth/authorization_urls",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
-        ("POST", "/app/v3/api/oauth/sessions", RouteAuth::Public),
+        (
+            "POST",
+            "/app/v3/api/oauth/sessions",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
         (
             "POST",
             "/app/v3/api/oauth/mini_program_sessions",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         (
             "GET",
             "/app/v3/api/oauth/callbacks/github",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         (
             "POST",
             "/app/v3/api/oauth/callbacks/github",
-            RouteAuth::Public,
+            RouteAuth::CredentialEntryBootstrap,
         ),
         // Public runtime metadata
         ("GET", "/app/v3/api/system/iam/runtime", RouteAuth::Public),
@@ -250,21 +295,21 @@ fn mounted_app_api_routes_have_manifest_rows_with_expected_auth() {
             "/app/v3/api/system/iam/account_binding_policy",
             RouteAuth::Public,
         ),
-        // Handler-validated session routes (framework public)
+        // Framework-resolved session routes.
         (
             "GET",
             "/app/v3/api/auth/sessions/current",
-            RouteAuth::Public,
+            RouteAuth::DualToken,
         ),
         (
             "PATCH",
             "/app/v3/api/auth/sessions/current",
-            RouteAuth::Public,
+            RouteAuth::DualToken,
         ),
         (
             "DELETE",
             "/app/v3/api/auth/sessions/current",
-            RouteAuth::Public,
+            RouteAuth::DualToken,
         ),
         (
             "GET",
@@ -327,19 +372,19 @@ fn exposes_surface_named_rust_integration_entrypoints() {
 fn app_routes_own_auth_sessions_and_current_user() {
     let routes = app_routes();
 
-    assert!(routes.contains(&HttpRoute::credential_entry_public(
+    assert!(routes.contains(&HttpRoute::credential_entry_bootstrap(
         HttpMethod::Post,
         "/app/v3/api/auth/sessions",
         "auth",
         "sessions.create",
     )));
-    assert!(routes.contains(&HttpRoute::credential_entry_public(
+    assert!(routes.contains(&HttpRoute::credential_entry_bootstrap(
         HttpMethod::Post,
         "/app/v3/api/auth/registrations",
         "auth",
         "registrations.create",
     )));
-    assert!(routes.contains(&HttpRoute::public(
+    assert!(routes.contains(&HttpRoute::dual_token(
         HttpMethod::Get,
         "/app/v3/api/auth/sessions/current",
         "auth",
@@ -479,7 +524,7 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
             "oauth",
             "oauth.providers.list",
         ),
-        HttpRoute::credential_entry_public(
+        HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/authorization_urls",
             "oauth",
@@ -491,7 +536,7 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
             "oauth",
             "oauth.authorizations.completions.create",
         ),
-        HttpRoute::credential_entry_public(
+        HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/device_authorizations",
             "oauth",
@@ -509,7 +554,7 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
             "oauth",
             "oauth.deviceAuthorizations.scans.create",
         ),
-        HttpRoute::credential_entry_public(
+        HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/device_authorizations/{deviceAuthorizationId}/password_completions",
             "oauth",
@@ -521,25 +566,25 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
             "oauth",
             "oauth.deviceAuthorizations.sessionExchanges.create",
         ),
-        HttpRoute::credential_entry_public(
+        HttpRoute::credential_entry_bootstrap(
             HttpMethod::Get,
             "/app/v3/api/oauth/callbacks/{providerCode}",
             "oauth",
             "oauth.callbacks.retrieve",
         ),
-        HttpRoute::credential_entry_public(
+        HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/callbacks/{providerCode}",
             "oauth",
             "oauth.callbacks.create",
         ),
-        HttpRoute::credential_entry_public(
+        HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/mini_program_sessions",
             "oauth",
             "oauth.miniProgramSessions.create",
         ),
-        HttpRoute::credential_entry_public(
+        HttpRoute::credential_entry_bootstrap(
             HttpMethod::Post,
             "/app/v3/api/oauth/sessions",
             "oauth",
@@ -575,13 +620,13 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
             "missing canonical app OAuth route: {route:?}",
         );
     }
-    assert!(routes.contains(&HttpRoute::credential_entry_public(
+    assert!(routes.contains(&HttpRoute::credential_entry_bootstrap(
         HttpMethod::Post,
         "/app/v3/api/auth/sessions/login_context_selection",
         "auth",
         "sessions.loginContextSelection.create",
     )));
-    assert!(routes.contains(&HttpRoute::credential_entry_public(
+    assert!(routes.contains(&HttpRoute::credential_entry_bootstrap(
         HttpMethod::Post,
         "/app/v3/api/auth/sessions/organization_selection",
         "auth",

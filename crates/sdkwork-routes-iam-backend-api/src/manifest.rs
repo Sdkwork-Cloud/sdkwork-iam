@@ -334,7 +334,7 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
         "iam",
         "serviceAccountCredentials.revoke",
     ),
-    HttpRoute::credential_entry_public(
+    HttpRoute::public(
         HttpMethod::Post,
         "/backend/v3/api/iam/service_account_tokens",
         "iam",

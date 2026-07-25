@@ -3,13 +3,15 @@ import type { RequestOptions, QueryParams } from '@sdkwork/sdk-common';
 import type { AuthTokenManager } from '@sdkwork/sdk-common';
 import { BaseHttpClient, withRetry } from '@sdkwork/sdk-common';
 
-type HttpRequestOptions = RequestOptions & {
+export type HttpRequestOptions = RequestOptions & {
   method?: string;
   body?: unknown;
   headers?: Record<string, string>;
   contentType?: string;
   credentialEntryBootstrap?: boolean;
 };
+
+export type ApiRequestOptions = Pick<HttpRequestOptions, 'signal' | 'timeout'>;
 
 export class HttpClient extends BaseHttpClient {
   private static readonly ACCESS_TOKEN_HEADER: string = 'Access-Token';
@@ -50,39 +52,24 @@ export class HttpClient extends BaseHttpClient {
   protected buildHeaders(config: any, skipAuth = false): Record<string, string> {
     const headers = super.buildHeaders(config, skipAuth);
     if (config?.credentialEntryBootstrap) {
-      this.stripForbiddenCredentialEntryHeaders(headers);
-      this.applyCredentialEntryBootstrapAccessToken(headers);
+      this.stripCredentialHeaders(headers, true);
       return headers;
     }
     if (!skipAuth && !config?.skipAuth) {
       return headers;
     }
 
-    this.stripAllAuthHeaders(headers);
+    this.stripCredentialHeaders(headers, false);
     return headers;
   }
 
-  private stripForbiddenCredentialEntryHeaders(headers: Record<string, string>): void {
+  private stripCredentialHeaders(
+    headers: Record<string, string>,
+    preserveAccessToken: boolean,
+  ): void {
     [
+      ...(preserveAccessToken ? [] : [HttpClient.ACCESS_TOKEN_HEADER, 'Access-Token']),
       'Authorization',
-      ['X', 'API', 'Key'].join('-'),
-      'X-Tenant-Id',
-      'X-Organization-Id',
-      'X-Platform',
-      'X-User-Id',
-      'X-Sdkwork-Tenant-Id',
-      'X-Sdkwork-Organization-Id',
-      'X-Sdkwork-User-Id',
-    ].forEach((key) => {
-      delete headers[key];
-    });
-  }
-
-  private stripAllAuthHeaders(headers: Record<string, string>): void {
-    [
-      HttpClient.ACCESS_TOKEN_HEADER,
-      'Authorization',
-      'Access-Token',
       ['X', 'API', 'Key'].join('-'),
       'X-Tenant-Id',
       'X-Organization-Id',
@@ -244,13 +231,22 @@ export class HttpClient extends BaseHttpClient {
     this.getInternalAuthConfig().tokenManager = manager;
   }
 
-  private applyCredentialEntryBootstrapAccessToken(headers: Record<string, string>): void {
+  private applyCredentialEntryBootstrapHeaders(
+    headers?: Record<string, string>,
+  ): Record<string, string> {
     const authConfig = this.getInternalAuthConfig();
     const tokenManager = authConfig.tokenManager;
     const accessToken = tokenManager?.getAccessToken?.();
-    if (typeof accessToken === 'string' && accessToken.length > 0) {
-      headers[HttpClient.ACCESS_TOKEN_HEADER] = accessToken;
+    if (typeof accessToken !== 'string' || accessToken.trim().length === 0) {
+      throw new Error(
+        'credential-entry-bootstrap requires a bootstrap Access-Token before request dispatch',
+      );
     }
+
+    const result = { ...(headers ?? {}) };
+    this.stripCredentialHeaders(result, false);
+    result[HttpClient.ACCESS_TOKEN_HEADER] = accessToken.trim();
+    return result;
   }
 
   private applySdkworkAuthHeaders(headers?: Record<string, string>): Record<string, string> | undefined {
@@ -269,22 +265,6 @@ export class HttpClient extends BaseHttpClient {
     };
   }
 
-  private applyCredentialEntryBootstrapHeaders(
-    headers?: Record<string, string>,
-  ): Record<string, string> | undefined {
-    const authConfig = this.getInternalAuthConfig();
-    const tokenManager = authConfig.tokenManager;
-    const accessToken = tokenManager?.getAccessToken?.();
-    if (!accessToken) {
-      return headers;
-    }
-
-    return {
-      ...(headers ?? {}),
-      [HttpClient.ACCESS_TOKEN_HEADER]: accessToken,
-    };
-  }
-
   private unwrapSdkworkV3Payload<T>(payload: unknown): T {
     if (!HttpClient.SDKWORK_V3_UNWRAP || payload == null || typeof payload !== 'object') {
       return payload as T;
@@ -292,7 +272,7 @@ export class HttpClient extends BaseHttpClient {
 
     const record = payload as Record<string, unknown>;
     if (record.code !== 0 || !('data' in record)) {
-      return payload as T;
+      return this.unwrapSdkworkV3Data<T>(record);
     }
 
     const data = record.data;
@@ -300,15 +280,18 @@ export class HttpClient extends BaseHttpClient {
       return data as T;
     }
 
-    const envelopeData = data as Record<string, unknown>;
-    if ('items' in envelopeData && 'pageInfo' in envelopeData) {
+    return this.unwrapSdkworkV3Data<T>(data as Record<string, unknown>);
+  }
+
+  private unwrapSdkworkV3Data<T>(data: Record<string, unknown>): T {
+    if ('items' in data && 'pageInfo' in data) {
       return data as T;
     }
-    if ('accepted' in envelopeData) {
+    if ('accepted' in data) {
       return data as T;
     }
-    if ('item' in envelopeData) {
-      return envelopeData.item as T;
+    if ('item' in data) {
+      return data.item as T;
     }
 
     return data as T;

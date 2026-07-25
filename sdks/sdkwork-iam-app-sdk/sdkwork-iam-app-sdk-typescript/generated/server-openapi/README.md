@@ -98,9 +98,10 @@ const result = await client.iam.departments.tree.retrieve();
 ### oauth
 
 ```typescript
-// Oauth authorization Urls create.
+// Oauth device Authorizations scans create.
+const deviceAuthorizationId = '1';
 const body = {};
-const result = await client.oauth.authorizationUrls.create(body);
+const result = await client.oauth.deviceAuthorizations.scans.create(deviceAuthorizationId, body);
 ```
 
 ### system

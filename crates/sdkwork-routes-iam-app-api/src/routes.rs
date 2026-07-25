@@ -32,6 +32,16 @@ pub async fn build_sdkwork_iam_app_api_router_with_pool(
     handlers::build_sdkwork_iam_app_api_router_with_pool(pool).await
 }
 
+/// Builds the IAM App API business router without Web Framework or infrastructure layers.
+///
+/// API assemblies use this entrypoint and bind the combined route manifest once after all
+/// selected owner contributions have been merged.
+pub async fn build_sdkwork_iam_app_api_business_router_with_pool(
+    pool: sdkwork_database_sqlx::DatabasePool,
+) -> Result<Router, String> {
+    handlers::build_sdkwork_iam_app_api_business_router_with_pool(pool).await
+}
+
 /// Mounts only IAM-owned OAuth device-authorization routes for product runtimes
 /// that already host the remaining `/app/v3/api/auth/*` surface locally.
 pub async fn build_sdkwork_iam_oauth_device_authorization_router_with_pool(

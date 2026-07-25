@@ -42,6 +42,34 @@ export interface SdkworkAppbasePcAuthRuntimeBaseUrls {
   appbaseAppApiBaseUrl: string;
 }
 
+/**
+ * Strip a trailing `/app/v3/api` segment from `appbaseAppApiBaseUrl` before
+ * passing it to the generated app SDK client.
+ *
+ * The generated App SDK already hard-codes `APP_API_PREFIX = "/app/v3/api"`
+ * inside `appApiPath()` and prepends it to every request URL. If the caller
+ * supplies a base URL that already includes the prefix (for example
+ * `https://api.example.com/app/v3/api`), the SDK would otherwise produce
+ * double-prefixed URLs like `https://api.example.com/app/v3/api/app/v3/api/...`
+ * which the gateway returns as 404.
+ *
+ * This mirrors `resolveBackendOrigin` for the backend SDK in
+ * `@sdkwork/iam-application-bootstrap` so both surfaces accept either an
+ * origin (`https://api.example.com`) or a prefixed URL
+ * (`https://api.example.com/app/v3/api`) interchangeably.
+ */
+function resolveAppOrigin(baseUrl: string): string {
+  const trimmed = (baseUrl ?? "").trim().replace(/\/+$/u, "");
+  if (trimmed.endsWith("/app/v3/api")) {
+    return trimmed.slice(0, -"/app/v3/api".length);
+  }
+  return trimmed;
+}
+
+function resolveAppSdkBaseUrl(baseUrl: string): string {
+  return resolveAppOrigin(baseUrl);
+}
+
 export interface SdkworkAppbasePcAuthRuntimeClientConfig extends Record<string, unknown> {
   authMode: "dual-token";
   baseUrl: string;
@@ -94,9 +122,10 @@ export function createSdkworkAppbasePcAuthRuntime(
     : undefined;
   const tokenStore = options.tokenStore ?? sessionBridge?.tokenStore ?? createMemoryIamTokenStore();
   const platform = options.app.platform ?? "pc";
+  const appSdkBaseUrl = resolveAppSdkBaseUrl(options.baseUrls.appbaseAppApiBaseUrl);
   const rawAppbaseApp = (options.createAppbaseAppClient ?? createAppbaseAppClient)({
     authMode: "dual-token",
-    baseUrl: options.baseUrls.appbaseAppApiBaseUrl,
+    baseUrl: appSdkBaseUrl,
     platform,
     tokenManager,
   });

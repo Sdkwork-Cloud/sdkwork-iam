@@ -288,9 +288,15 @@ where
 {
     let environment = resolve_web_environment_from_process_env();
     let security_policy = iam_web_security_policy(&environment);
-    let authorization_policy = std::sync::Arc::new(IamAuthorizationPolicy::new(route_manifest));
+    let authorization_policy =
+        std::sync::Arc::new(IamAuthorizationPolicy::new(route_manifest.clone()));
     sdkwork_web_axum::WebFrameworkLayer::new(resolver)
         .with_profile(WebRequestContextProfile {
+            open_api_prefixes: vec![
+                "/open/v3/api".to_owned(),
+                "/iam/v3/api".to_owned(),
+                "/iam/v3/oauth".to_owned(),
+            ],
             public_path_prefixes: extra_public_path_prefixes,
             environment,
             ..WebRequestContextProfile::default()
@@ -353,10 +359,11 @@ pub fn build_iam_open_api_web_framework_layer(
 ) -> sdkwork_web_axum::WebFrameworkLayer<IamWebRequestContextResolver> {
     let environment = resolve_web_environment_from_process_env();
     let security_policy = iam_web_security_policy(&environment);
-    let authorization_policy = std::sync::Arc::new(IamAuthorizationPolicy::new(route_manifest));
+    let authorization_policy =
+        std::sync::Arc::new(IamAuthorizationPolicy::new(route_manifest.clone()));
     sdkwork_web_axum::WebFrameworkLayer::new(resolver)
         .with_profile(WebRequestContextProfile {
-            open_api_prefixes: vec!["/iam/v3/api".to_owned()],
+            open_api_prefixes: vec!["/iam/v3/api".to_owned(), "/iam/v3/oauth".to_owned()],
             public_path_prefixes: Vec::new(),
             environment,
             ..WebRequestContextProfile::default()

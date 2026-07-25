@@ -99,10 +99,22 @@ function createSdkworkAuthIntlValue(
 export function useSdkworkAuthIntl(): SdkworkAuthIntlValue {
   const copy = useSdkworkModuleMessages(SDKWORK_AUTH_I18N_CATALOG);
   const i18n = useSdkworkI18n();
-  const locale = i18n?.locale ?? SDKWORK_AUTH_I18N_CATALOG.defaultLocale;
+  const locale = resolveSdkworkAuthLocale(i18n?.locale);
 
   return useMemo(
     () => createSdkworkAuthIntlValue(copy, locale),
     [copy, locale],
   );
+}
+
+function isSdkworkAuthLocale(value: string | undefined): value is SdkworkAuthLocale {
+  return value === "en-US" || value === "zh-CN";
+}
+
+function resolveSdkworkAuthLocale(value: string | undefined): SdkworkAuthLocale {
+  if (isSdkworkAuthLocale(value)) {
+    return value;
+  }
+  const fallback = SDKWORK_AUTH_I18N_CATALOG.defaultLocale;
+  return isSdkworkAuthLocale(fallback) ? fallback : "en-US";
 }

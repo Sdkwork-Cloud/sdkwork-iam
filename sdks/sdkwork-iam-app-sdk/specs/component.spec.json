@@ -45,7 +45,7 @@
   },
   "requestContextFramework": {
     "apiSurface": "app-api",
-    "contextType": "AppRequestContext",
+    "contextType": "WebRequestContext",
     "resolver": "AuthTokenParser + AccessTokenParser",
     "standardInterceptors": [
       "request_identity",

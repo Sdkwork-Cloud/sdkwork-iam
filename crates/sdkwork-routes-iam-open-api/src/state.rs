@@ -23,15 +23,7 @@ impl OpenIamState {
             .ok()
             .flatten()
             .and_then(|pool| pool.as_postgres().cloned().map(Arc::new));
-        let rate_limit_max_requests = std::env::var("SDKWORK_IAM_OPEN_API_RATE_LIMIT_MAX_REQUESTS")
-            .ok()
-            .and_then(|value| value.parse().ok())
-            .unwrap_or(20);
-        let rate_limit_window_seconds =
-            std::env::var("SDKWORK_IAM_OPEN_API_RATE_LIMIT_WINDOW_SECONDS")
-                .ok()
-                .and_then(|value| value.parse().ok())
-                .unwrap_or(60);
+        let (rate_limit_max_requests, rate_limit_window_seconds) = rate_limit_settings();
         Self {
             pool,
             rate_limit_max_requests,
@@ -39,9 +31,35 @@ impl OpenIamState {
         }
     }
 
+    pub fn from_pool(pool: sdkwork_database_sqlx::DatabasePool) -> Result<Self, String> {
+        let pool = pool
+            .as_postgres()
+            .cloned()
+            .map(Arc::new)
+            .ok_or_else(|| "IAM open API requires a PostgreSQL database pool".to_owned())?;
+        let (rate_limit_max_requests, rate_limit_window_seconds) = rate_limit_settings();
+        Ok(Self {
+            pool: Some(pool),
+            rate_limit_max_requests,
+            rate_limit_window_seconds,
+        })
+    }
+
     pub fn require_pool(&self) -> Result<&PgPool, String> {
         self.pool
             .as_deref()
             .ok_or_else(|| "IAM database pool is not configured".to_string())
     }
+}
+
+fn rate_limit_settings() -> (u32, u32) {
+    let max_requests = std::env::var("SDKWORK_IAM_OPEN_API_RATE_LIMIT_MAX_REQUESTS")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(20);
+    let window_seconds = std::env::var("SDKWORK_IAM_OPEN_API_RATE_LIMIT_WINDOW_SECONDS")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(60);
+    (max_requests, window_seconds)
 }

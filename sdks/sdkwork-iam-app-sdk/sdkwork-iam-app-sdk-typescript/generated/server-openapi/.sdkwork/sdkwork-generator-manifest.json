@@ -44,7 +44,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "ff6e5b6df95a133685a923551eff717f303f7c04d501123a109f3617d2d336db"
+      "sha256": "371e1d4e8904a56c2c1c96943ba9d90017c6ffc0ee4fcdb120eaaf3236fc90b7"
     },
     {
       "path": "sdkwork-sdk.json",
@@ -52,7 +52,7 @@
     },
     {
       "path": "src/api/auth.ts",
-      "sha256": "e4d1b0d27d64e7a325983b812de4e80c337c496ad51d31f1384510043e0493e9"
+      "sha256": "508f1a5aa6c3a7ce4f08710b2d3f337afddb2e243df6bc52f0f1e6be7b541510"
     },
     {
       "path": "src/api/base.ts",
@@ -60,7 +60,7 @@
     },
     {
       "path": "src/api/iam.ts",
-      "sha256": "119075b35cc72c271eda01fb4bac803bcf0d49617d1a2c85d8ac819db9887c33"
+      "sha256": "9b1d247855b2203a03166130717cf4f94ccfe7a999d27df89c0273787382881c"
     },
     {
       "path": "src/api/index.ts",
@@ -68,7 +68,7 @@
     },
     {
       "path": "src/api/oauth.ts",
-      "sha256": "97442d1a79855cf9f22390e3a63e72b7d0892c16c553e799c5cab6729539c3b3"
+      "sha256": "95a89e1c88b8a86a3906f1dba1d69176e1d9c7e2e6a93fb6ca50041e20f4a980"
     },
     {
       "path": "src/api/paths.ts",
@@ -76,7 +76,7 @@
     },
     {
       "path": "src/api/system.ts",
-      "sha256": "9a9877d1dd3e058cb35bb617716a8bb22307d1c3244e5c1424349c5f2344474d"
+      "sha256": "d6641e49bb9758099d243e579543ebaa029147954f5796c3edd2ae04f37adb3c"
     },
     {
       "path": "src/auth/index.ts",
@@ -84,7 +84,7 @@
     },
     {
       "path": "src/http/client.ts",
-      "sha256": "902ecbf9b15072c147ac9716f22209cd50b770e517b55d1ce1583671ab4d2c3e"
+      "sha256": "8839b850d906d757356241de57a3fc65beaa03287dad8e52965378164e860a57"
     },
     {
       "path": "src/http/index.ts",
@@ -99,32 +99,12 @@
       "sha256": "43865a9dcc2de85af87bdc3e8591ceccdbfc93f33c960681f3fd1e901bf4479b"
     },
     {
-      "path": "src/types/appbase-access-credential-create-command.ts",
-      "sha256": "ed707fe91084c02afd6f6d3d9d6d246b713aadd254f0de9f93228f446154c11e"
-    },
-    {
-      "path": "src/types/appbase-application-register-command.ts",
-      "sha256": "2a474cc5deb2c07ee40046fd6970536eca26707cc3ebd40441dc77c9a8ae85e6"
-    },
-    {
       "path": "src/types/appbase-operation-command.ts",
       "sha256": "075b62bfa1fe9927fb14ff048d8d9401d7bbd6ecce9b685cbb09826f196c6aa4"
     },
     {
       "path": "src/types/appbase-session-create-command.ts",
       "sha256": "817268d90eb781cc7463e833f4b704efa5c88a83551c175afc578edac3573fbb"
-    },
-    {
-      "path": "src/types/appbase-tenant-application-enable-command.ts",
-      "sha256": "1e3500f4c56e1ab900b196d9879f3867834db66ae75aeeb060a4dd4097886bae"
-    },
-    {
-      "path": "src/types/appbase-tenant-application-provision-command.ts",
-      "sha256": "c4671a9d96077de0d0aec04ef279acd7dc8cfb0a64ff24ad7e7d693f92106221"
-    },
-    {
-      "path": "src/types/appbase-tenant-application-update-command.ts",
-      "sha256": "b6d1ace9cefa4dd426b1ee864c3298437ed7f5565f94f9eed43c6807b7156211"
     },
     {
       "path": "src/types/common.ts",
@@ -135,12 +115,8 @@
       "sha256": "7688827a804d5c888fdf626b89e3356832f858e24f0657069b6b842a31ae6907"
     },
     {
-      "path": "src/types/iam-oauth-client-create-command.ts",
-      "sha256": "b507acc6502086b77de028f17b3d6b48888eb58b3170f80749ea53f501e4ff4a"
-    },
-    {
       "path": "src/types/index.ts",
-      "sha256": "80f3e51003aefbf14c1e1dc4fa785da39b7f0d292a23661f28d6f5ef2d556f13"
+      "sha256": "f9cf7d4c71ff50576fe90d4ebc84d02b09d6c83bf029b1d72695fc449de73c97"
     },
     {
       "path": "src/types/page-info.ts",

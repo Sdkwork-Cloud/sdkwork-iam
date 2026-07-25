@@ -1,10 +1,15 @@
 //! API assembly for sdkwork-iam.
 //! Application bootstrap lives in `bootstrap.rs`; route inventory is in `assembly-manifest.json`.
+// SDKWORK-ASSEMBLY-LIB-CUSTOM: preserve owner contribution and application bootstrap exports.
 
 mod bootstrap;
 mod generated;
 
-pub use bootstrap::{assemble_api_router, ApiAssembly};
+#[allow(deprecated)]
+pub use bootstrap::{
+    assemble_api_router, assemble_app_api_contribution, assemble_owner_api_surfaces,
+    bootstrap_iam_for_application, ApiAssembly, ApiAssemblyContribution,
+};
 
 pub fn assembly_route_count() -> usize {
     generated::ROUTE_CRATE_COUNT

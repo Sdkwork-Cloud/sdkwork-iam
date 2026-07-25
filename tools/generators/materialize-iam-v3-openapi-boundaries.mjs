@@ -16,13 +16,26 @@ const routeSources = [
     owner: 'iam',
     packageName: 'sdkwork-routes-iam-app-api',
     path: resolve(iamRoot, 'crates/sdkwork-routes-iam-app-api/src/manifest.rs'),
-    constructors: ['HttpRoute::credential_entry_public', 'HttpRoute::public', 'HttpRoute::dual_token', 'HttpRoute::api_key'],
+    constructors: [
+      'HttpRoute::credential_entry_bootstrap',
+      'HttpRoute::refresh_token',
+      'HttpRoute::public',
+      'HttpRoute::dual_token',
+      'HttpRoute::api_key',
+    ],
   },
   {
     owner: 'iam',
     packageName: 'sdkwork-routes-iam-backend-api',
     path: resolve(iamRoot, 'crates/sdkwork-routes-iam-backend-api/src/manifest.rs'),
-    constructors: ['HttpRoute::credential_entry_public', 'HttpRoute::public', 'HttpRoute::dual_token', 'HttpRoute::backend_admin', 'HttpRoute::api_key'],
+    constructors: [
+      'HttpRoute::credential_entry_bootstrap',
+      'HttpRoute::refresh_token',
+      'HttpRoute::public',
+      'HttpRoute::dual_token',
+      'HttpRoute::backend_admin',
+      'HttpRoute::api_key',
+    ],
   },
   {
     owner: 'iam',
@@ -71,34 +84,6 @@ const surfaces = {
       'Public OAuth authorization-server clients, provider callbacks, and open ingress integrations',
   },
 };
-
-const publicAppOperationIds = new Set([
-  'sessions.create',
-  'sessions.loginContextSelection.create',
-  'sessions.organizationSelection.create',
-  'sessions.refresh',
-  'passwordResetRequests.create',
-  'passwordResets.create',
-  'registrations.create',
-  'oauth.authorizationUrls.create',
-  'oauth.deviceAuthorizations.create',
-  'oauth.deviceAuthorizations.retrieve',
-  'oauth.deviceAuthorizations.scans.create',
-  'oauth.deviceAuthorizations.passwordCompletions.create',
-  'oauth.sessions.create',
-  'iam.runtime.retrieve',
-  'iam.verificationPolicy.retrieve',
-  'iam.accountBindingPolicy.retrieve',
-]);
-
-const publicBackendBootstrapOperationIds = new Set([
-  'applications.register',
-  'tenantApplications.create',
-  'tenantApplications.update',
-  'tenantApplications.enable',
-  'accessCredentials.create',
-  'serviceAccountTokens.create',
-]);
 
 const openApiExternalWireOperations = {
   'iam.oauth.wellKnown.authorizationServerMetadata.retrieve': 'oauth-authorization-server-metadata',
@@ -172,14 +157,6 @@ function isDirectExecution() {
 
 if (isDirectExecution()) {
   await materializeAppbaseV3OpenApiBoundaries();
-  const { patchIamAppSdkTypescriptCredentialEntryTransport } = await import(
-    './patch-iam-app-sdk-typescript-credential-entry-transport.mjs'
-  );
-  const { patchIamOpenSdkTypescriptV3Unwrap } = await import(
-    './patch-iam-open-sdk-typescript-v3-unwrap.mjs'
-  );
-  patchIamAppSdkTypescriptCredentialEntryTransport();
-  patchIamOpenSdkTypescriptV3Unwrap();
 }
 
 async function collectRoutes() {
@@ -300,7 +277,7 @@ function buildOpenApi(surface, routes) {
     paths,
     components: {
       securitySchemes: buildSecuritySchemes(surface),
-      schemas: buildSchemas(),
+      schemas: buildReachableSchemas(paths),
     },
     'x-sdkwork-materialized-from': materializedFromSources(surface).map((source) => ({
       owner: source.owner,
@@ -309,6 +286,53 @@ function buildOpenApi(surface, routes) {
     })),
     'x-sdkwork-request-context': buildRequestContext(surface),
   };
+}
+
+function buildReachableSchemas(paths) {
+  const schemas = buildSchemas();
+  const reachable = collectSchemaReferences(paths);
+  const pending = [...reachable];
+
+  while (pending.length > 0) {
+    const schemaName = pending.pop();
+    const schema = schemas[schemaName];
+    if (!schema) {
+      throw new Error(`OpenAPI path references unknown schema ${schemaName}.`);
+    }
+    for (const dependency of collectSchemaReferences(schema)) {
+      if (reachable.has(dependency)) {
+        continue;
+      }
+      reachable.add(dependency);
+      pending.push(dependency);
+    }
+  }
+
+  return Object.fromEntries(
+    Object.entries(schemas).filter(([schemaName]) => reachable.has(schemaName)),
+  );
+}
+
+function collectSchemaReferences(value, references = new Set()) {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectSchemaReferences(item, references));
+    return references;
+  }
+  if (!value || typeof value !== 'object') {
+    return references;
+  }
+
+  for (const [key, item] of Object.entries(value)) {
+    if (key === '$ref' && typeof item === 'string') {
+      const match = item.match(/^#\/components\/schemas\/([^/]+)$/u);
+      if (match) {
+        references.add(match[1]);
+      }
+      continue;
+    }
+    collectSchemaReferences(item, references);
+  }
+  return references;
 }
 
 function buildSecuritySchemes(surface) {
@@ -358,12 +382,12 @@ function buildRequestContext(surface) {
   }
 
   return {
-    contextObject: 'AppRequestContext',
+    contextObject: 'WebRequestContext',
     serverRequestId: 'server-owned',
     clientRequestIdHeader: 'forbidden',
-    tenantSource: 'AuthToken + AccessToken',
-    organizationSource: 'AuthToken + AccessToken',
-    userSource: 'AuthToken + AccessToken',
+    tenantSource: 'route auth profile',
+    organizationSource: 'route auth profile',
+    userSource: 'route auth profile',
   };
 }
 
@@ -416,7 +440,8 @@ function buildOperation(surface, route) {
     'x-sdkwork-api-authority': surface.authorityName,
     'x-sdkwork-domain': route.owner,
     'x-sdkwork-resource': route.operationId.split('.').slice(0, -1).join('.'),
-    'x-sdkwork-request-context': surface.sdkType === 'open' ? 'WebRequestContext' : 'AppRequestContext',
+    'x-sdkwork-request-context': 'WebRequestContext',
+    'x-sdkwork-api-surface': `${surface.sdkType}-api`,
     'x-sdkwork-server-request-id': true,
   };
 
@@ -895,14 +920,8 @@ function queryParameter(name, schema) {
 }
 
 function routeIsPublic(surface, route) {
-  if (surface.sdkType === 'open') {
-    return route.routeKind === 'open_api_flexible' || route.routeKind === 'public';
-  }
-  if (surface.sdkType === 'backend'
-    && (route.routeKind === 'public' || route.routeKind === 'credential_entry_public')) {
-    return publicBackendBootstrapOperationIds.has(route.operationId);
-  }
-  return surface.sdkType === 'app' && publicAppOperationIds.has(route.operationId);
+  void surface;
+  return route.routeKind === 'public';
 }
 
 function operationAuthMode(surface, route) {
@@ -918,22 +937,21 @@ function operationAuthMode(surface, route) {
     }
     return 'anonymous';
   }
-  if (surface.sdkType === 'backend' && publicBackendBootstrapOperationIds.has(route.operationId)) {
-    return route.operationId === 'serviceAccountTokens.create'
-      ? 'credential-entry'
-      : 'bootstrap-body';
-  }
-  if (surface.sdkType === 'app' && route.routeKind === 'credential_entry_public') {
+  if (route.routeKind === 'credential_entry_bootstrap') {
     return 'credential-entry-bootstrap';
   }
-  if (surface.sdkType === 'app' && publicAppOperationIds.has(route.operationId)) {
-    return route.operationId === 'sessions.refresh' ? 'refresh-token' : 'anonymous';
+  if (route.routeKind === 'refresh_token') {
+    return 'refresh-token';
+  }
+  if (route.routeKind === 'public') {
+    return 'anonymous';
   }
   return 'dual-token';
 }
 
 function resolveOperationSecurity(surface, route) {
-  if (routeIsPublic(surface, route)) {
+  const authMode = operationAuthMode(surface, route);
+  if (authMode === 'anonymous' || authMode === 'refresh-token') {
     return [];
   }
   if (surface.sdkType === 'open') {
@@ -943,7 +961,10 @@ function resolveOperationSecurity(surface, route) {
     if (route.routeKind === 'api_key') {
       return [{ ApiKey: [] }];
     }
-    return [{ ApiKey: [], OAuthBearer: [] }];
+    return [{ ApiKey: [] }, { OAuthBearer: [] }];
+  }
+  if (authMode === 'credential-entry-bootstrap') {
+    return [{ AccessToken: [] }];
   }
   return [{ AuthToken: [], AccessToken: [] }];
 }
@@ -955,8 +976,11 @@ function resolveRouteKind(routeExpression) {
   if (routeExpression.includes('HttpRoute::api_key')) {
     return 'api_key';
   }
-  if (routeExpression.includes('HttpRoute::credential_entry_public')) {
-    return 'credential_entry_public';
+  if (routeExpression.includes('HttpRoute::credential_entry_bootstrap')) {
+    return 'credential_entry_bootstrap';
+  }
+  if (routeExpression.includes('HttpRoute::refresh_token')) {
+    return 'refresh_token';
   }
   if (routeExpression.includes('HttpRoute::public')) {
     return 'public';
@@ -974,12 +998,11 @@ function resolveRouteKind(routeExpression) {
 }
 
 function operationForbidsCredentialHeaders(surface, route) {
-  if (surface.sdkType === 'app' && credentialHeaderForbiddenAppOperationIds.has(route.operationId)) {
-    return true;
-  }
-  return surface.sdkType === 'backend'
-    && (route.routeKind === 'credential_entry_public'
-      || publicBackendBootstrapOperationIds.has(route.operationId));
+  const authMode = operationAuthMode(surface, route);
+  return authMode === 'anonymous'
+    || authMode === 'refresh-token'
+    || authMode === 'credential-entry-bootstrap'
+    || (surface.sdkType === 'app' && credentialHeaderForbiddenAppOperationIds.has(route.operationId));
 }
 
 function usesJsonBody(method) {

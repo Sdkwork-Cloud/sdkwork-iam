@@ -4,7 +4,7 @@ use sdkwork_web_core::{
 };
 
 /// IAM authorization policy: organization membership gate + manifest permission checks.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct IamAuthorizationPolicy {
     manifest_policy: ManifestAuthorizationPolicy,
 }

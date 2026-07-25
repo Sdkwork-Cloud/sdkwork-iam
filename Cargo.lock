@@ -1938,13 +1938,19 @@ name = "sdkwork-api-iam-assembly"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "http-body-util",
  "sdkwork-iam-database-host",
+ "sdkwork-iam-embedded-application-bootstrap",
  "sdkwork-iam-web-adapter",
  "sdkwork-routes-iam-app-api",
  "sdkwork-routes-iam-backend-api",
  "sdkwork-routes-iam-open-api",
  "sdkwork-web-bootstrap",
+ "sdkwork-web-contract",
+ "sdkwork-web-core",
+ "serde_json",
  "tokio",
+ "tower",
  "tracing",
  "tracing-subscriber",
 ]
@@ -1953,8 +1959,14 @@ dependencies = [
 name = "sdkwork-api-iam-standalone-gateway"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "sdkwork-api-iam-assembly",
+ "sdkwork-iam-web-adapter",
+ "sdkwork-web-axum",
  "sdkwork-web-bootstrap",
+ "sdkwork-web-contract",
+ "sdkwork-web-core",
+ "serde_json",
  "tokio",
 ]
 

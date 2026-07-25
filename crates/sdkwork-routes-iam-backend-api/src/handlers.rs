@@ -115,8 +115,34 @@ async fn enforce_backend_rate_limit(pg: &PgPool, bucket: &str) -> Option<Respons
 /// Builds a fail-closed local/private `sdkwork-iam-backend-api` router.
 ///
 /// Backend API routes require an admin/operator IAM service implementation.
+///
+/// # Deprecated
+///
+/// This fail-closed constructor mounts the backend surface without a database
+/// pool, so every mutating operation returns `503 iam_database_unavailable`.
+/// Integration applications must use [`build_sdkwork_iam_backend_api_router_from_env`]
+/// (or the assembly-level [`sdkwork_api_iam_assembly::bootstrap_iam_for_application`])
+/// so the backend API resolves the IAM database pool and can serve authenticated
+/// traffic from the first request.
+#[deprecated(
+    since = "0.1.0",
+    note = "use build_sdkwork_iam_backend_api_router_from_env or bootstrap_iam_for_application; the fail-closed variant returns 503 on every mutating operation"
+)]
 pub fn build_sdkwork_iam_backend_api_router() -> Router {
     wrap_router_with_web_framework(Router::new().with_state(BackendIamState { pool: None }))
+}
+
+pub(crate) fn build_sdkwork_iam_backend_api_business_router_with_pool(
+    pool: sdkwork_database_sqlx::DatabasePool,
+) -> Result<Router, String> {
+    let pool = pool
+        .as_postgres()
+        .cloned()
+        .map(Arc::new)
+        .ok_or_else(|| "IAM backend API requires a PostgreSQL database pool".to_owned())?;
+    Ok(build_sdkwork_iam_backend_api_business_router_with_state(
+        BackendIamState { pool: Some(pool) },
+    ))
 }
 
 /// Builds the backend IAM router with an IAM database pool from environment when configured.
@@ -130,7 +156,17 @@ pub async fn build_sdkwork_iam_backend_api_router_from_env() -> Router {
     };
 
     let state = BackendIamState { pool };
-    let router = oauth_management::apply_oauth_routes(management::apply_management_routes(
+    let router = build_sdkwork_iam_backend_api_business_router_with_state(state);
+
+    sdkwork_iam_web_adapter::wrap_router_with_iam_backend_web_framework_from_env(
+        router,
+        iam_backend_api_route_manifest(),
+    )
+    .await
+}
+
+fn build_sdkwork_iam_backend_api_business_router_with_state(state: BackendIamState) -> Router {
+    oauth_management::apply_oauth_routes(management::apply_management_routes(
         crate::service_account_credentials::apply_service_account_credential_routes(
             Router::new()
                 .route(
@@ -185,13 +221,7 @@ pub async fn build_sdkwork_iam_backend_api_router_from_env() -> Router {
     .layer(middleware::from_fn_with_state(
         state,
         backend_write_rate_limit_middleware,
-    ));
-
-    sdkwork_iam_web_adapter::wrap_router_with_iam_backend_web_framework_from_env(
-        router,
-        iam_backend_api_route_manifest(),
-    )
-    .await
+    ))
 }
 
 pub(crate) fn postgres_pool_or_error(state: &BackendIamState) -> Result<&PgPool, Response> {

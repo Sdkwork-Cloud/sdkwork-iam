@@ -68,17 +68,6 @@ foreach ($LanguageValue in $Languages) {
         $OutputPath = Join-Path $LanguageWorkspace "generated\server-openapi"
         $PackageName = Resolve-PackageName $Language
         $NamespaceArgs = Resolve-NamespaceArgs $Language
-        $ResolvedLanguageWorkspace = [System.IO.Path]::GetFullPath($LanguageWorkspace)
-        $ResolvedOutputPath = [System.IO.Path]::GetFullPath($OutputPath)
-        $LanguageWorkspacePrefix = $ResolvedLanguageWorkspace.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
-
-        if (-not $ResolvedOutputPath.StartsWith($LanguageWorkspacePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "Refusing to clean SDK output outside language workspace: $ResolvedOutputPath"
-        }
-
-        if (Test-Path $OutputPath) {
-            Remove-Item -LiteralPath $OutputPath -Recurse -Force
-        }
         Write-Host "Generating $Language SDK at $OutputPath" -ForegroundColor Cyan
         & node $GeneratorPath generate `
             -i $InputPath `

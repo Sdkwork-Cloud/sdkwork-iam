@@ -153,14 +153,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "passwordResetRequests",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -284,14 +289,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "passwordResets",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -415,14 +425,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "registrations",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -546,14 +561,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "sessions",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -682,7 +702,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "sessions.current",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       },
       "get": {
@@ -806,7 +827,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "sessions.current",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       },
       "patch": {
@@ -930,7 +952,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "sessions.current",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": false,
@@ -1054,14 +1077,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "sessions.loginContextSelection",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -1185,14 +1213,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "sessions.organizationSelection",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -1318,12 +1351,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "refresh-token",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "sessions",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -1505,7 +1539,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "departmentAssignments",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.assignments.read"
       }
@@ -1678,7 +1713,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "departments",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.departments.read"
       }
@@ -1805,7 +1841,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "departments.tree",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.departments.read"
       }
@@ -1978,7 +2015,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "organizationMemberships",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.memberships.read"
       }
@@ -2151,7 +2189,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "organizations",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.organizations.read"
       }
@@ -2278,7 +2317,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "organizations.tree",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.organizations.read"
       }
@@ -2451,7 +2491,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "positionAssignments",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.assignments.read"
       }
@@ -2624,7 +2665,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "positions",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.positions.read"
       }
@@ -2797,7 +2839,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "roleBindings",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.role_bindings.read"
       }
@@ -2924,7 +2967,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "users.current",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam:self"
       },
@@ -3049,7 +3093,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "users.current",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.profile.update",
         "requestBody": {
@@ -3179,7 +3224,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "users.current.emailBindings",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.profile.update"
       },
@@ -3304,7 +3350,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "users.current.emailBindings",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.profile.update",
         "requestBody": {
@@ -3441,7 +3488,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "users.current.password",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.profile.update",
         "requestBody": {
@@ -3571,7 +3619,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "users.current.phoneBindings",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.profile.update"
       },
@@ -3696,7 +3745,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "users.current.phoneBindings",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "x-sdkwork-permission": "iam.profile.update",
         "requestBody": {
@@ -3879,7 +3929,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.accountLinks",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       }
     },
@@ -4007,7 +4058,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.accountLinks",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       }
     },
@@ -4121,14 +4173,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.authorizationUrls",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -4273,7 +4330,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.authorizations.completions",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -4408,17 +4466,17 @@
         },
         "security": [
           {
-            "AuthToken": [],
             "AccessToken": []
           }
         ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.callbacks",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       },
       "post": {
@@ -4541,17 +4599,17 @@
         },
         "security": [
           {
-            "AuthToken": [],
             "AccessToken": []
           }
         ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.callbacks",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -4675,14 +4733,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.deviceAuthorizations",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -4817,12 +4880,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.deviceAuthorizations",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       }
     },
@@ -4945,14 +5009,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.deviceAuthorizations.passwordCompletions",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -5087,12 +5156,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.deviceAuthorizations.scans",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -5225,19 +5295,15 @@
             }
           }
         },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-forbid-credential-headers": false,
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.deviceAuthorizations.sessionExchanges",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -5419,7 +5485,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.grants",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       }
     },
@@ -5547,7 +5614,8 @@
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.grants",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       }
     },
@@ -5663,17 +5731,17 @@
         },
         "security": [
           {
-            "AuthToken": [],
             "AccessToken": []
           }
         ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.miniProgramSessions",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -5843,19 +5911,15 @@
             }
           }
         },
-        "security": [
-          {
-            "AuthToken": [],
-            "AccessToken": []
-          }
-        ],
-        "x-sdkwork-auth-mode": "dual-token",
-        "x-sdkwork-forbid-credential-headers": false,
+        "security": [],
+        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.providers",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       }
     },
@@ -5969,14 +6033,19 @@
             }
           }
         },
-        "security": [],
+        "security": [
+          {
+            "AccessToken": []
+          }
+        ],
         "x-sdkwork-auth-mode": "credential-entry-bootstrap",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "oauth.sessions",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true,
         "requestBody": {
           "required": true,
@@ -6102,12 +6171,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.accountBindingPolicy",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       }
     },
@@ -6223,12 +6293,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.runtime",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       }
     },
@@ -6344,12 +6415,13 @@
         },
         "security": [],
         "x-sdkwork-auth-mode": "anonymous",
-        "x-sdkwork-forbid-credential-headers": false,
+        "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-app-api",
         "x-sdkwork-domain": "iam",
         "x-sdkwork-resource": "iam.verificationPolicy",
-        "x-sdkwork-request-context": "AppRequestContext",
+        "x-sdkwork-request-context": "WebRequestContext",
+        "x-sdkwork-api-surface": "app-api",
         "x-sdkwork-server-request-id": true
       }
     }
@@ -6687,51 +6759,6 @@
           }
         }
       },
-      "IamOauthClientCreateCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "integrationId",
-          "providerCode",
-          "clientCode",
-          "displayName",
-          "providerClientId"
-        ],
-        "description": "Tenant-scoped OAuth provider client registration command.",
-        "properties": {
-          "integrationId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "providerCode": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "clientCode": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
-          },
-          "displayName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "providerClientId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "providerTenantId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255,
-            "description": "Provider-owned identity federation scope, such as a WeChat Open Platform account ID."
-          }
-        }
-      },
       "AppbaseSessionCreateCommand": {
         "type": "object",
         "additionalProperties": true,
@@ -6771,423 +6798,6 @@
             "description": "Verified organization id supplied by an external user-center session exchange when the upstream identity resolved an organization scope."
           }
         }
-      },
-      "AppbaseApplicationRegisterCommand": {
-        "type": "object",
-        "additionalProperties": true,
-        "description": "Super-admin registered application command for startup bootstrap.",
-        "required": [
-          "appKey",
-          "name",
-          "appType",
-          "version",
-          "defaultAccessPermissions"
-        ],
-        "properties": {
-          "authToken": {
-            "type": "string",
-            "description": "Super-admin auth token used for bootstrap body authentication."
-          },
-          "username": {
-            "type": "string",
-            "description": "Super-admin username credential for bootstrap body authentication."
-          },
-          "email": {
-            "type": "string",
-            "description": "Super-admin email credential for bootstrap body authentication."
-          },
-          "phone": {
-            "type": "string",
-            "description": "Super-admin phone credential for bootstrap body authentication."
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "Super-admin password credential for bootstrap body authentication."
-          },
-          "ownerTenantId": {
-            "type": "string"
-          },
-          "appKey": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "appType": {
-            "type": "string"
-          },
-          "packageName": {
-            "type": "string"
-          },
-          "bundleId": {
-            "type": "string"
-          },
-          "desktopAppId": {
-            "type": "string"
-          },
-          "version": {
-            "type": "string"
-          },
-          "channel": {
-            "type": "string"
-          },
-          "manifestHash": {
-            "type": "string"
-          },
-          "defaultAccessPermissions": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "string"
-            }
-          },
-          "config": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "packages": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          }
-        }
-      },
-      "IamTenantApplicationManagementProvisionCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Provision a registered application template for a tenant through an authenticated operator workflow.",
-        "required": [
-          "organizationId",
-          "instanceKey",
-          "displayName",
-          "environment"
-        ],
-        "anyOf": [
-          {
-            "required": [
-              "templateId"
-            ]
-          },
-          {
-            "required": [
-              "appKey"
-            ]
-          }
-        ],
-        "properties": {
-          "organizationId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "templateId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "appKey": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "instanceKey": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "displayName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "environment": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "primaryDomain": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "accessPermissions": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            }
-          }
-        }
-      },
-      "IamTenantApplicationManagementUpdateCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Update operator-managed tenant application domain and access permissions.",
-        "properties": {
-          "primaryDomain": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "accessPermissions": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            }
-          }
-        }
-      },
-      "IamTenantApplicationStatusCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Authenticated operator command for a tenant application status transition.",
-        "properties": {}
-      },
-      "AppbaseTenantApplicationProvisionCommand": {
-        "type": "object",
-        "additionalProperties": true,
-        "description": "Provision a tenant application from a registered application template.",
-        "required": [
-          "tenantId",
-          "organizationId",
-          "instanceKey",
-          "displayName",
-          "environment"
-        ],
-        "properties": {
-          "authToken": {
-            "type": "string",
-            "description": "Super-admin auth token used for bootstrap body authentication."
-          },
-          "username": {
-            "type": "string",
-            "description": "Super-admin username credential for bootstrap body authentication."
-          },
-          "email": {
-            "type": "string",
-            "description": "Super-admin email credential for bootstrap body authentication."
-          },
-          "phone": {
-            "type": "string",
-            "description": "Super-admin phone credential for bootstrap body authentication."
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "Super-admin password credential for bootstrap body authentication."
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "organizationId": {
-            "type": "string"
-          },
-          "templateId": {
-            "type": "string"
-          },
-          "appKey": {
-            "type": "string"
-          },
-          "instanceKey": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "environment": {
-            "type": "string"
-          },
-          "primaryDomain": {
-            "type": "string"
-          },
-          "accessPermissions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "runtimeConfig": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        }
-      },
-      "AppbaseTenantApplicationUpdateCommand": {
-        "type": "object",
-        "additionalProperties": true,
-        "description": "Update tenant application access and runtime configuration.",
-        "properties": {
-          "authToken": {
-            "type": "string",
-            "description": "Super-admin auth token used for bootstrap body authentication."
-          },
-          "username": {
-            "type": "string",
-            "description": "Super-admin username credential for bootstrap body authentication."
-          },
-          "email": {
-            "type": "string",
-            "description": "Super-admin email credential for bootstrap body authentication."
-          },
-          "phone": {
-            "type": "string",
-            "description": "Super-admin phone credential for bootstrap body authentication."
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "Super-admin password credential for bootstrap body authentication."
-          },
-          "primaryDomain": {
-            "type": "string"
-          },
-          "domainConfig": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "accessPermissions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "runtimeConfig": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        }
-      },
-      "AppbaseTenantApplicationEnableCommand": {
-        "type": "object",
-        "additionalProperties": true,
-        "description": "Enable a provisioned tenant application before access credential issuance.",
-        "properties": {
-          "authToken": {
-            "type": "string",
-            "description": "Super-admin auth token used for bootstrap body authentication."
-          },
-          "username": {
-            "type": "string",
-            "description": "Super-admin username credential for bootstrap body authentication."
-          },
-          "email": {
-            "type": "string",
-            "description": "Super-admin email credential for bootstrap body authentication."
-          },
-          "phone": {
-            "type": "string",
-            "description": "Super-admin phone credential for bootstrap body authentication."
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "Super-admin password credential for bootstrap body authentication."
-          }
-        }
-      },
-      "AppbaseAccessCredentialCreateCommand": {
-        "type": "object",
-        "additionalProperties": true,
-        "description": "Issue a delegated access credential for an enabled tenant application.",
-        "required": [
-          "tenantId",
-          "organizationId"
-        ],
-        "properties": {
-          "authToken": {
-            "type": "string",
-            "description": "Super-admin auth token used for bootstrap body authentication."
-          },
-          "username": {
-            "type": "string",
-            "description": "Super-admin username credential for bootstrap body authentication."
-          },
-          "email": {
-            "type": "string",
-            "description": "Super-admin email credential for bootstrap body authentication."
-          },
-          "phone": {
-            "type": "string",
-            "description": "Super-admin phone credential for bootstrap body authentication."
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "description": "Super-admin password credential for bootstrap body authentication."
-          },
-          "tenantId": {
-            "type": "string"
-          },
-          "organizationId": {
-            "type": "string"
-          },
-          "tenantApplicationId": {
-            "type": "string"
-          },
-          "appId": {
-            "type": "string"
-          },
-          "instanceKey": {
-            "type": "string"
-          }
-        }
-      },
-      "ServiceAccountCredentialCreateCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "tenantApplicationId"
-        ],
-        "description": "Create a one-time-returned workload credential bound to a service account and tenant application.",
-        "properties": {
-          "tenantApplicationId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "ServiceAccountCredentialRevokeCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Revoke a workload credential and all sessions issued from it.",
-        "properties": {}
-      },
-      "ServiceAccountTokenExchangeCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "clientId",
-          "clientSecret"
-        ],
-        "description": "Exchange a workload client credential for short-lived tenant-bound dual tokens.",
-        "properties": {
-          "clientId": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "clientSecret": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 512,
-            "format": "password",
-            "writeOnly": true
-          }
-        }
       }
     }
   },
@@ -7199,11 +6809,11 @@
     }
   ],
   "x-sdkwork-request-context": {
-    "contextObject": "AppRequestContext",
+    "contextObject": "WebRequestContext",
     "serverRequestId": "server-owned",
     "clientRequestIdHeader": "forbidden",
-    "tenantSource": "AuthToken + AccessToken",
-    "organizationSource": "AuthToken + AccessToken",
-    "userSource": "AuthToken + AccessToken"
+    "tenantSource": "route auth profile",
+    "organizationSource": "route auth profile",
+    "userSource": "route auth profile"
   }
 }

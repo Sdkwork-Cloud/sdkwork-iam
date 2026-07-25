@@ -2,7 +2,7 @@
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use sdkwork_api_iam_assembly::assemble_business_router;
+use sdkwork_api_iam_assembly::assemble_owner_api_surfaces;
 use tower::ServiceExt;
 
 #[tokio::test]
@@ -29,7 +29,10 @@ async fn business_router_exposes_iam_backend_routes_without_infra_routes() {
 
 #[tokio::test]
 async fn business_router_exposes_iam_app_routes_without_infra_routes() {
-    let app = assemble_business_router().await.router;
+    let app = assemble_owner_api_surfaces()
+        .await
+        .expect("assemble IAM owner surfaces")
+        .router;
 
     let oauth = app
         .clone()

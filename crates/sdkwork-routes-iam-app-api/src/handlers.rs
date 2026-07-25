@@ -65,6 +65,14 @@ pub(crate) async fn build_sdkwork_iam_app_api_router_with_pool(
         .map(build_sdkwork_iam_app_api_router_with_state)
 }
 
+pub(crate) async fn build_sdkwork_iam_app_api_business_router_with_pool(
+    pool: sdkwork_database_sqlx::DatabasePool,
+) -> Result<Router, String> {
+    LocalIamState::from_pool(pool)
+        .await
+        .map(build_sdkwork_iam_app_api_core_router)
+}
+
 /// OAuth device-authorization (QR login) routes owned by IAM app-api.
 pub fn oauth_device_authorization_routes() -> Router<LocalIamState> {
     Router::new()

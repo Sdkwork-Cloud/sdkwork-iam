@@ -1,5 +1,5 @@
 import { appApiPath } from './paths';
-import type { HttpClient } from '../http/client';
+import type { ApiRequestOptions, HttpClient } from '../http/client';
 
 import type { AppbaseOperationCommand, SdkWorkPageData } from '../types';
 
@@ -13,13 +13,13 @@ export class IamUsersCurrentPhoneBindingsApi {
 
 
 /** Users current phone Bindings delete. */
-  async delete(): Promise<void> {
-    return this.client.delete<void>(appApiPath(`/iam/users/current/phone_bindings`));
+  async delete(requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(appApiPath(`/iam/users/current/phone_bindings`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any });
   }
 
 /** Users current phone Bindings create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(appApiPath(`/iam/users/current/phone_bindings`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/iam/users/current/phone_bindings`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -32,8 +32,8 @@ export class IamUsersCurrentPasswordApi {
 
 
 /** Users current password update. */
-  async update(body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(appApiPath(`/iam/users/current/password`), body, undefined, undefined, 'application/json');
+  async update(body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/iam/users/current/password`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -46,13 +46,13 @@ export class IamUsersCurrentEmailBindingsApi {
 
 
 /** Users current email Bindings delete. */
-  async delete(): Promise<void> {
-    return this.client.delete<void>(appApiPath(`/iam/users/current/email_bindings`));
+  async delete(requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(appApiPath(`/iam/users/current/email_bindings`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any });
   }
 
 /** Users current email Bindings create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(appApiPath(`/iam/users/current/email_bindings`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/iam/users/current/email_bindings`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -71,13 +71,13 @@ export class IamUsersCurrentApi {
 
 
 /** Users current retrieve. */
-  async retrieve(): Promise<Record<string, unknown>> {
-    return this.client.get<Record<string, unknown>>(appApiPath(`/iam/users/current`));
+  async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/iam/users/current`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Users current update. */
-  async update(body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(appApiPath(`/iam/users/current`), body, undefined, undefined, 'application/json');
+  async update(body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/iam/users/current`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -109,7 +109,7 @@ export class IamRoleBindingsApi {
 
 
 /** Role Bindings list. */
-  async list(params?: IamRoleBindingsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamRoleBindingsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -117,7 +117,7 @@ export class IamRoleBindingsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/role_bindings`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/role_bindings`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 }
 
@@ -138,7 +138,7 @@ export class IamPositionsApi {
 
 
 /** Positions list. */
-  async list(params?: IamPositionsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamPositionsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -146,7 +146,7 @@ export class IamPositionsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/positions`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/positions`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 }
 
@@ -167,7 +167,7 @@ export class IamPositionAssignmentsApi {
 
 
 /** Position Assignments list. */
-  async list(params?: IamPositionAssignmentsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamPositionAssignmentsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -175,7 +175,7 @@ export class IamPositionAssignmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/position_assignments`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/position_assignments`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 }
 
@@ -188,8 +188,8 @@ export class IamOrganizationsTreeApi {
 
 
 /** Organizations tree retrieve. */
-  async retrieve(): Promise<Record<string, unknown>> {
-    return this.client.get<Record<string, unknown>>(appApiPath(`/iam/organizations/tree`));
+  async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/iam/organizations/tree`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 }
 
@@ -212,7 +212,7 @@ export class IamOrganizationsApi {
 
 
 /** Organizations list. */
-  async list(params?: IamOrganizationsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOrganizationsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -220,7 +220,7 @@ export class IamOrganizationsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/organizations`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/organizations`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 }
 
@@ -241,7 +241,7 @@ export class IamOrganizationMembershipsApi {
 
 
 /** Organization Memberships list. */
-  async list(params?: IamOrganizationMembershipsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOrganizationMembershipsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -249,7 +249,7 @@ export class IamOrganizationMembershipsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/organization_memberships`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/organization_memberships`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 }
 
@@ -262,8 +262,8 @@ export class IamDepartmentsTreeApi {
 
 
 /** Departments tree retrieve. */
-  async retrieve(): Promise<Record<string, unknown>> {
-    return this.client.get<Record<string, unknown>>(appApiPath(`/iam/departments/tree`));
+  async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/iam/departments/tree`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 }
 
@@ -286,7 +286,7 @@ export class IamDepartmentsApi {
 
 
 /** Departments list. */
-  async list(params?: IamDepartmentsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamDepartmentsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -294,7 +294,7 @@ export class IamDepartmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/departments`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/departments`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 }
 
@@ -315,7 +315,7 @@ export class IamDepartmentAssignmentsApi {
 
 
 /** Department Assignments list. */
-  async list(params?: IamDepartmentAssignmentsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamDepartmentAssignmentsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -323,7 +323,7 @@ export class IamDepartmentAssignmentsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/department_assignments`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/department_assignments`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 }
 

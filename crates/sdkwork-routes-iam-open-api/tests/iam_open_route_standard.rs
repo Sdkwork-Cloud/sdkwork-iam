@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;

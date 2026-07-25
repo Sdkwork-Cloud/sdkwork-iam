@@ -1,5 +1,5 @@
 import { appApiPath } from './paths';
-import type { HttpClient } from '../http/client';
+import type { ApiRequestOptions, HttpClient } from '../http/client';
 
 
 
@@ -12,8 +12,8 @@ export class SystemIamVerificationPolicyApi {
 
 
 /** Iam verification Policy retrieve. */
-  async retrieve(): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/verification_policy`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/verification_policy`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, skipAuth: true });
   }
 }
 
@@ -26,8 +26,8 @@ export class SystemIamRuntimeApi {
 
 
 /** Iam runtime retrieve. */
-  async retrieve(): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/runtime`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/runtime`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, skipAuth: true });
   }
 }
 
@@ -40,8 +40,8 @@ export class SystemIamAccountBindingPolicyApi {
 
 
 /** Iam account Binding Policy retrieve. */
-  async retrieve(): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/account_binding_policy`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/account_binding_policy`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, skipAuth: true });
   }
 }
 

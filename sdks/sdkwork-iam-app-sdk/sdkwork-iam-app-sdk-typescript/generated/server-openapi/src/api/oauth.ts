@@ -1,5 +1,5 @@
 import { appApiPath } from './paths';
-import type { HttpClient } from '../http/client';
+import type { ApiRequestOptions, HttpClient } from '../http/client';
 
 import type { AppbaseOperationCommand, SdkWorkPageData, WechatMiniProgramSessionCreateCommand } from '../types';
 
@@ -13,8 +13,8 @@ export class OauthSessionsApi {
 
 
 /** Oauth sessions create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/sessions`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/sessions`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
 
@@ -35,7 +35,7 @@ export class OauthProvidersApi {
 
 
 /** Oauth providers list. */
-  async list(params?: OauthProvidersListParams): Promise<SdkWorkPageData> {
+  async list(params?: OauthProvidersListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -43,7 +43,7 @@ export class OauthProvidersApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/oauth/providers`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/oauth/providers`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, skipAuth: true });
   }
 }
 
@@ -56,8 +56,8 @@ export class OauthMiniProgramSessionsApi {
 
 
 /** Oauth mini Program Sessions create. */
-  async create(body: WechatMiniProgramSessionCreateCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/mini_program_sessions`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(body: WechatMiniProgramSessionCreateCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/mini_program_sessions`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
 
@@ -78,7 +78,7 @@ export class OauthGrantsApi {
 
 
 /** Oauth grants list. */
-  async list(params?: OauthGrantsListParams): Promise<SdkWorkPageData> {
+  async list(params?: OauthGrantsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -86,12 +86,12 @@ export class OauthGrantsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/oauth/grants`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/oauth/grants`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Oauth grants delete. */
-  async delete(grantId: string): Promise<void> {
-    return this.client.delete<void>(appApiPath(`/oauth/grants/${serializePathParameter(grantId, { name: 'grantId', style: 'simple', explode: false })}`));
+  async delete(grantId: string, requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(appApiPath(`/oauth/grants/${serializePathParameter(grantId, { name: 'grantId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any });
   }
 }
 
@@ -104,8 +104,8 @@ export class OauthDeviceAuthorizationsSessionExchangesApi {
 
 
 /** Oauth device Authorizations session Exchanges create. */
-  async create(deviceAuthorizationId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, { name: 'deviceAuthorizationId', style: 'simple', explode: false })}/session_exchanges`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(deviceAuthorizationId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, { name: 'deviceAuthorizationId', style: 'simple', explode: false })}/session_exchanges`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
   }
 }
 
@@ -118,8 +118,8 @@ export class OauthDeviceAuthorizationsScansApi {
 
 
 /** Oauth device Authorizations scans create. */
-  async create(deviceAuthorizationId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, { name: 'deviceAuthorizationId', style: 'simple', explode: false })}/scans`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+  async create(deviceAuthorizationId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, { name: 'deviceAuthorizationId', style: 'simple', explode: false })}/scans`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
   }
 }
 
@@ -132,8 +132,8 @@ export class OauthDeviceAuthorizationsPasswordCompletionsApi {
 
 
 /** Oauth device Authorizations password Completions create. */
-  async create(deviceAuthorizationId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, { name: 'deviceAuthorizationId', style: 'simple', explode: false })}/password_completions`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(deviceAuthorizationId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, { name: 'deviceAuthorizationId', style: 'simple', explode: false })}/password_completions`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
 
@@ -152,13 +152,13 @@ export class OauthDeviceAuthorizationsApi {
 
 
 /** Oauth device Authorizations create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/device_authorizations`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/device_authorizations`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 
 /** Oauth device Authorizations retrieve. */
-  async retrieve(deviceAuthorizationId: string): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, { name: 'deviceAuthorizationId', style: 'simple', explode: false })}`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(deviceAuthorizationId: string, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, { name: 'deviceAuthorizationId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, skipAuth: true });
   }
 }
 
@@ -171,13 +171,13 @@ export class OauthCallbacksApi {
 
 
 /** Oauth callbacks retrieve. */
-  async retrieve(providerCode: string): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/callbacks/${serializePathParameter(providerCode, { name: 'providerCode', style: 'simple', explode: false })}`), { method: 'GET' as any, credentialEntryBootstrap: true });
+  async retrieve(providerCode: string, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/callbacks/${serializePathParameter(providerCode, { name: 'providerCode', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, credentialEntryBootstrap: true });
   }
 
 /** Oauth callbacks create. */
-  async create(providerCode: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/callbacks/${serializePathParameter(providerCode, { name: 'providerCode', style: 'simple', explode: false })}`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(providerCode: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/callbacks/${serializePathParameter(providerCode, { name: 'providerCode', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
 
@@ -190,8 +190,8 @@ export class OauthAuthorizationsCompletionsApi {
 
 
 /** Oauth authorizations completions create. */
-  async create(authorizationStateId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/authorizations/${serializePathParameter(authorizationStateId, { name: 'authorizationStateId', style: 'simple', explode: false })}/completions`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(authorizationStateId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/authorizations/${serializePathParameter(authorizationStateId, { name: 'authorizationStateId', style: 'simple', explode: false })}/completions`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -215,8 +215,8 @@ export class OauthAuthorizationUrlsApi {
 
 
 /** Oauth authorization Urls create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/authorization_urls`), { method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/authorization_urls`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', credentialEntryBootstrap: true });
   }
 }
 
@@ -237,7 +237,7 @@ export class OauthAccountLinksApi {
 
 
 /** Oauth account Links list. */
-  async list(params?: OauthAccountLinksListParams): Promise<SdkWorkPageData> {
+  async list(params?: OauthAccountLinksListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -245,12 +245,12 @@ export class OauthAccountLinksApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(appApiPath(`/oauth/account_links`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/oauth/account_links`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Oauth account Links delete. */
-  async delete(accountLinkId: string): Promise<void> {
-    return this.client.delete<void>(appApiPath(`/oauth/account_links/${serializePathParameter(accountLinkId, { name: 'accountLinkId', style: 'simple', explode: false })}`));
+  async delete(accountLinkId: string, requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(appApiPath(`/oauth/account_links/${serializePathParameter(accountLinkId, { name: 'accountLinkId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any });
   }
 }
 
