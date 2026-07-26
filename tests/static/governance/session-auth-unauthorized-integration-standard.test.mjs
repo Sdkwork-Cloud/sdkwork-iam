@@ -14,7 +14,6 @@ const authPcReactRoot = path.join(
 );
 
 const IAM_PC_APP_ROOTS = [
-  "sdkwork-birdcoder/apps/sdkwork-birdcoder-pc",
   "sdkwork-clawrouter/apps/sdkwork-clawrouter-pc",
   "sdkwork-dezhou/apps/sdkwork-dezhou-pc",
   "sdkwork-documents/apps/sdkwork-documents-pc",
@@ -69,7 +68,6 @@ for (const appRoot of IAM_PC_APP_ROOTS) {
 
   test(`${appName} wires browser session-auth modal root inside router`, () => {
     const entryFiles = findExistingFiles(appRoot, [
-      "packages/sdkwork-birdcoder-pc-shell/src/application/app/AppRoot.tsx",
       "packages/sdkwork-terminal-pc-core/src/bootstrap/renderApp.tsx",
       "src/bootstrap/routes.tsx",
       "src/AuthGate.tsx",
@@ -91,7 +89,6 @@ for (const appRoot of IAM_PC_APP_ROOTS) {
 
   test(`${appName} uses appbase auth runtime with session-auth enabled by default`, () => {
     const iamRuntimeFiles = findExistingFiles(appRoot, [
-      "packages/sdkwork-birdcoder-pc-infrastructure/src/services/iamRuntime.ts",
       "packages/sdkwork-clawroutes-pc-commons/src/iam-runtime.ts",
       "packages/sdkwork-github-pc-core/src/iam/githubIamRuntime.ts",
       "packages/sdkwork-notary-pc-core/src/appAuthRuntime.ts",

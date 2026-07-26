@@ -68,6 +68,7 @@
   },
   "devDependencies": {
     "@sdkwork/auth-pc-react": "workspace:*",
+    "@sdkwork/iam-credential-entry": "workspace:*",
     "@sdkwork/core-pc-react": "workspace:*",
     "@sdkwork/iam-application-bootstrap": "workspace:*",
     "@sdkwork/iam-contracts": "workspace:*",

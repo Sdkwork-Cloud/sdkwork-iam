@@ -1,34 +1,33 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
 import {
-  mergeRepoDevBootstrapAccessTokenEnv,
-} from './create-dev-bootstrap-access-token-env.mjs';
-import {
   resolveRendererDevBootstrapContext,
-} from './run-renderer-dev-with-bootstrap.mjs';
+} from '@sdkwork/iam-credential-entry/renderer-dev-bootstrap';
+import {
+  mergeRepoDevBootstrapAccessTokenEnv,
+} from '@sdkwork/iam-credential-entry/node-bootstrap';
 
-const birdCoderRoot = path.resolve(import.meta.dirname, '../../../sdkwork-birdcoder');
-const birdCoderSurfaces = [
-  'sdkwork-birdcoder-pc',
-  'sdkwork-birdcoder-h5',
-  'sdkwork-birdcoder-flutter-mobile',
-];
+function writeManifest(root, appId) {
+  fs.mkdirSync(root, { recursive: true });
+  fs.writeFileSync(path.join(root, 'sdkwork.app.config.json'), JSON.stringify({
+    app: { key: appId },
+    backend: { appId, tenantId: '100001', organizationId: '0' },
+  }));
+}
 
-test('resolveDevBootstrapContext prefers nearest app manifest and repo root', () => {
-  const context = resolveRendererDevBootstrapContext(
-    path.join(birdCoderRoot, 'apps', 'sdkwork-birdcoder-pc'),
-  );
-  assert.equal(context.manifestPath, 'sdkwork.app.config.json');
-  assert.match(context.repoRoot, /sdkwork-birdcoder-pc$/u);
-});
+test('renderer bootstrap resolves the nearest generic application manifest', () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sdkwork-iam-renderer-'));
+  const surfaceRoot = path.join(repoRoot, 'apps', 'sdkwork-example-pc');
+  fs.writeFileSync(path.join(repoRoot, 'package.json'), '{}');
+  writeManifest(repoRoot, 'sdkwork-example');
+  writeManifest(surfaceRoot, 'sdkwork-example-pc');
 
-for (const appId of birdCoderSurfaces) {
-  test(`generic renderer bootstrap context preserves ${appId} identity`, () => {
-    const context = resolveRendererDevBootstrapContext(
-      path.join(birdCoderRoot, 'apps', appId),
-    );
+  try {
+    const context = resolveRendererDevBootstrapContext(surfaceRoot);
     const merged = mergeRepoDevBootstrapAccessTokenEnv({
       env: {},
       manifestPath: context.manifestPath,
@@ -37,10 +36,11 @@ for (const appId of birdCoderSurfaces) {
     const payload = JSON.parse(
       Buffer.from(merged.SDKWORK_ACCESS_TOKEN.split('.')[1], 'base64url').toString('utf8'),
     );
-    assert.equal(payload.app_id, appId);
-    assert.equal(payload.tenant_id, '100001');
-    assert.equal(payload.organization_id, '0');
-  });
-}
 
-console.log('run-renderer-dev-with-bootstrap contract passed.');
+    assert.equal(context.repoRoot, surfaceRoot);
+    assert.equal(context.manifestPath, 'sdkwork.app.config.json');
+    assert.equal(payload.app_id, 'sdkwork-example-pc');
+  } finally {
+    fs.rmSync(repoRoot, { force: true, recursive: true });
+  }
+});

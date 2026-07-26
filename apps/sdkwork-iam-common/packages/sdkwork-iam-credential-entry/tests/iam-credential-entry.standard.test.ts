@@ -103,24 +103,24 @@ describe('@sdkwork/iam-credential-entry', () => {
 
   it('resolves runtime app id exclusively from backend.appId', () => {
     const manifest = {
-      app: { key: 'sdkwork-birdcoder' },
-      backend: { appId: 'sdkwork-birdcoder-pc', tenantId: '100001', organizationId: '0' },
+      app: { key: 'sdkwork-example' },
+      backend: { appId: 'sdkwork-example-pc', tenantId: '100001', organizationId: '0' },
     };
 
-    expect(resolveAppIdFromManifest(manifest)).toBe('sdkwork-birdcoder-pc');
+    expect(resolveAppIdFromManifest(manifest)).toBe('sdkwork-example-pc');
     const token = createDevBootstrapAccessTokenJwt({ manifest });
     const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
-    expect(payload.app_id).toBe('sdkwork-birdcoder-pc');
+    expect(payload.app_id).toBe('sdkwork-example-pc');
   });
 
   it('rejects credential-entry manifests without backend.appId', () => {
     expect(() => resolveAppIdFromManifest({
-      app: { key: 'sdkwork-birdcoder-pc' },
+      app: { key: 'sdkwork-example-pc' },
       backend: { tenantId: '100001', organizationId: '0' },
     })).toThrow(/backend\.appId is required/u);
     expect(() => createDevBootstrapAccessTokenJwt({
       manifest: {
-        app: { key: 'sdkwork-birdcoder-pc' },
+        app: { key: 'sdkwork-example-pc' },
         backend: { tenantId: '100001', organizationId: '0' },
       },
     })).toThrow(/backend\.appId is required/u);
@@ -128,11 +128,11 @@ describe('@sdkwork/iam-credential-entry', () => {
 
   it('rejects appId overrides that contradict the selected surface manifest', () => {
     expect(() => createDevBootstrapAccessTokenJwt({
-      appId: 'sdkwork-birdcoder-h5',
+      appId: 'sdkwork-example-h5',
       manifest: {
-        app: { key: 'sdkwork-birdcoder-pc' },
+        app: { key: 'sdkwork-example-pc' },
         backend: {
-          appId: 'sdkwork-birdcoder-pc',
+          appId: 'sdkwork-example-pc',
           tenantId: '100001',
           organizationId: '0',
         },

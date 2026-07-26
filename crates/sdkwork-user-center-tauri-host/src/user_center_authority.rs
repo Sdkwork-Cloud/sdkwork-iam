@@ -3287,7 +3287,7 @@ fn upsert_user_shadow_with_phone(
                 metadata_json, status, created_at, updated_at, version, is_deleted
             )
             VALUES (
-                ?1, ?2, ?3, ?4, ?5, ?6, NULL, 'default', 'default', 'birdcoder',
+                ?1, ?2, ?3, ?4, ?5, ?6, NULL, 'default', 'default', 'default',
                 ?7, ?8, NULL, NULL, NULL, NULL, NULL, NULL, ?9, ?10, ?11, ?12, 'active',
                 ?13, ?14, 0, 0
             )

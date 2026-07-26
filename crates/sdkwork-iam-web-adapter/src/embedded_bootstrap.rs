@@ -23,32 +23,12 @@ use crate::application_registry::ensure_tenant_application_runtime;
 
 const TENANT_APPLICATION_BOOTSTRAP_POOL_CONNECTIONS: u32 = 2;
 
-/// Resolves the application root directory from known `SDKWORK_*_APP_ROOT` environment variables.
+/// Resolves the consuming application root from the generic SDKWork contract.
 pub fn resolve_application_app_root() -> Option<PathBuf> {
-    for key in [
-        "SDKWORK_APP_ROOT",
-        "SDKWORK_CLAW_ROUTER_APP_ROOT",
-        "SDKWORK_IM_APP_ROOT",
-        "SDKWORK_DRIVE_APP_ROOT",
-        "SDKWORK_BIRDCODER_APP_ROOT",
-        "SDKWORK_GITHUB_APP_ROOT",
-        "SDKWORK_NOTES_APP_ROOT",
-        "SDKWORK_MAIL_APP_ROOT",
-        "SDKWORK_RTC_APP_ROOT",
-        "SDKWORK_KNOWLEDGEBASE_APP_ROOT",
-        "SDKWORK_DOCUMENTS_APP_ROOT",
-        "SDKWORK_TERMINAL_APP_ROOT",
-        "SDKWORK_IAM_APP_ROOT",
-        "SDKWORK_APPBASE_APP_ROOT",
-    ] {
-        if let Ok(path) = std::env::var(key) {
-            let trimmed = path.trim();
-            if !trimmed.is_empty() {
-                return Some(PathBuf::from(trimmed));
-            }
-        }
-    }
-    None
+    std::env::var("SDKWORK_APP_ROOT").ok().and_then(|path| {
+        let trimmed = path.trim();
+        (!trimmed.is_empty()).then(|| PathBuf::from(trimmed))
+    })
 }
 
 /// Resolves the application root with a fallback path.
@@ -421,7 +401,7 @@ mod tests {
                 .expect("system time")
                 .as_nanos()
         ));
-        let pc_root = root.join("apps").join("sdkwork-birdcoder-pc");
+        let pc_root = root.join("apps").join("sdkwork-example-pc");
         std::fs::create_dir_all(&pc_root).expect("create temp app roots");
         std::fs::write(root.join("sdkwork.app.config.json"), "{}").expect("write root manifest");
         std::fs::write(pc_root.join("sdkwork.app.config.json"), "{}").expect("write pc manifest");
@@ -437,7 +417,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        assert_eq!(normalized, vec!["", "apps/sdkwork-birdcoder-pc"]);
+        assert_eq!(normalized, vec!["", "apps/sdkwork-example-pc"]);
 
         let _ = std::fs::remove_dir_all(root);
     }

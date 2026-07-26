@@ -437,13 +437,13 @@ mod tests {
     fn manifest_runtime_bindings_use_backend_app_id_without_guessing_surface_ids() {
         let manifest = SdkworkAppManifest {
             app: ManifestAppSection {
-                key: "sdkwork-birdcoder".to_owned(),
-                name: "SDKWork BirdCoder".to_owned(),
+                key: "sdkwork-example".to_owned(),
+                name: "SDKWork Example".to_owned(),
                 display_name: None,
                 app_type: Some("APP_REACT".to_owned()),
             },
             backend: ManifestBackendSection {
-                app_id: Some("sdkwork-birdcoder".to_owned()),
+                app_id: Some("sdkwork-example".to_owned()),
                 access_token_permission_scope: Some(vec!["iam.self".to_owned()]),
                 ..ManifestBackendSection::default()
             },
@@ -455,7 +455,7 @@ mod tests {
             .map(|binding| binding.runtime_app_id)
             .collect::<Vec<_>>();
 
-        assert_eq!(app_ids, vec!["sdkwork-birdcoder".to_owned()]);
+        assert_eq!(app_ids, vec!["sdkwork-example".to_owned()]);
     }
 
     #[test]

@@ -51,6 +51,7 @@
       "sdkwork_iam_web_adapter::IamApiKeyLookupService",
       "sdkwork_iam_web_adapter::IamOAuthTokenLookupService",
       "sdkwork_iam_web_adapter::wrap_router_with_iam_app_web_framework",
+      "sdkwork_iam_web_adapter::wrap_router_with_iam_owner_web_framework",
       "sdkwork_iam_web_adapter::wrap_router_with_iam_open_api_web_framework",
       "sdkwork_iam_web_adapter::build_iam_open_api_web_framework_layer",
       "sdkwork_iam_web_adapter::TenantSigningKeyStore",
@@ -71,6 +72,7 @@
       "SDKWORK_ENVIRONMENT",
       "SDKWORK_IM_ENVIRONMENT",
       "SDKWORK_IAM_ENVIRONMENT",
+      "SDKWORK_APP_ROOT",
       "SDKWORK_CORS_ALLOWED_ORIGINS",
       "SDKWORK_IAM_CORS_ALLOWED_ORIGINS"
     ]

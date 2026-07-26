@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "kind": "sdkwork.iam.module",
   "moduleId": "ai",
-  "catalogVersion": "1.0.0",
+  "catalogVersion": "1.1.0",
   "domain": "ai",
   "owner": "sdkwork-ai",
   "displayName": "ai module",
@@ -24,6 +24,15 @@
         "action": "read",
         "status": "active",
         "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "ai.agents.use",
+        "name": "Use AI agents",
+        "resource": "ai.agents",
+        "action": "use",
+        "status": "active",
+        "since": "1.1.0",
         "replacementCode": null
       },
       {
@@ -207,6 +216,7 @@
         "roleCode": "app_user",
         "patterns": [
           "ai.agents.read",
+          "ai.agents.use",
           "ai.skills.read"
         ]
       },

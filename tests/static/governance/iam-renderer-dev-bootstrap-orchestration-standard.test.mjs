@@ -66,28 +66,6 @@ test('shared repo bootstrap helper is available for application dev orchestrator
   assert.match(source, /resolveRepoApplicationManifestPath/u);
 });
 
-test('BirdCoder delegates renderer bootstrap to sdkwork-app topology application roots', () => {
-  const repoRoot = path.join(sdkworkSpaceRoot, 'sdkwork-birdcoder');
-  const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
-  const topology = JSON.parse(
-    fs.readFileSync(path.join(repoRoot, 'specs/topology.spec.json'), 'utf8'),
-  );
-  assert.match(packageJson.scripts['dev:standalone'], /sdkwork-app dev/u);
-
-  const clients = topology.orchestration.profiles['standalone.development'].processes
-    .filter((processEntry) => processEntry.role === 'client');
-  for (const applicationRoot of [
-    'apps/sdkwork-birdcoder-pc',
-    'apps/sdkwork-birdcoder-h5',
-    'apps/sdkwork-birdcoder-flutter-mobile',
-  ]) {
-    assert.ok(
-      clients.some((processEntry) => processEntry.applicationRoot === applicationRoot),
-      `BirdCoder topology must bind renderer bootstrap to ${applicationRoot}`,
-    );
-  }
-});
-
 for (const orchestrator of IAM_PC_RENDERER_DEV_ORCHESTRATORS) {
   test(`${orchestrator.repo}/${orchestrator.relativePath} injects IAM bootstrap access token for renderer dev`, () => {
     const source = readOrchestratorSource(orchestrator);

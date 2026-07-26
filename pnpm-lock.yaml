@@ -53,6 +53,9 @@ importers:
       '@sdkwork/iam-contracts':
         specifier: workspace:*
         version: link:apps/sdkwork-iam-common/packages/sdkwork-iam-contracts
+      '@sdkwork/iam-credential-entry':
+        specifier: workspace:*
+        version: link:apps/sdkwork-iam-common/packages/sdkwork-iam-credential-entry
       '@sdkwork/iam-pc-admin-account-binding':
         specifier: workspace:*
         version: link:apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-account-binding

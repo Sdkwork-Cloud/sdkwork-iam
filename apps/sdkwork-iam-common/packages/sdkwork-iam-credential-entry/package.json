@@ -19,7 +19,15 @@
       "types": "./src/node-bootstrap.d.mts",
       "import": "./src/node-bootstrap.mjs",
       "default": "./src/node-bootstrap.mjs"
+    },
+    "./renderer-dev-bootstrap": {
+      "types": "./src/renderer-dev-bootstrap.d.mts",
+      "import": "./src/renderer-dev-bootstrap.mjs",
+      "default": "./src/renderer-dev-bootstrap.mjs"
     }
+  },
+  "bin": {
+    "sdkwork-iam-renderer-dev-bootstrap": "./src/bin/renderer-dev-bootstrap.mjs"
   },
   "files": [
     "src",

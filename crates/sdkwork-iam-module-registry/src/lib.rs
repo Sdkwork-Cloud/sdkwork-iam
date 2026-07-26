@@ -55,5 +55,10 @@ mod federation_tests {
         let merged = merge_discovered(&modules);
         assert!(merged.permissions.len() >= 140);
         assert!(merged.role_patterns.contains_key("platform_super_admin"));
+        assert!(merged.permissions.contains_key("ai.agents.use"));
+        assert!(merged
+            .role_patterns
+            .get("app_user")
+            .is_some_and(|patterns| patterns.contains("ai.agents.use")));
     }
 }

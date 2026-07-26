@@ -5,6 +5,7 @@ export const IAM_GOVERNANCE_NODE_TEST_FILES = [
   'tests/static/governance/api-prefix-standard-governance.test.mjs',
   'tests/static/governance/common-package-test-script-standard.test.mjs',
   'tests/static/governance/iam-application-bootstrap-standard.test.mjs',
+  'tests/static/governance/iam-consumer-independence-standard.test.mjs',
   'tests/static/governance/iam-database-init-standard.test.mjs',
   'tests/static/governance/iam-login-integration-standard.test.mjs',
   'tests/static/governance/credential-entry-runtime-standard.test.mjs',

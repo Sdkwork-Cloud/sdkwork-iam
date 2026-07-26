@@ -44,11 +44,11 @@
     }
   ],
   "contracts": {
-    "publicExports": [".", "./vite", "./node-bootstrap"],
+    "publicExports": [".", "./vite", "./node-bootstrap", "./renderer-dev-bootstrap"],
     "runtimeEntrypoints": [
       "package.json#scripts.typecheck",
       "package.json#scripts.test",
-      "sdkwork-iam/scripts/dev/create-dev-bootstrap-access-token-env.mjs"
+      "package.json#bin.sdkwork-iam-renderer-dev-bootstrap"
     ],
     "sdkClients": ["@sdkwork/iam-app-sdk"],
     "events": [],
@@ -57,7 +57,7 @@
   },
   "integration": {
     "authority": "Root SDKWork specs remain authoritative. Local specs may extend but must not contradict them.",
-    "dependencyPolicy": "Applications consume credential-entry behavior only through public package exports and the canonical Node orchestrator helper.",
+    "dependencyPolicy": "Applications consume credential-entry behavior only through public package exports and the package-owned renderer bootstrap CLI; consumers do not reference sdkwork-iam repository source paths.",
     "sdkPolicy": "The shared runtime prepares the global TokenManager before generated IAM app SDK calls; consumers do not build raw HTTP requests or manual auth headers.",
     "languagePolicy": "Node orchestration and Vite integration share one IAM-owned component boundary and preserve private credential handling."
   },
@@ -65,7 +65,8 @@
     "commands": [
       "pnpm --filter @sdkwork/iam-credential-entry typecheck",
       "pnpm --filter @sdkwork/iam-credential-entry test",
-      "node scripts/dev/create-dev-bootstrap-access-token-env.test.mjs"
+      "node scripts/dev/create-dev-bootstrap-access-token-env.test.mjs",
+      "node --test scripts/dev/run-renderer-dev-with-bootstrap.test.mjs"
     ]
   },
   "metadata": {

@@ -340,6 +340,17 @@ pub fn wrap_router_with_iam_app_web_framework(
     wrap_router_with_iam_app_web_framework_resolver(router, resolver, route_manifest)
 }
 
+/// Preserves IAM route identity for legacy hosts that dispatch the IAM owner
+/// contribution separately. New gateways should bind one combined manifest
+/// and one process-wide Web Framework layer.
+pub fn wrap_router_with_iam_owner_web_framework(
+    router: axum::Router,
+    resolver: IamWebRequestContextResolver,
+    route_manifest: HttpRouteManifest,
+) -> axum::Router {
+    wrap_router_with_iam_app_web_framework_resolver(router, resolver, route_manifest)
+}
+
 pub fn wrap_router_with_iam_app_web_framework_resolver<R>(
     router: axum::Router,
     resolver: R,

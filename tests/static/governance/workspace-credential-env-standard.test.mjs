@@ -10,7 +10,6 @@ import {
   listRepoRootsWithManifest,
   listTrackedEnvTemplateOffenders,
   listViteConfigsMissingPrivateEnvDefine,
-  viteConfigInjectsPrivateAccessToken,
 } from "../../../scripts/governance/discover-vite-app-roots.mjs";
 import {
   listRuntimeScopedCredentialEnvOffenders,
@@ -73,17 +72,6 @@ test("first-party vite app configs inject SDKWORK_ACCESS_TOKEN through vite defi
     offenders,
     [],
     `Vite configs missing process.env.SDKWORK_ACCESS_TOKEN define:\n${offenders.join("\n")}`,
-  );
-});
-
-test("browser vite apps may satisfy credential define through filtered runtime bootstrap", () => {
-  const birdcoderPcConfig = path.join(
-    workspaceRoot,
-    "sdkwork-birdcoder/apps/sdkwork-birdcoder-pc/vite.config.ts",
-  );
-  assert.ok(
-    viteConfigInjectsPrivateAccessToken(fs.readFileSync(birdcoderPcConfig, "utf8")),
-    "birdcoder browser apps must use createBirdcoderVitePlugins filtered runtime bootstrap",
   );
 });
 

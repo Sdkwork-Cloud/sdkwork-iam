@@ -719,17 +719,17 @@ describe("persistent IAM token store", () => {
       refreshToken: "rotating-refresh-token",
     };
 
-    await createPersistentIamTokenStore({ appId: "birdcoder", storage }).set(session);
-    const restored = await createPersistentIamTokenStore({ appId: "birdcoder", storage }).get();
+    await createPersistentIamTokenStore({ appId: "example", storage }).set(session);
+    const restored = await createPersistentIamTokenStore({ appId: "example", storage }).get();
 
     expect(restored).toEqual(session);
-    expect([...values.keys()]).toEqual(["sdkwork.birdcoder.iamSession.v1"]);
+    expect([...values.keys()]).toEqual(["sdkwork.example.iamSession.v1"]);
   });
 
   it("clears malformed persisted sessions instead of authenticating from them", async () => {
     const removeItem = vi.fn();
     const store = createPersistentIamTokenStore({
-      appId: "birdcoder",
+      appId: "example",
       storage: {
         getItem: () => "{not-json",
         removeItem,
@@ -738,7 +738,7 @@ describe("persistent IAM token store", () => {
     });
 
     await expect(store.get()).resolves.toEqual({});
-    expect(removeItem).toHaveBeenCalledWith("sdkwork.birdcoder.iamSession.v1");
+    expect(removeItem).toHaveBeenCalledWith("sdkwork.example.iamSession.v1");
   });
 });
 

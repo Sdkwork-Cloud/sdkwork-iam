@@ -24,8 +24,8 @@ Application repositories must not duplicate manifest mapping, Postgres `search_p
 ## Environment
 
 - `SDKWORK_APP_ROOT` selects the application manifest root
-- Approved app-root aliases include `SDKWORK_IAM_APP_ROOT`, `SDKWORK_IM_APP_ROOT`, `SDKWORK_DRIVE_APP_ROOT`, `SDKWORK_CLAW_ROUTER_APP_ROOT`, `SDKWORK_BIRDCODER_APP_ROOT`, `SDKWORK_GITHUB_APP_ROOT`, `SDKWORK_NOTES_APP_ROOT`, `SDKWORK_MAIL_APP_ROOT`, `SDKWORK_RTC_APP_ROOT`, `SDKWORK_KNOWLEDGEBASE_APP_ROOT`, `SDKWORK_DOCUMENTS_APP_ROOT`, and `SDKWORK_TERMINAL_APP_ROOT`
-- `@sdkwork/app-topology` `resolveIamDevEnv()` injects `SDKWORK_APP_ROOT`, `SDKWORK_IAM_APP_ROOT`, and the derived `SDKWORK_<APP>_APP_ROOT` alias from `topology.spec.json#appId`
+- `SDKWORK_APP_ROOT` is the only application-root input consumed by IAM. Product-specific aliases remain owned by each consuming application and must be mapped to this generic contract at its composition boundary.
+- `@sdkwork/app-topology` `resolveIamDevEnv()` injects `SDKWORK_APP_ROOT` from the selected application topology.
 - Application adapters `MUST` call `ensure_tenant_application_from_app_root_with_env_and_fallback` so startup succeeds when env aliases are unset
 - Unified Postgres profile keys are resolved through `sdkwork-database-config`
 

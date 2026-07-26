@@ -131,7 +131,67 @@ async fn open_router_accepts_dev_inline_oauth_bearer_before_handler() {
         response.status(),
         "OAuth-authenticated open-api request should reach handler fail-closed response"
     );
+    let trace_id = response
+        .headers()
+        .get("x-sdkwork-trace-id")
+        .and_then(|value| value.to_str().ok())
+        .expect("trace header")
+        .to_owned();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let payload: Value = serde_json::from_slice(&body).expect("problem json");
+    assert_eq!(payload["traceId"].as_str(), Some(trace_id.as_str()));
+    assert_eq!(
+        payload["instance"].as_str(),
+        Some("GET /iam/v3/api/oauth/provider_callbacks/{callbackPublicId}")
+    );
+    assert_eq!(
+        payload["operationId"].as_str(),
+        Some("iam.oauth.providerCallbacks.retrieve")
+    );
     std::env::remove_var("SDKWORK_ENV");
+}
+
+#[tokio::test]
+async fn open_router_normalizes_json_extractor_rejections_with_route_identity() {
+    let router = build_sdkwork_iam_open_api_router();
+    let response = router
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/iam/v3/api/oauth/token")
+                .header("content-type", "application/json")
+                .body(Body::from("{"))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(StatusCode::BAD_REQUEST, response.status());
+    assert_eq!(
+        response
+            .headers()
+            .get("content-type")
+            .and_then(|value| value.to_str().ok()),
+        Some("application/problem+json")
+    );
+    let trace_id = response
+        .headers()
+        .get("x-sdkwork-trace-id")
+        .and_then(|value| value.to_str().ok())
+        .expect("trace header")
+        .to_owned();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let payload: Value = serde_json::from_slice(&body).expect("problem json");
+    assert_eq!(payload["code"].as_i64(), Some(40002));
+    assert_eq!(payload["traceId"].as_str(), Some(trace_id.as_str()));
+    assert_eq!(
+        payload["instance"].as_str(),
+        Some("POST /iam/v3/api/oauth/token")
+    );
+    assert_eq!(
+        payload["operationId"].as_str(),
+        Some("iam.oauth.token.create")
+    );
 }
 
 #[tokio::test]
