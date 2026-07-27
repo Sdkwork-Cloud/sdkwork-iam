@@ -1,21 +1,3 @@
--- sdkwork:migration
--- id: 0012_iam_service_account_credentials
--- engine: postgres
--- module: iam
--- purpose: Add service-account credentials and session principal projections
--- reversible: true
--- rollback: down-migration
--- transactional: true
--- lock: access-exclusive
--- lock_timeout: 5s
--- statement_timeout: 120s
--- rewrite_expectation: metadata-only column additions followed by an explicit session backfill
--- wal_impact: proportional to existing iam_session rows updated during principal backfill
--- backfill_plan: populate principal_kind and principal_id from each existing user session
--- observability: monitor updated row count, lock waits, constraint validation, and migration history
--- cancellation_point: before principal_id is made NOT NULL
--- recovery_command: apply 0012_iam_service_account_credentials.down.sql after draining service-account sessions
-
 ALTER TABLE iam_session
   ALTER COLUMN user_id DROP NOT NULL,
   ADD COLUMN IF NOT EXISTS principal_kind TEXT NOT NULL DEFAULT 'user',
