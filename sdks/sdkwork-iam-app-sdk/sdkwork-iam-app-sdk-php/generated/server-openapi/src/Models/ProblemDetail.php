@@ -18,12 +18,17 @@ final class ProblemDetail
 
     public ?string $instance = null;
 
-    public ?string $code = null;
-
-    public ?string $traceId = null;
+    /** Platform or domain error code per API_SPEC.md §15.3. */
+    public ?int $code = null;
 
     /** Server-owned request correlation id. */
-    public ?string $requestId = null;
+    public ?string $traceId = null;
+
+    /** Optional stable localization key such as errors.result.40001. */
+    public ?string $i18nKey = null;
+
+    /** Optional effective BCP 47 locale used by framework message mapping. */
+    public ?string $locale = null;
 
     public array $errors = [];
 
@@ -50,8 +55,11 @@ final class ProblemDetail
         $this->traceId = array_key_exists('traceId', $data)
             ? $data['traceId']
             : null;
-        $this->requestId = array_key_exists('requestId', $data)
-            ? $data['requestId']
+        $this->i18nKey = array_key_exists('i18nKey', $data)
+            ? $data['i18nKey']
+            : null;
+        $this->locale = array_key_exists('locale', $data)
+            ? $data['locale']
             : null;
         $this->errors = array_key_exists('errors', $data)
             ? is_array($data['errors'])
@@ -75,7 +83,8 @@ final class ProblemDetail
             'instance' => $this->instance,
             'code' => $this->code,
             'traceId' => $this->traceId,
-            'requestId' => $this->requestId,
+            'i18nKey' => $this->i18nKey,
+            'locale' => $this->locale,
             'errors' => array_values(array_map(static fn($item) => $item instanceof FieldError ? $item->toArray() : $item, $this->errors)),
         ];
     }

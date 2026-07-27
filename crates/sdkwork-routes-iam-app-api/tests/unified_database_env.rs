@@ -59,9 +59,10 @@ pub async fn postgres_pool_for_integration_tests() -> sqlx::PgPool {
         .clone()
 }
 
-/// Shared `DatabasePool` for HTTP integration tests so router rebuilds do not open new PostgreSQL pools.
+/// Shared initialized `DatabasePool` for HTTP integration tests.
+#[allow(dead_code)]
 pub async fn integration_database_pool_for_router() -> DatabasePool {
-    INTEGRATION_ROUTER_DATABASE_POOL
+    let pool = INTEGRATION_ROUTER_DATABASE_POOL
         .get_or_init(|| async {
             let pg = postgres_pool_for_integration_tests().await;
             let url =
@@ -81,10 +82,19 @@ pub async fn integration_database_pool_for_router() -> DatabasePool {
                 acquire_timeout_secs: 60,
                 ..DatabaseConfig::default()
             };
-            DatabasePool::Postgres(pg, PoolContext { config })
+            let pool = DatabasePool::Postgres(pg, PoolContext { config });
+            sdkwork_iam_database_host::bootstrap_iam_database(pool)
+                .await
+                .expect("bootstrap shared IAM integration database")
+                .pool()
+                .clone()
         })
         .await
-        .clone()
+        .clone();
+    sdkwork_iam_database_host::ensure_iam_id_generator_initialized(&pool)
+        .await
+        .expect("refresh shared IAM integration ID generator lease");
+    pool
 }
 
 /// Pin the IAM service database URL after loading the claw-router profile so
@@ -149,6 +159,7 @@ fn strip_optional_quotes(value: &str) -> String {
 }
 
 /// True when a unified PostgreSQL profile file exists for local integration suites.
+#[allow(dead_code)]
 pub fn iam_postgres_profile_configured() -> bool {
     unified_database_env_candidates()
         .iter()

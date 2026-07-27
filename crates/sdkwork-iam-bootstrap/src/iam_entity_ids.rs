@@ -1,29 +1,51 @@
 //! Snowflake numeric identifiers for IAM entities that must map into SQL BIGINT scopes.
 
-use std::sync::OnceLock;
+use std::sync::{OnceLock, RwLock};
 use std::time::Duration;
 
 use sdkwork_database_id::{NodeLease, SnowflakeIdError, SnowflakeIdGenerator};
 
 const DEFAULT_IAM_SNOWFLAKE_NODE_ID: u16 = 2;
 
-static IAM_SNOWFLAKE_GENERATOR: OnceLock<SnowflakeIdGenerator> = OnceLock::new();
-static IAM_SNOWFLAKE_LEASE: OnceLock<Option<NodeLease>> = OnceLock::new();
+struct IamSnowflakeState {
+    generator: SnowflakeIdGenerator,
+    _lease: Option<NodeLease>,
+}
+
+static IAM_SNOWFLAKE_STATE: OnceLock<RwLock<IamSnowflakeState>> = OnceLock::new();
 
 /// Initialize the IAM ID generator from a database-allocated node_id.
 ///
 /// Call this during application bootstrap after the database pool is available.
 /// The `lease` keeps the database heartbeat alive.
 pub fn init_iam_id_generator(generator: SnowflakeIdGenerator, lease: Option<NodeLease>) {
-    let _ = IAM_SNOWFLAKE_LEASE.set(lease);
-    let _ = IAM_SNOWFLAKE_GENERATOR.set(generator);
+    let state = IAM_SNOWFLAKE_STATE.get_or_init(|| {
+        RwLock::new(IamSnowflakeState {
+            generator: generator.clone(),
+            _lease: None,
+        })
+    });
+    *state
+        .write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = IamSnowflakeState {
+        generator,
+        _lease: lease,
+    };
 }
 
-fn iam_snowflake_generator() -> &'static SnowflakeIdGenerator {
-    IAM_SNOWFLAKE_GENERATOR.get_or_init(|| {
-        SnowflakeIdGenerator::new(resolve_iam_snowflake_node_id())
-            .expect("IAM snowflake node id must be valid")
-    })
+fn iam_snowflake_generator() -> SnowflakeIdGenerator {
+    IAM_SNOWFLAKE_STATE
+        .get_or_init(|| {
+            RwLock::new(IamSnowflakeState {
+                generator: SnowflakeIdGenerator::new(resolve_iam_snowflake_node_id())
+                    .expect("IAM snowflake node id must be valid"),
+                _lease: None,
+            })
+        })
+        .read()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .generator
+        .clone()
 }
 
 fn resolve_iam_snowflake_node_id() -> u16 {
@@ -36,8 +58,9 @@ fn resolve_iam_snowflake_node_id() -> u16 {
 
 /// Generates a positive snowflake id string suitable for IAM tenant/user primary keys.
 pub fn new_iam_snowflake_id() -> String {
+    let generator = iam_snowflake_generator();
     loop {
-        match iam_snowflake_generator().generate() {
+        match generator.generate() {
             Ok(id) if id > 0 => return id.to_string(),
             Ok(_) => continue,
             Err(SnowflakeIdError::SequenceExhausted { .. }) => {

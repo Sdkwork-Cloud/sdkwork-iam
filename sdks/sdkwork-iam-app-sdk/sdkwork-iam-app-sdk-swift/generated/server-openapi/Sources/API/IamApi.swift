@@ -8,7 +8,7 @@ public class IamApi {
     }
 
     /// Department Assignments list.
-    public func departmentAssignmentsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> AppbaseApiResult? {
+    public func departmentAssignmentsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> SdkWorkListResponse? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
@@ -16,11 +16,11 @@ public class IamApi {
             QueryParameterSpec(name: "sort", value: sort, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "q", value: q, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
-        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/department_assignments"), query), responseType: AppbaseApiResult.self)
+        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/department_assignments"), query), responseType: SdkWorkListResponse.self)
     }
 
     /// Departments list.
-    public func departmentsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> AppbaseApiResult? {
+    public func departmentsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> SdkWorkListResponse? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
@@ -28,16 +28,16 @@ public class IamApi {
             QueryParameterSpec(name: "sort", value: sort, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "q", value: q, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
-        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/departments"), query), responseType: AppbaseApiResult.self)
+        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/departments"), query), responseType: SdkWorkListResponse.self)
     }
 
     /// Departments tree retrieve.
-    public func departmentsTreeRetrieve() async throws -> AppbaseApiResult? {
-        return try await client.get(ApiPaths.appPath("/iam/departments/tree"), responseType: AppbaseApiResult.self)
+    public func departmentsTreeRetrieve() async throws -> SdkWorkResourceResponse? {
+        return try await client.get(ApiPaths.appPath("/iam/departments/tree"), responseType: SdkWorkResourceResponse.self)
     }
 
     /// Organization Memberships list.
-    public func organizationMembershipsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> AppbaseApiResult? {
+    public func organizationMembershipsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> SdkWorkListResponse? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
@@ -45,11 +45,11 @@ public class IamApi {
             QueryParameterSpec(name: "sort", value: sort, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "q", value: q, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
-        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/organization_memberships"), query), responseType: AppbaseApiResult.self)
+        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/organization_memberships"), query), responseType: SdkWorkListResponse.self)
     }
 
     /// Organizations list.
-    public func organizationsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> AppbaseApiResult? {
+    public func organizationsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> SdkWorkListResponse? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
@@ -57,16 +57,16 @@ public class IamApi {
             QueryParameterSpec(name: "sort", value: sort, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "q", value: q, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
-        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/organizations"), query), responseType: AppbaseApiResult.self)
+        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/organizations"), query), responseType: SdkWorkListResponse.self)
     }
 
     /// Organizations tree retrieve.
-    public func organizationsTreeRetrieve() async throws -> AppbaseApiResult? {
-        return try await client.get(ApiPaths.appPath("/iam/organizations/tree"), responseType: AppbaseApiResult.self)
+    public func organizationsTreeRetrieve() async throws -> SdkWorkResourceResponse? {
+        return try await client.get(ApiPaths.appPath("/iam/organizations/tree"), responseType: SdkWorkResourceResponse.self)
     }
 
     /// Position Assignments list.
-    public func positionAssignmentsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> AppbaseApiResult? {
+    public func positionAssignmentsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> SdkWorkListResponse? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
@@ -74,11 +74,11 @@ public class IamApi {
             QueryParameterSpec(name: "sort", value: sort, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "q", value: q, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
-        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/position_assignments"), query), responseType: AppbaseApiResult.self)
+        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/position_assignments"), query), responseType: SdkWorkListResponse.self)
     }
 
     /// Positions list.
-    public func positionsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> AppbaseApiResult? {
+    public func positionsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> SdkWorkListResponse? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
@@ -86,11 +86,11 @@ public class IamApi {
             QueryParameterSpec(name: "sort", value: sort, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "q", value: q, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
-        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/positions"), query), responseType: AppbaseApiResult.self)
+        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/positions"), query), responseType: SdkWorkListResponse.self)
     }
 
     /// Role Bindings list.
-    public func roleBindingsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> AppbaseApiResult? {
+    public func roleBindingsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> SdkWorkListResponse? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
@@ -98,42 +98,42 @@ public class IamApi {
             QueryParameterSpec(name: "sort", value: sort, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "q", value: q, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
-        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/role_bindings"), query), responseType: AppbaseApiResult.self)
+        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/role_bindings"), query), responseType: SdkWorkListResponse.self)
     }
 
     /// Users current retrieve.
-    public func usersCurrentRetrieve() async throws -> AppbaseApiResult? {
-        return try await client.get(ApiPaths.appPath("/iam/users/current"), responseType: AppbaseApiResult.self)
+    public func usersCurrentRetrieve() async throws -> SdkWorkResourceResponse? {
+        return try await client.get(ApiPaths.appPath("/iam/users/current"), responseType: SdkWorkResourceResponse.self)
     }
 
     /// Users current update.
-    public func usersCurrentUpdate(body: [String: Any]? = nil) async throws -> AppbaseApiResult? {
-        return try await client.patch(ApiPaths.appPath("/iam/users/current"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: AppbaseApiResult.self)
+    public func usersCurrentUpdate(body: [String: Any]? = nil) async throws -> SdkWorkResourceResponse? {
+        return try await client.patch(ApiPaths.appPath("/iam/users/current"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: SdkWorkResourceResponse.self)
     }
 
     /// Users current email Bindings delete.
-    public func usersCurrentEmailBindingsDelete() async throws -> AppbaseApiResult? {
-        return try await client.delete(ApiPaths.appPath("/iam/users/current/email_bindings"), responseType: AppbaseApiResult.self)
+    public func usersCurrentEmailBindingsDelete() async throws -> Void {
+        _ = try await client.delete(ApiPaths.appPath("/iam/users/current/email_bindings"))
     }
 
     /// Users current email Bindings create.
-    public func usersCurrentEmailBindingsCreate(body: [String: Any]) async throws -> AppbaseApiResult? {
-        return try await client.post(ApiPaths.appPath("/iam/users/current/email_bindings"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: AppbaseApiResult.self)
+    public func usersCurrentEmailBindingsCreate(body: [String: Any]) async throws -> SdkWorkResourceResponse? {
+        return try await client.post(ApiPaths.appPath("/iam/users/current/email_bindings"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: SdkWorkResourceResponse.self)
     }
 
     /// Users current password update.
-    public func usersCurrentPasswordUpdate(body: [String: Any]) async throws -> AppbaseApiResult? {
-        return try await client.post(ApiPaths.appPath("/iam/users/current/password"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: AppbaseApiResult.self)
+    public func usersCurrentPasswordUpdate(body: [String: Any]? = nil) async throws -> SdkWorkResourceResponse? {
+        return try await client.patch(ApiPaths.appPath("/iam/users/current/password"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: SdkWorkResourceResponse.self)
     }
 
     /// Users current phone Bindings delete.
-    public func usersCurrentPhoneBindingsDelete() async throws -> AppbaseApiResult? {
-        return try await client.delete(ApiPaths.appPath("/iam/users/current/phone_bindings"), responseType: AppbaseApiResult.self)
+    public func usersCurrentPhoneBindingsDelete() async throws -> Void {
+        _ = try await client.delete(ApiPaths.appPath("/iam/users/current/phone_bindings"))
     }
 
     /// Users current phone Bindings create.
-    public func usersCurrentPhoneBindingsCreate(body: [String: Any]) async throws -> AppbaseApiResult? {
-        return try await client.post(ApiPaths.appPath("/iam/users/current/phone_bindings"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: AppbaseApiResult.self)
+    public func usersCurrentPhoneBindingsCreate(body: [String: Any]) async throws -> SdkWorkResourceResponse? {
+        return try await client.post(ApiPaths.appPath("/iam/users/current/phone_bindings"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: SdkWorkResourceResponse.self)
     }
 
 

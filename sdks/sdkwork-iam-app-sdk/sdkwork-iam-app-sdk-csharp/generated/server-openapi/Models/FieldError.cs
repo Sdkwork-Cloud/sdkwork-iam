@@ -8,6 +8,8 @@ namespace SDKWork.Iam.AppSdk.Models
     {
         public string Field { get; set; }
         public string Message { get; set; }
-        public string? Code { get; set; }
+        public int? Code { get; set; }
+        public string? I18nKey { get; set; }
+        public Dictionary<string, string>? Params { get; set; }
     }
 }

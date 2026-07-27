@@ -1,6 +1,6 @@
 package types
 
-// Operation-specific command payload defined by the owning appbase Rust module.
+// Operation-specific command payload defined by the owning IAM Rust module.
 type AppbaseOperationCommand struct {
 
 }

@@ -77,7 +77,7 @@ export class AuthSessionsApi {
 
 /** Sessions refresh. */
   async refresh(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<SdkWorkCommandData> {
-    return this.client.request<SdkWorkCommandData>(appApiPath(`/auth/sessions/refresh`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', accessTokenOnly: true });
+    return this.client.request<SdkWorkCommandData>(appApiPath(`/auth/sessions/refresh`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
   }
 }
 

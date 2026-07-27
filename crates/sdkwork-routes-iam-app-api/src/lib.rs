@@ -38,7 +38,9 @@ pub use manifest::{
 pub use password_session_bridge::{PasswordSessionBridge, PasswordSessionBridgeResult};
 pub use paths::APP_API_PREFIX;
 pub use routes::{
+    build_sdkwork_iam_app_api_business_router_with_initialized_pool,
     build_sdkwork_iam_app_api_business_router_with_pool, build_sdkwork_iam_app_api_router,
+    build_sdkwork_iam_app_api_router_with_initialized_pool,
     build_sdkwork_iam_app_api_router_with_local_directory,
     build_sdkwork_iam_app_api_router_with_pool, build_sdkwork_iam_app_api_router_with_web_resolver,
     build_sdkwork_iam_oauth_device_authorization_router_with_pool,

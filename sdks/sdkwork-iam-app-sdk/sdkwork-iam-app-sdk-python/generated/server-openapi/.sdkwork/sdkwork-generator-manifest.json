@@ -40,7 +40,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "c8e6baa007a8a34cd8b355010eaf33a67dd3a59c0192ceb28c95b152957991d8"
+      "sha256": "d3773a9c9a484502314f4885e07ae2024c9978d66b68dc3c1f8a59fe60a72195"
     },
     {
       "path": "requirements.txt",
@@ -56,19 +56,19 @@
     },
     {
       "path": "sdkwork_iam_app_sdk/api/auth.py",
-      "sha256": "803a009986d84d08a1efe26518019354b0edc45d84cfa88ae710258cecd140f0"
+      "sha256": "81ba329927443d0f375517cecd00fc2373598fab2cc207e1bfa51b4d2f8b7cb7"
     },
     {
       "path": "sdkwork_iam_app_sdk/api/iam.py",
-      "sha256": "cc10640b18d42ea0f30b7390d89a43e2223632a30ca7261a704aa20d77dd29b1"
+      "sha256": "e6ac825ee6e9802a080efc348616e034877b76423ec18f161644281eed94a28d"
     },
     {
       "path": "sdkwork_iam_app_sdk/api/oauth.py",
-      "sha256": "97d110b7b016d2bda39690b531b1b33066f7bae58ee0a135d2439754faad6843"
+      "sha256": "50b57d2bbe65c3933d6113f5c0adae22053da0641e16ae6534d70ee18c8c6dc2"
     },
     {
       "path": "sdkwork_iam_app_sdk/api/system.py",
-      "sha256": "5b9423d85fa003131f113873dceb6610c9befed6f57ad0cd7d0e8d344c0dff6c"
+      "sha256": "e8075a36f0b07f6531cf5a846895608c8f85fc95c2171296f7a498556995793a"
     },
     {
       "path": "sdkwork_iam_app_sdk/client.py",
@@ -76,51 +76,63 @@
     },
     {
       "path": "sdkwork_iam_app_sdk/http_client.py",
-      "sha256": "6840cfb8a0faca42ec50d8722946b2bf75f8aede51a88876a35535e3a7b52392"
+      "sha256": "f773037dfb78398353cc5d6eef661d252b87a135205391c7ec45dad43c32bac3"
     },
     {
       "path": "sdkwork_iam_app_sdk/models/__init__.py",
-      "sha256": "506cea44c13d74eea09d231945ee85ea62686fc9a4b4eb44dd005c9bcc9a1185"
-    },
-    {
-      "path": "sdkwork_iam_app_sdk/models/appbase_access_credential_create_command.py",
-      "sha256": "5203488f27ddde0d379908a0ca3adae6ec666a12abeb3edad7e25eeaad8b0d16"
-    },
-    {
-      "path": "sdkwork_iam_app_sdk/models/appbase_api_result.py",
-      "sha256": "f394489fcc63d11d19df62a86ed6d8860ce0513e36b22809cf7bf11ce7f6e806"
-    },
-    {
-      "path": "sdkwork_iam_app_sdk/models/appbase_application_register_command.py",
-      "sha256": "7d5afca9321685587d62d991d218df911c6b629227b6235f1f825a522518e0e8"
+      "sha256": "b2f1e82d24d50f634dd46331c0c0436d05a96e41383b8d262d6edd198fb64748"
     },
     {
       "path": "sdkwork_iam_app_sdk/models/appbase_session_create_command.py",
       "sha256": "9c5caacc0324fbea1f3576dd22a97fab8f4c1d8e62964edf932c212e6a8102ba"
     },
     {
-      "path": "sdkwork_iam_app_sdk/models/appbase_tenant_application_enable_command.py",
-      "sha256": "b0805b88891a523d00319d45a748be08c9c35403fbc8bf440b22336ef678422b"
-    },
-    {
-      "path": "sdkwork_iam_app_sdk/models/appbase_tenant_application_provision_command.py",
-      "sha256": "f20f1c45f2ccf55c38059b9d8aba0e514fcb1db9cc7db122f491da257425d85d"
-    },
-    {
-      "path": "sdkwork_iam_app_sdk/models/appbase_tenant_application_update_command.py",
-      "sha256": "3749c323ce091b7947dbad82255a79c35f4b72f6b3bddfbea4e6d7c7bf37eaab"
-    },
-    {
       "path": "sdkwork_iam_app_sdk/models/field_error.py",
-      "sha256": "55a16fc5837525b2e8488b197409789d86b03b301f09a83ff5642260c83beae2"
+      "sha256": "5027c2d560e5a15664f62611f73bc8385794ac4dd43f169adae89cf2bd8a1a76"
+    },
+    {
+      "path": "sdkwork_iam_app_sdk/models/page_info.py",
+      "sha256": "0f81129ea8bcb4251c3d8bdd788be210051c6f1a3535fd18cf770bca14fdfd13"
     },
     {
       "path": "sdkwork_iam_app_sdk/models/problem_detail.py",
-      "sha256": "73139fe4e53a44b27b04ba096d97b1eedebc6e537f9e3777dbc01a7f659848e4"
+      "sha256": "2d8208f66783f1e1c85928f27376896046a0c85b995f633e499a28896f06012e"
+    },
+    {
+      "path": "sdkwork_iam_app_sdk/models/sdk_work_api_response.py",
+      "sha256": "c76a9fa3784ba83c7ca1314987ef9811ed94f15164328840ef89b49b00cbd0a4"
+    },
+    {
+      "path": "sdkwork_iam_app_sdk/models/sdk_work_command_data.py",
+      "sha256": "b56c81e6d443fa7d37811561a951bf91979571dd3b53b7ec2cdeef107999347f"
+    },
+    {
+      "path": "sdkwork_iam_app_sdk/models/sdk_work_command_response.py",
+      "sha256": "8fe28ce2ab996f43ca52a5e0b2e462a42b171c68bddd41341bb26cac9ca15a2c"
+    },
+    {
+      "path": "sdkwork_iam_app_sdk/models/sdk_work_list_response.py",
+      "sha256": "a66e283546743b13a3d380a9c1861cb38a3402c90715fea557c97cb290616486"
+    },
+    {
+      "path": "sdkwork_iam_app_sdk/models/sdk_work_page_data.py",
+      "sha256": "6903097c7602ae22293e53b9ed707e2e39a69f4cb012b8563a52d386c0a5ad10"
+    },
+    {
+      "path": "sdkwork_iam_app_sdk/models/sdk_work_resource_data.py",
+      "sha256": "f890d654c53e83aa1275abfa085a132c0042b19f918ff11fef3b101f3a314a23"
+    },
+    {
+      "path": "sdkwork_iam_app_sdk/models/sdk_work_resource_response.py",
+      "sha256": "04999dbef6e10773d76f9d28fc5db40074609449a7b9f4ab915b177e73ad3353"
+    },
+    {
+      "path": "sdkwork_iam_app_sdk/models/wechat_mini_program_session_create_command.py",
+      "sha256": "c0aec0506eb5ef90881c370f56f02922859ee4b0e86ddaec2ef5ec695fa23029"
     },
     {
       "path": "sdkwork-sdk.json",
-      "sha256": "5dc8a64338fb381fd53501289db9cb002c065fdf03fc9fd11c8dc25c662b9306"
+      "sha256": "eb323e265f51c1ccc29225445678546889d86f492217f949224a127ac410ae0f"
     },
     {
       "path": "setup.py",

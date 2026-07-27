@@ -1,8 +1,8 @@
 # sdkwork-api-iam-assembly
 
-Generated HTTP gateway assembly for the `sdkwork-iam` application plane. Composes IAM `app-api`, `backend-api`, and `open-api` route crates into a single Axum router for standalone and cloud gateway hosts.
+Host-neutral HTTP API assembly for the `sdkwork-iam` application plane. It composes IAM `app-api`, `backend-api`, and `open-api` business routes, manifests, OpenAPI, permission catalogs, context injectors, and database readiness capability.
 
-Infrastructure routes (`/healthz`, `/livez`, `/readyz`, `/metrics`) are mounted once at the assembly layer through `sdkwork-web-bootstrap::assemble_multi_surface_router`. Readiness probes the IAM SQLx pool when database env is configured.
+The assembly does not mount process-wide middleware or infrastructure routes. `sdkwork-api-iam-standalone-gateway` owns the Web Framework layer and mounts `/healthz`, `/livez`, `/readyz`, `/metrics`, and `/openapi.json` once through `sdkwork-web-bootstrap`.
 
 ## Verification
 

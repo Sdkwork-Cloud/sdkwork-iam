@@ -1304,6 +1304,21 @@ async fn find_template_by_app_key(
     Ok(row.map(map_template_row))
 }
 
+async fn find_template_by_app_key_any_status(
+    pg: &PgPool,
+    app_key: &str,
+) -> Result<Option<RegisteredApplicationTemplate>, String> {
+    let row = sqlx::query(
+        "SELECT id, app_key, name, package_name, version, default_access_permissions_json \
+         FROM iam_application_template WHERE app_key = $1 LIMIT 1",
+    )
+    .bind(app_key)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("load application template by app_key failed: {error}"))?;
+    Ok(row.map(map_template_row))
+}
+
 async fn find_tenant_application_by_instance_key(
     pg: &PgPool,
     tenant_id: &str,
@@ -1374,7 +1389,7 @@ async fn upsert_application_template_with_id(
     }
 
     let now = chrono::Utc::now();
-    let existing = find_template_by_app_key(pg, &command.app_key).await?;
+    let existing = find_template_by_app_key_any_status(pg, &command.app_key).await?;
     let resolved_template_id = existing
         .as_ref()
         .map(|template| template.id.clone())
@@ -1410,12 +1425,30 @@ async fn upsert_application_template_with_id(
         .await
         .map_err(|error| format!("update application template failed: {error}"))?;
     } else {
-        sqlx::query(
+        let result = sqlx::query(
             "INSERT INTO iam_application_template (id, owner_tenant_id, app_key, name, display_name, \
              app_type, package_name, bundle_id, desktop_app_id, version, channel, status, \
              runtime_config_json, artifacts_config_json, default_access_permissions_json, \
              manifest_hash, last_synced_at, created_at, updated_at) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active', $12, $13, $14, $15, $16, $17, $18)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active', $12, $13, $14, $15, $16, $17, $18) \
+             ON CONFLICT (id) DO UPDATE SET \
+               owner_tenant_id = EXCLUDED.owner_tenant_id, \
+               name = EXCLUDED.name, \
+               display_name = EXCLUDED.display_name, \
+               app_type = EXCLUDED.app_type, \
+               package_name = EXCLUDED.package_name, \
+               bundle_id = EXCLUDED.bundle_id, \
+               desktop_app_id = EXCLUDED.desktop_app_id, \
+               version = EXCLUDED.version, \
+               channel = EXCLUDED.channel, \
+               status = 'active', \
+               runtime_config_json = EXCLUDED.runtime_config_json, \
+               artifacts_config_json = EXCLUDED.artifacts_config_json, \
+               default_access_permissions_json = EXCLUDED.default_access_permissions_json, \
+               manifest_hash = EXCLUDED.manifest_hash, \
+               last_synced_at = EXCLUDED.last_synced_at, \
+               updated_at = EXCLUDED.updated_at \
+             WHERE iam_application_template.app_key = EXCLUDED.app_key",
         )
         .bind(&resolved_template_id)
         .bind(&command.owner_tenant_id)
@@ -1438,6 +1471,11 @@ async fn upsert_application_template_with_id(
         .execute(pg)
         .await
         .map_err(|error| format!("insert application template failed: {error}"))?;
+        if result.rows_affected() != 1 {
+            return Err(format!(
+                "application template id {resolved_template_id} is owned by another app key"
+            ));
+        }
     }
 
     replace_template_packages(pg, &resolved_template_id, &command.packages, &now).await?;

@@ -7,8 +7,8 @@ public class OauthApi {
         self.client = client
     }
 
-    /// Oauth account Links list.
-    public func accountLinksList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> AppbaseApiResult? {
+    /// Account Links list.
+    public func accountLinksList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> SdkWorkListResponse? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
@@ -16,56 +16,61 @@ public class OauthApi {
             QueryParameterSpec(name: "sort", value: sort, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "q", value: q, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
-        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/account_links"), query), responseType: AppbaseApiResult.self)
+        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/account_links"), query), responseType: SdkWorkListResponse.self)
     }
 
-    /// Oauth account Links delete.
-    public func accountLinksDelete(accountLinkId: String) async throws -> AppbaseApiResult? {
-        return try await client.delete(ApiPaths.appPath("/oauth/account_links/\(serializePathParameter(accountLinkId, PathParameterSpec(name: "accountLinkId", style: "simple", explode: false)))"), responseType: AppbaseApiResult.self)
+    /// Account Links delete.
+    public func accountLinksDelete(accountLinkId: String) async throws -> Void {
+        _ = try await client.delete(ApiPaths.appPath("/oauth/account_links/\(serializePathParameter(accountLinkId, PathParameterSpec(name: "accountLinkId", style: "simple", explode: false)))"))
     }
 
-    /// Oauth authorization Urls create.
-    public func authorizationUrlsCreate(body: [String: Any]) async throws -> AppbaseApiResult? {
-        return try await client.request("POST", ApiPaths.appPath("/oauth/authorization_urls"), body: body, params: nil, headers: nil, contentType: "application/json", skipAuth: true, responseType: AppbaseApiResult.self)
+    /// Authorization Urls create.
+    public func authorizationUrlsCreate(body: [String: Any]) async throws -> SdkWorkResourceResponse? {
+        return try await client.request("POST", ApiPaths.appPath("/oauth/authorization_urls"), body: body, params: nil, headers: nil, contentType: "application/json", accessTokenOnly: true, responseType: SdkWorkResourceResponse.self)
     }
 
-    /// Oauth callbacks handle Get.
-    public func callbacksHandleGet(providerCode: String) async throws -> AppbaseApiResult? {
-        return try await client.get(ApiPaths.appPath("/oauth/callbacks/\(serializePathParameter(providerCode, PathParameterSpec(name: "providerCode", style: "simple", explode: false)))"), responseType: AppbaseApiResult.self)
+    /// Authorizations completions create.
+    public func authorizationsCompletionsCreate(authorizationStateId: String, body: [String: Any]) async throws -> SdkWorkResourceResponse? {
+        return try await client.post(ApiPaths.appPath("/oauth/authorizations/\(serializePathParameter(authorizationStateId, PathParameterSpec(name: "authorizationStateId", style: "simple", explode: false)))/completions"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: SdkWorkResourceResponse.self)
     }
 
-    /// Oauth callbacks handle Post.
-    public func callbacksHandlePost(providerCode: String, body: [String: Any]) async throws -> AppbaseApiResult? {
-        return try await client.post(ApiPaths.appPath("/oauth/callbacks/\(serializePathParameter(providerCode, PathParameterSpec(name: "providerCode", style: "simple", explode: false)))"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: AppbaseApiResult.self)
+    /// Callbacks retrieve.
+    public func callbacksRetrieve(providerCode: String) async throws -> SdkWorkResourceResponse? {
+        return try await client.request("GET", ApiPaths.appPath("/oauth/callbacks/\(serializePathParameter(providerCode, PathParameterSpec(name: "providerCode", style: "simple", explode: false)))"), body: nil, params: nil, headers: nil, accessTokenOnly: true, responseType: SdkWorkResourceResponse.self)
     }
 
-    /// Oauth device Authorizations create.
-    public func deviceAuthorizationsCreate(body: [String: Any]) async throws -> AppbaseApiResult? {
-        return try await client.request("POST", ApiPaths.appPath("/oauth/device_authorizations"), body: body, params: nil, headers: nil, contentType: "application/json", skipAuth: true, responseType: AppbaseApiResult.self)
+    /// Callbacks create.
+    public func callbacksCreate(providerCode: String, body: [String: Any]) async throws -> SdkWorkResourceResponse? {
+        return try await client.request("POST", ApiPaths.appPath("/oauth/callbacks/\(serializePathParameter(providerCode, PathParameterSpec(name: "providerCode", style: "simple", explode: false)))"), body: body, params: nil, headers: nil, contentType: "application/json", accessTokenOnly: true, responseType: SdkWorkResourceResponse.self)
     }
 
-    /// Oauth device Authorizations retrieve.
-    public func deviceAuthorizationsRetrieve(deviceAuthorizationId: String) async throws -> AppbaseApiResult? {
-        return try await client.request("GET", ApiPaths.appPath("/oauth/device_authorizations/\(serializePathParameter(deviceAuthorizationId, PathParameterSpec(name: "deviceAuthorizationId", style: "simple", explode: false)))"), body: nil, params: nil, headers: nil, skipAuth: true, responseType: AppbaseApiResult.self)
+    /// Device Authorizations create.
+    public func deviceAuthorizationsCreate(body: [String: Any]) async throws -> SdkWorkResourceResponse? {
+        return try await client.request("POST", ApiPaths.appPath("/oauth/device_authorizations"), body: body, params: nil, headers: nil, contentType: "application/json", skipAuth: true, responseType: SdkWorkResourceResponse.self)
     }
 
-    /// Oauth device Authorizations password Completions create.
-    public func deviceAuthorizationsPasswordCompletionsCreate(deviceAuthorizationId: String, body: [String: Any]) async throws -> AppbaseApiResult? {
-        return try await client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/\(serializePathParameter(deviceAuthorizationId, PathParameterSpec(name: "deviceAuthorizationId", style: "simple", explode: false)))/password_completions"), body: body, params: nil, headers: nil, contentType: "application/json", skipAuth: true, responseType: AppbaseApiResult.self)
+    /// Device Authorizations retrieve.
+    public func deviceAuthorizationsRetrieve(deviceAuthorizationId: String) async throws -> SdkWorkResourceResponse? {
+        return try await client.request("GET", ApiPaths.appPath("/oauth/device_authorizations/\(serializePathParameter(deviceAuthorizationId, PathParameterSpec(name: "deviceAuthorizationId", style: "simple", explode: false)))"), body: nil, params: nil, headers: nil, skipAuth: true, responseType: SdkWorkResourceResponse.self)
     }
 
-    /// Oauth device Authorizations scans create.
-    public func deviceAuthorizationsScansCreate(deviceAuthorizationId: String, body: [String: Any]) async throws -> AppbaseApiResult? {
-        return try await client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/\(serializePathParameter(deviceAuthorizationId, PathParameterSpec(name: "deviceAuthorizationId", style: "simple", explode: false)))/scans"), body: body, params: nil, headers: nil, contentType: "application/json", skipAuth: true, responseType: AppbaseApiResult.self)
+    /// Device Authorizations password Completions create.
+    public func deviceAuthorizationsPasswordCompletionsCreate(deviceAuthorizationId: String, body: [String: Any]) async throws -> SdkWorkResourceResponse? {
+        return try await client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/\(serializePathParameter(deviceAuthorizationId, PathParameterSpec(name: "deviceAuthorizationId", style: "simple", explode: false)))/password_completions"), body: body, params: nil, headers: nil, contentType: "application/json", accessTokenOnly: true, responseType: SdkWorkResourceResponse.self)
     }
 
-    /// Oauth device Authorizations session Exchanges create.
-    public func deviceAuthorizationsSessionExchangesCreate(deviceAuthorizationId: String, body: [String: Any]) async throws -> AppbaseApiResult? {
-        return try await client.post(ApiPaths.appPath("/oauth/device_authorizations/\(serializePathParameter(deviceAuthorizationId, PathParameterSpec(name: "deviceAuthorizationId", style: "simple", explode: false)))/session_exchanges"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: AppbaseApiResult.self)
+    /// Device Authorizations scans create.
+    public func deviceAuthorizationsScansCreate(deviceAuthorizationId: String, body: [String: Any]) async throws -> SdkWorkResourceResponse? {
+        return try await client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/\(serializePathParameter(deviceAuthorizationId, PathParameterSpec(name: "deviceAuthorizationId", style: "simple", explode: false)))/scans"), body: body, params: nil, headers: nil, contentType: "application/json", accessTokenOnly: true, responseType: SdkWorkResourceResponse.self)
     }
 
-    /// Oauth grants list.
-    public func grantsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> AppbaseApiResult? {
+    /// Device Authorizations session Exchanges create.
+    public func deviceAuthorizationsSessionExchangesCreate(deviceAuthorizationId: String, body: [String: Any]) async throws -> SdkWorkResourceResponse? {
+        return try await client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/\(serializePathParameter(deviceAuthorizationId, PathParameterSpec(name: "deviceAuthorizationId", style: "simple", explode: false)))/session_exchanges"), body: body, params: nil, headers: nil, contentType: "application/json", skipAuth: true, responseType: SdkWorkResourceResponse.self)
+    }
+
+    /// Grants list.
+    public func grantsList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> SdkWorkListResponse? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
@@ -73,21 +78,21 @@ public class OauthApi {
             QueryParameterSpec(name: "sort", value: sort, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "q", value: q, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
-        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/grants"), query), responseType: AppbaseApiResult.self)
+        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/grants"), query), responseType: SdkWorkListResponse.self)
     }
 
-    /// Oauth grants delete.
-    public func grantsDelete(grantId: String) async throws -> AppbaseApiResult? {
-        return try await client.delete(ApiPaths.appPath("/oauth/grants/\(serializePathParameter(grantId, PathParameterSpec(name: "grantId", style: "simple", explode: false)))"), responseType: AppbaseApiResult.self)
+    /// Grants delete.
+    public func grantsDelete(grantId: String) async throws -> Void {
+        _ = try await client.delete(ApiPaths.appPath("/oauth/grants/\(serializePathParameter(grantId, PathParameterSpec(name: "grantId", style: "simple", explode: false)))"))
     }
 
-    /// Oauth mini Program Sessions create.
-    public func miniProgramSessionsCreate(body: [String: Any]) async throws -> AppbaseApiResult? {
-        return try await client.post(ApiPaths.appPath("/oauth/mini_program_sessions"), body: body, params: nil, headers: nil, contentType: "application/json", responseType: AppbaseApiResult.self)
+    /// Mini Program Sessions create.
+    public func miniProgramSessionsCreate(body: WechatMiniProgramSessionCreateCommand) async throws -> SdkWorkResourceResponse? {
+        return try await client.request("POST", ApiPaths.appPath("/oauth/mini_program_sessions"), body: body, params: nil, headers: nil, contentType: "application/json", accessTokenOnly: true, responseType: SdkWorkResourceResponse.self)
     }
 
-    /// Oauth providers list.
-    public func providersList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> AppbaseApiResult? {
+    /// Providers list.
+    public func providersList(page: Int? = nil, pageSize: Int? = nil, cursor: String? = nil, sort: String? = nil, q: String? = nil) async throws -> SdkWorkListResponse? {
         let query = buildQueryString([
             QueryParameterSpec(name: "page", value: page, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "page_size", value: pageSize, style: "form", explode: true, allowReserved: false, contentType: nil),
@@ -95,12 +100,12 @@ public class OauthApi {
             QueryParameterSpec(name: "sort", value: sort, style: "form", explode: true, allowReserved: false, contentType: nil),
             QueryParameterSpec(name: "q", value: q, style: "form", explode: true, allowReserved: false, contentType: nil)
         ])
-        return try await client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/providers"), query), responseType: AppbaseApiResult.self)
+        return try await client.request("GET", ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/providers"), query), body: nil, params: nil, headers: nil, accessTokenOnly: true, responseType: SdkWorkListResponse.self)
     }
 
-    /// Oauth sessions create.
-    public func sessionsCreate(body: [String: Any]) async throws -> AppbaseApiResult? {
-        return try await client.request("POST", ApiPaths.appPath("/oauth/sessions"), body: body, params: nil, headers: nil, contentType: "application/json", skipAuth: true, responseType: AppbaseApiResult.self)
+    /// Sessions create.
+    public func sessionsCreate(body: AppbaseSessionCreateCommand) async throws -> SdkWorkResourceResponse? {
+        return try await client.request("POST", ApiPaths.appPath("/oauth/sessions"), body: body, params: nil, headers: nil, contentType: "application/json", accessTokenOnly: true, responseType: SdkWorkResourceResponse.self)
     }
 
     private struct PathParameterSpec {

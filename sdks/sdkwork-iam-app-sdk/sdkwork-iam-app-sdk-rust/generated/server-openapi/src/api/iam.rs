@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::api::paths::app_path;
 use crate::api::paths::append_query_string;
 use crate::http::{SdkworkError, SdkworkHttpClient};
-use crate::models::{AppbaseApiResult};
+use crate::models::{SdkWorkPageData};
 
 #[derive(Clone)]
 pub struct IamApi {
@@ -16,7 +16,7 @@ impl IamApi {
     }
 
     /// Department Assignments list.
-    pub async fn department_assignments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn department_assignments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -29,7 +29,7 @@ impl IamApi {
     }
 
     /// Departments list.
-    pub async fn departments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn departments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -42,13 +42,13 @@ impl IamApi {
     }
 
     /// Departments tree retrieve.
-    pub async fn departments_tree_retrieve(&self) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn departments_tree_retrieve(&self) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&"/iam/departments/tree".to_string());
         self.client.get(&path, None, None).await
     }
 
     /// Organization Memberships list.
-    pub async fn organization_memberships_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn organization_memberships_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -61,7 +61,7 @@ impl IamApi {
     }
 
     /// Organizations list.
-    pub async fn organizations_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn organizations_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -74,13 +74,13 @@ impl IamApi {
     }
 
     /// Organizations tree retrieve.
-    pub async fn organizations_tree_retrieve(&self) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn organizations_tree_retrieve(&self) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&"/iam/organizations/tree".to_string());
         self.client.get(&path, None, None).await
     }
 
     /// Position Assignments list.
-    pub async fn position_assignments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn position_assignments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -93,7 +93,7 @@ impl IamApi {
     }
 
     /// Positions list.
-    pub async fn positions_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn positions_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -106,7 +106,7 @@ impl IamApi {
     }
 
     /// Role Bindings list.
-    pub async fn role_bindings_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn role_bindings_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -119,43 +119,43 @@ impl IamApi {
     }
 
     /// Users current retrieve.
-    pub async fn users_current_retrieve(&self) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn users_current_retrieve(&self) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&"/iam/users/current".to_string());
         self.client.get(&path, None, None).await
     }
 
     /// Users current update.
-    pub async fn users_current_update(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn users_current_update(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&"/iam/users/current".to_string());
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Users current email Bindings delete.
-    pub async fn users_current_email_bindings_delete(&self) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn users_current_email_bindings_delete(&self) -> Result<(), SdkworkError> {
         let path = app_path(&"/iam/users/current/email_bindings".to_string());
         self.client.delete(&path, None, None).await
     }
 
     /// Users current email Bindings create.
-    pub async fn users_current_email_bindings_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn users_current_email_bindings_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&"/iam/users/current/email_bindings".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Users current password update.
-    pub async fn users_current_password_update(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn users_current_password_update(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&"/iam/users/current/password".to_string());
-        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+        self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Users current phone Bindings delete.
-    pub async fn users_current_phone_bindings_delete(&self) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn users_current_phone_bindings_delete(&self) -> Result<(), SdkworkError> {
         let path = app_path(&"/iam/users/current/phone_bindings".to_string());
         self.client.delete(&path, None, None).await
     }
 
     /// Users current phone Bindings create.
-    pub async fn users_current_phone_bindings_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
+    pub async fn users_current_phone_bindings_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&"/iam/users/current/phone_bindings".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }

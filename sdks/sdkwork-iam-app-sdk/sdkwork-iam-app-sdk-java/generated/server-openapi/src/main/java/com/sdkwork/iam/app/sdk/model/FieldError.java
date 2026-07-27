@@ -1,10 +1,13 @@
 package com.sdkwork.iam.app.sdk.model;
 
+import java.util.Map;
 
 public class FieldError {
     private String field;
     private String message;
-    private String code;
+    private Integer code;
+    private String i18nKey;
+    private Map<String, String> params;
 
     public String getField() {
         return this.field;
@@ -22,11 +25,27 @@ public class FieldError {
         this.message = message;
     }
 
-    public String getCode() {
+    public Integer getCode() {
         return this.code;
     }
 
-    public void setCode(String code) {
+    public void setCode(Integer code) {
         this.code = code;
+    }
+
+    public String getI18nKey() {
+        return this.i18nKey;
+    }
+
+    public void setI18nKey(String i18nKey) {
+        this.i18nKey = i18nKey;
+    }
+
+    public Map<String, String> getParams() {
+        return this.params;
+    }
+
+    public void setParams(Map<String, String> params) {
+        this.params = params;
     }
 }

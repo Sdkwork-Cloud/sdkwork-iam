@@ -35,7 +35,7 @@ public class Main {
 client.setAccessToken("your-access-token");
 
         // Use the SDK
-        AppbaseApiResult result = client.getAuth().sessionsCurrentRetrieve();
+        SdkWorkResourceResponse result = client.getAuth().sessionsCurrentRetrieve();
         System.out.println(result);
     }
 }
@@ -72,7 +72,7 @@ client.getHttpClient().setHeader("X-Custom-Header", "value");
 
 ```java
 // Sessions current retrieve.
-AppbaseApiResult result = client.getAuth().sessionsCurrentRetrieve();
+SdkWorkResourceResponse result = client.getAuth().sessionsCurrentRetrieve();
 System.out.println(result);
 ```
 
@@ -80,21 +80,21 @@ System.out.println(result);
 
 ```java
 // Departments tree retrieve.
-AppbaseApiResult result = client.getIam().departmentsTreeRetrieve();
+SdkWorkResourceResponse result = client.getIam().departmentsTreeRetrieve();
 System.out.println(result);
 ```
 
 ### oauth
 
 ```java
-// Oauth account Links list.
+// Account Links list.
 Map<String, Object> params = new LinkedHashMap<>();
 params.put("page", 1);
 params.put("page_size", 2);
 params.put("cursor", "cursor");
 params.put("sort", "sort");
 params.put("q", "q");
-AppbaseApiResult result = client.getOauth().accountLinksList(params);
+SdkWorkListResponse result = client.getOauth().accountLinksList(params);
 System.out.println(result);
 ```
 
@@ -102,7 +102,7 @@ System.out.println(result);
 
 ```java
 // Iam account Binding Policy retrieve.
-AppbaseApiResult result = client.getSystem().iamAccountBindingPolicyRetrieve();
+SdkWorkResourceResponse result = client.getSystem().iamAccountBindingPolicyRetrieve();
 System.out.println(result);
 ```
 
@@ -110,7 +110,7 @@ System.out.println(result);
 
 ```java
 try {
-    AppbaseApiResult result = client.getAuth().sessionsCurrentRetrieve();
+    SdkWorkResourceResponse result = client.getAuth().sessionsCurrentRetrieve();
     System.out.println(result);
 } catch (Exception e) {
     System.err.println("Error: " + e.getMessage());

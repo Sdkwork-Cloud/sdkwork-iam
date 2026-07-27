@@ -334,7 +334,7 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
         "iam",
         "serviceAccountCredentials.revoke",
     ),
-    HttpRoute::public(
+    HttpRoute::bootstrap_body(
         HttpMethod::Post,
         "/backend/v3/api/iam/service_account_tokens",
         "iam",
@@ -514,13 +514,13 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
         "iam",
         "apiKeys.list",
     ),
-    HttpRoute::public(
+    HttpRoute::bootstrap_body(
         HttpMethod::Post,
         "/backend/v3/api/iam/applications/register",
         "iam",
         "applications.register",
     ),
-    HttpRoute::public(
+    HttpRoute::bootstrap_body(
         HttpMethod::Post,
         "/backend/v3/api/iam/tenant_applications",
         "iam",
@@ -532,19 +532,19 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
         "iam",
         "tenantApplications.retrieve",
     ),
-    HttpRoute::public(
+    HttpRoute::bootstrap_body(
         HttpMethod::Patch,
         "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}",
         "iam",
         "tenantApplications.update",
     ),
-    HttpRoute::public(
+    HttpRoute::bootstrap_body(
         HttpMethod::Post,
         "/backend/v3/api/iam/tenant_applications/{tenantApplicationId}/enable",
         "iam",
         "tenantApplications.enable",
     ),
-    HttpRoute::public(
+    HttpRoute::bootstrap_body(
         HttpMethod::Post,
         "/backend/v3/api/iam/access_credentials",
         "iam",

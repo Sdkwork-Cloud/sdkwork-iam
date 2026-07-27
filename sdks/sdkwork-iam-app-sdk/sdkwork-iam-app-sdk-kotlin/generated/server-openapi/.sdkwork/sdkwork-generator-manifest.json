@@ -36,11 +36,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "b74536a2cdce323927633c9519f932c96168bcf985ad66c8a909db0dba2e0146"
+      "sha256": "c8257c144df305472b63c3ce3b5ba93794ea6c95b90ec64ef9f755390ced4735"
     },
     {
       "path": "sdkwork-sdk.json",
-      "sha256": "7eb93d165ae74f9bfff3088fa19671d31309b04eae6a37bc66efd5b8d8b49085"
+      "sha256": "0ee4e1ef11b52513ea9aa24f5fd48769d83fb5783c812c8560241842acaac092"
     },
     {
       "path": "settings.gradle.kts",
@@ -56,63 +56,75 @@
     },
     {
       "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/api/AuthApi.kt",
-      "sha256": "dde80ac1d5782762405216797cf63226d4014224c75b13394ebbe489b7902bd3"
+      "sha256": "69ef58f0a4f7ef96433a2b350a35856e303300ba939df7ad4be152096bf418a6"
     },
     {
       "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/api/IamApi.kt",
-      "sha256": "f4a0cf5dbc6c8e63f345d49c8d3e6741723336042ff8207f6506ea2f84a4ef87"
+      "sha256": "b61e5c3b81217905e56556f5028f6b53179765326512d55a7e9007da6ef8e9fb"
     },
     {
       "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/api/OauthApi.kt",
-      "sha256": "3f690d6e91416c67747e39a8e530d064500fcdc6f4c894888d13d662b3c43603"
+      "sha256": "90f47227c8359ba5ec14e7ce2e7f58a30f9b6c580ae24745e9c41c3ceffbaefe"
     },
     {
       "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/api/SystemApi.kt",
-      "sha256": "621ab53a5c37d090759825838a3fa3b45257e8dee2fca1a1458ee52530405771"
-    },
-    {
-      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/AppbaseAccessCredentialCreateCommand.kt",
-      "sha256": "89c748b587e2d77367f61f272c08a81f21d4193652f592dc2bdde31614cc95ae"
-    },
-    {
-      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/AppbaseApiResult.kt",
-      "sha256": "aeee33515db476cce3959599ff8d8188609048a0fb58a7df57c627d12e64eda1"
-    },
-    {
-      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/AppbaseApplicationRegisterCommand.kt",
-      "sha256": "c0127f6428be1a11a01b46e16d5e8d6bd13ac577b660fb932a861466ea013aae"
+      "sha256": "8b7d4b8bba69abb0df04b75acd106943889cf39e166b8d17586396d473095842"
     },
     {
       "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/AppbaseSessionCreateCommand.kt",
       "sha256": "2fa75f4c7056fbf2f63735870548c5f33d202d2d0641e9f98687d5adfa5aac55"
     },
     {
-      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/AppbaseTenantApplicationEnableCommand.kt",
-      "sha256": "d41136b957314592bef9911907d2af83d94570d08c507a902c2f893b6a9449fa"
-    },
-    {
-      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/AppbaseTenantApplicationProvisionCommand.kt",
-      "sha256": "dda1101587e8f039e3e780d598d7174c9f17e6aa044df9e0fbf589adb00e8210"
-    },
-    {
-      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/AppbaseTenantApplicationUpdateCommand.kt",
-      "sha256": "192466caec7ebb6c94260532875a175e833c7d37a5ac89e3d6b87ce4f5b38397"
-    },
-    {
       "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/FieldError.kt",
-      "sha256": "cdf47f0f9f873649e89687d20c6e613071a0b548d3ce69608b402b37d17a3468"
+      "sha256": "bbb238748d25271f502bdbd5a6de00908bc49db3774eccd668763d57db3fef03"
     },
     {
       "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/http/HttpClient.kt",
-      "sha256": "de5a7541eba3e356e49b923cf8ab7803e104de594197a458386ff7c27046dfab"
+      "sha256": "bbc4be5a5a16fdf635b09e94b766d18a12c4a489f715051968547d30f7418027"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/PageInfo.kt",
+      "sha256": "dd3e84a3cbcc91e078c5c506e3d1c8e2424de594395d3c8be1cdcf259ec01a3b"
     },
     {
       "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/ProblemDetail.kt",
-      "sha256": "17c2b186601c06ea3ab305f02d883e85ad996ba490fc60bc13537e181bd54cb5"
+      "sha256": "711262e3d3c4ce643cd2c7b268ca1ee2eb55d712f6141e6f0d10468465f697f0"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/SdkWorkApiResponse.kt",
+      "sha256": "79cbd2c0c753d3853ef323a4c29fef1b91be0bdb60ab118e91fe7d1d99c331c6"
     },
     {
       "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/SdkworkAppClient.kt",
       "sha256": "b1b60c76db1a2c44a92667b16453e8fcc57daad9386777bdb796bc51ba9367f0"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/SdkWorkCommandData.kt",
+      "sha256": "8ac309aa1a2b47ac9881d57b111b25f880eae750f6aa6e8801730254171ec7b1"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/SdkWorkCommandResponse.kt",
+      "sha256": "9eb90fcdf6235a9bbc751ab8a4da9cd9b44226247935b3729e5aae74fc48f3bb"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/SdkWorkListResponse.kt",
+      "sha256": "f26779ab6aac42677d0adca98c0ea2cb9e860ac78bfd37a72881c6b7b216a07d"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/SdkWorkPageData.kt",
+      "sha256": "4b4d58c8e7d2db97d811527a83a22bdab709c2a034165e73c40f59f8fdac3623"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/SdkWorkResourceData.kt",
+      "sha256": "5aec0caf2a626d30de4b22ec74fba79a5cfd9ad8a94a7d9ea01d36e6c53697d7"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/SdkWorkResourceResponse.kt",
+      "sha256": "a4744fbfabb81e359a36d118b53975b1c97cd39a8b26fa16ad46f63eee0a6087"
+    },
+    {
+      "path": "src/main/kotlin/com/sdkwork/iam/app/sdk/WechatMiniProgramSessionCreateCommand.kt",
+      "sha256": "223acf6677d0d756fa5cb8ac1702829d05c34331f3cb56574fa8d629f4e7974d"
     }
   ],
   "scaffoldFiles": [

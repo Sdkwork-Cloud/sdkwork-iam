@@ -12,11 +12,11 @@
   "generatedFiles": [
     {
       "path": "api/auth.go",
-      "sha256": "06b8f5c94093f0871b622ef463ea78359302f62c2c7c5d823763eb56e8355274"
+      "sha256": "c46602b1f80200fc8943346ba1dfcdc5051b4e980d27c0d15f6fb3bfa8a66a28"
     },
     {
       "path": "api/base.go",
-      "sha256": "d16cd51e06603555f504b365f3f2c258454944a32001cd6f3237079057610c8c"
+      "sha256": "dc13312cb58e7970437957f5ec7502b0c2a4546b4fb220b81c843d1ed246b19f"
     },
     {
       "path": "api/doc.go",
@@ -24,11 +24,11 @@
     },
     {
       "path": "api/iam.go",
-      "sha256": "b013d4a2673352a42759d26918823b4052bc783fbc7f7cfac2842baefad93888"
+      "sha256": "a4d98414c70ae2780fd4939bdcc27572ff227afbeab179bf39ce5d885334c751"
     },
     {
       "path": "api/oauth.go",
-      "sha256": "83b77a8a3e59cd10781eb562958adcd28fda5dff9a62243bd105676f89de515e"
+      "sha256": "bed9b2d2ca6a1a345ad6e7e10ccd44f6b13145b926fc3bb170fbc25c16bc3631"
     },
     {
       "path": "api/paths.go",
@@ -36,7 +36,7 @@
     },
     {
       "path": "api/system.go",
-      "sha256": "0a86e4357459dadac29c9b76d761d1f32d32f27fbb394ffbe9e1c61d1c3d2ea3"
+      "sha256": "ea239bc25db5efb66af5351a0042c6dd1ef6ebf7394ac0bd9e43e7a5e3b24701"
     },
     {
       "path": "bin/publish-core.mjs",
@@ -64,7 +64,7 @@
     },
     {
       "path": "http/client.go",
-      "sha256": "5574d28592e72078ae744ce20c0930fa7825b32ab3e2b18ed3de16652df50b0e"
+      "sha256": "f3df614e72134be31d440adb40a7867c9bd2db848a8d57cfa577bdf81f960d47"
     },
     {
       "path": "http/doc.go",
@@ -76,7 +76,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "b58e71091285c02b86ff12fe9d9f5eb763c3a62d370e8e2d98bb8bc5414fa53f"
+      "sha256": "e17e54753de7cf07964f5b2f0464dce3b9b5616d1a0a0639b8f8ff8f1523a535"
     },
     {
       "path": "sdk.go",
@@ -84,39 +84,15 @@
     },
     {
       "path": "sdkwork-sdk.json",
-      "sha256": "71c26e19949461cf82da3cd7e251e1b54c9abfe09842af5780fafce1f7f02738"
-    },
-    {
-      "path": "types/appbase_access_credential_create_command.go",
-      "sha256": "a9f9547d00440f7358b9b56855a6f91e7644ff1f557012c4cf5d940dbc2608bf"
-    },
-    {
-      "path": "types/appbase_api_result.go",
-      "sha256": "b8ac02f26f22eb79b96d479742bd3ab29edd5be9f8d6361bf97bf7f6b206f55c"
-    },
-    {
-      "path": "types/appbase_application_register_command.go",
-      "sha256": "5b085924c35965c1206c094c827d6339afa99467192eb43a849fb6a46d5ffb33"
+      "sha256": "c58777b8b379b949e8452c436b28ac9450bb9a9404b912343705663b76b0b710"
     },
     {
       "path": "types/appbase_operation_command.go",
-      "sha256": "08b5848c5271547e26dd569bcf32728e5ad51487a363807d0c4d5c64f58c39ae"
+      "sha256": "94a49b82c73506dd6c5e6627496542598783f21a3eb69834809dc8ffd5011c3e"
     },
     {
       "path": "types/appbase_session_create_command.go",
       "sha256": "9476cd0a7f41c62d86da49d3acab8b52a1fdca39c3ea5a3bc5ccdae06d52b918"
-    },
-    {
-      "path": "types/appbase_tenant_application_enable_command.go",
-      "sha256": "6cb97a5d543ca6f922da1e1f2993c3b964c209439c13a2d15e710abb658eb544"
-    },
-    {
-      "path": "types/appbase_tenant_application_provision_command.go",
-      "sha256": "de2d070d0c92987e75a5b7e40d6be572a3438b9465f51b3873d85ab65b6feebd"
-    },
-    {
-      "path": "types/appbase_tenant_application_update_command.go",
-      "sha256": "a9f2841e6f95b77507976d81ab1fe9b814fb20239374c95d507bcd33b385efcc"
     },
     {
       "path": "types/common.go",
@@ -128,11 +104,51 @@
     },
     {
       "path": "types/field_error.go",
-      "sha256": "27378d0617d9dd86431e84cdfcce5c0623e159921cecbf873faf7f438de4510f"
+      "sha256": "67c3493456d4029e45dabf6a06b7659dceac1ae577a9dce55011367fbae43d25"
+    },
+    {
+      "path": "types/page_info.go",
+      "sha256": "e3ed0f4d7f04c05a38a7b1c3932d98eeaaa25143954e65d843a19a69a3777af0"
     },
     {
       "path": "types/problem_detail.go",
-      "sha256": "44971e8989526db7de091ae602799043927c96bc40a8f879b76f679a663a96e8"
+      "sha256": "69c1f1a0c372c9bcd6ab9162497a075745d3d674f5d56b726bd573d0cf55aa0f"
+    },
+    {
+      "path": "types/sdk_work_api_response.go",
+      "sha256": "5db6f23abcb089d1d69ea0b883363a56d40249fedbc148c1873d5e1a1035b908"
+    },
+    {
+      "path": "types/sdk_work_command_data.go",
+      "sha256": "ce5269d30af68dbe995c0abdb510d2d6a1b8e3063cad46016fb13595d1c157ea"
+    },
+    {
+      "path": "types/sdk_work_command_response.go",
+      "sha256": "398a82020d73e539fc7db61c0d3a3ee5a668d85f4ef0407897e590d7ea214053"
+    },
+    {
+      "path": "types/sdk_work_list_response.go",
+      "sha256": "2aa039f6f18ef4bf65e827d3d65c54689db4515e9f8bbd2931ccf4f758599a52"
+    },
+    {
+      "path": "types/sdk_work_page_data.go",
+      "sha256": "854e133027dfe779912cc299365a97b48d1b088e88cbb87def3db92174c23a17"
+    },
+    {
+      "path": "types/sdk_work_platform_error_code.go",
+      "sha256": "6b6ca36f06dc0804cf6429312f6c6352017e0b119d9a77e81d5eb7bc36bdb092"
+    },
+    {
+      "path": "types/sdk_work_resource_data.go",
+      "sha256": "63de7a9fff9c0b683c1e3f50d53d8b50128732347f4b480bbb5dee6da57e1287"
+    },
+    {
+      "path": "types/sdk_work_resource_response.go",
+      "sha256": "0f08181bbc0578265fd0987c4c7cff522a7f8693a0fe36483ea431566481deaf"
+    },
+    {
+      "path": "types/wechat_mini_program_session_create_command.go",
+      "sha256": "b979914f15eeedb922bcb3f70ce31a9f03fdeeb44a0889a2216a44744663082d"
     }
   ],
   "scaffoldFiles": [

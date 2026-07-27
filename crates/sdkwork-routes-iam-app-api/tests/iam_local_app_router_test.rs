@@ -18,10 +18,22 @@ mod unified_database_env;
 const VERIFY_CODE_ENV: &str = "SDKWORK_IAM_DEV_FIXED_VERIFY_CODE";
 const SIGNING_MASTER_SECRET_ENV: &str = "SDKWORK_IAM_TENANT_SIGNING_MASTER_SECRET";
 const SIGNING_KEY_ROTATE_ENV: &str = "SDKWORK_IAM_TENANT_SIGNING_KEY_ROTATE";
+const RUNTIME_ENVIRONMENT_ENV: &str = "SDKWORK_ENVIRONMENT";
+const RATE_LIMIT_MAX_REQUESTS_ENV: &str = "SDKWORK_IAM_RATE_LIMIT_MAX_REQUESTS";
+const RATE_LIMIT_WINDOW_SECONDS_ENV: &str = "SDKWORK_IAM_RATE_LIMIT_WINDOW_SECONDS";
+const LOGIN_MAX_ATTEMPTS_ENV: &str = "SDKWORK_IAM_LOGIN_MAX_ATTEMPTS";
+const LOGIN_LOCKOUT_MINUTES_ENV: &str = "SDKWORK_IAM_LOGIN_LOCKOUT_MINUTES";
+const CONTACT_BINDING_ENABLED_ENV: &str = "SDKWORK_IAM_CONTACT_BINDING_ENABLED";
 const RUNTIME_ENV_KEYS: &[&str] = &[
     VERIFY_CODE_ENV,
     SIGNING_MASTER_SECRET_ENV,
     SIGNING_KEY_ROTATE_ENV,
+    RUNTIME_ENVIRONMENT_ENV,
+    RATE_LIMIT_MAX_REQUESTS_ENV,
+    RATE_LIMIT_WINDOW_SECONDS_ENV,
+    LOGIN_MAX_ATTEMPTS_ENV,
+    LOGIN_LOCKOUT_MINUTES_ENV,
+    CONTACT_BINDING_ENABLED_ENV,
 ];
 const CONFIGURED_BOOTSTRAP_USERNAME: &str = "configured-local-owner@sdkwork-iam.test";
 const CONFIGURED_BOOTSTRAP_PASSWORD: &str = "ConfiguredPass#2026";
@@ -286,8 +298,10 @@ async fn build_router_and_directory_without_bootstrap() -> (
 }
 
 fn configure_real_local_runtime_env() {
-    set_optional_env("SDKWORK_IAM_RATE_LIMIT_MAX_REQUESTS", Some("10000"));
-    set_optional_env("SDKWORK_IAM_RATE_LIMIT_WINDOW_SECONDS", Some("60"));
+    set_optional_env(RUNTIME_ENVIRONMENT_ENV, Some("test"));
+    set_optional_env(RATE_LIMIT_MAX_REQUESTS_ENV, Some("10000"));
+    set_optional_env(RATE_LIMIT_WINDOW_SECONDS_ENV, Some("60"));
+    set_optional_env(CONTACT_BINDING_ENABLED_ENV, Some("true"));
 }
 
 async fn build_router_with_bootstrap_and_reset_code() -> axum::Router {
@@ -317,6 +331,15 @@ async fn request_json(
         Some(test_bootstrap_access_token().as_str()),
     )
     .await
+}
+
+async fn request_public_json(
+    app: &axum::Router,
+    method: Method,
+    path: &str,
+    body: Body,
+) -> axum::response::Response {
+    request_json_with_auth(app, method, path, body, None, None).await
 }
 
 async fn request_open_registration_json(
@@ -810,7 +833,7 @@ fn response_tree_nodes(payload: &Value) -> Vec<Value> {
 async fn local_app_router_serves_oauth_device_authorization_creation() {
     let app = build_router_without_bootstrap().await;
 
-    let response = request_json(
+    let response = request_public_json(
         &app,
         Method::POST,
         "/app/v3/api/oauth/device_authorizations",
@@ -865,7 +888,6 @@ async fn local_app_router_builds_oauth_device_entry_from_request_origin() {
                 .uri("/app/v3/api/oauth/device_authorizations")
                 .header("content-type", "application/json")
                 .header("origin", "https://chat.example.test")
-                .header("Access-Token", test_bootstrap_access_token())
                 .body(Body::from(json!({ "purpose": "login" }).to_string()))
                 .expect("request should build"),
         )
@@ -891,7 +913,7 @@ async fn local_app_router_builds_oauth_device_entry_from_request_origin() {
 async fn local_app_router_does_not_emit_oauth_device_display_copy() {
     let app = build_router_without_bootstrap().await;
 
-    let response = request_json(
+    let response = request_public_json(
         &app,
         Method::POST,
         "/app/v3/api/oauth/device_authorizations",
@@ -1355,21 +1377,11 @@ async fn local_app_router_current_session_rejects_tampered_dual_token_claims() {
 #[tokio::test]
 async fn local_app_router_refresh_requires_explicit_refresh_token() {
     let app = build_router_with_bootstrap().await;
-    let login_data = create_bootstrap_login_session(&app).await;
-    let auth_token = login_data["authToken"]
-        .as_str()
-        .expect("login should include auth token");
-    let access_token = login_data["accessToken"]
-        .as_str()
-        .expect("login should include access token");
-
-    let missing_refresh_response = request_json_with_auth(
+    let missing_refresh_response = request_public_json(
         &app,
         Method::POST,
         "/app/v3/api/auth/sessions/refresh",
         Body::from(json!({}).to_string()),
-        Some(auth_token),
-        Some(access_token),
     )
     .await;
 
@@ -1464,7 +1476,14 @@ async fn local_app_router_rotates_signing_keys_with_overlapping_validation_windo
         .as_str()
         .expect("rotated auth kid")
         .to_string();
-    assert_ne!(old_kid, new_kid);
+    let signing_keys = sqlx::query_as::<_, (String, String)>(
+        "SELECT kid, status FROM iam_tenant_signing_key WHERE tenant_id = $1 ORDER BY created_at",
+    )
+    .bind(CONFIGURED_TENANT_ID)
+    .fetch_all(&postgres_pool_for_tests().await)
+    .await
+    .expect("load signing key rotation state");
+    assert_ne!(old_kid, new_kid, "signing keys: {signing_keys:?}");
 }
 
 #[tokio::test]
@@ -2081,7 +2100,8 @@ async fn local_app_router_ephemeral_password_reset_survives_router_rebuild() {
     );
 
     let app_a = build_router_with_env(Some(seed_credentials), Some(CONFIGURED_RESET_CODE)).await;
-    let request_response = request_json(
+    let tenant_access_token = test_bootstrap_access_token_for_tenant(&tenant_id);
+    let request_response = request_json_with_auth(
         &app_a,
         Method::POST,
         "/app/v3/api/auth/password_reset_requests",
@@ -2091,13 +2111,15 @@ async fn local_app_router_ephemeral_password_reset_survives_router_rebuild() {
             })
             .to_string(),
         ),
+        None,
+        Some(&tenant_access_token),
     )
     .await;
     assert_eq!(request_response.status(), StatusCode::OK);
 
     let app_b =
         build_router_with_env_without_fixture_cleanup(None, Some(CONFIGURED_RESET_CODE)).await;
-    let reset_response = request_json(
+    let reset_response = request_json_with_auth(
         &app_b,
         Method::POST,
         "/app/v3/api/auth/password_resets",
@@ -2110,9 +2132,13 @@ async fn local_app_router_ephemeral_password_reset_survives_router_rebuild() {
             })
             .to_string(),
         ),
+        None,
+        Some(&tenant_access_token),
     )
     .await;
-    assert_eq!(reset_response.status(), StatusCode::OK);
+    let reset_status = reset_response.status();
+    let reset_body = read_json(reset_response).await;
+    assert_eq!(reset_status, StatusCode::OK, "reset response: {reset_body}");
 
     let login_response = request_json_with_auth(
         &app_b,
@@ -2427,7 +2453,8 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
     )
     .await;
 
-    let unknown_request_response = request_json(
+    let tenant_access_token = test_bootstrap_access_token_for_tenant(&tenant_id);
+    let unknown_request_response = request_json_with_auth(
         &app,
         Method::POST,
         "/app/v3/api/auth/password_reset_requests",
@@ -2437,6 +2464,8 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
             })
             .to_string(),
         ),
+        None,
+        Some(&tenant_access_token),
     )
     .await;
 
@@ -2445,7 +2474,7 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
     assert_eq!(unknown_request_body["data"]["accepted"], true);
     assert!(unknown_request_body["data"]["resetToken"].is_null());
 
-    let request_response = request_json(
+    let request_response = request_json_with_auth(
         &app,
         Method::POST,
         "/app/v3/api/auth/password_reset_requests",
@@ -2455,6 +2484,8 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
             })
             .to_string(),
         ),
+        None,
+        Some(&tenant_access_token),
     )
     .await;
 
@@ -2463,7 +2494,7 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
     assert_eq!(request_body["data"]["accepted"], true);
     assert!(request_body["data"]["resetToken"].is_null());
 
-    let bad_code_response = request_json(
+    let bad_code_response = request_json_with_auth(
         &app,
         Method::POST,
         "/app/v3/api/auth/password_resets",
@@ -2476,12 +2507,14 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
             })
             .to_string(),
         ),
+        None,
+        Some(&tenant_access_token),
     )
     .await;
 
     assert_eq!(bad_code_response.status(), StatusCode::UNAUTHORIZED);
 
-    let missing_confirmation_response = request_json(
+    let missing_confirmation_response = request_json_with_auth(
         &app,
         Method::POST,
         "/app/v3/api/auth/password_resets",
@@ -2493,6 +2526,8 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
             })
             .to_string(),
         ),
+        None,
+        Some(&tenant_access_token),
     )
     .await;
 
@@ -2510,7 +2545,7 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
         .to_string()
         .contains(reset_password));
 
-    let reset_response = request_json(
+    let reset_response = request_json_with_auth(
         &app,
         Method::POST,
         "/app/v3/api/auth/password_resets",
@@ -2523,10 +2558,14 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
             })
             .to_string(),
         ),
+        None,
+        Some(&tenant_access_token),
     )
     .await;
 
-    assert_eq!(reset_response.status(), StatusCode::OK);
+    let reset_status = reset_response.status();
+    let reset_body = read_json(reset_response).await;
+    assert_eq!(reset_status, StatusCode::OK, "reset response: {reset_body}");
 
     let old_password_response = request_json_with_auth(
         &app,
@@ -2578,7 +2617,7 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
 
     assert_eq!(new_password_response.status(), StatusCode::OK);
 
-    let reused_token_response = request_json(
+    let reused_token_response = request_json_with_auth(
         &app,
         Method::POST,
         "/app/v3/api/auth/password_resets",
@@ -2591,6 +2630,8 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
             })
             .to_string(),
         ),
+        None,
+        Some(&tenant_access_token),
     )
     .await;
 
@@ -2623,7 +2664,7 @@ async fn local_app_router_oauth_device_password_completion_requires_valid_creden
     .await;
     assert_eq!(register_response.status(), StatusCode::OK);
 
-    let device_response = request_json(
+    let device_response = request_public_json(
         &app,
         Method::POST,
         "/app/v3/api/oauth/device_authorizations",
@@ -2728,7 +2769,7 @@ async fn local_app_router_oauth_device_password_completion_requires_valid_creden
             .is_some());
     }
 
-    let completed_device_response = request_json(
+    let completed_device_response = request_public_json(
         &app,
         Method::GET,
         &format!("/app/v3/api/oauth/device_authorizations/{session_key}"),
@@ -2740,7 +2781,7 @@ async fn local_app_router_oauth_device_password_completion_requires_valid_creden
     assert_eq!(completed_device_body["data"]["status"], "completed");
     assert_eq!(completed_device_body["data"]["sessionReady"], true);
 
-    let exchange_response = request_json(
+    let exchange_response = request_public_json(
         &app,
         Method::POST,
         &format!("/app/v3/api/oauth/device_authorizations/{session_key}/session_exchanges"),
@@ -2758,7 +2799,7 @@ async fn local_app_router_oauth_device_password_completion_requires_organization
 ) {
     let app = build_router_with_multiple_organizations().await;
 
-    let device_response = request_json(
+    let device_response = request_public_json(
         &app,
         Method::POST,
         "/app/v3/api/oauth/device_authorizations",
@@ -2833,7 +2874,7 @@ async fn local_app_router_oauth_device_password_completion_requires_organization
     );
     assert!(selection_body["data"]["authToken"].as_str().is_some());
 
-    let completed_device_response = request_json(
+    let completed_device_response = request_public_json(
         &app,
         Method::GET,
         &format!("/app/v3/api/oauth/device_authorizations/{session_key}"),
@@ -2841,14 +2882,19 @@ async fn local_app_router_oauth_device_password_completion_requires_organization
     )
     .await;
 
-    assert_eq!(completed_device_response.status(), StatusCode::OK);
+    let completed_device_status = completed_device_response.status();
     let completed_device_body = read_json(completed_device_response).await;
+    assert_eq!(
+        completed_device_status,
+        StatusCode::OK,
+        "completed device response: {completed_device_body}"
+    );
     assert_eq!(completed_device_body["data"]["status"], "completed");
     assert_eq!(completed_device_body["data"]["sessionReady"], true);
     assert!(completed_device_body["data"]["session"].is_null());
     assert!(completed_device_body["data"]["authToken"].is_null());
 
-    let exchange_response = request_json(
+    let exchange_response = request_public_json(
         &app,
         Method::POST,
         &format!("/app/v3/api/oauth/device_authorizations/{session_key}/session_exchanges"),
@@ -2863,7 +2909,7 @@ async fn local_app_router_oauth_device_password_completion_requires_organization
     );
     assert!(exchange_body["data"]["authToken"].as_str().is_some());
 
-    let replay_exchange_response = request_json(
+    let replay_exchange_response = request_public_json(
         &app,
         Method::POST,
         &format!("/app/v3/api/oauth/device_authorizations/{session_key}/session_exchanges"),
@@ -2877,7 +2923,7 @@ async fn local_app_router_oauth_device_password_completion_requires_organization
 async fn local_app_router_oauth_device_scan_requires_poll_secret() {
     let app = build_router_with_bootstrap().await;
 
-    let device_response = request_json(
+    let device_response = request_public_json(
         &app,
         Method::POST,
         "/app/v3/api/oauth/device_authorizations",
@@ -2941,8 +2987,8 @@ async fn local_app_router_locks_account_after_repeated_failed_logins() {
     unified_database_env::apply_unified_claw_postgres_env();
     let _snapshot = EnvSnapshot::capture(RUNTIME_ENV_KEYS);
     configure_real_local_runtime_env();
-    set_optional_env("SDKWORK_IAM_LOGIN_MAX_ATTEMPTS", Some("3"));
-    set_optional_env("SDKWORK_IAM_LOGIN_LOCKOUT_MINUTES", Some("15"));
+    set_optional_env(LOGIN_MAX_ATTEMPTS_ENV, Some("3"));
+    set_optional_env(LOGIN_LOCKOUT_MINUTES_ENV, Some("15"));
 
     let app = sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_router()
         .await
@@ -3105,7 +3151,11 @@ const TERTIARY_TENANT_ID: &str = "tenant_tertiary_login";
 
 async fn postgres_pool_for_tests() -> sqlx::PgPool {
     unified_database_env::apply_unified_claw_postgres_env();
-    unified_database_env::postgres_pool_for_integration_tests().await
+    unified_database_env::integration_database_pool_for_router()
+        .await
+        .as_postgres()
+        .expect("IAM integration database must be PostgreSQL")
+        .clone()
 }
 
 async fn prepare_open_registration_database() {
@@ -3382,6 +3432,8 @@ async fn seed_owner_directory_for_tenant(
             .expect("insert owner role binding");
 
             for permission_code in [
+                "iam:self",
+                "iam.profile.update",
                 "iam.users.read",
                 "iam.organizations.read",
                 "iam.memberships.read",
@@ -4070,7 +4122,9 @@ async fn local_app_router_current_session_resigns_refreshed_permission_scopes() 
 #[tokio::test]
 async fn local_app_router_supports_current_user_contact_binding_and_unbind() {
     let app = build_router_with_bootstrap_and_reset_code().await;
+    seed_contact_unbind_policy_for_tenant(CONFIGURED_TENANT_ID).await;
     let login_data = create_bootstrap_login_session(&app).await;
+    assert_eq!(login_data["context"]["tenantId"], CONFIGURED_TENANT_ID);
     let auth_token = login_data["authToken"].as_str().expect("auth token");
     let access_token = login_data["accessToken"].as_str().expect("access token");
 
@@ -4083,8 +4137,13 @@ async fn local_app_router_supports_current_user_contact_binding_and_unbind() {
         Some(access_token),
     )
     .await;
-    assert_eq!(current_response.status(), StatusCode::OK);
+    let current_status = current_response.status();
     let current_body = read_json(current_response).await;
+    assert_eq!(
+        current_status,
+        StatusCode::OK,
+        "current user response: {current_body}"
+    );
     assert_eq!(current_body["code"].as_i64(), Some(0));
     assert!(current_body["data"]["emailVerified"].is_boolean());
     assert!(current_body["data"]["phoneVerified"].is_boolean());
@@ -4104,8 +4163,13 @@ async fn local_app_router_supports_current_user_contact_binding_and_unbind() {
         Some(access_token),
     )
     .await;
-    assert_eq!(bind_email_response.status(), StatusCode::OK);
+    let bind_email_status = bind_email_response.status();
     let bind_email_body = read_json(bind_email_response).await;
+    assert_eq!(
+        bind_email_status,
+        StatusCode::OK,
+        "bind email response: {bind_email_body}"
+    );
     assert_eq!(bind_email_body["code"].as_i64(), Some(0));
     assert_eq!(
         bind_email_body["data"]["email"],
@@ -4156,6 +4220,14 @@ async fn local_app_router_supports_current_user_contact_binding_and_unbind() {
         "rebound-user@sdkwork-iam.test"
     );
 
+    let stored_policy = sdkwork_iam_web_adapter::load_account_binding_policy(
+        &postgres_pool_for_tests().await,
+        CONFIGURED_TENANT_ID,
+    )
+    .await
+    .expect("load contact binding policy");
+    assert!(stored_policy.contact_binding.email_unbind_enabled);
+
     let unbind_email_response = request_json_with_auth(
         &app,
         Method::DELETE,
@@ -4165,8 +4237,13 @@ async fn local_app_router_supports_current_user_contact_binding_and_unbind() {
         Some(access_token),
     )
     .await;
-    assert_eq!(unbind_email_response.status(), StatusCode::OK);
+    let unbind_email_status = unbind_email_response.status();
     let unbind_email_body = read_json(unbind_email_response).await;
+    assert_eq!(
+        unbind_email_status,
+        StatusCode::OK,
+        "unbind email response: {unbind_email_body}"
+    );
     assert!(unbind_email_body["data"]["email"].is_null());
     assert_eq!(unbind_email_body["data"]["emailVerified"], false);
 }

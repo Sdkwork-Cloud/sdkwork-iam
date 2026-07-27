@@ -36,11 +36,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "54bbb21e7d47a3e28017a19fc735aff433c1998f8ab03663aff84a7a271e4e15"
+      "sha256": "544a469c2ac91a72048c944a9718166cf6b0da17b3be553ec98ab6119a657283"
     },
     {
       "path": "sdkwork-sdk.json",
-      "sha256": "d225f59e99774069a96efa791c26b81c8e2c61fa5e08a28ed65b3f1d1d686b4e"
+      "sha256": "4878b762e0b7163d45fea24c979a3c01c19da5d2970c424943fc4d8f2ab13cfe"
     },
     {
       "path": "src/main/java/com/sdkwork/iam/app/sdk/api/ApiPaths.java",
@@ -48,15 +48,15 @@
     },
     {
       "path": "src/main/java/com/sdkwork/iam/app/sdk/api/AuthApi.java",
-      "sha256": "9799daca67258f1cb091387b7b0ba594addfc65185420ab14581bd15aed2928d"
+      "sha256": "34dde20f0542509761b0f5fac080e638fb9e73dcc56232cc79a9b9b550c95cab"
     },
     {
       "path": "src/main/java/com/sdkwork/iam/app/sdk/api/IamApi.java",
-      "sha256": "fe1968c206a7c13b364abdcdb21a9c75004ac8b7bb5fa754878c5bf72ae2273f"
+      "sha256": "527e1f041fe15d4b8a25bc8f9dbc1723779c58cabc7df3c9d06c2ddb7ca8804b"
     },
     {
       "path": "src/main/java/com/sdkwork/iam/app/sdk/api/OauthApi.java",
-      "sha256": "45b401edf3f8940d1e5ad2e7f2d9f73d506e8fbb33601f6bce0585365c772acb"
+      "sha256": "3b08d72b9c7a2c7b64694408f2b1bb6cec820b1ba7acd7ab50ea93277f4fa585"
     },
     {
       "path": "src/main/java/com/sdkwork/iam/app/sdk/api/package-info.java",
@@ -64,47 +64,59 @@
     },
     {
       "path": "src/main/java/com/sdkwork/iam/app/sdk/api/SystemApi.java",
-      "sha256": "908aa0fdbf5944d460ee460730439d1ef992fd342e84ada6bcfeb75f5ec2b4c5"
+      "sha256": "e5b0a09d0dfc8f3f6730e31e02eacfbf45b03c221e65c279d4ebe4f1b907a5af"
     },
     {
       "path": "src/main/java/com/sdkwork/iam/app/sdk/http/HttpClient.java",
-      "sha256": "bb53582549f336eb2cad36e021acd0e1ef0d5910df7fb10e56f8eba4d650c3d6"
-    },
-    {
-      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseAccessCredentialCreateCommand.java",
-      "sha256": "ea33063ae84329b4cd8882a0426ee66bb3218d18a43d885642ebd52d150712dc"
-    },
-    {
-      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseApiResult.java",
-      "sha256": "474ee62e32a02f8ad5f837de750e73a7ebb2a6b46d9c5edbc3b453331abe721d"
-    },
-    {
-      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseApplicationRegisterCommand.java",
-      "sha256": "7d38209972209c538764b921aad00efc9b0519fa48584ba4aa5cd95c5065595c"
+      "sha256": "a31eff435b38d2c4dfeba4d4ead3131f423c5c5229d947ed0da677d3c131bae6"
     },
     {
       "path": "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseSessionCreateCommand.java",
       "sha256": "54051cf6e1564a46723a1e9770b812d047208c2a1d9fdd9b7a8576f3fd19e948"
     },
     {
-      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseTenantApplicationEnableCommand.java",
-      "sha256": "5c5b03a7bb6adaec251290c78f20e9dec07f5c40477203b05091a91f7c7d4fa1"
-    },
-    {
-      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseTenantApplicationProvisionCommand.java",
-      "sha256": "668ccd6194522cc0adbea23bb5c249f26de9ae64e297b7c62cce1239bdb90d1e"
-    },
-    {
-      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseTenantApplicationUpdateCommand.java",
-      "sha256": "1c1ca0838309643fe98d0628a993bd75f01240bc32b5b02a0a645417fde38da6"
-    },
-    {
       "path": "src/main/java/com/sdkwork/iam/app/sdk/model/FieldError.java",
-      "sha256": "66cd1f527a83c074343e6490d3695253636246fa28210670aeae1bc65e2916c8"
+      "sha256": "267ba360b2d6445f5f1ef2c57afeb250ea7d96de5776cea25542c114ea3b1d32"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/PageInfo.java",
+      "sha256": "7430072ece727a7f1c107704026ca9eefbcd78b30e4b4ad3f888a52a877f4665"
     },
     {
       "path": "src/main/java/com/sdkwork/iam/app/sdk/model/ProblemDetail.java",
-      "sha256": "43a17078bc65c98fb181038e963af3453ffb14b5708f91ae6cfa2ea66d432d73"
+      "sha256": "6f2a5aa3feca3d19aba55c90395ee73b9b1594d278b063a47d25c3b000257f69"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkApiResponse.java",
+      "sha256": "df8eb9dac330dbcb98866891d6746f79fb40eeba85ff7b6d15dd309ad9136ff1"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkCommandData.java",
+      "sha256": "d8916768122008e01c9e8ec09aa82f9bbee012208fada6b752fa85ded056dd81"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkCommandResponse.java",
+      "sha256": "63f43280bd9c1be8e2ee2ace698256730042c15b8bc39bb769dc6f9b36b11cba"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkListResponse.java",
+      "sha256": "8379d12932de8a35a473edf9cbd9212c5334e5637bb3c55e86566e37b6961c03"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkPageData.java",
+      "sha256": "3213eb359161ca638449ad31b9b0a33e23f5665f70d8a96854aa2f4ce2e51ca8"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkResourceData.java",
+      "sha256": "d64d8e24345e6b6db9c3510a4c562db2f0b521135f8b940a4acbe235f7478ac8"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkResourceResponse.java",
+      "sha256": "4065470dc993e9d4471e3289bf7df4e617de412ae2176a616374456af1fca607"
+    },
+    {
+      "path": "src/main/java/com/sdkwork/iam/app/sdk/model/WechatMiniProgramSessionCreateCommand.java",
+      "sha256": "c9b416a235b5f6f4ab091d757ce182e96e37f8db618ab604ca1c4e3a18259320"
     },
     {
       "path": "src/main/java/com/sdkwork/iam/app/sdk/SdkworkAppClient.java",

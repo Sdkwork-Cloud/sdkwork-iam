@@ -1,6 +1,7 @@
 schema_version: 1
 kind: sdkwork.database.schema
 module_id: iam
+database_role: authoritative-server
 contract_version: 1.0.0
 owner_team: sdkwork-iam
 compliance_level: L2

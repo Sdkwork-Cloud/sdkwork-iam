@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace SDKWork\\Iam\\AppSdk\Api;
 
-use SDKWork\\Iam\\AppSdk\Models\AppbaseApiResult;
+use SDKWork\\Iam\\AppSdk\Models\SdkWorkListResponse;
+use SDKWork\\Iam\\AppSdk\Models\SdkWorkResourceResponse;
 
 final class IamApi extends BaseApi
 {
     /** Department Assignments list. */
-    public function departmentAssignmentsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?AppbaseApiResult
+    public function departmentAssignmentsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?SdkWorkListResponse
     {
         $path = '/app/v3/api/iam/department_assignments';
         $query = $this->buildQueryString([
@@ -21,11 +22,11 @@ final class IamApi extends BaseApi
         ]);
         $path = $this->appendQueryString($path, $query);
         $result = $this->client->request('GET', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkListResponse::fromArray($result) : null;
     }
 
     /** Departments list. */
-    public function departmentsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?AppbaseApiResult
+    public function departmentsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?SdkWorkListResponse
     {
         $path = '/app/v3/api/iam/departments';
         $query = $this->buildQueryString([
@@ -37,19 +38,19 @@ final class IamApi extends BaseApi
         ]);
         $path = $this->appendQueryString($path, $query);
         $result = $this->client->request('GET', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkListResponse::fromArray($result) : null;
     }
 
     /** Departments tree retrieve. */
-    public function departmentsTreeRetrieve(): ?AppbaseApiResult
+    public function departmentsTreeRetrieve(): ?SdkWorkResourceResponse
     {
         $path = '/app/v3/api/iam/departments/tree';
         $result = $this->client->request('GET', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkResourceResponse::fromArray($result) : null;
     }
 
     /** Organization Memberships list. */
-    public function organizationMembershipsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?AppbaseApiResult
+    public function organizationMembershipsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?SdkWorkListResponse
     {
         $path = '/app/v3/api/iam/organization_memberships';
         $query = $this->buildQueryString([
@@ -61,11 +62,11 @@ final class IamApi extends BaseApi
         ]);
         $path = $this->appendQueryString($path, $query);
         $result = $this->client->request('GET', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkListResponse::fromArray($result) : null;
     }
 
     /** Organizations list. */
-    public function organizationsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?AppbaseApiResult
+    public function organizationsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?SdkWorkListResponse
     {
         $path = '/app/v3/api/iam/organizations';
         $query = $this->buildQueryString([
@@ -77,19 +78,19 @@ final class IamApi extends BaseApi
         ]);
         $path = $this->appendQueryString($path, $query);
         $result = $this->client->request('GET', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkListResponse::fromArray($result) : null;
     }
 
     /** Organizations tree retrieve. */
-    public function organizationsTreeRetrieve(): ?AppbaseApiResult
+    public function organizationsTreeRetrieve(): ?SdkWorkResourceResponse
     {
         $path = '/app/v3/api/iam/organizations/tree';
         $result = $this->client->request('GET', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkResourceResponse::fromArray($result) : null;
     }
 
     /** Position Assignments list. */
-    public function positionAssignmentsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?AppbaseApiResult
+    public function positionAssignmentsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?SdkWorkListResponse
     {
         $path = '/app/v3/api/iam/position_assignments';
         $query = $this->buildQueryString([
@@ -101,11 +102,11 @@ final class IamApi extends BaseApi
         ]);
         $path = $this->appendQueryString($path, $query);
         $result = $this->client->request('GET', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkListResponse::fromArray($result) : null;
     }
 
     /** Positions list. */
-    public function positionsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?AppbaseApiResult
+    public function positionsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?SdkWorkListResponse
     {
         $path = '/app/v3/api/iam/positions';
         $query = $this->buildQueryString([
@@ -117,11 +118,11 @@ final class IamApi extends BaseApi
         ]);
         $path = $this->appendQueryString($path, $query);
         $result = $this->client->request('GET', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkListResponse::fromArray($result) : null;
     }
 
     /** Role Bindings list. */
-    public function roleBindingsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?AppbaseApiResult
+    public function roleBindingsList(?int $page = null, ?int $pageSize = null, ?string $cursor = null, ?string $sort = null, ?string $q = null): ?SdkWorkListResponse
     {
         $path = '/app/v3/api/iam/role_bindings';
         $query = $this->buildQueryString([
@@ -133,75 +134,75 @@ final class IamApi extends BaseApi
         ]);
         $path = $this->appendQueryString($path, $query);
         $result = $this->client->request('GET', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkListResponse::fromArray($result) : null;
     }
 
     /** Users current retrieve. */
-    public function usersCurrentRetrieve(): ?AppbaseApiResult
+    public function usersCurrentRetrieve(): ?SdkWorkResourceResponse
     {
         $path = '/app/v3/api/iam/users/current';
         $result = $this->client->request('GET', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkResourceResponse::fromArray($result) : null;
     }
 
     /** Users current update. */
-    public function usersCurrentUpdate(?array $body = null): ?AppbaseApiResult
+    public function usersCurrentUpdate(?array $body = null): ?SdkWorkResourceResponse
     {
         $path = '/app/v3/api/iam/users/current';
         $payload = $body;
         $result = $this->client->request('PATCH', $path, [
             'json' => $payload,
         ]);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkResourceResponse::fromArray($result) : null;
     }
 
     /** Users current email Bindings delete. */
-    public function usersCurrentEmailBindingsDelete(): ?AppbaseApiResult
+    public function usersCurrentEmailBindingsDelete(): mixed
     {
         $path = '/app/v3/api/iam/users/current/email_bindings';
         $result = $this->client->request('DELETE', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return $result;
     }
 
     /** Users current email Bindings create. */
-    public function usersCurrentEmailBindingsCreate(array $body): ?AppbaseApiResult
+    public function usersCurrentEmailBindingsCreate(array $body): ?SdkWorkResourceResponse
     {
         $path = '/app/v3/api/iam/users/current/email_bindings';
         $payload = $body;
         $result = $this->client->request('POST', $path, [
             'json' => $payload,
         ]);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkResourceResponse::fromArray($result) : null;
     }
 
     /** Users current password update. */
-    public function usersCurrentPasswordUpdate(array $body): ?AppbaseApiResult
+    public function usersCurrentPasswordUpdate(?array $body = null): ?SdkWorkResourceResponse
     {
         $path = '/app/v3/api/iam/users/current/password';
         $payload = $body;
-        $result = $this->client->request('POST', $path, [
+        $result = $this->client->request('PATCH', $path, [
             'json' => $payload,
         ]);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkResourceResponse::fromArray($result) : null;
     }
 
     /** Users current phone Bindings delete. */
-    public function usersCurrentPhoneBindingsDelete(): ?AppbaseApiResult
+    public function usersCurrentPhoneBindingsDelete(): mixed
     {
         $path = '/app/v3/api/iam/users/current/phone_bindings';
         $result = $this->client->request('DELETE', $path, []);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return $result;
     }
 
     /** Users current phone Bindings create. */
-    public function usersCurrentPhoneBindingsCreate(array $body): ?AppbaseApiResult
+    public function usersCurrentPhoneBindingsCreate(array $body): ?SdkWorkResourceResponse
     {
         $path = '/app/v3/api/iam/users/current/phone_bindings';
         $payload = $body;
         $result = $this->client->request('POST', $path, [
             'json' => $payload,
         ]);
-        return is_array($result) ? AppbaseApiResult::fromArray($result) : null;
+        return is_array($result) ? SdkWorkResourceResponse::fromArray($result) : null;
     }
 
 }

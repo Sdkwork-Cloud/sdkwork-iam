@@ -11,8 +11,8 @@ class OauthApi {
 
   OauthApi(this._client);
 
-  /// Oauth account Links list.
-  Future<AppbaseApiResult?> accountLinksList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
+  /// Account Links list.
+  Future<SdkWorkListResponse?> accountLinksList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
       QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
@@ -23,99 +23,105 @@ class OauthApi {
     final response = await _client.get(ApiPaths.appendQueryString(ApiPaths.appPath('/oauth/account_links'), query));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkListResponse.fromJson(map);
     })();
   }
 
-  /// Oauth account Links delete.
-  Future<AppbaseApiResult?> accountLinksDelete(String accountLinkId) async {
-    final response = await _client.delete(ApiPaths.appPath('/oauth/account_links/${serializePathParameter(accountLinkId, const PathParameterSpec('accountLinkId', 'simple', false))}'));
-    return (() {
-      final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
-    })();
+  /// Account Links delete.
+  Future<void> accountLinksDelete(String accountLinkId) async {
+    await _client.delete(ApiPaths.appPath('/oauth/account_links/${serializePathParameter(accountLinkId, const PathParameterSpec('accountLinkId', 'simple', false))}'));
   }
 
-  /// Oauth authorization Urls create.
-  Future<AppbaseApiResult?> authorizationUrlsCreate(Map<String, dynamic> body) async {
+  /// Authorization Urls create.
+  Future<SdkWorkResourceResponse?> authorizationUrlsCreate(Map<String, dynamic> body) async {
     final payload = body;
-    final response = await _client.request('POST', ApiPaths.appPath('/oauth/authorization_urls'), body: payload, contentType: 'application/json', skipAuth: true);
+    final response = await _client.request('POST', ApiPaths.appPath('/oauth/authorization_urls'), body: payload, contentType: 'application/json', accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
-  /// Oauth callbacks handle Get.
-  Future<AppbaseApiResult?> callbacksHandleGet(String providerCode) async {
-    final response = await _client.get(ApiPaths.appPath('/oauth/callbacks/${serializePathParameter(providerCode, const PathParameterSpec('providerCode', 'simple', false))}'));
-    return (() {
-      final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
-    })();
-  }
-
-  /// Oauth callbacks handle Post.
-  Future<AppbaseApiResult?> callbacksHandlePost(String providerCode, Map<String, dynamic> body) async {
+  /// Authorizations completions create.
+  Future<SdkWorkResourceResponse?> authorizationsCompletionsCreate(String authorizationStateId, Map<String, dynamic> body) async {
     final payload = body;
-    final response = await _client.post(ApiPaths.appPath('/oauth/callbacks/${serializePathParameter(providerCode, const PathParameterSpec('providerCode', 'simple', false))}'), body: payload, contentType: 'application/json');
+    final response = await _client.post(ApiPaths.appPath('/oauth/authorizations/${serializePathParameter(authorizationStateId, const PathParameterSpec('authorizationStateId', 'simple', false))}/completions'), body: payload, contentType: 'application/json');
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
-  /// Oauth device Authorizations create.
-  Future<AppbaseApiResult?> deviceAuthorizationsCreate(Map<String, dynamic> body) async {
+  /// Callbacks retrieve.
+  Future<SdkWorkResourceResponse?> callbacksRetrieve(String providerCode) async {
+    final response = await _client.request('GET', ApiPaths.appPath('/oauth/callbacks/${serializePathParameter(providerCode, const PathParameterSpec('providerCode', 'simple', false))}'), accessTokenOnly: true);
+    return (() {
+      final map = sdkworkResponseAsMap(response);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
+    })();
+  }
+
+  /// Callbacks create.
+  Future<SdkWorkResourceResponse?> callbacksCreate(String providerCode, Map<String, dynamic> body) async {
+    final payload = body;
+    final response = await _client.request('POST', ApiPaths.appPath('/oauth/callbacks/${serializePathParameter(providerCode, const PathParameterSpec('providerCode', 'simple', false))}'), body: payload, contentType: 'application/json', accessTokenOnly: true);
+    return (() {
+      final map = sdkworkResponseAsMap(response);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
+    })();
+  }
+
+  /// Device Authorizations create.
+  Future<SdkWorkResourceResponse?> deviceAuthorizationsCreate(Map<String, dynamic> body) async {
     final payload = body;
     final response = await _client.request('POST', ApiPaths.appPath('/oauth/device_authorizations'), body: payload, contentType: 'application/json', skipAuth: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
-  /// Oauth device Authorizations retrieve.
-  Future<AppbaseApiResult?> deviceAuthorizationsRetrieve(String deviceAuthorizationId) async {
+  /// Device Authorizations retrieve.
+  Future<SdkWorkResourceResponse?> deviceAuthorizationsRetrieve(String deviceAuthorizationId) async {
     final response = await _client.request('GET', ApiPaths.appPath('/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, const PathParameterSpec('deviceAuthorizationId', 'simple', false))}'), skipAuth: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
-  /// Oauth device Authorizations password Completions create.
-  Future<AppbaseApiResult?> deviceAuthorizationsPasswordCompletionsCreate(String deviceAuthorizationId, Map<String, dynamic> body) async {
+  /// Device Authorizations password Completions create.
+  Future<SdkWorkResourceResponse?> deviceAuthorizationsPasswordCompletionsCreate(String deviceAuthorizationId, Map<String, dynamic> body) async {
     final payload = body;
-    final response = await _client.request('POST', ApiPaths.appPath('/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, const PathParameterSpec('deviceAuthorizationId', 'simple', false))}/password_completions'), body: payload, contentType: 'application/json', skipAuth: true);
+    final response = await _client.request('POST', ApiPaths.appPath('/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, const PathParameterSpec('deviceAuthorizationId', 'simple', false))}/password_completions'), body: payload, contentType: 'application/json', accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
-  /// Oauth device Authorizations scans create.
-  Future<AppbaseApiResult?> deviceAuthorizationsScansCreate(String deviceAuthorizationId, Map<String, dynamic> body) async {
+  /// Device Authorizations scans create.
+  Future<SdkWorkResourceResponse?> deviceAuthorizationsScansCreate(String deviceAuthorizationId, Map<String, dynamic> body) async {
     final payload = body;
-    final response = await _client.request('POST', ApiPaths.appPath('/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, const PathParameterSpec('deviceAuthorizationId', 'simple', false))}/scans'), body: payload, contentType: 'application/json', skipAuth: true);
+    final response = await _client.request('POST', ApiPaths.appPath('/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, const PathParameterSpec('deviceAuthorizationId', 'simple', false))}/scans'), body: payload, contentType: 'application/json', accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
-  /// Oauth device Authorizations session Exchanges create.
-  Future<AppbaseApiResult?> deviceAuthorizationsSessionExchangesCreate(String deviceAuthorizationId, Map<String, dynamic> body) async {
+  /// Device Authorizations session Exchanges create.
+  Future<SdkWorkResourceResponse?> deviceAuthorizationsSessionExchangesCreate(String deviceAuthorizationId, Map<String, dynamic> body) async {
     final payload = body;
-    final response = await _client.post(ApiPaths.appPath('/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, const PathParameterSpec('deviceAuthorizationId', 'simple', false))}/session_exchanges'), body: payload, contentType: 'application/json');
+    final response = await _client.request('POST', ApiPaths.appPath('/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, const PathParameterSpec('deviceAuthorizationId', 'simple', false))}/session_exchanges'), body: payload, contentType: 'application/json', skipAuth: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
-  /// Oauth grants list.
-  Future<AppbaseApiResult?> grantsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
+  /// Grants list.
+  Future<SdkWorkListResponse?> grantsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
       QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
@@ -126,31 +132,27 @@ class OauthApi {
     final response = await _client.get(ApiPaths.appendQueryString(ApiPaths.appPath('/oauth/grants'), query));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkListResponse.fromJson(map);
     })();
   }
 
-  /// Oauth grants delete.
-  Future<AppbaseApiResult?> grantsDelete(String grantId) async {
-    final response = await _client.delete(ApiPaths.appPath('/oauth/grants/${serializePathParameter(grantId, const PathParameterSpec('grantId', 'simple', false))}'));
+  /// Grants delete.
+  Future<void> grantsDelete(String grantId) async {
+    await _client.delete(ApiPaths.appPath('/oauth/grants/${serializePathParameter(grantId, const PathParameterSpec('grantId', 'simple', false))}'));
+  }
+
+  /// Mini Program Sessions create.
+  Future<SdkWorkResourceResponse?> miniProgramSessionsCreate(WechatMiniProgramSessionCreateCommand body) async {
+    final payload = body.toJson();
+    final response = await _client.request('POST', ApiPaths.appPath('/oauth/mini_program_sessions'), body: payload, contentType: 'application/json', accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
-  /// Oauth mini Program Sessions create.
-  Future<AppbaseApiResult?> miniProgramSessionsCreate(Map<String, dynamic> body) async {
-    final payload = body;
-    final response = await _client.post(ApiPaths.appPath('/oauth/mini_program_sessions'), body: payload, contentType: 'application/json');
-    return (() {
-      final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
-    })();
-  }
-
-  /// Oauth providers list.
-  Future<AppbaseApiResult?> providersList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
+  /// Providers list.
+  Future<SdkWorkListResponse?> providersList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
       QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
@@ -158,20 +160,20 @@ class OauthApi {
       QueryParameterSpec('sort', sort, 'form', true, false, null),
       QueryParameterSpec('q', q, 'form', true, false, null)
     ]);
-    final response = await _client.get(ApiPaths.appendQueryString(ApiPaths.appPath('/oauth/providers'), query));
+    final response = await _client.request('GET', ApiPaths.appendQueryString(ApiPaths.appPath('/oauth/providers'), query), accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkListResponse.fromJson(map);
     })();
   }
 
-  /// Oauth sessions create.
-  Future<AppbaseApiResult?> sessionsCreate(Map<String, dynamic> body) async {
-    final payload = body;
-    final response = await _client.request('POST', ApiPaths.appPath('/oauth/sessions'), body: payload, contentType: 'application/json', skipAuth: true);
+  /// Sessions create.
+  Future<SdkWorkResourceResponse?> sessionsCreate(AppbaseSessionCreateCommand body) async {
+    final payload = body.toJson();
+    final response = await _client.request('POST', ApiPaths.appPath('/oauth/sessions'), body: payload, contentType: 'application/json', accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 }

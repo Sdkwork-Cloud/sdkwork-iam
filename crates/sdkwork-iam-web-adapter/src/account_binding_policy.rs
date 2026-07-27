@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use sqlx::{types::Json as SqlxJson, PgPool};
+use sqlx::PgPool;
 
 pub const IAM_ACCOUNT_BINDING_POLICY_CODE: &str = "iam.account_binding";
 
@@ -126,7 +126,7 @@ pub async fn load_account_binding_policy(
     pg: &PgPool,
     tenant_id: &str,
 ) -> Result<AccountBindingPolicyDocument, String> {
-    let row = sqlx::query_scalar::<_, SqlxJson<Value>>(
+    let row = sqlx::query_scalar::<_, String>(
         "SELECT policy_json FROM iam_policy \
          WHERE tenant_id = $1 AND code = $2 AND status = 'active' \
          LIMIT 1",
@@ -137,9 +137,11 @@ pub async fn load_account_binding_policy(
     .await
     .map_err(|error| format!("load account binding policy failed: {error}"))?;
 
-    Ok(row
-        .map(|SqlxJson(raw)| parse_account_binding_policy(&raw))
-        .unwrap_or_else(default_account_binding_policy))
+    match row {
+        Some(raw) => serde_json::from_str(&raw)
+            .map_err(|error| format!("decode account binding policy failed: {error}")),
+        None => Ok(default_account_binding_policy()),
+    }
 }
 
 pub async fn save_account_binding_policy(
@@ -148,7 +150,7 @@ pub async fn save_account_binding_policy(
     policy: &AccountBindingPolicyDocument,
 ) -> Result<(), String> {
     let now = chrono::Utc::now();
-    let policy_json = serde_json::to_value(policy)
+    let policy_json = serde_json::to_string(policy)
         .map_err(|error| format!("serialize account binding policy failed: {error}"))?;
     let policy_id = format!("{tenant_id}:account_binding");
 
@@ -165,7 +167,7 @@ pub async fn save_account_binding_policy(
     .bind(tenant_id)
     .bind(IAM_ACCOUNT_BINDING_POLICY_CODE)
     .bind("Account binding policy")
-    .bind(SqlxJson(policy_json))
+    .bind(policy_json)
     .bind(now)
     .execute(pg)
     .await

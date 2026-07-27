@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 from ..http_client import HttpClient
-from ..models import AppbaseApiResult, AppbaseSessionCreateCommand
+from ..models import AppbaseSessionCreateCommand, SdkWorkCommandResponse, SdkWorkResourceResponse
 
 def _append_query_string(path: str, raw_query_string: str) -> str:
     query = raw_query_string.lstrip('?')
@@ -31,9 +31,9 @@ class AuthPasswordResetRequestsApi:
         self._client = client
 
 
-    def create(self, body: Dict[str, Any]) -> AppbaseApiResult:
+    def create(self, body: Dict[str, Any]) -> SdkWorkResourceResponse:
         """Password Reset Requests create."""
-        return self._client.post(f"/app/v3/api/auth/password_reset_requests", json=body, skip_auth=True)
+        return self._client.post(f"/app/v3/api/auth/password_reset_requests", json=body, access_token_only=True)
 
 class AuthPasswordResetsApi:
     """auth auth.password_resets API client."""
@@ -42,9 +42,9 @@ class AuthPasswordResetsApi:
         self._client = client
 
 
-    def create(self, body: Dict[str, Any]) -> AppbaseApiResult:
+    def create(self, body: Dict[str, Any]) -> SdkWorkResourceResponse:
         """Password Resets create."""
-        return self._client.post(f"/app/v3/api/auth/password_resets", json=body, skip_auth=True)
+        return self._client.post(f"/app/v3/api/auth/password_resets", json=body, access_token_only=True)
 
 class AuthRegistrationsApi:
     """auth auth.registrations API client."""
@@ -53,9 +53,9 @@ class AuthRegistrationsApi:
         self._client = client
 
 
-    def create(self, body: Dict[str, Any]) -> AppbaseApiResult:
+    def create(self, body: Dict[str, Any]) -> SdkWorkResourceResponse:
         """Registrations create."""
-        return self._client.post(f"/app/v3/api/auth/registrations", json=body, skip_auth=True)
+        return self._client.post(f"/app/v3/api/auth/registrations", json=body, access_token_only=True)
 
 class AuthSessionsApi:
     """auth auth.sessions API client."""
@@ -67,11 +67,11 @@ class AuthSessionsApi:
         self.organization_selection = AuthSessionsOrganizationSelectionApi(client)
 
 
-    def create(self, body: AppbaseSessionCreateCommand) -> AppbaseApiResult:
+    def create(self, body: AppbaseSessionCreateCommand) -> SdkWorkResourceResponse:
         """Sessions create."""
-        return self._client.post(f"/app/v3/api/auth/sessions", json=body, skip_auth=True)
+        return self._client.post(f"/app/v3/api/auth/sessions", json=body, access_token_only=True)
 
-    def refresh(self, body: Dict[str, Any]) -> AppbaseApiResult:
+    def refresh(self, body: Dict[str, Any]) -> SdkWorkCommandResponse:
         """Sessions refresh."""
         return self._client.post(f"/app/v3/api/auth/sessions/refresh", json=body, skip_auth=True)
 
@@ -82,15 +82,15 @@ class AuthSessionsCurrentApi:
         self._client = client
 
 
-    def delete(self) -> AppbaseApiResult:
+    def delete(self) -> None:
         """Sessions current delete."""
         return self._client.delete(f"/app/v3/api/auth/sessions/current")
 
-    def retrieve(self) -> AppbaseApiResult:
+    def retrieve(self) -> SdkWorkResourceResponse:
         """Sessions current retrieve."""
         return self._client.get(f"/app/v3/api/auth/sessions/current")
 
-    def update(self, body: Optional[Dict[str, Any]] = None) -> AppbaseApiResult:
+    def update(self, body: Optional[Dict[str, Any]] = None) -> SdkWorkResourceResponse:
         """Sessions current update."""
         return self._client.patch(f"/app/v3/api/auth/sessions/current", json=body)
 
@@ -101,9 +101,9 @@ class AuthSessionsLoginContextSelectionApi:
         self._client = client
 
 
-    def create(self, body: Dict[str, Any]) -> AppbaseApiResult:
+    def create(self, body: Dict[str, Any]) -> SdkWorkResourceResponse:
         """Sessions login Context Selection create."""
-        return self._client.post(f"/app/v3/api/auth/sessions/login_context_selection", json=body, skip_auth=True)
+        return self._client.post(f"/app/v3/api/auth/sessions/login_context_selection", json=body, access_token_only=True)
 
 class AuthSessionsOrganizationSelectionApi:
     """auth auth.sessions.organization_selection API client."""
@@ -112,6 +112,6 @@ class AuthSessionsOrganizationSelectionApi:
         self._client = client
 
 
-    def create(self, body: Dict[str, Any]) -> AppbaseApiResult:
+    def create(self, body: Dict[str, Any]) -> SdkWorkResourceResponse:
         """Sessions organization Selection create."""
-        return self._client.post(f"/app/v3/api/auth/sessions/organization_selection", json=body, skip_auth=True)
+        return self._client.post(f"/app/v3/api/auth/sessions/organization_selection", json=body, access_token_only=True)

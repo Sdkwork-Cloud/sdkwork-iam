@@ -12,7 +12,7 @@ class IamApi {
   IamApi(this._client);
 
   /// Department Assignments list.
-  Future<AppbaseApiResult?> departmentAssignmentsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
+  Future<SdkWorkListResponse?> departmentAssignmentsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
       QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
@@ -23,12 +23,12 @@ class IamApi {
     final response = await _client.get(ApiPaths.appendQueryString(ApiPaths.appPath('/iam/department_assignments'), query));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkListResponse.fromJson(map);
     })();
   }
 
   /// Departments list.
-  Future<AppbaseApiResult?> departmentsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
+  Future<SdkWorkListResponse?> departmentsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
       QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
@@ -39,21 +39,21 @@ class IamApi {
     final response = await _client.get(ApiPaths.appendQueryString(ApiPaths.appPath('/iam/departments'), query));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkListResponse.fromJson(map);
     })();
   }
 
   /// Departments tree retrieve.
-  Future<AppbaseApiResult?> departmentsTreeRetrieve() async {
+  Future<SdkWorkResourceResponse?> departmentsTreeRetrieve() async {
     final response = await _client.get(ApiPaths.appPath('/iam/departments/tree'));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
   /// Organization Memberships list.
-  Future<AppbaseApiResult?> organizationMembershipsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
+  Future<SdkWorkListResponse?> organizationMembershipsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
       QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
@@ -64,12 +64,12 @@ class IamApi {
     final response = await _client.get(ApiPaths.appendQueryString(ApiPaths.appPath('/iam/organization_memberships'), query));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkListResponse.fromJson(map);
     })();
   }
 
   /// Organizations list.
-  Future<AppbaseApiResult?> organizationsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
+  Future<SdkWorkListResponse?> organizationsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
       QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
@@ -80,21 +80,21 @@ class IamApi {
     final response = await _client.get(ApiPaths.appendQueryString(ApiPaths.appPath('/iam/organizations'), query));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkListResponse.fromJson(map);
     })();
   }
 
   /// Organizations tree retrieve.
-  Future<AppbaseApiResult?> organizationsTreeRetrieve() async {
+  Future<SdkWorkResourceResponse?> organizationsTreeRetrieve() async {
     final response = await _client.get(ApiPaths.appPath('/iam/organizations/tree'));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
   /// Position Assignments list.
-  Future<AppbaseApiResult?> positionAssignmentsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
+  Future<SdkWorkListResponse?> positionAssignmentsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
       QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
@@ -105,12 +105,12 @@ class IamApi {
     final response = await _client.get(ApiPaths.appendQueryString(ApiPaths.appPath('/iam/position_assignments'), query));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkListResponse.fromJson(map);
     })();
   }
 
   /// Positions list.
-  Future<AppbaseApiResult?> positionsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
+  Future<SdkWorkListResponse?> positionsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
       QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
@@ -121,12 +121,12 @@ class IamApi {
     final response = await _client.get(ApiPaths.appendQueryString(ApiPaths.appPath('/iam/positions'), query));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkListResponse.fromJson(map);
     })();
   }
 
   /// Role Bindings list.
-  Future<AppbaseApiResult?> roleBindingsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
+  Future<SdkWorkListResponse?> roleBindingsList([int? page, int? pageSize, String? cursor, String? sort, String? q]) async {
     final query = buildQueryString([
       QueryParameterSpec('page', page, 'form', true, false, null),
       QueryParameterSpec('page_size', pageSize, 'form', true, false, null),
@@ -137,74 +137,66 @@ class IamApi {
     final response = await _client.get(ApiPaths.appendQueryString(ApiPaths.appPath('/iam/role_bindings'), query));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkListResponse.fromJson(map);
     })();
   }
 
   /// Users current retrieve.
-  Future<AppbaseApiResult?> usersCurrentRetrieve() async {
+  Future<SdkWorkResourceResponse?> usersCurrentRetrieve() async {
     final response = await _client.get(ApiPaths.appPath('/iam/users/current'));
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
   /// Users current update.
-  Future<AppbaseApiResult?> usersCurrentUpdate([Map<String, dynamic>? body]) async {
+  Future<SdkWorkResourceResponse?> usersCurrentUpdate([Map<String, dynamic>? body]) async {
     final payload = body;
     final response = await _client.patch(ApiPaths.appPath('/iam/users/current'), body: payload, contentType: 'application/json');
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
   /// Users current email Bindings delete.
-  Future<AppbaseApiResult?> usersCurrentEmailBindingsDelete() async {
-    final response = await _client.delete(ApiPaths.appPath('/iam/users/current/email_bindings'));
-    return (() {
-      final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
-    })();
+  Future<void> usersCurrentEmailBindingsDelete() async {
+    await _client.delete(ApiPaths.appPath('/iam/users/current/email_bindings'));
   }
 
   /// Users current email Bindings create.
-  Future<AppbaseApiResult?> usersCurrentEmailBindingsCreate(Map<String, dynamic> body) async {
+  Future<SdkWorkResourceResponse?> usersCurrentEmailBindingsCreate(Map<String, dynamic> body) async {
     final payload = body;
     final response = await _client.post(ApiPaths.appPath('/iam/users/current/email_bindings'), body: payload, contentType: 'application/json');
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
   /// Users current password update.
-  Future<AppbaseApiResult?> usersCurrentPasswordUpdate(Map<String, dynamic> body) async {
+  Future<SdkWorkResourceResponse?> usersCurrentPasswordUpdate([Map<String, dynamic>? body]) async {
     final payload = body;
-    final response = await _client.post(ApiPaths.appPath('/iam/users/current/password'), body: payload, contentType: 'application/json');
+    final response = await _client.patch(ApiPaths.appPath('/iam/users/current/password'), body: payload, contentType: 'application/json');
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
   /// Users current phone Bindings delete.
-  Future<AppbaseApiResult?> usersCurrentPhoneBindingsDelete() async {
-    final response = await _client.delete(ApiPaths.appPath('/iam/users/current/phone_bindings'));
-    return (() {
-      final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
-    })();
+  Future<void> usersCurrentPhoneBindingsDelete() async {
+    await _client.delete(ApiPaths.appPath('/iam/users/current/phone_bindings'));
   }
 
   /// Users current phone Bindings create.
-  Future<AppbaseApiResult?> usersCurrentPhoneBindingsCreate(Map<String, dynamic> body) async {
+  Future<SdkWorkResourceResponse?> usersCurrentPhoneBindingsCreate(Map<String, dynamic> body) async {
     final payload = body;
     final response = await _client.post(ApiPaths.appPath('/iam/users/current/phone_bindings'), body: payload, contentType: 'application/json');
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 }

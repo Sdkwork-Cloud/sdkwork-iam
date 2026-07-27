@@ -228,19 +228,20 @@ impl LocalIamState {
     }
 
     pub async fn from_env() -> Result<Self, String> {
-        let config = LocalIamConfig::from_env();
         let host = sdkwork_iam_database_host::bootstrap_iam_database_from_env().await?;
-        backfill_tenant_members(host.pool()).await?;
-        repair_legacy_opaque_user_ids(host.pool()).await?;
-        Ok(Self::new(host.pool().clone(), config, None))
+        Self::from_initialized_pool(host.pool().clone()).await
     }
 
     pub async fn from_pool(pool: DatabasePool) -> Result<Self, String> {
-        let config = LocalIamConfig::from_env();
         let host = sdkwork_iam_database_host::bootstrap_iam_database(pool).await?;
-        backfill_tenant_members(host.pool()).await?;
-        repair_legacy_opaque_user_ids(host.pool()).await?;
-        Ok(Self::new(host.pool().clone(), config, None))
+        Self::from_initialized_pool(host.pool().clone()).await
+    }
+
+    pub async fn from_initialized_pool(pool: DatabasePool) -> Result<Self, String> {
+        sdkwork_iam_database_host::ensure_iam_id_generator_initialized(&pool).await?;
+        backfill_tenant_members(&pool).await?;
+        repair_legacy_opaque_user_ids(&pool).await?;
+        Ok(Self::new(pool, LocalIamConfig::from_env(), None))
     }
 
     /// Lightweight IAM state for product runtimes that already installed IAM schema

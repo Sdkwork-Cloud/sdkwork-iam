@@ -9,7 +9,7 @@ import com.sdkwork.iam.app.sdk.http.HttpClient
 class IamApi(private val client: HttpClient) {
 
     /** Department Assignments list. */
-    suspend fun departmentAssignmentsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): AppbaseApiResult? {
+    suspend fun departmentAssignmentsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): SdkWorkListResponse? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
             QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -18,11 +18,11 @@ class IamApi(private val client: HttpClient) {
             QueryParameterSpec("q", q, "form", true, false, null)
         ))
         val raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/department_assignments"), query))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkListResponse>() {})
     }
 
     /** Departments list. */
-    suspend fun departmentsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): AppbaseApiResult? {
+    suspend fun departmentsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): SdkWorkListResponse? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
             QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -31,17 +31,17 @@ class IamApi(private val client: HttpClient) {
             QueryParameterSpec("q", q, "form", true, false, null)
         ))
         val raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/departments"), query))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkListResponse>() {})
     }
 
     /** Departments tree retrieve. */
-    suspend fun departmentsTreeRetrieve(): AppbaseApiResult? {
+    suspend fun departmentsTreeRetrieve(): SdkWorkResourceResponse? {
         val raw = client.get(ApiPaths.appPath("/iam/departments/tree"))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
     /** Organization Memberships list. */
-    suspend fun organizationMembershipsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): AppbaseApiResult? {
+    suspend fun organizationMembershipsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): SdkWorkListResponse? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
             QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -50,11 +50,11 @@ class IamApi(private val client: HttpClient) {
             QueryParameterSpec("q", q, "form", true, false, null)
         ))
         val raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/organization_memberships"), query))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkListResponse>() {})
     }
 
     /** Organizations list. */
-    suspend fun organizationsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): AppbaseApiResult? {
+    suspend fun organizationsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): SdkWorkListResponse? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
             QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -63,17 +63,17 @@ class IamApi(private val client: HttpClient) {
             QueryParameterSpec("q", q, "form", true, false, null)
         ))
         val raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/organizations"), query))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkListResponse>() {})
     }
 
     /** Organizations tree retrieve. */
-    suspend fun organizationsTreeRetrieve(): AppbaseApiResult? {
+    suspend fun organizationsTreeRetrieve(): SdkWorkResourceResponse? {
         val raw = client.get(ApiPaths.appPath("/iam/organizations/tree"))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
     /** Position Assignments list. */
-    suspend fun positionAssignmentsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): AppbaseApiResult? {
+    suspend fun positionAssignmentsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): SdkWorkListResponse? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
             QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -82,11 +82,11 @@ class IamApi(private val client: HttpClient) {
             QueryParameterSpec("q", q, "form", true, false, null)
         ))
         val raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/position_assignments"), query))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkListResponse>() {})
     }
 
     /** Positions list. */
-    suspend fun positionsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): AppbaseApiResult? {
+    suspend fun positionsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): SdkWorkListResponse? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
             QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -95,11 +95,11 @@ class IamApi(private val client: HttpClient) {
             QueryParameterSpec("q", q, "form", true, false, null)
         ))
         val raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/positions"), query))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkListResponse>() {})
     }
 
     /** Role Bindings list. */
-    suspend fun roleBindingsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): AppbaseApiResult? {
+    suspend fun roleBindingsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): SdkWorkListResponse? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
             QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -108,49 +108,47 @@ class IamApi(private val client: HttpClient) {
             QueryParameterSpec("q", q, "form", true, false, null)
         ))
         val raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/role_bindings"), query))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkListResponse>() {})
     }
 
     /** Users current retrieve. */
-    suspend fun usersCurrentRetrieve(): AppbaseApiResult? {
+    suspend fun usersCurrentRetrieve(): SdkWorkResourceResponse? {
         val raw = client.get(ApiPaths.appPath("/iam/users/current"))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
     /** Users current update. */
-    suspend fun usersCurrentUpdate(body: Map<String, Any>? = null): AppbaseApiResult? {
+    suspend fun usersCurrentUpdate(body: Map<String, Any>? = null): SdkWorkResourceResponse? {
         val raw = client.patch(ApiPaths.appPath("/iam/users/current"), body, null, null, "application/json")
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
     /** Users current email Bindings delete. */
-    suspend fun usersCurrentEmailBindingsDelete(): AppbaseApiResult? {
-        val raw = client.delete(ApiPaths.appPath("/iam/users/current/email_bindings"))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    suspend fun usersCurrentEmailBindingsDelete(): Unit {
+        client.delete(ApiPaths.appPath("/iam/users/current/email_bindings"))
     }
 
     /** Users current email Bindings create. */
-    suspend fun usersCurrentEmailBindingsCreate(body: Map<String, Any>): AppbaseApiResult? {
+    suspend fun usersCurrentEmailBindingsCreate(body: Map<String, Any>): SdkWorkResourceResponse? {
         val raw = client.post(ApiPaths.appPath("/iam/users/current/email_bindings"), body, null, null, "application/json")
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
     /** Users current password update. */
-    suspend fun usersCurrentPasswordUpdate(body: Map<String, Any>): AppbaseApiResult? {
-        val raw = client.post(ApiPaths.appPath("/iam/users/current/password"), body, null, null, "application/json")
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    suspend fun usersCurrentPasswordUpdate(body: Map<String, Any>? = null): SdkWorkResourceResponse? {
+        val raw = client.patch(ApiPaths.appPath("/iam/users/current/password"), body, null, null, "application/json")
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
     /** Users current phone Bindings delete. */
-    suspend fun usersCurrentPhoneBindingsDelete(): AppbaseApiResult? {
-        val raw = client.delete(ApiPaths.appPath("/iam/users/current/phone_bindings"))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    suspend fun usersCurrentPhoneBindingsDelete(): Unit {
+        client.delete(ApiPaths.appPath("/iam/users/current/phone_bindings"))
     }
 
     /** Users current phone Bindings create. */
-    suspend fun usersCurrentPhoneBindingsCreate(body: Map<String, Any>): AppbaseApiResult? {
+    suspend fun usersCurrentPhoneBindingsCreate(body: Map<String, Any>): SdkWorkResourceResponse? {
         val raw = client.post(ApiPaths.appPath("/iam/users/current/phone_bindings"), body, null, null, "application/json")
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
 

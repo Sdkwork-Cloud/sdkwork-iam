@@ -1,5 +1,6 @@
 require_relative 'base_api'
-require_relative '../models/appbase_api_result'
+require_relative '../models/sdk_work_list_response'
+require_relative '../models/sdk_work_resource_response'
 
 module Sdkwork
   module AppSdk
@@ -19,7 +20,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('GET', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkListResponse.from_hash(result) : nil
           end
 
           # Departments list.
@@ -36,7 +37,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('GET', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkListResponse.from_hash(result) : nil
           end
 
           # Departments tree retrieve.
@@ -45,7 +46,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('GET', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Organization Memberships list.
@@ -62,7 +63,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('GET', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkListResponse.from_hash(result) : nil
           end
 
           # Organizations list.
@@ -79,7 +80,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('GET', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkListResponse.from_hash(result) : nil
           end
 
           # Organizations tree retrieve.
@@ -88,7 +89,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('GET', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Position Assignments list.
@@ -105,7 +106,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('GET', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkListResponse.from_hash(result) : nil
           end
 
           # Positions list.
@@ -122,7 +123,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('GET', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkListResponse.from_hash(result) : nil
           end
 
           # Role Bindings list.
@@ -139,7 +140,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('GET', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkListResponse.from_hash(result) : nil
           end
 
           # Users current retrieve.
@@ -148,7 +149,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('GET', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Users current update.
@@ -158,7 +159,7 @@ module Sdkwork
             options = {}
             options[:json] = payload unless payload.nil?
             result = @client.request('PATCH', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Users current email Bindings delete.
@@ -167,7 +168,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('DELETE', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result
           end
 
           # Users current email Bindings create.
@@ -177,7 +178,7 @@ module Sdkwork
             options = {}
             options[:json] = payload unless payload.nil?
             result = @client.request('POST', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Users current password update.
@@ -186,8 +187,8 @@ module Sdkwork
             payload = body
             options = {}
             options[:json] = payload unless payload.nil?
-            result = @client.request('POST', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result = @client.request('PATCH', path, **options)
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Users current phone Bindings delete.
@@ -196,7 +197,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('DELETE', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result
           end
 
           # Users current phone Bindings create.
@@ -206,7 +207,7 @@ module Sdkwork
             options = {}
             options[:json] = payload unless payload.nil?
             result = @client.request('POST', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
       end

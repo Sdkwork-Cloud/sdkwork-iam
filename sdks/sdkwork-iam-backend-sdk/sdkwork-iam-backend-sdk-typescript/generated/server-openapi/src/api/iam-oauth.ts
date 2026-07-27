@@ -1,5 +1,5 @@
 import { backendApiPath } from './paths';
-import type { HttpClient } from '../http/client';
+import type { ApiRequestOptions, HttpClient } from '../http/client';
 
 import type { AppbaseOperationCommand, IamOauthClientCreateCommand, SdkWorkPageData } from '../types';
 
@@ -13,8 +13,8 @@ export class IamOauthIamOauthWebhookConfigsVerificationsApi {
 
 
 /** Iam oauth webhook Configs verifications create. */
-  async create(webhookConfigId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/webhook_configs/${serializePathParameter(webhookConfigId, { name: 'webhookConfigId', style: 'simple', explode: false })}/verifications`), body, undefined, undefined, 'application/json');
+  async create(webhookConfigId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/webhook_configs/${serializePathParameter(webhookConfigId, { name: 'webhookConfigId', style: 'simple', explode: false })}/verifications`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -37,7 +37,7 @@ export class IamOauthIamOauthWebhookConfigsApi {
 
 
 /** Iam oauth webhook Configs list. */
-  async list(params?: IamOauthIamOauthWebhookConfigsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthWebhookConfigsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -45,17 +45,17 @@ export class IamOauthIamOauthWebhookConfigsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/webhook_configs`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/webhook_configs`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth webhook Configs create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/webhook_configs`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/webhook_configs`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth webhook Configs update. */
-  async update(webhookConfigId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/webhook_configs/${serializePathParameter(webhookConfigId, { name: 'webhookConfigId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(webhookConfigId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/webhook_configs/${serializePathParameter(webhookConfigId, { name: 'webhookConfigId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -76,7 +76,7 @@ export class IamOauthIamOauthTenantBindingsApi {
 
 
 /** Iam oauth tenant Bindings list. */
-  async list(params?: IamOauthIamOauthTenantBindingsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthTenantBindingsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -84,17 +84,17 @@ export class IamOauthIamOauthTenantBindingsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/tenant_bindings`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/tenant_bindings`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth tenant Bindings create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/tenant_bindings`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/tenant_bindings`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth tenant Bindings update. */
-  async update(bindingId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/tenant_bindings/${serializePathParameter(bindingId, { name: 'bindingId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(bindingId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/tenant_bindings/${serializePathParameter(bindingId, { name: 'bindingId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -115,7 +115,7 @@ export class IamOauthIamOauthSurfacesApi {
 
 
 /** Iam oauth surfaces list. */
-  async list(params?: IamOauthIamOauthSurfacesListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthSurfacesListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -123,22 +123,22 @@ export class IamOauthIamOauthSurfacesApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/surfaces`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/surfaces`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth surfaces create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/surfaces`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/surfaces`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth surfaces delete. */
-  async delete(surfaceId: string): Promise<void> {
-    return this.client.delete<void>(backendApiPath(`/iam/oauth/surfaces/${serializePathParameter(surfaceId, { name: 'surfaceId', style: 'simple', explode: false })}`));
+  async delete(surfaceId: string, requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(backendApiPath(`/iam/oauth/surfaces/${serializePathParameter(surfaceId, { name: 'surfaceId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any });
   }
 
 /** Iam oauth surfaces update. */
-  async update(surfaceId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/surfaces/${serializePathParameter(surfaceId, { name: 'surfaceId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(surfaceId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/surfaces/${serializePathParameter(surfaceId, { name: 'surfaceId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -159,7 +159,7 @@ export class IamOauthIamOauthSecretsApi {
 
 
 /** Iam oauth secrets list. */
-  async list(params?: IamOauthIamOauthSecretsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthSecretsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -167,17 +167,17 @@ export class IamOauthIamOauthSecretsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/secrets`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/secrets`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth secrets create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/secrets`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/secrets`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth secrets delete. */
-  async delete(secretId: string): Promise<void> {
-    return this.client.delete<void>(backendApiPath(`/iam/oauth/secrets/${serializePathParameter(secretId, { name: 'secretId', style: 'simple', explode: false })}`));
+  async delete(secretId: string, requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(backendApiPath(`/iam/oauth/secrets/${serializePathParameter(secretId, { name: 'secretId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any });
   }
 }
 
@@ -198,7 +198,7 @@ export class IamOauthIamOauthScopeProfilesApi {
 
 
 /** Iam oauth scope Profiles list. */
-  async list(params?: IamOauthIamOauthScopeProfilesListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthScopeProfilesListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -206,17 +206,17 @@ export class IamOauthIamOauthScopeProfilesApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/scope_profiles`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/scope_profiles`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth scope Profiles create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/scope_profiles`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/scope_profiles`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth scope Profiles update. */
-  async update(scopeProfileId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/scope_profiles/${serializePathParameter(scopeProfileId, { name: 'scopeProfileId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(scopeProfileId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/scope_profiles/${serializePathParameter(scopeProfileId, { name: 'scopeProfileId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -237,7 +237,7 @@ export class IamOauthIamOauthResourceAuthorizationsApi {
 
 
 /** Iam oauth resource Authorizations list. */
-  async list(params?: IamOauthIamOauthResourceAuthorizationsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthResourceAuthorizationsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -245,17 +245,17 @@ export class IamOauthIamOauthResourceAuthorizationsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/resource_authorizations`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/resource_authorizations`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth resource Authorizations create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_authorizations`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_authorizations`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth resource Authorizations update. */
-  async update(authorizationId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_authorizations/${serializePathParameter(authorizationId, { name: 'authorizationId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(authorizationId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_authorizations/${serializePathParameter(authorizationId, { name: 'authorizationId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -268,8 +268,8 @@ export class IamOauthIamOauthResourceAccountsVerificationsApi {
 
 
 /** Iam oauth resource Accounts verifications create. */
-  async create(resourceAccountId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}/verifications`), body, undefined, undefined, 'application/json');
+  async create(resourceAccountId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}/verifications`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -282,8 +282,8 @@ export class IamOauthIamOauthResourceAccountsMiniProgramLoginChecksApi {
 
 
 /** Iam oauth resource Accounts mini Program Login Checks create. */
-  async create(resourceAccountId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}/mini_program_login_checks`), body, undefined, undefined, 'application/json');
+  async create(resourceAccountId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}/mini_program_login_checks`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -296,8 +296,8 @@ export class IamOauthIamOauthResourceAccountsAuthorizationRefreshesApi {
 
 
 /** Iam oauth resource Accounts authorization Refreshes create. */
-  async create(resourceAccountId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}/authorization_refreshes`), body, undefined, undefined, 'application/json');
+  async create(resourceAccountId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}/authorization_refreshes`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -324,7 +324,7 @@ export class IamOauthIamOauthResourceAccountsApi {
 
 
 /** Iam oauth resource Accounts list. */
-  async list(params?: IamOauthIamOauthResourceAccountsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthResourceAccountsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -332,17 +332,17 @@ export class IamOauthIamOauthResourceAccountsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/resource_accounts`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/resource_accounts`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth resource Accounts create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth resource Accounts update. */
-  async update(resourceAccountId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(resourceAccountId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -363,7 +363,7 @@ export class IamOauthIamOauthProviderCatalogApi {
 
 
 /** Iam oauth provider Catalog list. */
-  async list(params?: IamOauthIamOauthProviderCatalogListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthProviderCatalogListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -371,22 +371,22 @@ export class IamOauthIamOauthProviderCatalogApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/provider_catalog`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/provider_catalog`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth provider Catalog create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/provider_catalog`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/provider_catalog`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth provider Catalog retrieve. */
-  async retrieve(providerCatalogId: string): Promise<Record<string, unknown>> {
-    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/oauth/provider_catalog/${serializePathParameter(providerCatalogId, { name: 'providerCatalogId', style: 'simple', explode: false })}`));
+  async retrieve(providerCatalogId: string, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/provider_catalog/${serializePathParameter(providerCatalogId, { name: 'providerCatalogId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth provider Catalog update. */
-  async update(providerCatalogId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/provider_catalog/${serializePathParameter(providerCatalogId, { name: 'providerCatalogId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(providerCatalogId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/provider_catalog/${serializePathParameter(providerCatalogId, { name: 'providerCatalogId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -407,7 +407,7 @@ export class IamOauthIamOauthPoliciesApi {
 
 
 /** Iam oauth policies list. */
-  async list(params?: IamOauthIamOauthPoliciesListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthPoliciesListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -415,17 +415,17 @@ export class IamOauthIamOauthPoliciesApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/policies`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/policies`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth policies create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/policies`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/policies`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth policies update. */
-  async update(policyId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(policyId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -438,8 +438,8 @@ export class IamOauthIamOauthOperatorPlatformsPreAuthorizationsApi {
 
 
 /** Iam oauth operator Platforms pre Authorizations create. */
-  async create(operatorPlatformId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/operator_platforms/${serializePathParameter(operatorPlatformId, { name: 'operatorPlatformId', style: 'simple', explode: false })}/pre_authorizations`), body, undefined, undefined, 'application/json');
+  async create(operatorPlatformId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/operator_platforms/${serializePathParameter(operatorPlatformId, { name: 'operatorPlatformId', style: 'simple', explode: false })}/pre_authorizations`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -462,7 +462,7 @@ export class IamOauthIamOauthOperatorPlatformsApi {
 
 
 /** Iam oauth operator Platforms list. */
-  async list(params?: IamOauthIamOauthOperatorPlatformsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthOperatorPlatformsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -470,17 +470,17 @@ export class IamOauthIamOauthOperatorPlatformsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/operator_platforms`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/operator_platforms`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth operator Platforms create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/operator_platforms`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/operator_platforms`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth operator Platforms update. */
-  async update(operatorPlatformId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/operator_platforms/${serializePathParameter(operatorPlatformId, { name: 'operatorPlatformId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(operatorPlatformId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/operator_platforms/${serializePathParameter(operatorPlatformId, { name: 'operatorPlatformId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -493,8 +493,8 @@ export class IamOauthIamOauthOperationalResourcesPublishesApi {
 
 
 /** Iam oauth operational Resources publishes create. */
-  async create(resourceId: string, body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/operational_resources/${serializePathParameter(resourceId, { name: 'resourceId', style: 'simple', explode: false })}/publishes`), body, undefined, undefined, 'application/json');
+  async create(resourceId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/operational_resources/${serializePathParameter(resourceId, { name: 'resourceId', style: 'simple', explode: false })}/publishes`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -517,7 +517,7 @@ export class IamOauthIamOauthOperationalResourcesApi {
 
 
 /** Iam oauth operational Resources list. */
-  async list(params?: IamOauthIamOauthOperationalResourcesListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthOperationalResourcesListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -525,22 +525,22 @@ export class IamOauthIamOauthOperationalResourcesApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/operational_resources`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/operational_resources`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth operational Resources create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/operational_resources`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/operational_resources`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth operational Resources delete. */
-  async delete(resourceId: string): Promise<void> {
-    return this.client.delete<void>(backendApiPath(`/iam/oauth/operational_resources/${serializePathParameter(resourceId, { name: 'resourceId', style: 'simple', explode: false })}`));
+  async delete(resourceId: string, requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(backendApiPath(`/iam/oauth/operational_resources/${serializePathParameter(resourceId, { name: 'resourceId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any });
   }
 
 /** Iam oauth operational Resources update. */
-  async update(resourceId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/operational_resources/${serializePathParameter(resourceId, { name: 'resourceId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(resourceId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/operational_resources/${serializePathParameter(resourceId, { name: 'resourceId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -561,7 +561,7 @@ export class IamOauthIamOauthIntegrationsApi {
 
 
 /** Iam oauth integrations list. */
-  async list(params?: IamOauthIamOauthIntegrationsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthIntegrationsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -569,27 +569,27 @@ export class IamOauthIamOauthIntegrationsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/integrations`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/integrations`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth integrations create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/integrations`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/integrations`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth integrations delete. */
-  async delete(integrationId: string): Promise<void> {
-    return this.client.delete<void>(backendApiPath(`/iam/oauth/integrations/${serializePathParameter(integrationId, { name: 'integrationId', style: 'simple', explode: false })}`));
+  async delete(integrationId: string, requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(backendApiPath(`/iam/oauth/integrations/${serializePathParameter(integrationId, { name: 'integrationId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any });
   }
 
 /** Iam oauth integrations retrieve. */
-  async retrieve(integrationId: string): Promise<Record<string, unknown>> {
-    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/oauth/integrations/${serializePathParameter(integrationId, { name: 'integrationId', style: 'simple', explode: false })}`));
+  async retrieve(integrationId: string, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/integrations/${serializePathParameter(integrationId, { name: 'integrationId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth integrations update. */
-  async update(integrationId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/integrations/${serializePathParameter(integrationId, { name: 'integrationId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(integrationId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/integrations/${serializePathParameter(integrationId, { name: 'integrationId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -610,7 +610,7 @@ export class IamOauthIamOauthGrantsApi {
 
 
 /** Iam oauth grants list. */
-  async list(params?: IamOauthIamOauthGrantsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthGrantsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -618,12 +618,12 @@ export class IamOauthIamOauthGrantsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/grants`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/grants`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth grants delete. */
-  async delete(grantId: string): Promise<void> {
-    return this.client.delete<void>(backendApiPath(`/iam/oauth/grants/${serializePathParameter(grantId, { name: 'grantId', style: 'simple', explode: false })}`));
+  async delete(grantId: string, requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(backendApiPath(`/iam/oauth/grants/${serializePathParameter(grantId, { name: 'grantId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any });
   }
 }
 
@@ -644,7 +644,7 @@ export class IamOauthIamOauthFlowConfigsApi {
 
 
 /** Iam oauth flow Configs list. */
-  async list(params?: IamOauthIamOauthFlowConfigsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthFlowConfigsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -652,17 +652,17 @@ export class IamOauthIamOauthFlowConfigsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/flow_configs`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/flow_configs`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth flow Configs create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/flow_configs`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/flow_configs`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth flow Configs update. */
-  async update(flowConfigId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/flow_configs/${serializePathParameter(flowConfigId, { name: 'flowConfigId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(flowConfigId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/flow_configs/${serializePathParameter(flowConfigId, { name: 'flowConfigId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -683,7 +683,7 @@ export class IamOauthIamOauthDiagnosticRunsApi {
 
 
 /** Iam oauth diagnostic Runs list. */
-  async list(params?: IamOauthIamOauthDiagnosticRunsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthDiagnosticRunsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -691,17 +691,17 @@ export class IamOauthIamOauthDiagnosticRunsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/diagnostic_runs`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/diagnostic_runs`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth diagnostic Runs create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/diagnostic_runs`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/diagnostic_runs`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth diagnostic Runs retrieve. */
-  async retrieve(diagnosticRunId: string): Promise<Record<string, unknown>> {
-    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/oauth/diagnostic_runs/${serializePathParameter(diagnosticRunId, { name: 'diagnosticRunId', style: 'simple', explode: false })}`));
+  async retrieve(diagnosticRunId: string, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/diagnostic_runs/${serializePathParameter(diagnosticRunId, { name: 'diagnosticRunId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 }
 
@@ -722,7 +722,7 @@ export class IamOauthIamOauthClientsApi {
 
 
 /** Iam oauth clients list. */
-  async list(params?: IamOauthIamOauthClientsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthClientsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -730,27 +730,27 @@ export class IamOauthIamOauthClientsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/clients`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/clients`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth clients create. */
-  async create(body: IamOauthClientCreateCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/clients`), body, undefined, undefined, 'application/json');
+  async create(body: IamOauthClientCreateCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/clients`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth clients delete. */
-  async delete(oauthClientId: string): Promise<void> {
-    return this.client.delete<void>(backendApiPath(`/iam/oauth/clients/${serializePathParameter(oauthClientId, { name: 'oauthClientId', style: 'simple', explode: false })}`));
+  async delete(oauthClientId: string, requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(backendApiPath(`/iam/oauth/clients/${serializePathParameter(oauthClientId, { name: 'oauthClientId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any });
   }
 
 /** Iam oauth clients retrieve. */
-  async retrieve(oauthClientId: string): Promise<Record<string, unknown>> {
-    return this.client.get<Record<string, unknown>>(backendApiPath(`/iam/oauth/clients/${serializePathParameter(oauthClientId, { name: 'oauthClientId', style: 'simple', explode: false })}`));
+  async retrieve(oauthClientId: string, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/clients/${serializePathParameter(oauthClientId, { name: 'oauthClientId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth clients update. */
-  async update(oauthClientId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/clients/${serializePathParameter(oauthClientId, { name: 'oauthClientId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(oauthClientId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/clients/${serializePathParameter(oauthClientId, { name: 'oauthClientId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -771,7 +771,7 @@ export class IamOauthIamOauthClaimMappingsApi {
 
 
 /** Iam oauth claim Mappings list. */
-  async list(params?: IamOauthIamOauthClaimMappingsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthClaimMappingsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -779,17 +779,17 @@ export class IamOauthIamOauthClaimMappingsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/claim_mappings`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/claim_mappings`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth claim Mappings create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.post<Record<string, unknown>>(backendApiPath(`/iam/oauth/claim_mappings`), body, undefined, undefined, 'application/json');
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/claim_mappings`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json' });
   }
 
 /** Iam oauth claim Mappings update. */
-  async update(mappingId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/claim_mappings/${serializePathParameter(mappingId, { name: 'mappingId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(mappingId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/claim_mappings/${serializePathParameter(mappingId, { name: 'mappingId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 
@@ -810,7 +810,7 @@ export class IamOauthIamOauthCallbackEventsApi {
 
 
 /** Iam oauth callback Events list. */
-  async list(params?: IamOauthIamOauthCallbackEventsListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthCallbackEventsListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -818,7 +818,7 @@ export class IamOauthIamOauthCallbackEventsApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/callback_events`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/callback_events`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 }
 
@@ -839,7 +839,7 @@ export class IamOauthIamOauthAccountLinksApi {
 
 
 /** Iam oauth account Links list. */
-  async list(params?: IamOauthIamOauthAccountLinksListParams): Promise<SdkWorkPageData> {
+  async list(params?: IamOauthIamOauthAccountLinksListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
@@ -847,12 +847,12 @@ export class IamOauthIamOauthAccountLinksApi {
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/account_links`), query));
+    return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/oauth/account_links`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any });
   }
 
 /** Iam oauth account Links update. */
-  async update(accountLinkId: string, body?: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.patch<Record<string, unknown>>(backendApiPath(`/iam/oauth/account_links/${serializePathParameter(accountLinkId, { name: 'accountLinkId', style: 'simple', explode: false })}`), body, undefined, undefined, 'application/json');
+  async update(accountLinkId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/account_links/${serializePathParameter(accountLinkId, { name: 'accountLinkId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json' });
   }
 }
 

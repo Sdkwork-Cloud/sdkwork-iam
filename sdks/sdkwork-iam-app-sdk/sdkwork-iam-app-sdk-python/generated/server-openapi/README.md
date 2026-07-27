@@ -74,7 +74,7 @@ print(result)
 ### oauth
 
 ```python
-# Oauth account Links list.
+# Account Links list.
 params = {
     'page': 1,
     'page_size': 2,

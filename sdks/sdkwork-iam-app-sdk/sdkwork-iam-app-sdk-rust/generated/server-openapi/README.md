@@ -70,7 +70,7 @@ println!("{result:?}");
 
 ```rust
 use std::collections::HashMap;
-// Oauth account Links list.
+// Account Links list.
 let mut query = HashMap::new();
 query.insert("page".to_string(), serde_json::json!(1));
 query.insert("page_size".to_string(), serde_json::json!(2));

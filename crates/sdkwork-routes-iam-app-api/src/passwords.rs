@@ -16,6 +16,12 @@ use crate::utils::*;
 
 static PASSWORD_HASH_PERMITS: OnceLock<Arc<Semaphore>> = OnceLock::new();
 
+pub(crate) enum PasswordResetVerificationError {
+    InvalidChallenge,
+    NotConfigured,
+    Storage(String),
+}
+
 async fn run_password_cpu_task<T>(task: impl FnOnce() -> T + Send + 'static) -> Option<T>
 where
     T: Send + 'static,
@@ -588,15 +594,7 @@ pub(crate) async fn validate_password_reset_verification(
     user: &LocalIamUser,
     account: &str,
     code: &str,
-) -> Result<(), String> {
-    if fixed_verification_code_allowed(config) {
-        if let Some(expected) = &config.dev_fixed_verify_code {
-            if code == expected {
-                return Ok(());
-            }
-        }
-    }
-
+) -> Result<(), PasswordResetVerificationError> {
     if messaging_verification_enabled() {
         let (channel, target) = password_reset_channel_for_account(account, user);
         return verify_and_consume_messaging_challenge(
@@ -610,25 +608,38 @@ pub(crate) async fn validate_password_reset_verification(
                 code,
             },
         )
-        .await;
+        .await
+        .map_err(|error| {
+            if error.contains("verification code") {
+                PasswordResetVerificationError::InvalidChallenge
+            } else {
+                PasswordResetVerificationError::Storage(error)
+            }
+        });
     }
 
     if fixed_verification_code_allowed(config) {
-        let reset_key = canonical_identity(&user.username);
-        let reset_request =
-            crate::ephemeral::get_password_reset_request(pg, &user.tenant_id, &reset_key).await?;
-        let Some(reset_request) = reset_request else {
-            return Err("verification code is invalid".to_string());
+        let Some(expected_code) = config.dev_fixed_verify_code.as_deref() else {
+            return Err(PasswordResetVerificationError::NotConfigured);
         };
-        if reset_request.expire_time < current_millis()
-            || reset_request.username != user.username
-            || reset_request.code != code
-        {
-            return Err("verification code is invalid".to_string());
+        if code != expected_code {
+            return Err(PasswordResetVerificationError::InvalidChallenge);
         }
-        crate::ephemeral::delete_password_reset_request(pg, &user.tenant_id, &reset_key).await?;
+        let reset_key = canonical_identity(&user.username);
+        let consumed = crate::ephemeral::consume_password_reset_request(
+            pg,
+            &user.tenant_id,
+            &reset_key,
+            &user.username,
+            code,
+        )
+        .await
+        .map_err(PasswordResetVerificationError::Storage)?;
+        if !consumed {
+            return Err(PasswordResetVerificationError::InvalidChallenge);
+        }
         return Ok(());
     }
 
-    Err("password reset verification is not configured for this environment".to_string())
+    Err(PasswordResetVerificationError::NotConfigured)
 }

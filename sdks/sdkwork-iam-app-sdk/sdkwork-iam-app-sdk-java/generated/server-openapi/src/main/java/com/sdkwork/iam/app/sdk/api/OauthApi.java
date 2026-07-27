@@ -13,8 +13,8 @@ public class OauthApi {
         this.client = client;
     }
 
-    /** Oauth account Links list. */
-    public AppbaseApiResult accountLinksList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
+    /** Account Links list. */
+    public SdkWorkListResponse accountLinksList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -23,65 +23,71 @@ public class OauthApi {
             new QueryParameterSpec("q", q, "form", true, false, null)
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/account_links"), query));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkListResponse>() {});
     }
 
-    /** Oauth account Links delete. */
-    public AppbaseApiResult accountLinksDelete(String accountLinkId) throws Exception {
-        Object raw = client.delete(ApiPaths.appPath("/oauth/account_links/" + serializePathParameter(accountLinkId, new PathParameterSpec("accountLinkId", "simple", false)) + ""));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Account Links delete. */
+    public Void accountLinksDelete(String accountLinkId) throws Exception {
+        client.delete(ApiPaths.appPath("/oauth/account_links/" + serializePathParameter(accountLinkId, new PathParameterSpec("accountLinkId", "simple", false)) + ""));
+        return null;
     }
 
-    /** Oauth authorization Urls create. */
-    public AppbaseApiResult authorizationUrlsCreate(Map<String, Object> body) throws Exception {
-        Object raw = client.request("POST", ApiPaths.appPath("/oauth/authorization_urls"), body, null, null, "application/json", true);
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Authorization Urls create. */
+    public SdkWorkResourceResponse authorizationUrlsCreate(Map<String, Object> body) throws Exception {
+        Object raw = client.request("POST", ApiPaths.appPath("/oauth/authorization_urls"), body, null, null, "application/json", false, true);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
-    /** Oauth callbacks handle Get. */
-    public AppbaseApiResult callbacksHandleGet(String providerCode) throws Exception {
-        Object raw = client.get(ApiPaths.appPath("/oauth/callbacks/" + serializePathParameter(providerCode, new PathParameterSpec("providerCode", "simple", false)) + ""));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Authorizations completions create. */
+    public SdkWorkResourceResponse authorizationsCompletionsCreate(String authorizationStateId, Map<String, Object> body) throws Exception {
+        Object raw = client.post(ApiPaths.appPath("/oauth/authorizations/" + serializePathParameter(authorizationStateId, new PathParameterSpec("authorizationStateId", "simple", false)) + "/completions"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
-    /** Oauth callbacks handle Post. */
-    public AppbaseApiResult callbacksHandlePost(String providerCode, Map<String, Object> body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/oauth/callbacks/" + serializePathParameter(providerCode, new PathParameterSpec("providerCode", "simple", false)) + ""), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Callbacks retrieve. */
+    public SdkWorkResourceResponse callbacksRetrieve(String providerCode) throws Exception {
+        Object raw = client.request("GET", ApiPaths.appPath("/oauth/callbacks/" + serializePathParameter(providerCode, new PathParameterSpec("providerCode", "simple", false)) + ""), null, null, null, null, false, true);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
-    /** Oauth device Authorizations create. */
-    public AppbaseApiResult deviceAuthorizationsCreate(Map<String, Object> body) throws Exception {
-        Object raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations"), body, null, null, "application/json", true);
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Callbacks create. */
+    public SdkWorkResourceResponse callbacksCreate(String providerCode, Map<String, Object> body) throws Exception {
+        Object raw = client.request("POST", ApiPaths.appPath("/oauth/callbacks/" + serializePathParameter(providerCode, new PathParameterSpec("providerCode", "simple", false)) + ""), body, null, null, "application/json", false, true);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
-    /** Oauth device Authorizations retrieve. */
-    public AppbaseApiResult deviceAuthorizationsRetrieve(String deviceAuthorizationId) throws Exception {
-        Object raw = client.request("GET", ApiPaths.appPath("/oauth/device_authorizations/" + serializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false)) + ""), null, null, null, null, true);
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Device Authorizations create. */
+    public SdkWorkResourceResponse deviceAuthorizationsCreate(Map<String, Object> body) throws Exception {
+        Object raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations"), body, null, null, "application/json", true, false);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
-    /** Oauth device Authorizations password Completions create. */
-    public AppbaseApiResult deviceAuthorizationsPasswordCompletionsCreate(String deviceAuthorizationId, Map<String, Object> body) throws Exception {
-        Object raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/" + serializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false)) + "/password_completions"), body, null, null, "application/json", true);
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Device Authorizations retrieve. */
+    public SdkWorkResourceResponse deviceAuthorizationsRetrieve(String deviceAuthorizationId) throws Exception {
+        Object raw = client.request("GET", ApiPaths.appPath("/oauth/device_authorizations/" + serializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false)) + ""), null, null, null, null, true, false);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
-    /** Oauth device Authorizations scans create. */
-    public AppbaseApiResult deviceAuthorizationsScansCreate(String deviceAuthorizationId, Map<String, Object> body) throws Exception {
-        Object raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/" + serializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false)) + "/scans"), body, null, null, "application/json", true);
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Device Authorizations password Completions create. */
+    public SdkWorkResourceResponse deviceAuthorizationsPasswordCompletionsCreate(String deviceAuthorizationId, Map<String, Object> body) throws Exception {
+        Object raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/" + serializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false)) + "/password_completions"), body, null, null, "application/json", false, true);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
-    /** Oauth device Authorizations session Exchanges create. */
-    public AppbaseApiResult deviceAuthorizationsSessionExchangesCreate(String deviceAuthorizationId, Map<String, Object> body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/oauth/device_authorizations/" + serializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false)) + "/session_exchanges"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Device Authorizations scans create. */
+    public SdkWorkResourceResponse deviceAuthorizationsScansCreate(String deviceAuthorizationId, Map<String, Object> body) throws Exception {
+        Object raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/" + serializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false)) + "/scans"), body, null, null, "application/json", false, true);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
-    /** Oauth grants list. */
-    public AppbaseApiResult grantsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
+    /** Device Authorizations session Exchanges create. */
+    public SdkWorkResourceResponse deviceAuthorizationsSessionExchangesCreate(String deviceAuthorizationId, Map<String, Object> body) throws Exception {
+        Object raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/" + serializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false)) + "/session_exchanges"), body, null, null, "application/json", true, false);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
+    }
+
+    /** Grants list. */
+    public SdkWorkListResponse grantsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -90,23 +96,23 @@ public class OauthApi {
             new QueryParameterSpec("q", q, "form", true, false, null)
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/grants"), query));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkListResponse>() {});
     }
 
-    /** Oauth grants delete. */
-    public AppbaseApiResult grantsDelete(String grantId) throws Exception {
-        Object raw = client.delete(ApiPaths.appPath("/oauth/grants/" + serializePathParameter(grantId, new PathParameterSpec("grantId", "simple", false)) + ""));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Grants delete. */
+    public Void grantsDelete(String grantId) throws Exception {
+        client.delete(ApiPaths.appPath("/oauth/grants/" + serializePathParameter(grantId, new PathParameterSpec("grantId", "simple", false)) + ""));
+        return null;
     }
 
-    /** Oauth mini Program Sessions create. */
-    public AppbaseApiResult miniProgramSessionsCreate(Map<String, Object> body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/oauth/mini_program_sessions"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Mini Program Sessions create. */
+    public SdkWorkResourceResponse miniProgramSessionsCreate(WechatMiniProgramSessionCreateCommand body) throws Exception {
+        Object raw = client.request("POST", ApiPaths.appPath("/oauth/mini_program_sessions"), body, null, null, "application/json", false, true);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
-    /** Oauth providers list. */
-    public AppbaseApiResult providersList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
+    /** Providers list. */
+    public SdkWorkListResponse providersList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -114,14 +120,14 @@ public class OauthApi {
             new QueryParameterSpec("sort", sort, "form", true, false, null),
             new QueryParameterSpec("q", q, "form", true, false, null)
         ));
-        Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/providers"), query));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        Object raw = client.request("GET", ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/providers"), query), null, null, null, null, false, true);
+        return client.convertValue(raw, new TypeReference<SdkWorkListResponse>() {});
     }
 
-    /** Oauth sessions create. */
-    public AppbaseApiResult sessionsCreate(Map<String, Object> body) throws Exception {
-        Object raw = client.request("POST", ApiPaths.appPath("/oauth/sessions"), body, null, null, "application/json", true);
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    /** Sessions create. */
+    public SdkWorkResourceResponse sessionsCreate(AppbaseSessionCreateCommand body) throws Exception {
+        Object raw = client.request("POST", ApiPaths.appPath("/oauth/sessions"), body, null, null, "application/json", false, true);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
     private record PathParameterSpec(String name, String style, boolean explode) {}

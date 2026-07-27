@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 3,
+  "kind": "sdkwork.app",
+  "app": {
+    "key": "sdkwork-iam-assembly-test",
+    "name": "sdkwork-iam-assembly-test",
+    "displayName": "SDKWork IAM Assembly Test",
+    "officialWebsiteUrl": "https://sdkwork.com/testing/iam-assembly",
+    "appType": "SDK"
+  },
+  "backend": {
+    "appId": "sdkwork-iam-assembly-test",
+    "tenantId": "100001",
+    "organizationId": "0",
+    "accessTokenPermissionScope": [
+      "iam.users.read"
+    ]
+  },
+  "runtime": {
+    "family": "server",
+    "framework": "rust-axum",
+    "supportedDeploymentProfiles": [
+      "standalone"
+    ],
+    "defaultDeploymentProfile": "standalone"
+  },
+  "media": {
+    "icons": {
+      "primary": {
+        "id": "iam-assembly-test-icon",
+        "type": "ICON",
+        "url": "https://sdkwork.com/assets/testing/iam-assembly.png"
+      },
+      "platform": []
+    },
+    "screenshots": [],
+    "previews": []
+  },
+  "publish": {},
+  "environments": {},
+  "artifacts": {
+    "installConfig": {
+      "packages": []
+    }
+  },
+  "release": {
+    "currentVersion": "0.1.0",
+    "notes": [
+      {
+        "current": true,
+        "version": "0.1.0",
+        "channel": "test"
+      }
+    ]
+  },
+  "security": {}
+}

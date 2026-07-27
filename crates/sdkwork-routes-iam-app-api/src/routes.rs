@@ -32,6 +32,13 @@ pub async fn build_sdkwork_iam_app_api_router_with_pool(
     handlers::build_sdkwork_iam_app_api_router_with_pool(pool).await
 }
 
+/// Builds the IAM App API router from a pool whose database lifecycle already completed.
+pub async fn build_sdkwork_iam_app_api_router_with_initialized_pool(
+    pool: sdkwork_database_sqlx::DatabasePool,
+) -> Result<Router, String> {
+    handlers::build_sdkwork_iam_app_api_router_with_initialized_pool(pool).await
+}
+
 /// Builds the IAM App API business router without Web Framework or infrastructure layers.
 ///
 /// API assemblies use this entrypoint and bind the combined route manifest once after all
@@ -40,6 +47,13 @@ pub async fn build_sdkwork_iam_app_api_business_router_with_pool(
     pool: sdkwork_database_sqlx::DatabasePool,
 ) -> Result<Router, String> {
     handlers::build_sdkwork_iam_app_api_business_router_with_pool(pool).await
+}
+
+/// Builds the host-neutral business router from an already initialized IAM pool.
+pub async fn build_sdkwork_iam_app_api_business_router_with_initialized_pool(
+    pool: sdkwork_database_sqlx::DatabasePool,
+) -> Result<Router, String> {
+    handlers::build_sdkwork_iam_app_api_business_router_with_initialized_pool(pool).await
 }
 
 /// Mounts only IAM-owned OAuth device-authorization routes for product runtimes

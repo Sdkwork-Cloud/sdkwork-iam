@@ -9,9 +9,11 @@
     "protocol": "http",
     "packageName": "com.sdkwork:sdkwork-iam-app-sdk"
   },
-  "changeFingerprint": "1ad2583d00fe074171917f80856d88543ae623cf652bd6c608480313a04e6311",
+  "changeFingerprint": "ea8771e26700d7e8e20de2884b6b258531d91c123a5ed4fc00d7cf10eeecc00b",
   "changes": {
-    "createdGeneratedFiles": [
+    "createdGeneratedFiles": [],
+    "updatedGeneratedFiles": [],
+    "unchangedGeneratedFiles": [
       "bin/publish-core.mjs",
       "bin/publish.ps1",
       "bin/publish.sh",
@@ -27,148 +29,50 @@
       "src/main/java/com/sdkwork/iam/app/sdk/api/package-info.java",
       "src/main/java/com/sdkwork/iam/app/sdk/api/SystemApi.java",
       "src/main/java/com/sdkwork/iam/app/sdk/http/HttpClient.java",
-      "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseAccessCredentialCreateCommand.java",
-      "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseApiResult.java",
-      "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseApplicationRegisterCommand.java",
       "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseSessionCreateCommand.java",
-      "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseTenantApplicationEnableCommand.java",
-      "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseTenantApplicationProvisionCommand.java",
-      "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseTenantApplicationUpdateCommand.java",
       "src/main/java/com/sdkwork/iam/app/sdk/model/FieldError.java",
+      "src/main/java/com/sdkwork/iam/app/sdk/model/PageInfo.java",
       "src/main/java/com/sdkwork/iam/app/sdk/model/ProblemDetail.java",
+      "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkApiResponse.java",
+      "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkCommandData.java",
+      "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkCommandResponse.java",
+      "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkListResponse.java",
+      "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkPageData.java",
+      "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkResourceData.java",
+      "src/main/java/com/sdkwork/iam/app/sdk/model/SdkWorkResourceResponse.java",
+      "src/main/java/com/sdkwork/iam/app/sdk/model/WechatMiniProgramSessionCreateCommand.java",
       "src/main/java/com/sdkwork/iam/app/sdk/SdkworkAppClient.java"
     ],
-    "updatedGeneratedFiles": [],
-    "unchangedGeneratedFiles": [],
     "deletedGeneratedFiles": [],
-    "scaffoldedFiles": [
+    "scaffoldedFiles": [],
+    "preservedScaffoldFiles": [
       "custom/README.md"
     ],
-    "preservedScaffoldFiles": [],
     "backedUpFiles": []
   },
   "impact": {
     "schemaVersion": 1,
-    "areas": [
-      "api-surface",
-      "models",
-      "runtime",
-      "build-metadata",
-      "publish-workflow",
-      "documentation",
-      "custom-scaffold",
-      "unknown"
-    ],
-    "details": [
-      {
-        "area": "api-surface",
-        "paths": [
-          "src/main/java/com/sdkwork/iam/app/sdk/api/ApiPaths.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/api/AuthApi.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/api/IamApi.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/api/OauthApi.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/api/package-info.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/api/SystemApi.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/SdkworkAppClient.java"
-        ]
-      },
-      {
-        "area": "models",
-        "paths": [
-          "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseAccessCredentialCreateCommand.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseApiResult.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseApplicationRegisterCommand.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseSessionCreateCommand.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseTenantApplicationEnableCommand.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseTenantApplicationProvisionCommand.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/model/AppbaseTenantApplicationUpdateCommand.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/model/FieldError.java",
-          "src/main/java/com/sdkwork/iam/app/sdk/model/ProblemDetail.java"
-        ]
-      },
-      {
-        "area": "runtime",
-        "paths": [
-          "src/main/java/com/sdkwork/iam/app/sdk/http/HttpClient.java"
-        ]
-      },
-      {
-        "area": "build-metadata",
-        "paths": [
-          "pom.xml",
-          "sdkwork-sdk.json"
-        ]
-      },
-      {
-        "area": "publish-workflow",
-        "paths": [
-          "bin/publish-core.mjs",
-          "bin/publish.ps1",
-          "bin/publish.sh"
-        ]
-      },
-      {
-        "area": "documentation",
-        "paths": [
-          "CHANGELOG.md",
-          "custom/README.md",
-          "README.md"
-        ]
-      },
-      {
-        "area": "custom-scaffold",
-        "paths": [
-          "custom/README.md"
-        ]
-      },
-      {
-        "area": "unknown",
-        "paths": [
-          "LICENSE"
-        ]
-      }
-    ],
-    "requiresVerification": true,
-    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+    "areas": [],
+    "details": [],
+    "requiresVerification": false,
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
   },
   "verificationPlan": {
-    "shouldRun": true,
-    "runPhase": "now",
-    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
-    "steps": [
-      {
-        "id": "check",
-        "title": "Unified package check",
-        "required": true,
-        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-iam\\sdks\\sdkwork-iam-app-sdk\\sdkwork-iam-app-sdk-java\\generated\\server-openapi",
-        "command": "node",
-        "args": [
-          "./bin/publish-core.mjs",
-          "--language",
-          "java",
-          "--project-dir",
-          ".",
-          "--action",
-          "check"
-        ],
-        "displayCommand": "node ./bin/publish-core.mjs --language java --project-dir . --action check"
-      }
-    ]
+    "shouldRun": false,
+    "runPhase": "skip",
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
+    "steps": []
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "high",
-    "nextAction": "verify",
+    "riskLevel": "low",
+    "nextAction": "skip",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
-    "summary": "Changes have been applied. Run the required verification plan now.",
+    "summary": "No actionable changes were detected. No apply or verification step is required.",
     "reasons": [
-      "manual-review-required",
-      "preserved-legacy-files",
-      "unknown-impact",
-      "verification-required"
+      "no-actionable-changes"
     ]
   },
-  "preservedLegacyFiles": true
+  "preservedLegacyFiles": false
 }

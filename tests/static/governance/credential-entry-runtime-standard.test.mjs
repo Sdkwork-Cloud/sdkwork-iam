@@ -16,7 +16,7 @@ function listWorkspaceIamRuntimeSources() {
     .filter((entry) => entry.isDirectory())
     .map((entry) => path.join(sdkworkSpaceRoot, entry.name));
 
-  const runtimeFilePattern = /(?:appAuthRuntime|iamRuntime|IamRuntime|authRuntime)\.(ts|tsx|mjs)$/u;
+  const runtimeFilePattern = /(?:app[-_]?auth[-_]?runtime|iam[-_]?runtime|auth[-_]?runtime)\.(ts|tsx|mjs)$/iu;
 
   for (const repoRoot of repoRoots) {
     const appsDir = path.join(repoRoot, 'apps');
@@ -33,9 +33,6 @@ function listWorkspaceIamRuntimeSources() {
         return;
       }
       if (!source.includes('wrapCredentialEntryClient')) {
-        return;
-      }
-      if (source.includes('credentialEntry') && /skipWrap:\s*true/u.test(source)) {
         return;
       }
       offenders.push(path.relative(sdkworkSpaceRoot, filePath));
@@ -97,7 +94,9 @@ test('product IAM runtimes do not duplicate request-time credential-entry wrappe
 
 test('auth-runtime README documents credential-entry bootstrap behavior', () => {
   const readme = readText('apps/sdkwork-iam-pc/packages/sdkwork-auth-runtime-pc-react/README.md');
-  assert.match(readme, /wrapCredentialEntryClient|credential-entry|SDKWORK_ACCESS_TOKEN/u);
+  assert.match(readme, /credential-entry|SDKWORK_ACCESS_TOKEN/u);
+  assert.match(readme, /access-token-only/u);
+  assert.doesNotMatch(readme, /skipWrap|wrapCredentialEntryClient/u);
 });
 
 console.log('credential-entry runtime standard passed.');

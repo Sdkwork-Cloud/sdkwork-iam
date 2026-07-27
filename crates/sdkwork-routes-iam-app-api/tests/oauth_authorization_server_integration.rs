@@ -285,7 +285,7 @@ async fn read_json(response: axum::response::Response) -> Value {
 
 async fn build_oauth_integration_app() -> axum::Router {
     let pool = unified_database_env::integration_database_pool_for_router().await;
-    sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_router_with_pool(pool)
+    sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_router_with_initialized_pool(pool)
         .await
         .expect("oauth e2e router should build")
 }

@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 from ..http_client import HttpClient
-from ..models import AppbaseApiResult
+from ..models import SdkWorkListResponse, SdkWorkResourceResponse
 
 def _append_query_string(path: str, raw_query_string: str) -> str:
     query = raw_query_string.lstrip('?')
@@ -145,7 +145,7 @@ class IamDepartmentAssignmentsApi:
         self._client = client
 
 
-    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> AppbaseApiResult:
+    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> SdkWorkListResponse:
         """Department Assignments list."""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -164,7 +164,7 @@ class IamDepartmentsApi:
         self.tree = IamDepartmentsTreeApi(client)
 
 
-    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> AppbaseApiResult:
+    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> SdkWorkListResponse:
         """Departments list."""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -182,7 +182,7 @@ class IamDepartmentsTreeApi:
         self._client = client
 
 
-    def retrieve(self) -> AppbaseApiResult:
+    def retrieve(self) -> SdkWorkResourceResponse:
         """Departments tree retrieve."""
         return self._client.get(f"/app/v3/api/iam/departments/tree")
 
@@ -193,7 +193,7 @@ class IamOrganizationMembershipsApi:
         self._client = client
 
 
-    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> AppbaseApiResult:
+    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> SdkWorkListResponse:
         """Organization Memberships list."""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -212,7 +212,7 @@ class IamOrganizationsApi:
         self.tree = IamOrganizationsTreeApi(client)
 
 
-    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> AppbaseApiResult:
+    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> SdkWorkListResponse:
         """Organizations list."""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -230,7 +230,7 @@ class IamOrganizationsTreeApi:
         self._client = client
 
 
-    def retrieve(self) -> AppbaseApiResult:
+    def retrieve(self) -> SdkWorkResourceResponse:
         """Organizations tree retrieve."""
         return self._client.get(f"/app/v3/api/iam/organizations/tree")
 
@@ -241,7 +241,7 @@ class IamPositionAssignmentsApi:
         self._client = client
 
 
-    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> AppbaseApiResult:
+    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> SdkWorkListResponse:
         """Position Assignments list."""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -259,7 +259,7 @@ class IamPositionsApi:
         self._client = client
 
 
-    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> AppbaseApiResult:
+    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> SdkWorkListResponse:
         """Positions list."""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -277,7 +277,7 @@ class IamRoleBindingsApi:
         self._client = client
 
 
-    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> AppbaseApiResult:
+    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> SdkWorkListResponse:
         """Role Bindings list."""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -306,11 +306,11 @@ class IamUsersCurrentApi:
         self.phone_bindings = IamUsersCurrentPhoneBindingsApi(client)
 
 
-    def retrieve(self) -> AppbaseApiResult:
+    def retrieve(self) -> SdkWorkResourceResponse:
         """Users current retrieve."""
         return self._client.get(f"/app/v3/api/iam/users/current")
 
-    def update(self, body: Optional[Dict[str, Any]] = None) -> AppbaseApiResult:
+    def update(self, body: Optional[Dict[str, Any]] = None) -> SdkWorkResourceResponse:
         """Users current update."""
         return self._client.patch(f"/app/v3/api/iam/users/current", json=body)
 
@@ -321,11 +321,11 @@ class IamUsersCurrentEmailBindingsApi:
         self._client = client
 
 
-    def delete(self) -> AppbaseApiResult:
+    def delete(self) -> None:
         """Users current email Bindings delete."""
         return self._client.delete(f"/app/v3/api/iam/users/current/email_bindings")
 
-    def create(self, body: Dict[str, Any]) -> AppbaseApiResult:
+    def create(self, body: Dict[str, Any]) -> SdkWorkResourceResponse:
         """Users current email Bindings create."""
         return self._client.post(f"/app/v3/api/iam/users/current/email_bindings", json=body)
 
@@ -336,9 +336,9 @@ class IamUsersCurrentPasswordApi:
         self._client = client
 
 
-    def update(self, body: Dict[str, Any]) -> AppbaseApiResult:
+    def update(self, body: Optional[Dict[str, Any]] = None) -> SdkWorkResourceResponse:
         """Users current password update."""
-        return self._client.post(f"/app/v3/api/iam/users/current/password", json=body)
+        return self._client.patch(f"/app/v3/api/iam/users/current/password", json=body)
 
 class IamUsersCurrentPhoneBindingsApi:
     """iam iam.users.current.phone_bindings API client."""
@@ -347,10 +347,10 @@ class IamUsersCurrentPhoneBindingsApi:
         self._client = client
 
 
-    def delete(self) -> AppbaseApiResult:
+    def delete(self) -> None:
         """Users current phone Bindings delete."""
         return self._client.delete(f"/app/v3/api/iam/users/current/phone_bindings")
 
-    def create(self, body: Dict[str, Any]) -> AppbaseApiResult:
+    def create(self, body: Dict[str, Any]) -> SdkWorkResourceResponse:
         """Users current phone Bindings create."""
         return self._client.post(f"/app/v3/api/iam/users/current/phone_bindings", json=body)

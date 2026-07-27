@@ -80,36 +80,29 @@ pub(crate) async fn upsert_password_reset_request(
     Ok(())
 }
 
-pub(crate) async fn get_password_reset_request(
+pub(crate) async fn consume_password_reset_request(
     pg: &PgPool,
     tenant_id: &str,
     account_key: &str,
-) -> Result<Option<LocalPasswordResetRequest>, String> {
+    expected_username: &str,
+    expected_code: &str,
+) -> Result<bool, String> {
     let storage_key = artifact_key(tenant_id, KIND_PASSWORD_RESET, account_key);
-    let row = sqlx::query(
-        "SELECT payload_json FROM iam_ephemeral_artifact \
-         WHERE artifact_key = $1 AND expires_at > $2",
+    let consumed_key = sqlx::query_scalar::<_, String>(
+        "DELETE FROM iam_ephemeral_artifact \
+         WHERE artifact_key = $1 AND expires_at > $2 \
+           AND payload_json ->> 'username' = $3 \
+           AND payload_json ->> 'code' = $4 \
+         RETURNING artifact_key",
     )
     .bind(&storage_key)
     .bind(current_timestamp_utc())
+    .bind(expected_username)
+    .bind(expected_code)
     .fetch_optional(pg)
     .await
-    .map_err(|error| format!("load password reset artifact failed: {error}"))?;
-    Ok(row.and_then(|row| password_reset_request_from_payload(row.get(0))))
-}
-
-pub(crate) async fn delete_password_reset_request(
-    pg: &PgPool,
-    tenant_id: &str,
-    account_key: &str,
-) -> Result<(), String> {
-    let storage_key = artifact_key(tenant_id, KIND_PASSWORD_RESET, account_key);
-    sqlx::query("DELETE FROM iam_ephemeral_artifact WHERE artifact_key = $1")
-        .bind(&storage_key)
-        .execute(pg)
-        .await
-        .map_err(|error| format!("delete password reset artifact failed: {error}"))?;
-    Ok(())
+    .map_err(|error| format!("consume password reset artifact failed: {error}"))?;
+    Ok(consumed_key.is_some())
 }
 
 pub(crate) async fn insert_login_continuation(
@@ -301,17 +294,6 @@ pub(crate) async fn mutate_qr_session(
         .await
         .map_err(|error| format!("commit qr session transaction failed: {error}"))?;
     Ok(Some(session))
-}
-
-fn password_reset_request_from_payload(payload: Json<Value>) -> Option<LocalPasswordResetRequest> {
-    let code = optional_string(payload.0.get("code"))?;
-    let expire_time = payload.0["expireTimeMs"].as_u64()? as u128;
-    let username = optional_string(payload.0.get("username"))?;
-    Some(LocalPasswordResetRequest {
-        code,
-        expire_time,
-        username,
-    })
 }
 
 fn login_continuation_to_json(continuation: &LocalLoginContinuation) -> Value {

@@ -14,21 +14,21 @@ public class SystemApi {
     }
 
     /** Iam account Binding Policy retrieve. */
-    public AppbaseApiResult iamAccountBindingPolicyRetrieve() throws Exception {
-        Object raw = client.request("GET", ApiPaths.appPath("/system/iam/account_binding_policy"), null, null, null, null, true);
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    public SdkWorkResourceResponse iamAccountBindingPolicyRetrieve() throws Exception {
+        Object raw = client.request("GET", ApiPaths.appPath("/system/iam/account_binding_policy"), null, null, null, null, false, true);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
     /** Iam runtime retrieve. */
-    public AppbaseApiResult iamRuntimeRetrieve() throws Exception {
-        Object raw = client.request("GET", ApiPaths.appPath("/system/iam/runtime"), null, null, null, null, true);
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    public SdkWorkResourceResponse iamRuntimeRetrieve() throws Exception {
+        Object raw = client.request("GET", ApiPaths.appPath("/system/iam/runtime"), null, null, null, null, false, true);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
     /** Iam verification Policy retrieve. */
-    public AppbaseApiResult iamVerificationPolicyRetrieve() throws Exception {
-        Object raw = client.request("GET", ApiPaths.appPath("/system/iam/verification_policy"), null, null, null, null, true);
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    public SdkWorkResourceResponse iamVerificationPolicyRetrieve() throws Exception {
+        Object raw = client.request("GET", ApiPaths.appPath("/system/iam/verification_policy"), null, null, null, null, false, true);
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
 

@@ -3,13 +3,14 @@
   "kind": "sdkwork.component.spec",
   "component": {
     "name": "sdkwork-api-iam-standalone-gateway",
-    "displayName": "SDKWork iam Standalone API Gateway",
+    "displayName": "SDKWork IAM Standalone API Gateway",
     "version": "0.1.0",
     "type": "rust-api-standalone-gateway",
-    "root": "crates/sdkwork-api-iam-standalone-gateway",
+    "root": "sdkwork-iam/crates/sdkwork-api-iam-standalone-gateway",
     "domain": "iam",
     "capability": "api-gateway",
     "surface": "gateway-api",
+    "status": "standard",
     "languages": [
       "rust"
     ],
@@ -21,43 +22,47 @@
   "canonicalSpecs": [
     {
       "file": "API_ASSEMBLY_SPEC.md",
-      "path": "../../../sdkwork-specs/API_ASSEMBLY_SPEC.md",
+      "path": "../../../../sdkwork-specs/API_ASSEMBLY_SPEC.md",
       "purpose": "Host-neutral application API composition."
     },
     {
       "file": "APPLICATION_GATEWAY_SPEC.md",
-      "path": "../../../sdkwork-specs/APPLICATION_GATEWAY_SPEC.md",
+      "path": "../../../../sdkwork-specs/APPLICATION_GATEWAY_SPEC.md",
       "purpose": "Standalone gateway process and dependency boundaries."
     },
     {
       "file": "WEB_FRAMEWORK_SPEC.md",
-      "path": "../../../sdkwork-specs/WEB_FRAMEWORK_SPEC.md",
+      "path": "../../../../sdkwork-specs/WEB_FRAMEWORK_SPEC.md",
       "purpose": "Process-wide HTTP infrastructure ownership."
     },
     {
       "file": "WEB_BACKEND_SPEC.md",
-      "path": "../../../sdkwork-specs/WEB_BACKEND_SPEC.md",
+      "path": "../../../../sdkwork-specs/WEB_BACKEND_SPEC.md",
       "purpose": "HTTP backend host rules."
     },
     {
       "file": "RUST_CODE_SPEC.md",
-      "path": "../../../sdkwork-specs/RUST_CODE_SPEC.md",
+      "path": "../../../../sdkwork-specs/RUST_CODE_SPEC.md",
       "purpose": "Rust host implementation rules."
     },
     {
       "file": "APP_RUNTIME_TOPOLOGY_SPEC.md",
-      "path": "../../../sdkwork-specs/APP_RUNTIME_TOPOLOGY_SPEC.md",
+      "path": "../../../../sdkwork-specs/APP_RUNTIME_TOPOLOGY_SPEC.md",
       "purpose": "Application ingress and development topology."
     },
     {
       "file": "TEST_SPEC.md",
-      "path": "../../../sdkwork-specs/TEST_SPEC.md",
+      "path": "../../../../sdkwork-specs/TEST_SPEC.md",
       "purpose": "Gateway composition verification."
     }
   ],
   "contracts": {
     "layerRole": "runtime-gateway",
-    "publicExports": [],
+    "publicExports": [
+      "sdkwork_api_iam_standalone_gateway::build_standalone_router",
+      "sdkwork_api_iam_standalone_gateway::build_standalone_runtime",
+      "sdkwork_api_iam_standalone_gateway::StandaloneRuntime"
+    ],
     "providedPorts": [],
     "requiredPorts": [
       {
@@ -76,9 +81,20 @@
     "events": [],
     "configKeys": []
   },
+  "integration": {
+    "authority": "Root SDKWork specs remain authoritative. Local specs may narrow this component but must not contradict them.",
+    "dependencyPolicy": "The standalone gateway consumes host-neutral IAM assembly output and owns process-wide Web Framework and infrastructure route composition.",
+    "sdkPolicy": "The runtime serves materialized owner-only OpenAPI and does not construct or fork generated SDK clients.",
+    "languagePolicy": "Rust code follows Cargo workspace dependencies and the SDKWork gateway responsibility boundary."
+  },
   "verification": {
     "commands": [
-      "cargo check -p sdkwork-api-iam-standalone-gateway"
+      "cargo check -p sdkwork-api-iam-standalone-gateway",
+      "cargo test -p sdkwork-api-iam-standalone-gateway"
     ]
+  },
+  "metadata": {
+    "managedBy": "sdkwork-iam",
+    "standardVersion": "2026-07-27"
   }
 }

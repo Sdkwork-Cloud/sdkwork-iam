@@ -11,9 +11,10 @@ class ProblemDetail:
     type: str
     title: str
     status: int
+    code: int
+    trace_id: str
     detail: Optional[str] = None
     instance: Optional[str] = None
-    code: Optional[str] = None
-    trace_id: Optional[str] = None
-    request_id: Optional[str] = None
+    i18n_key: Optional[str] = None
+    locale: Optional[str] = None
     errors: Optional[List[FieldError]] = None

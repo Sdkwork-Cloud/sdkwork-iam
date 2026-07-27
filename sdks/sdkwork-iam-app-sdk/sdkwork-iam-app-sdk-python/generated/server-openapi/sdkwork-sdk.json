@@ -5,6 +5,8 @@
   "language": "python",
   "sdkType": "app",
   "packageName": "sdkwork-iam-app-sdk",
+  "transportPackageName": "sdkwork-iam-app-sdk",
+  "consumerPackageName": "sdkwork-iam-app-sdk",
   "generator": "@sdkwork/sdk-generator",
   "capabilities": {
     "supportsGeneratedTests": true,

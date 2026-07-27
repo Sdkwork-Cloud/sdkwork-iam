@@ -6,8 +6,9 @@ data class ProblemDetail(
     val status: Int? = null,
     val detail: String? = null,
     val instance: String? = null,
-    val code: String? = null,
+    val code: Int? = null,
     val traceId: String? = null,
-    val requestId: String? = null,
+    val i18nKey: String? = null,
+    val locale: String? = null,
     val errors: List<FieldError>? = null
 )

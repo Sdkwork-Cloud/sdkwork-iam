@@ -9,22 +9,24 @@ function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(root, relativePath), 'utf8'));
 }
 
-test('package.json verify script matches root component spec verification commands', () => {
+test('package.json verify facade delegates to the shared lifecycle and its hook matches the root component spec', () => {
   const packageJson = readJson('package.json');
   const rootSpec = readJson('specs/component.spec.json');
   const verifyScript = packageJson.scripts.verify;
+  const verifyHook = packageJson.scripts['_sdkwork:verify'];
 
+  assert.equal(verifyScript, 'pnpm exec sdkwork-app verify');
   assert.equal(
-    typeof verifyScript,
+    typeof verifyHook,
     'string',
-    'package.json must declare scripts.verify',
+    'package.json must declare scripts._sdkwork:verify for the shared lifecycle facade',
   );
 
   for (const command of rootSpec.verification.commands) {
     const step = command.replace(/^pnpm run /u, '');
     assert.ok(
-      verifyScript.includes(step),
-      `scripts.verify must include ${step} from specs/component.spec.json`,
+      verifyHook.includes(step),
+      `scripts._sdkwork:verify must include ${step} from specs/component.spec.json`,
     );
   }
 });

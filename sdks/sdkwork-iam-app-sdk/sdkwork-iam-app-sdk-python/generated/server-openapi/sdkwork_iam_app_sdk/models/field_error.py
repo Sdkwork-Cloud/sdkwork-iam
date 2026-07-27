@@ -7,4 +7,6 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 class FieldError:
     field: str
     message: str
-    code: Optional[str] = None
+    code: Optional[int] = None
+    i18n_key: Optional[str] = None
+    params: Optional[Dict[str, str]] = None

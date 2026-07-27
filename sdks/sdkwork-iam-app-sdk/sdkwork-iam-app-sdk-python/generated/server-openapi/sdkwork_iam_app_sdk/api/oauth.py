@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 from ..http_client import HttpClient
-from ..models import AppbaseApiResult
+from ..models import AppbaseSessionCreateCommand, SdkWorkListResponse, SdkWorkResourceResponse, WechatMiniProgramSessionCreateCommand
 
 def _append_query_string(path: str, raw_query_string: str) -> str:
     query = raw_query_string.lstrip('?')
@@ -191,6 +191,7 @@ class OauthApi:
         self._client = client
         self.account_links = OauthAccountLinksApi(client)
         self.authorization_urls = OauthAuthorizationUrlsApi(client)
+        self.authorizations = OauthAuthorizationsApi(client)
         self.callbacks = OauthCallbacksApi(client)
         self.device_authorizations = OauthDeviceAuthorizationsApi(client)
         self.grants = OauthGrantsApi(client)
@@ -206,8 +207,8 @@ class OauthAccountLinksApi:
         self._client = client
 
 
-    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> AppbaseApiResult:
-        """Oauth account Links list."""
+    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> SdkWorkListResponse:
+        """Account Links list."""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -217,8 +218,8 @@ class OauthAccountLinksApi:
         ])
         return self._client.get(_append_query_string(f"/app/v3/api/oauth/account_links", query))
 
-    def delete(self, account_link_id: str) -> AppbaseApiResult:
-        """Oauth account Links delete."""
+    def delete(self, account_link_id: str) -> None:
+        """Account Links delete."""
         return self._client.delete(f"/app/v3/api/oauth/account_links/{serialize_path_parameter(account_link_id, {'name': 'accountLinkId', 'style': 'simple', 'explode': False})}")
 
 class OauthAuthorizationUrlsApi:
@@ -228,9 +229,28 @@ class OauthAuthorizationUrlsApi:
         self._client = client
 
 
-    def create(self, body: Dict[str, Any]) -> AppbaseApiResult:
-        """Oauth authorization Urls create."""
-        return self._client.post(f"/app/v3/api/oauth/authorization_urls", json=body, skip_auth=True)
+    def create(self, body: Dict[str, Any]) -> SdkWorkResourceResponse:
+        """Authorization Urls create."""
+        return self._client.post(f"/app/v3/api/oauth/authorization_urls", json=body, access_token_only=True)
+
+class OauthAuthorizationsApi:
+    """oauth oauth.authorizations API client."""
+
+    def __init__(self, client: HttpClient):
+        self._client = client
+        self.completions = OauthAuthorizationsCompletionsApi(client)
+
+
+class OauthAuthorizationsCompletionsApi:
+    """oauth oauth.authorizations.completions API client."""
+
+    def __init__(self, client: HttpClient):
+        self._client = client
+
+
+    def create(self, authorization_state_id: str, body: Dict[str, Any]) -> SdkWorkResourceResponse:
+        """Authorizations completions create."""
+        return self._client.post(f"/app/v3/api/oauth/authorizations/{serialize_path_parameter(authorization_state_id, {'name': 'authorizationStateId', 'style': 'simple', 'explode': False})}/completions", json=body)
 
 class OauthCallbacksApi:
     """oauth oauth.callbacks API client."""
@@ -239,13 +259,13 @@ class OauthCallbacksApi:
         self._client = client
 
 
-    def retrieve(self, provider_code: str) -> AppbaseApiResult:
-        """Oauth callbacks handle Get."""
-        return self._client.get(f"/app/v3/api/oauth/callbacks/{serialize_path_parameter(provider_code, {'name': 'providerCode', 'style': 'simple', 'explode': False})}")
+    def retrieve(self, provider_code: str) -> SdkWorkResourceResponse:
+        """Callbacks retrieve."""
+        return self._client.get(f"/app/v3/api/oauth/callbacks/{serialize_path_parameter(provider_code, {'name': 'providerCode', 'style': 'simple', 'explode': False})}", access_token_only=True)
 
-    def update(self, provider_code: str, body: Dict[str, Any]) -> AppbaseApiResult:
-        """Oauth callbacks handle Post."""
-        return self._client.post(f"/app/v3/api/oauth/callbacks/{serialize_path_parameter(provider_code, {'name': 'providerCode', 'style': 'simple', 'explode': False})}", json=body)
+    def create(self, provider_code: str, body: Dict[str, Any]) -> SdkWorkResourceResponse:
+        """Callbacks create."""
+        return self._client.post(f"/app/v3/api/oauth/callbacks/{serialize_path_parameter(provider_code, {'name': 'providerCode', 'style': 'simple', 'explode': False})}", json=body, access_token_only=True)
 
 class OauthDeviceAuthorizationsApi:
     """oauth oauth.device_authorizations API client."""
@@ -257,12 +277,12 @@ class OauthDeviceAuthorizationsApi:
         self.session_exchanges = OauthDeviceAuthorizationsSessionExchangesApi(client)
 
 
-    def create(self, body: Dict[str, Any]) -> AppbaseApiResult:
-        """Oauth device Authorizations create."""
+    def create(self, body: Dict[str, Any]) -> SdkWorkResourceResponse:
+        """Device Authorizations create."""
         return self._client.post(f"/app/v3/api/oauth/device_authorizations", json=body, skip_auth=True)
 
-    def retrieve(self, device_authorization_id: str) -> AppbaseApiResult:
-        """Oauth device Authorizations retrieve."""
+    def retrieve(self, device_authorization_id: str) -> SdkWorkResourceResponse:
+        """Device Authorizations retrieve."""
         return self._client.get(f"/app/v3/api/oauth/device_authorizations/{serialize_path_parameter(device_authorization_id, {'name': 'deviceAuthorizationId', 'style': 'simple', 'explode': False})}", skip_auth=True)
 
 class OauthDeviceAuthorizationsPasswordCompletionsApi:
@@ -272,9 +292,9 @@ class OauthDeviceAuthorizationsPasswordCompletionsApi:
         self._client = client
 
 
-    def create(self, device_authorization_id: str, body: Dict[str, Any]) -> AppbaseApiResult:
-        """Oauth device Authorizations password Completions create."""
-        return self._client.post(f"/app/v3/api/oauth/device_authorizations/{serialize_path_parameter(device_authorization_id, {'name': 'deviceAuthorizationId', 'style': 'simple', 'explode': False})}/password_completions", json=body, skip_auth=True)
+    def create(self, device_authorization_id: str, body: Dict[str, Any]) -> SdkWorkResourceResponse:
+        """Device Authorizations password Completions create."""
+        return self._client.post(f"/app/v3/api/oauth/device_authorizations/{serialize_path_parameter(device_authorization_id, {'name': 'deviceAuthorizationId', 'style': 'simple', 'explode': False})}/password_completions", json=body, access_token_only=True)
 
 class OauthDeviceAuthorizationsScansApi:
     """oauth oauth.device_authorizations.scans API client."""
@@ -283,9 +303,9 @@ class OauthDeviceAuthorizationsScansApi:
         self._client = client
 
 
-    def create(self, device_authorization_id: str, body: Dict[str, Any]) -> AppbaseApiResult:
-        """Oauth device Authorizations scans create."""
-        return self._client.post(f"/app/v3/api/oauth/device_authorizations/{serialize_path_parameter(device_authorization_id, {'name': 'deviceAuthorizationId', 'style': 'simple', 'explode': False})}/scans", json=body, skip_auth=True)
+    def create(self, device_authorization_id: str, body: Dict[str, Any]) -> SdkWorkResourceResponse:
+        """Device Authorizations scans create."""
+        return self._client.post(f"/app/v3/api/oauth/device_authorizations/{serialize_path_parameter(device_authorization_id, {'name': 'deviceAuthorizationId', 'style': 'simple', 'explode': False})}/scans", json=body, access_token_only=True)
 
 class OauthDeviceAuthorizationsSessionExchangesApi:
     """oauth oauth.device_authorizations.session_exchanges API client."""
@@ -294,9 +314,9 @@ class OauthDeviceAuthorizationsSessionExchangesApi:
         self._client = client
 
 
-    def create(self, device_authorization_id: str, body: Dict[str, Any]) -> AppbaseApiResult:
-        """Oauth device Authorizations session Exchanges create."""
-        return self._client.post(f"/app/v3/api/oauth/device_authorizations/{serialize_path_parameter(device_authorization_id, {'name': 'deviceAuthorizationId', 'style': 'simple', 'explode': False})}/session_exchanges", json=body)
+    def create(self, device_authorization_id: str, body: Dict[str, Any]) -> SdkWorkResourceResponse:
+        """Device Authorizations session Exchanges create."""
+        return self._client.post(f"/app/v3/api/oauth/device_authorizations/{serialize_path_parameter(device_authorization_id, {'name': 'deviceAuthorizationId', 'style': 'simple', 'explode': False})}/session_exchanges", json=body, skip_auth=True)
 
 class OauthGrantsApi:
     """oauth oauth.grants API client."""
@@ -305,8 +325,8 @@ class OauthGrantsApi:
         self._client = client
 
 
-    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> AppbaseApiResult:
-        """Oauth grants list."""
+    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> SdkWorkListResponse:
+        """Grants list."""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -316,8 +336,8 @@ class OauthGrantsApi:
         ])
         return self._client.get(_append_query_string(f"/app/v3/api/oauth/grants", query))
 
-    def delete(self, grant_id: str) -> AppbaseApiResult:
-        """Oauth grants delete."""
+    def delete(self, grant_id: str) -> None:
+        """Grants delete."""
         return self._client.delete(f"/app/v3/api/oauth/grants/{serialize_path_parameter(grant_id, {'name': 'grantId', 'style': 'simple', 'explode': False})}")
 
 class OauthMiniProgramSessionsApi:
@@ -327,9 +347,9 @@ class OauthMiniProgramSessionsApi:
         self._client = client
 
 
-    def create(self, body: Dict[str, Any]) -> AppbaseApiResult:
-        """Oauth mini Program Sessions create."""
-        return self._client.post(f"/app/v3/api/oauth/mini_program_sessions", json=body)
+    def create(self, body: WechatMiniProgramSessionCreateCommand) -> SdkWorkResourceResponse:
+        """Mini Program Sessions create."""
+        return self._client.post(f"/app/v3/api/oauth/mini_program_sessions", json=body, access_token_only=True)
 
 class OauthProvidersApi:
     """oauth oauth.providers API client."""
@@ -338,8 +358,8 @@ class OauthProvidersApi:
         self._client = client
 
 
-    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> AppbaseApiResult:
-        """Oauth providers list."""
+    def list(self, page: Optional[int] = None, page_size: Optional[int] = None, cursor: Optional[str] = None, sort: Optional[str] = None, q: Optional[str] = None) -> SdkWorkListResponse:
+        """Providers list."""
         query = build_query_string([
             {'name': 'page', 'value': page, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'page_size', 'value': page_size, 'style': 'form', 'explode': True, 'allow_reserved': False},
@@ -347,7 +367,7 @@ class OauthProvidersApi:
             {'name': 'sort', 'value': sort, 'style': 'form', 'explode': True, 'allow_reserved': False},
             {'name': 'q', 'value': q, 'style': 'form', 'explode': True, 'allow_reserved': False},
         ])
-        return self._client.get(_append_query_string(f"/app/v3/api/oauth/providers", query))
+        return self._client.get(_append_query_string(f"/app/v3/api/oauth/providers", query), access_token_only=True)
 
 class OauthSessionsApi:
     """oauth oauth.sessions API client."""
@@ -356,6 +376,6 @@ class OauthSessionsApi:
         self._client = client
 
 
-    def create(self, body: Dict[str, Any]) -> AppbaseApiResult:
-        """Oauth sessions create."""
-        return self._client.post(f"/app/v3/api/oauth/sessions", json=body, skip_auth=True)
+    def create(self, body: AppbaseSessionCreateCommand) -> SdkWorkResourceResponse:
+        """Sessions create."""
+        return self._client.post(f"/app/v3/api/oauth/sessions", json=body, access_token_only=True)

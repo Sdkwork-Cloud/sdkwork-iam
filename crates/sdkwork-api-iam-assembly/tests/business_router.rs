@@ -6,10 +6,21 @@ use sdkwork_api_iam_assembly::assemble_owner_api_surfaces;
 use tower::ServiceExt;
 
 #[tokio::test]
-async fn business_router_exposes_iam_backend_routes_without_infra_routes() {
-    let backend = sdkwork_routes_iam_backend_api::gateway_mount().await;
+async fn business_router_exposes_iam_owner_routes_without_infra_routes() {
+    let previous_app_root = std::env::var_os("SDKWORK_APP_ROOT");
+    std::env::set_var(
+        "SDKWORK_APP_ROOT",
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/embedded-application"),
+    );
+    let assembly = assemble_owner_api_surfaces().await;
+    match previous_app_root {
+        Some(value) => std::env::set_var("SDKWORK_APP_ROOT", value),
+        None => std::env::remove_var("SDKWORK_APP_ROOT"),
+    }
+    let app = assembly.expect("assemble IAM owner surfaces").router;
 
-    let users = backend
+    let users = app
         .clone()
         .oneshot(
             Request::builder()
@@ -23,16 +34,8 @@ async fn business_router_exposes_iam_backend_routes_without_infra_routes() {
     assert_ne!(
         users.status(),
         StatusCode::NOT_FOUND,
-        "backend gateway_mount must register directory admin routes"
+        "owner assembly must register directory admin routes"
     );
-}
-
-#[tokio::test]
-async fn business_router_exposes_iam_app_routes_without_infra_routes() {
-    let app = assemble_owner_api_surfaces()
-        .await
-        .expect("assemble IAM owner surfaces")
-        .router;
 
     let oauth = app
         .clone()

@@ -10,7 +10,11 @@ final class FieldError
 
     public ?string $message = null;
 
-    public ?string $code = null;
+    public ?int $code = null;
+
+    public ?string $i18nKey = null;
+
+    public array $params = [];
 
     public function __construct(array $data = [])
     {
@@ -23,6 +27,14 @@ final class FieldError
         $this->code = array_key_exists('code', $data)
             ? $data['code']
             : null;
+        $this->i18nKey = array_key_exists('i18nKey', $data)
+            ? $data['i18nKey']
+            : null;
+        $this->params = array_key_exists('params', $data)
+            ? is_array($data['params'])
+                ? array_map(static fn($item) => $item, $data['params'])
+                : []
+            : [];
     }
 
     public static function fromArray(?array $data): ?self
@@ -36,6 +48,8 @@ final class FieldError
             'field' => $this->field,
             'message' => $this->message,
             'code' => $this->code,
+            'i18nKey' => $this->i18nKey,
+            'params' => array_map(static fn($item) => $item, $this->params),
         ];
     }
 }

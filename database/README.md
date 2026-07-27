@@ -1,26 +1,25 @@
 # IAM Database Module
 
-Canonical lifecycle assets for `sdkwork-iam` per `DATABASE_FRAMEWORK_SPEC.md`.
+Canonical authoritative-server lifecycle assets for `sdkwork-iam` under `DATABASE_FRAMEWORK_SPEC.md`.
 
-- moduleId: `iam`
-- serviceCode: `IAM`
-- tablePrefix: `iam_`
-- contract tables: **57** (see `contract/schema.yaml`)
+- `databaseRole`: `authoritative-server`
+- `moduleId`: `iam`
+- `serviceCode`: `IAM`
+- `tablePrefix`: `iam_`
+- `contract tables`: 57, listed in `contract/schema.yaml`
+- `engine`: PostgreSQL only
+- `autoMigrate`: disabled by default
 
 ## Layout
 
-1. **Baseline** — `database/ddl/baseline/{engine}/0001_iam_baseline.sql` is the greenfield DDL snapshot (no legacy Studio cleanup).
-2. **Migrations** — `database/migrations/{engine}/` holds versioned incremental changes. Upgraded databases apply `0007_drop_legacy_studio_tables` to remove deprecated Studio catalog tables; fresh installs skip no-op drops safely.
-3. **Drift** — run `pnpm run db:drift:check` before release.
+1. `database/ddl/baseline/postgres/0001_iam_baseline.sql` is the greenfield PostgreSQL DDL snapshot.
+2. `database/migrations/postgres/` contains versioned incremental migrations with explicit lock, timeout, rollback, and transaction metadata.
+3. `database/seeds/` contains common and locale-aware initialization data.
+4. `database/drift/` declares non-mutating drift policy.
 
-Lifecycle orchestration is implemented in `crates/sdkwork-iam-database-host` (`sdkwork-iam-db` CLI).
+SQLite is not part of this authoritative database root. Any embedded SQLite adapter is non-authoritative and must own a separate `client-local` lifecycle contract before production use.
 
-## Engines
-
-| Engine | Lifecycle | Notes |
-| --- | --- | --- |
-| PostgreSQL | **Authoritative** — `db:init`, `db:migrate`, `db:bootstrap`, drift checks | Required for production IAM HTTP services |
-| SQLite | **Embedded mirror only** — not in `database.manifest.json` | OAuth-device / Claw Router narrow paths; baseline uses SQLite `TEXT` JSON columns (not PostgreSQL `JSONB`) |
+Lifecycle orchestration is implemented by `crates/sdkwork-iam-database-host` through the `sdkwork-iam-db` CLI. Production startup does not auto-migrate; migrations are an explicit governed operation.
 
 ## Commands
 
@@ -37,6 +36,7 @@ pnpm run db:status
 pnpm run db:drift:check
 ```
 
-- `db:init` — apply baseline DDL on an empty database.
-- `db:bootstrap` — init + migrate + operational seed (via `sdkwork-iam-database-host`).
-- `db:migrate` — apply pending versioned migrations (including legacy Studio cleanup on upgrades).
+- `db:init` applies the PostgreSQL baseline to an empty database.
+- `db:bootstrap` initializes, migrates, and applies the selected operational seed profile.
+- `db:migrate` applies pending versioned PostgreSQL migrations.
+- `db:drift:check` compares the deployed schema with the contract and never mutates it.

@@ -52,7 +52,7 @@
     },
     {
       "path": "src/api/auth.ts",
-      "sha256": "c34fdc843c1972005e724c30a6a95edcb0bf3a88f02d32ca701fe419b5698dd8"
+      "sha256": "a6e662bb48b77bdf526abb25b1bd56601915b14ec89b5c41b06b926840be54fe"
     },
     {
       "path": "src/api/base.ts",
@@ -84,7 +84,7 @@
     },
     {
       "path": "src/http/client.ts",
-      "sha256": "a26a75200b81060fc4909aae258d337967ccd196c2b69d9a2e183aa2e1f80162"
+      "sha256": "a400aaa79494485aecb46e21b6662c0bbb9315fe2bd4cbef86abe82b96964dda"
     },
     {
       "path": "src/http/index.ts",

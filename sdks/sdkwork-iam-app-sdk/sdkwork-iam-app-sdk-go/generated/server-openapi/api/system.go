@@ -14,31 +14,31 @@ func NewSystemApi(client *sdkhttp.Client) *SystemApi {
 }
 
 // Iam account Binding Policy retrieve.
-func (a *SystemApi) IamAccountBindingPolicyRetrieve() (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Request("GET", AppApiPath("/system/iam/account_binding_policy"), nil, nil, nil, "", true)
+func (a *SystemApi) IamAccountBindingPolicyRetrieve() (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("GET", AppApiPath("/system/iam/account_binding_policy"), nil, nil, nil, "", false, true)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
 // Iam runtime retrieve.
-func (a *SystemApi) IamRuntimeRetrieve() (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Request("GET", AppApiPath("/system/iam/runtime"), nil, nil, nil, "", true)
+func (a *SystemApi) IamRuntimeRetrieve() (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("GET", AppApiPath("/system/iam/runtime"), nil, nil, nil, "", false, true)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
 // Iam verification Policy retrieve.
-func (a *SystemApi) IamVerificationPolicyRetrieve() (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Request("GET", AppApiPath("/system/iam/verification_policy"), nil, nil, nil, "", true)
+func (a *SystemApi) IamVerificationPolicyRetrieve() (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("GET", AppApiPath("/system/iam/verification_policy"), nil, nil, nil, "", false, true)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }

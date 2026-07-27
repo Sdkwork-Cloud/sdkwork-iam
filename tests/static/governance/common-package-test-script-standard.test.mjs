@@ -27,7 +27,7 @@ function toPosixPath(filePath) {
   return filePath.split(path.sep).join("/");
 }
 
-test("common TypeScript packages with tests expose exact package-level tests through the workspace Vitest root", () => {
+test("common TypeScript packages with tests expose exact package-level tests through an approved workspace Vitest root", () => {
   const violations = [];
 
   for (const packageJsonPath of listCommonPackageJsonFiles()) {
@@ -50,18 +50,18 @@ test("common TypeScript packages with tests expose exact package-level tests thr
       continue;
     }
 
-    const expectedTestScript = [
+    const expectedTestScripts = ["vitest.config.ts", "vitest.node.config.ts"].map((configFile) => [
       "pnpm --dir ../../../.. exec vitest run",
       `${packageRootRelativePath}/tests`,
-      "--config vitest.config.ts --configLoader native --pool vmThreads",
-    ].join(" ");
+      `--config ${configFile} --configLoader native --pool vmThreads`,
+    ].join(" "));
 
-    if (testScript !== expectedTestScript) {
+    if (!expectedTestScripts.includes(testScript)) {
       violations.push({
         name: packageJson.name,
         path: path.relative(appbaseRoot, packageJsonPath),
         testScript,
-        expectedTestScript,
+        expectedTestScripts,
       });
     }
   }

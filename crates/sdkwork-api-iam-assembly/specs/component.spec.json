@@ -6,7 +6,7 @@
     "displayName": "SDKWork IAM Gateway Assembly",
     "version": "0.1.0",
     "type": "rust-api-assembly",
-    "root": "crates/sdkwork-api-iam-assembly",
+    "root": "sdkwork-iam/crates/sdkwork-api-iam-assembly",
     "domain": "iam",
     "capability": "api-assembly",
     "surface": "api-assembly",

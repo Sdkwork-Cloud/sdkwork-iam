@@ -1,6 +1,7 @@
 require_relative 'base_api'
-require_relative '../models/appbase_api_result'
 require_relative '../models/appbase_session_create_command'
+require_relative '../models/sdk_work_command_response'
+require_relative '../models/sdk_work_resource_response'
 
 module Sdkwork
   module AppSdk
@@ -11,10 +12,10 @@ module Sdkwork
             path = '/app/v3/api/auth/password_reset_requests'
             payload = body
             options = {}
-            options[:skip_auth] = true
+            options[:access_token_only] = true
             options[:json] = payload unless payload.nil?
             result = @client.request('POST', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Password Resets create.
@@ -22,10 +23,10 @@ module Sdkwork
             path = '/app/v3/api/auth/password_resets'
             payload = body
             options = {}
-            options[:skip_auth] = true
+            options[:access_token_only] = true
             options[:json] = payload unless payload.nil?
             result = @client.request('POST', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Registrations create.
@@ -33,10 +34,10 @@ module Sdkwork
             path = '/app/v3/api/auth/registrations'
             payload = body
             options = {}
-            options[:skip_auth] = true
+            options[:access_token_only] = true
             options[:json] = payload unless payload.nil?
             result = @client.request('POST', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Sessions create.
@@ -44,10 +45,10 @@ module Sdkwork
             path = '/app/v3/api/auth/sessions'
             payload = body.respond_to?(:to_hash) ? body.to_hash : body
             options = {}
-            options[:skip_auth] = true
+            options[:access_token_only] = true
             options[:json] = payload unless payload.nil?
             result = @client.request('POST', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Sessions current delete.
@@ -56,7 +57,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('DELETE', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result
           end
 
           # Sessions current retrieve.
@@ -65,7 +66,7 @@ module Sdkwork
             options = {}
 
             result = @client.request('GET', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Sessions current update.
@@ -75,7 +76,7 @@ module Sdkwork
             options = {}
             options[:json] = payload unless payload.nil?
             result = @client.request('PATCH', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Sessions login Context Selection create.
@@ -83,10 +84,10 @@ module Sdkwork
             path = '/app/v3/api/auth/sessions/login_context_selection'
             payload = body
             options = {}
-            options[:skip_auth] = true
+            options[:access_token_only] = true
             options[:json] = payload unless payload.nil?
             result = @client.request('POST', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Sessions organization Selection create.
@@ -94,10 +95,10 @@ module Sdkwork
             path = '/app/v3/api/auth/sessions/organization_selection'
             payload = body
             options = {}
-            options[:skip_auth] = true
+            options[:access_token_only] = true
             options[:json] = payload unless payload.nil?
             result = @client.request('POST', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkResourceResponse.from_hash(result) : nil
           end
 
           # Sessions refresh.
@@ -108,7 +109,7 @@ module Sdkwork
             options[:skip_auth] = true
             options[:json] = payload unless payload.nil?
             result = @client.request('POST', path, **options)
-            result.is_a?(Hash) ? Models::AppbaseApiResult.from_hash(result) : nil
+            result.is_a?(Hash) ? Models::SdkWorkCommandResponse.from_hash(result) : nil
           end
 
       end

@@ -16,6 +16,7 @@ export type ApiRequestOptions = Pick<HttpRequestOptions, 'signal' | 'timeout'>;
 export class HttpClient extends BaseHttpClient {
   private static readonly ACCESS_TOKEN_HEADER: string = 'Access-Token';
   private static readonly SDKWORK_V3_UNWRAP = true;
+  private static readonly SDKWORK_V3_REQUEST_FINGERPRINTS = true;
   private static readonly REQUIRES_SDKWORK_ACCESS_TOKEN = true;
 
   constructor(config: SdkworkAppConfig) {
@@ -48,6 +49,120 @@ export class HttpClient extends BaseHttpClient {
     }
 
     return Object.keys(mergedHeaders).length > 0 ? mergedHeaders : undefined;
+  }
+
+  private async applySdkworkRequestBodyFingerprint(
+    headers: Record<string, string> | undefined,
+    body: unknown,
+  ): Promise<Record<string, string> | undefined> {
+    if (
+      !HttpClient.SDKWORK_V3_REQUEST_FINGERPRINTS
+      || body == null
+      || !this.hasNonEmptyHeader(headers, 'Idempotency-Key')
+      || this.hasNonEmptyHeader(headers, 'X-Content-SHA256')
+      || this.hasNonEmptyHeader(headers, 'X-Idempotency-Fingerprint')
+    ) {
+      return headers;
+    }
+
+    const fingerprint = await this.createSdkworkRequestBodyFingerprint(body);
+    if (!fingerprint) {
+      return headers;
+    }
+
+    const normalizedFingerprintHeader = fingerprint.header.toLowerCase();
+    const preparedHeaders = Object.fromEntries(
+      Object.entries(headers ?? {}).filter(
+        ([headerName]) => headerName.toLowerCase() !== normalizedFingerprintHeader,
+      ),
+    );
+    return {
+      ...preparedHeaders,
+      [fingerprint.header]: fingerprint.value,
+    };
+  }
+
+  private hasNonEmptyHeader(headers: Record<string, string> | undefined, name: string): boolean {
+    const normalizedName = name.toLowerCase();
+    return Object.entries(headers ?? {}).some(
+      ([headerName, value]) => headerName.toLowerCase() === normalizedName && value.trim().length > 0,
+    );
+  }
+
+  private async createSdkworkRequestBodyFingerprint(
+    body: unknown,
+  ): Promise<{ header: 'X-Content-SHA256' | 'X-Idempotency-Fingerprint'; value: string } | undefined> {
+    if (typeof FormData !== 'undefined' && body instanceof FormData) {
+      const canonicalForm = await this.serializeSdkworkFormData(body);
+      return {
+        header: 'X-Idempotency-Fingerprint',
+        value: await this.sha256Hex(new TextEncoder().encode(canonicalForm)),
+      };
+    }
+
+    const bytes = await this.serializeSdkworkRequestBodyBytes(body);
+    if (!bytes) {
+      return undefined;
+    }
+    return {
+      header: 'X-Content-SHA256',
+      value: await this.sha256Hex(bytes),
+    };
+  }
+
+  private async serializeSdkworkRequestBodyBytes(body: unknown): Promise<Uint8Array | undefined> {
+    if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) {
+      return new TextEncoder().encode(body.toString());
+    }
+    if (typeof Blob !== 'undefined' && body instanceof Blob) {
+      return new Uint8Array(await body.arrayBuffer());
+    }
+    if (typeof ArrayBuffer !== 'undefined' && body instanceof ArrayBuffer) {
+      return new Uint8Array(body.slice(0));
+    }
+    if (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(body)) {
+      return new Uint8Array(new Uint8Array(body.buffer, body.byteOffset, body.byteLength));
+    }
+    if (typeof body === 'string') {
+      return new TextEncoder().encode(body);
+    }
+
+    const serialized = JSON.stringify(body);
+    return serialized === undefined ? undefined : new TextEncoder().encode(serialized);
+  }
+
+  private async serializeSdkworkFormData(body: FormData): Promise<string> {
+    const parts: Array<Record<string, unknown>> = [];
+    for (const [name, value] of body.entries()) {
+      if (typeof value === 'string') {
+        parts.push({ kind: 'field', name, value });
+        continue;
+      }
+
+      const bytes = new Uint8Array(await value.arrayBuffer());
+      parts.push({
+        kind: 'file',
+        name,
+        fileName: 'name' in value ? String(value.name) : '',
+        contentType: value.type,
+        size: value.size,
+        contentSha256: await this.sha256Hex(bytes),
+      });
+    }
+    return JSON.stringify(parts);
+  }
+
+  private async sha256Hex(bytes: Uint8Array): Promise<string> {
+    const subtle = globalThis.crypto?.subtle;
+    if (!subtle) {
+      throw new Error('Web Crypto SHA-256 is required for SDKWork idempotent requests with a body.');
+    }
+    const digestInput = new Uint8Array(bytes.byteLength);
+    digestInput.set(bytes);
+    const digest = await subtle.digest('SHA-256', digestInput);
+    return Array.from(new Uint8Array(digest))
+      .map((value) => value.toString(16).padStart(2, '0'))
+      .join('');
   }
 
   protected buildHeaders(config: any, skipAuth = false): Record<string, string> {
@@ -321,6 +436,11 @@ export class HttpClient extends BaseHttpClient {
       : skipAuth
         ? headers
         : this.applySdkworkAuthHeaders(headers);
+    const requestBody = this.buildRequestBody(body, contentType);
+    const preparedHeaders = await this.applySdkworkRequestBodyFingerprint(
+      this.buildRequestHeaders(requestHeaders, body == null ? undefined : contentType),
+      requestBody,
+    );
     const payload = await withRetry(
       () => execute.call(this, {
         url: path,
@@ -328,8 +448,8 @@ export class HttpClient extends BaseHttpClient {
         ...rest,
         skipAuth,
         accessTokenOnly,
-        body: this.buildRequestBody(body, contentType),
-        headers: this.buildRequestHeaders(requestHeaders, body == null ? undefined : contentType),
+        body: requestBody,
+        headers: preparedHeaders,
       }),
       { maxRetries: 3 }
     );
@@ -355,9 +475,13 @@ export class HttpClient extends BaseHttpClient {
       : skipAuth
         ? headers
         : this.applySdkworkAuthHeaders(headers);
-    const requestHeaders = this.buildRequestHeaders(
-      { Accept: 'text/event-stream', ...(authHeaders ?? {}) },
-      body == null ? undefined : contentType,
+    const requestBody = this.buildRequestBody(body, contentType);
+    const requestHeaders = await this.applySdkworkRequestBodyFingerprint(
+      this.buildRequestHeaders(
+        { Accept: 'text/event-stream', ...(authHeaders ?? {}) },
+        body == null ? undefined : contentType,
+      ),
+      requestBody,
     );
 
     for await (const data of stream.call(this, path, {
@@ -365,7 +489,7 @@ export class HttpClient extends BaseHttpClient {
       ...rest,
       skipAuth,
       accessTokenOnly,
-      body: this.buildRequestBody(body, contentType),
+      body: requestBody,
       headers: requestHeaders,
     })) {
       if (data === '[DONE]') {

@@ -331,6 +331,37 @@ fn derive_master_key_from_secret(secret: &str) -> Result<Key<Aes256Gcm>, String>
 mod tests {
     use super::*;
 
+    const SIGNING_SECRET_ENV_KEYS: [&str; 2] = [
+        "SDKWORK_IAM_SIGNING_MASTER_SECRET",
+        "SDKWORK_IAM_LEGACY_SIGNING_MASTER_SECRETS",
+    ];
+
+    struct EnvSnapshot {
+        values: Vec<(&'static str, Option<std::ffi::OsString>)>,
+    }
+
+    impl EnvSnapshot {
+        fn capture(names: &[&'static str]) -> Self {
+            Self {
+                values: names
+                    .iter()
+                    .map(|name| (*name, std::env::var_os(name)))
+                    .collect(),
+            }
+        }
+    }
+
+    impl Drop for EnvSnapshot {
+        fn drop(&mut self) {
+            for (name, value) in &self.values {
+                match value {
+                    Some(value) => std::env::set_var(name, value),
+                    None => std::env::remove_var(name),
+                }
+            }
+        }
+    }
+
     #[test]
     fn tenant_primary_signing_kid_is_stable_per_tenant() {
         assert_eq!(
@@ -341,22 +372,27 @@ mod tests {
 
     #[test]
     fn encrypted_signing_secret_roundtrip_with_master_secret() {
+        let _env_lock = crate::test_env_lock::lock();
+        let _env_snapshot = EnvSnapshot::capture(&SIGNING_SECRET_ENV_KEYS);
         std::env::set_var(
             "SDKWORK_IAM_SIGNING_MASTER_SECRET",
             "integration-test-signing-master-secret",
         );
+        std::env::remove_var("SDKWORK_IAM_LEGACY_SIGNING_MASTER_SECRETS");
         let plaintext = b"tenant-signing-secret-material";
         let secret_ref = encode_signing_secret_ref(plaintext);
         assert!(secret_ref.starts_with(LEGACY_ENCRYPTED_PREFIX));
         let decoded =
             decode_signing_secret_ref(&secret_ref).expect("decode encrypted signing secret");
         assert_eq!(decoded, plaintext);
-        std::env::remove_var("SDKWORK_IAM_SIGNING_MASTER_SECRET");
     }
 
     #[test]
     fn database_native_signing_secret_roundtrip_without_master() {
+        let _env_lock = crate::test_env_lock::lock();
+        let _env_snapshot = EnvSnapshot::capture(&SIGNING_SECRET_ENV_KEYS);
         std::env::remove_var("SDKWORK_IAM_SIGNING_MASTER_SECRET");
+        std::env::remove_var("SDKWORK_IAM_LEGACY_SIGNING_MASTER_SECRETS");
         let plaintext = b"tenant-signing-secret-material";
         let secret_ref = encode_signing_secret_ref(plaintext);
         assert!(!secret_ref.starts_with(LEGACY_ENCRYPTED_PREFIX));
@@ -367,8 +403,11 @@ mod tests {
     #[test]
     fn legacy_encrypted_signing_secret_remains_readable() {
         use aes_gcm::aead::{AeadCore, OsRng as AesOsRng};
+        let _env_lock = crate::test_env_lock::lock();
+        let _env_snapshot = EnvSnapshot::capture(&SIGNING_SECRET_ENV_KEYS);
         let plaintext = b"legacy-encrypted-signing-secret";
         let legacy_master = "integration-test-signing-master-secret";
+        std::env::remove_var("SDKWORK_IAM_SIGNING_MASTER_SECRET");
         std::env::set_var("SDKWORK_IAM_LEGACY_SIGNING_MASTER_SECRETS", legacy_master);
         let key = derive_master_key_from_secret(legacy_master).expect("derive key");
         let cipher = Aes256Gcm::new(&key);
@@ -384,6 +423,5 @@ mod tests {
         );
         let decoded = decode_signing_secret_ref(&secret_ref).expect("decode legacy secret");
         assert_eq!(decoded, plaintext);
-        std::env::remove_var("SDKWORK_IAM_LEGACY_SIGNING_MASTER_SECRETS");
     }
 }

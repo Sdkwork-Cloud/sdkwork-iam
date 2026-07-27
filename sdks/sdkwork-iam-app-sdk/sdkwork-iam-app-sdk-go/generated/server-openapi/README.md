@@ -87,7 +87,7 @@ fmt.Println(result)
 ### oauth
 
 ```go
-// Oauth account Links list.
+// Account Links list.
 params := map[string]interface{}{
     "page": 1,
     "page_size": 2,

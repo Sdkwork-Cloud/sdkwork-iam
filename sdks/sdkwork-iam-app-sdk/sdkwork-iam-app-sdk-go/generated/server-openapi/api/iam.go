@@ -18,7 +18,7 @@ func NewIamApi(client *sdkhttp.Client) *IamApi {
 }
 
 // Department Assignments list.
-func (a *IamApi) DepartmentAssignmentsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) DepartmentAssignmentsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.SdkWorkListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page", Value: func() interface{} { if page == nil { return nil }; return *page }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -28,14 +28,14 @@ func (a *IamApi) DepartmentAssignmentsList(page *int, pageSize *int, cursor *str
     })
     raw, err := a.client.Get(AppendQueryString(AppApiPath("/iam/department_assignments"), query), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkListResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkListResponse](raw)
 }
 
 // Departments list.
-func (a *IamApi) DepartmentsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) DepartmentsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.SdkWorkListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page", Value: func() interface{} { if page == nil { return nil }; return *page }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -45,24 +45,24 @@ func (a *IamApi) DepartmentsList(page *int, pageSize *int, cursor *string, sort 
     })
     raw, err := a.client.Get(AppendQueryString(AppApiPath("/iam/departments"), query), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkListResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkListResponse](raw)
 }
 
 // Departments tree retrieve.
-func (a *IamApi) DepartmentsTreeRetrieve() (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) DepartmentsTreeRetrieve() (sdktypes.SdkWorkResourceResponse, error) {
     raw, err := a.client.Get(AppApiPath("/iam/departments/tree"), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
 // Organization Memberships list.
-func (a *IamApi) OrganizationMembershipsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) OrganizationMembershipsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.SdkWorkListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page", Value: func() interface{} { if page == nil { return nil }; return *page }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -72,14 +72,14 @@ func (a *IamApi) OrganizationMembershipsList(page *int, pageSize *int, cursor *s
     })
     raw, err := a.client.Get(AppendQueryString(AppApiPath("/iam/organization_memberships"), query), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkListResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkListResponse](raw)
 }
 
 // Organizations list.
-func (a *IamApi) OrganizationsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) OrganizationsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.SdkWorkListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page", Value: func() interface{} { if page == nil { return nil }; return *page }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -89,24 +89,24 @@ func (a *IamApi) OrganizationsList(page *int, pageSize *int, cursor *string, sor
     })
     raw, err := a.client.Get(AppendQueryString(AppApiPath("/iam/organizations"), query), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkListResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkListResponse](raw)
 }
 
 // Organizations tree retrieve.
-func (a *IamApi) OrganizationsTreeRetrieve() (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) OrganizationsTreeRetrieve() (sdktypes.SdkWorkResourceResponse, error) {
     raw, err := a.client.Get(AppApiPath("/iam/organizations/tree"), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
 // Position Assignments list.
-func (a *IamApi) PositionAssignmentsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) PositionAssignmentsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.SdkWorkListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page", Value: func() interface{} { if page == nil { return nil }; return *page }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -116,14 +116,14 @@ func (a *IamApi) PositionAssignmentsList(page *int, pageSize *int, cursor *strin
     })
     raw, err := a.client.Get(AppendQueryString(AppApiPath("/iam/position_assignments"), query), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkListResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkListResponse](raw)
 }
 
 // Positions list.
-func (a *IamApi) PositionsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) PositionsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.SdkWorkListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page", Value: func() interface{} { if page == nil { return nil }; return *page }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -133,14 +133,14 @@ func (a *IamApi) PositionsList(page *int, pageSize *int, cursor *string, sort *s
     })
     raw, err := a.client.Get(AppendQueryString(AppApiPath("/iam/positions"), query), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkListResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkListResponse](raw)
 }
 
 // Role Bindings list.
-func (a *IamApi) RoleBindingsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) RoleBindingsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.SdkWorkListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page", Value: func() interface{} { if page == nil { return nil }; return *page }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -150,80 +150,80 @@ func (a *IamApi) RoleBindingsList(page *int, pageSize *int, cursor *string, sort
     })
     raw, err := a.client.Get(AppendQueryString(AppApiPath("/iam/role_bindings"), query), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkListResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkListResponse](raw)
 }
 
 // Users current retrieve.
-func (a *IamApi) UsersCurrentRetrieve() (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) UsersCurrentRetrieve() (sdktypes.SdkWorkResourceResponse, error) {
     raw, err := a.client.Get(AppApiPath("/iam/users/current"), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
 // Users current update.
-func (a *IamApi) UsersCurrentUpdate(body *sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) UsersCurrentUpdate(body *sdktypes.AppbaseOperationCommand) (sdktypes.SdkWorkResourceResponse, error) {
     raw, err := a.client.Patch(AppApiPath("/iam/users/current"), body, nil, nil, "application/json")
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
 // Users current email Bindings delete.
-func (a *IamApi) UsersCurrentEmailBindingsDelete() (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) UsersCurrentEmailBindingsDelete() (struct{}, error) {
     raw, err := a.client.Delete(AppApiPath("/iam/users/current/email_bindings"), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero struct{}
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[struct{}](raw)
 }
 
 // Users current email Bindings create.
-func (a *IamApi) UsersCurrentEmailBindingsCreate(body sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) UsersCurrentEmailBindingsCreate(body sdktypes.AppbaseOperationCommand) (sdktypes.SdkWorkResourceResponse, error) {
     raw, err := a.client.Post(AppApiPath("/iam/users/current/email_bindings"), body, nil, nil, "application/json")
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
 // Users current password update.
-func (a *IamApi) UsersCurrentPasswordUpdate(body sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Post(AppApiPath("/iam/users/current/password"), body, nil, nil, "application/json")
+func (a *IamApi) UsersCurrentPasswordUpdate(body *sdktypes.AppbaseOperationCommand) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Patch(AppApiPath("/iam/users/current/password"), body, nil, nil, "application/json")
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
 // Users current phone Bindings delete.
-func (a *IamApi) UsersCurrentPhoneBindingsDelete() (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) UsersCurrentPhoneBindingsDelete() (struct{}, error) {
     raw, err := a.client.Delete(AppApiPath("/iam/users/current/phone_bindings"), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero struct{}
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[struct{}](raw)
 }
 
 // Users current phone Bindings create.
-func (a *IamApi) UsersCurrentPhoneBindingsCreate(body sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
+func (a *IamApi) UsersCurrentPhoneBindingsCreate(body sdktypes.AppbaseOperationCommand) (sdktypes.SdkWorkResourceResponse, error) {
     raw, err := a.client.Post(AppApiPath("/iam/users/current/phone_bindings"), body, nil, nil, "application/json")
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
 

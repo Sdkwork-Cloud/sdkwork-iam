@@ -14,8 +14,8 @@ function escapeRegExp(value) {
 }
 
 function generatedPathPattern(openApiPath) {
-  const appPath = openApiPath.replace(/^\/app\/v3\/api/u, "");
-  return appPath
+  const relativePath = openApiPath.replace(/^\/(?:app|backend)\/v3\/api/u, "");
+  return relativePath
     .split(/(\{[^}]+\})/u)
     .map((part) => {
       if (/^\{[^}]+\}$/u.test(part)) {
@@ -104,9 +104,9 @@ test("appbase app SDK generated auth entry operations suppress stored credential
   for (const operation of suppressedOperations) {
     assert.ok(operation.tag, `${operation.operationId} must declare a generated API tag`);
     const generatedApi = read(generatedApiFileForTag(operation.tag));
-    const suppressionFlag = operation.authMode === "credential-entry-bootstrap"
-      ? "credentialEntryBootstrap: true"
-      : "skipAuth: true";
+    const suppressionFlag = operation.authMode === "anonymous" || operation.authMode === "refresh-token"
+      ? "skipAuth: true"
+      : "accessTokenOnly: true";
     assert.match(
       generatedApi,
       new RegExp(
@@ -125,24 +125,75 @@ test("appbase app SDK generated auth entry operations suppress stored credential
 
   assert.match(
     httpClient,
-    /protected buildHeaders\(config: any, skipAuth = false\): Record<string, string> \{[\s\S]*config\?\.credentialEntryBootstrap[\s\S]*'Authorization'[\s\S]*'X-Sdkwork-Tenant-Id'[\s\S]*'X-Sdkwork-Organization-Id'[\s\S]*'X-Sdkwork-User-Id'/u,
+    /protected buildHeaders\(config: any, skipAuth = false\): Record<string, string> \{[\s\S]*config\?\.accessTokenOnly[\s\S]*stripCredentialHeaders\(headers, true\)/u,
     "generated HTTP client must strip forbidden credential-entry headers while preserving bootstrap Access-Token",
   );
   assert.match(
     httpClient,
-    /protected buildHeaders\(config: any, skipAuth = false\): Record<string, string> \{[\s\S]*config\?\.skipAuth[\s\S]*'Authorization'[\s\S]*'Access-Token'[\s\S]*'X-Sdkwork-Tenant-Id'[\s\S]*'X-Sdkwork-Organization-Id'[\s\S]*'X-Sdkwork-User-Id'/u,
+    /protected buildHeaders\(config: any, skipAuth = false\): Record<string, string> \{[\s\S]*!skipAuth && !config\?\.skipAuth[\s\S]*stripCredentialHeaders\(headers, false\)/u,
     "generated HTTP client must strip stored credential and SDKWork context headers when skipAuth is set",
   );
   assert.match(
     httpClient,
-    /execute\.call\(this, \{[\s\S]*skipAuth,[\s\S]*credentialEntryBootstrap,[\s\S]*headers: this\.buildRequestHeaders/u,
-    "generated request transport must pass skipAuth and credentialEntryBootstrap into BaseHttpClient.execute",
+    /stripCredentialHeaders\([\s\S]*preserveAccessToken[\s\S]*'Access-Token'[\s\S]*'Authorization'[\s\S]*'X-Sdkwork-Tenant-Id'[\s\S]*'X-Sdkwork-Organization-Id'[\s\S]*'X-Sdkwork-User-Id'/u,
+    "generated HTTP client must centrally remove every SDKWork credential and context header",
   );
   assert.match(
     httpClient,
-    /stream\.call\(this, path, \{[\s\S]*skipAuth,[\s\S]*headers: requestHeaders/u,
-    "generated stream transport must pass skipAuth into BaseHttpClient.stream",
+    /execute\.call\(this, \{[\s\S]*skipAuth,[\s\S]*accessTokenOnly,[\s\S]*headers: preparedHeaders/u,
+    "generated request transport must pass skipAuth and accessTokenOnly into BaseHttpClient.execute",
   );
+  assert.match(
+    httpClient,
+    /stream\.call\(this, path, \{[\s\S]*skipAuth,[\s\S]*accessTokenOnly,[\s\S]*headers: requestHeaders/u,
+    "generated stream transport must pass skipAuth and accessTokenOnly into BaseHttpClient.stream",
+  );
+});
+
+test("appbase backend SDK bootstrap-body operations suppress stored credentials end to end", () => {
+  const openApi = JSON.parse(read(
+    "sdks/sdkwork-iam-backend-sdk/openapi/sdkwork-iam-backend-api.sdkgen.yaml",
+  ));
+  const iamApi = read(
+    "sdks/sdkwork-iam-backend-sdk/sdkwork-iam-backend-sdk-typescript/generated/server-openapi/src/api/iam.ts",
+  );
+  const operations = Object.entries(openApi.paths).flatMap(([apiPath, pathItem]) => (
+    Object.entries(pathItem)
+      .filter(([, operation]) => operation["x-sdkwork-auth-mode"] === "bootstrap-body")
+      .map(([method, operation]) => ({ apiPath, method, operation }))
+  ));
+
+  assert.deepEqual(
+    operations.map(({ operation }) => operation.operationId).sort(),
+    [
+      "accessCredentials.create",
+      "applications.register",
+      "serviceAccountTokens.create",
+      "tenantApplications.create",
+      "tenantApplications.enable",
+      "tenantApplications.update",
+    ],
+  );
+  for (const { apiPath, method, operation } of operations) {
+    assert.deepEqual(
+      operation.security,
+      [],
+      `${method.toUpperCase()} ${apiPath} must not declare header authentication`,
+    );
+    assert.equal(
+      operation["x-sdkwork-forbid-credential-headers"],
+      true,
+      `${method.toUpperCase()} ${apiPath} must reject stored credential contamination`,
+    );
+    assert.match(
+      iamApi,
+      new RegExp(
+        `backendApiPath\\(\`${generatedPathPattern(apiPath)}\`\\)[\\s\\S]{0,360}skipAuth: true`,
+        "u",
+      ),
+      `${operation.operationId} must suppress stored credentials in generated TypeScript SDK`,
+    );
+  }
 });
 
 test("appbase app SDK OpenAPI declares real session creation context fields", () => {
@@ -175,149 +226,117 @@ test("appbase app SDK OpenAPI declares real session creation context fields", ()
 });
 
 test("appbase app SDK generated credential suppression stays aligned across language SDKs", () => {
+  const transportCredentialPolicy = /(?=[\s\S]*(?:access-token-only request requires Access-Token before request dispatch|URLError\(\.userAuthenticationRequired\)))(?=[\s\S]*x-sdkwork-organization-id)[\s\S]*/iu;
   const checks = [
     {
       language: "dart",
       api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-dart/generated/server-openapi/lib/src/api/auth.dart",
       http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-dart/generated/server-openapi/lib/src/http/client.dart",
       apiPatterns: [
-        /ApiPaths\.appPath\('\/auth\/sessions'\)[\s\S]*skipAuth: true/u,
+        /ApiPaths\.appPath\('\/auth\/sessions'\)[\s\S]*accessTokenOnly: true/u,
         /ApiPaths\.appPath\('\/auth\/sessions\/refresh'\)[\s\S]*skipAuth: true/u,
       ],
-      httpPatterns: [
-        /_buildHeaders\(headers,[\s\S]*skipAuth: skipAuth\)/u,
-        /if \(!skipAuth\)[\s\S]*_authToken[\s\S]*Access-Token/u,
-      ],
+      httpPatterns: [transportCredentialPolicy],
     },
     {
       language: "flutter",
       api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-flutter/generated/server-openapi/lib/src/api/auth.dart",
       http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-flutter/generated/server-openapi/lib/src/http/client.dart",
       apiPatterns: [
-        /ApiPaths\.appPath\('\/auth\/sessions'\)[\s\S]*skipAuth: true/u,
+        /ApiPaths\.appPath\('\/auth\/sessions'\)[\s\S]*accessTokenOnly: true/u,
         /ApiPaths\.appPath\('\/auth\/sessions\/refresh'\)[\s\S]*skipAuth: true/u,
       ],
-      httpPatterns: [
-        /bool skipAuth = false[\s\S]*if \(!skipAuth\) \.\.\.headers/u,
-        /bool skipAuth = false[\s\S]*if \(!skipAuth\) \.\.\.this\.headers/u,
-      ],
+      httpPatterns: [transportCredentialPolicy],
     },
     {
       language: "python",
       api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-python/generated/server-openapi/sdkwork_iam_app_sdk/api/auth.py",
       http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-python/generated/server-openapi/sdkwork_iam_app_sdk/http_client.py",
       apiPatterns: [
-        /\/app\/v3\/api\/auth\/sessions", json=body, skip_auth=True/u,
+        /\/app\/v3\/api\/auth\/sessions", json=body, access_token_only=True/u,
         /\/app\/v3\/api\/auth\/sessions\/refresh", json=body, skip_auth=True/u,
       ],
-      httpPatterns: [
-        /def _request_session\(self, skip_auth: bool = False\):[\s\S]*if not skip_auth:[\s\S]*return self\._get_session\(\)[\s\S]*session\.headers\.clear\(\)/u,
-        /headers=self\._request_headers\(\{'Accept': 'text\/event-stream'[\s\S]*skip_auth\)/u,
-      ],
+      httpPatterns: [transportCredentialPolicy],
     },
     {
       language: "go",
       api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-go/generated/server-openapi/api/auth.go",
       http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-go/generated/server-openapi/http/client.go",
       apiPatterns: [
-        /AppApiPath\("\/auth\/sessions"\)[\s\S]*"application\/json", true\)/u,
-        /AppApiPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true\)/u,
+        /AppApiPath\("\/auth\/sessions"\)[\s\S]*"application\/json", false, true\)/u,
+        /AppApiPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true, false\)/u,
       ],
-      httpPatterns: [
-        /func \(c \*Client\) mergeHeaders\(requestHeaders map\[string\]string, skipAuth bool\)[\s\S]*if !skipAuth/u,
-        /mergedHeaders := c\.mergeHeaders\(requestHeaders, skipAuth\)/u,
-      ],
+      httpPatterns: [transportCredentialPolicy],
     },
     {
       language: "java",
       api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-java/generated/server-openapi/src/main/java/com/sdkwork/iam/app/sdk/api/AuthApi.java",
       http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-java/generated/server-openapi/src/main/java/com/sdkwork/iam/app/sdk/http/HttpClient.java",
       apiPatterns: [
-        /ApiPaths\.appPath\("\/auth\/sessions"\)[\s\S]*"application\/json", true\)/u,
-        /ApiPaths\.appPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true\)/u,
+        /ApiPaths\.appPath\("\/auth\/sessions"\)[\s\S]*"application\/json", false, true\)/u,
+        /ApiPaths\.appPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true, false\)/u,
       ],
-      httpPatterns: [
-        /applyHeaders\(Request\.Builder builder, Map<String, String> requestHeaders, boolean skipAuth\)[\s\S]*skipAuth \? new HashMap<>\(\) : new HashMap<>\(headers\)/u,
-        /applyHeaders\(new Request\.Builder\(\), requestHeaders, skipAuth\)/u,
-      ],
+      httpPatterns: [transportCredentialPolicy],
     },
     {
       language: "kotlin",
       api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-kotlin/generated/server-openapi/src/main/kotlin/com/sdkwork/iam/app/sdk/api/AuthApi.kt",
       http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-kotlin/generated/server-openapi/src/main/kotlin/com/sdkwork/iam/app/sdk/http/HttpClient.kt",
       apiPatterns: [
-        /ApiPaths\.appPath\("\/auth\/sessions"\)[\s\S]*"application\/json", true\)/u,
-        /ApiPaths\.appPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true\)/u,
+        /ApiPaths\.appPath\("\/auth\/sessions"\)[\s\S]*"application\/json", false, true\)/u,
+        /ApiPaths\.appPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true, false\)/u,
       ],
-      httpPatterns: [
-        /mergeHeaders\(requestHeaders: Map<String, String>\? = null, skipAuth: Boolean = false\)[\s\S]*if \(!skipAuth\) headers\.toMutableMap\(\) else mutableMapOf\(\)/u,
-        /\.headers\(mergeHeaders\(requestHeaders, skipAuth\)\)/u,
-      ],
+      httpPatterns: [transportCredentialPolicy],
     },
     {
       language: "csharp",
       api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-csharp/generated/server-openapi/Api/AuthApi.cs",
       http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-csharp/generated/server-openapi/Http/HttpClient.cs",
       apiPatterns: [
-        /ApiPaths\.AppPath\("\/auth\/sessions"\)[\s\S]*"application\/json", true\)/u,
-        /ApiPaths\.AppPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true\)/u,
+        /ApiPaths\.AppPath\("\/auth\/sessions"\)[\s\S]*"application\/json", false, true\)/u,
+        /ApiPaths\.AppPath\("\/auth\/sessions\/refresh"\)[\s\S]*"application\/json", true, false\)/u,
       ],
-      httpPatterns: [
-        /private async Task<HttpResponseMessage> SendAsync\(HttpRequestMessage request, bool skipAuth = false\)[\s\S]*if \(!skipAuth\)[\s\S]*anonymousClient/u,
-        /SendAsync\(request, skipAuth\)/u,
-      ],
+      httpPatterns: [transportCredentialPolicy],
     },
     {
       language: "swift",
       api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-swift/generated/server-openapi/Sources/API/AuthApi.swift",
       http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-swift/generated/server-openapi/Sources/HTTP/HttpClient.swift",
       apiPatterns: [
-        /ApiPaths\.appPath\("\/auth\/sessions"\)[\s\S]*skipAuth: true/u,
+        /ApiPaths\.appPath\("\/auth\/sessions"\)[\s\S]*accessTokenOnly: true/u,
         /ApiPaths\.appPath\("\/auth\/sessions\/refresh"\)[\s\S]*skipAuth: true/u,
       ],
-      httpPatterns: [
-        /skipAuth: Bool = false[\s\S]*if !skipAuth[\s\S]*for \(key, value\) in headers/u,
-        /applyHeaders\(&request, requestHeaders: requestHeaders[\s\S]*skipAuth: skipAuth\)/u,
-      ],
+      httpPatterns: [transportCredentialPolicy],
     },
     {
       language: "rust",
       api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-rust/generated/server-openapi/src/api/auth.rs",
       http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-rust/generated/server-openapi/src/http/client.rs",
       apiPatterns: [
-        /app_path\(&"\/auth\/sessions"\.to_string\(\)\)[\s\S]*Some\("application\/json"\), true\)\.await/u,
-        /app_path\(&"\/auth\/sessions\/refresh"\.to_string\(\)\)[\s\S]*Some\("application\/json"\), true\)\.await/u,
+        /app_path\(&"\/auth\/sessions"\.to_string\(\)\)[\s\S]*Some\("application\/json"\), false, true\)\.await/u,
+        /app_path\(&"\/auth\/sessions\/refresh"\.to_string\(\)\)[\s\S]*Some\("application\/json"\), true, false\)\.await/u,
       ],
-      httpPatterns: [
-        /fn merge_headers\(&self, headers: Option<&RequestHeaders>, skip_auth: bool\)[\s\S]*if !skip_auth/u,
-        /self\.merge_headers\(headers, skip_auth\)\?/u,
-      ],
+      httpPatterns: [transportCredentialPolicy],
     },
     {
       language: "php",
       api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-php/generated/server-openapi/src/Api/Auth.php",
       http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-php/generated/server-openapi/src/Http/HttpClient.php",
       apiPatterns: [
-        /\/auth\/sessions'[\s\S]*'skipAuth' => true/u,
+        /\/auth\/sessions'[\s\S]*'accessTokenOnly' => true/u,
         /\/auth\/sessions\/refresh'[\s\S]*'skipAuth' => true/u,
       ],
-      httpPatterns: [
-        /\$clientHeaders = empty\(\$options\['skipAuth'\]\)[\s\S]*array_merge\(\$this->buildAuthHeaders\(\), \$this->headers\)/u,
-        /\$clientHeaders,/u,
-      ],
+      httpPatterns: [transportCredentialPolicy],
     },
     {
       language: "ruby",
       api: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-ruby/generated/server-openapi/lib/sdkwork/app_sdk/api/auth.rb",
       http: "sdks/sdkwork-iam-app-sdk/sdkwork-iam-app-sdk-ruby/generated/server-openapi/lib/sdkwork/app_sdk/http/client.rb",
       apiPatterns: [
-        /\/auth\/sessions'[\s\S]*options\[:skip_auth\] = true/u,
+        /\/auth\/sessions'[\s\S]*options\[:access_token_only\] = true/u,
         /\/auth\/sessions\/refresh'[\s\S]*options\[:skip_auth\] = true/u,
       ],
-      httpPatterns: [
-        /def build_headers\(request_headers, skip_auth: false\)[\s\S]*client_headers = skip_auth \? \{\} : auth_headers\.merge\(@headers\)/u,
-        /build_headers\(headers, skip_auth: skip_auth\)/u,
-      ],
+      httpPatterns: [transportCredentialPolicy],
     },
   ];
 
@@ -333,7 +352,7 @@ test("appbase app SDK generated credential suppression stays aligned across lang
   }
 });
 
-test("open-api generated ingress operations stay anonymous and suppress stored credentials", () => {
+test("open-api generated ingress operations preserve auth classification and suppress stored credentials", () => {
   const openApiAuthority = JSON.parse(read("apis/open-api/iam/sdkwork-iam-open-api.openapi.yaml"));
   const openApi = JSON.parse(read("sdks/sdkwork-iam-open-sdk/openapi/sdkwork-iam-open-api.sdkgen.yaml"));
   const oauthApi = read(
@@ -360,11 +379,20 @@ test("open-api generated ingress operations stay anonymous and suppress stored c
       }))
   ));
 
-  const providerCallbackOperations = anonymousOperations.filter((operation) => (
-    operation.apiPath.includes("/oauth/provider_callbacks/")
-  ));
-  const authorizationServerOperations = anonymousOperations.filter((operation) => (
-    !operation.apiPath.includes("/oauth/provider_callbacks/")
+  const providerCallbackOperations = Object.entries(openApi.paths).flatMap(([apiPath, pathItem]) => (
+    Object.entries(pathItem)
+      .filter(([, operation]) => (
+        apiPath.includes("/oauth/provider_callbacks/")
+        && operation["x-sdkwork-wire-protocol"] === "external"
+      ))
+      .map(([method, operation]) => ({
+        apiPath,
+        method: method.toUpperCase(),
+        operationId: operation.operationId,
+        authMode: operation["x-sdkwork-auth-mode"],
+        externalProtocolId: operation["x-sdkwork-external-protocol-id"],
+        security: operation.security,
+      }))
   ));
   const authorityWellKnownOperations = Object.entries(openApiAuthority.paths)
     .filter(([apiPath]) => apiPath.startsWith("/.well-known/"))
@@ -376,11 +404,27 @@ test("open-api generated ingress operations stay anonymous and suppress stored c
       }))
     ));
 
-  assert.equal(providerCallbackOperations.length, 2, "open-api must expose two anonymous OAuth provider callback operations");
+  assert.deepEqual(
+    providerCallbackOperations.map((operation) => operation.externalProtocolId).sort(),
+    ["wechat-provider-callback", "wechat-provider-callback-verification"],
+    "open-api must expose the two external WeChat provider callback protocols",
+  );
+  assert.ok(
+    providerCallbackOperations.every((operation) => (
+      operation.authMode === "open-api-flexible"
+      && JSON.stringify(operation.security) === JSON.stringify([{ ApiKey: [] }, { OAuthBearer: [] }])
+    )),
+    "external provider callbacks must preserve open-api-flexible authentication",
+  );
   assert.equal(
-    authorizationServerOperations.length,
-    8,
-    "open-api SDK input must expose eight anonymous SDKWork OAuth authorization-server operations under /iam/v3/api",
+    anonymousOperations.length,
+    7,
+    "open-api SDK input must expose seven anonymous SDKWork OAuth authorization-server operations under /iam/v3/api",
+  );
+  assert.deepEqual(
+    anonymousOperations,
+    authorityAnonymousOperations,
+    "anonymous auth classification must stay identical between authority and SDK input",
   );
   assert.equal(
     authorityWellKnownOperations.length,
@@ -394,7 +438,7 @@ test("open-api generated ingress operations stay anonymous and suppress stored c
     "well-known discovery routes must declare x-sdkwork-wire-protocol: external on the API authority",
   );
   assert.ok(
-    authorizationServerOperations.every((operation) => operation.apiPath.startsWith("/iam/v3/api/")),
+    anonymousOperations.every((operation) => operation.apiPath.startsWith("/iam/v3/api/")),
     "anonymous authorization-server SDK operations must stay under /iam/v3/api",
   );
   assert.ok(
@@ -403,12 +447,12 @@ test("open-api generated ingress operations stay anonymous and suppress stored c
   );
   assert.match(
     oauthApi,
-    /async retrieve\([\s\S]*skipAuth:\s*true/u,
+    /customApiPath\(`\/oauth\/provider_callbacks\/\$\{serializePathParameter\(callbackPublicId,[\s\S]{0,420}method: 'GET' as any, skipAuth: true/u,
     "open-api GET provider callback must suppress stored credentials",
   );
   assert.match(
     oauthApi,
-    /async create\([\s\S]*skipAuth:\s*true/u,
+    /customApiPath\(`\/oauth\/provider_callbacks\/\$\{serializePathParameter\(callbackPublicId,[\s\S]{0,520}method: 'POST' as any,[\s\S]{0,100}skipAuth: true/u,
     "open-api POST provider callback must suppress stored credentials",
   );
   assert.match(

@@ -41,7 +41,7 @@ SDKWork applications require a centralized identity and access management domain
 
 - Rust route crates: app-api, backend-api, open-api, gateway assembly
 - Database module: `iam_*` PostgreSQL schemas, migrations, and lifecycle (`database.manifest.json`)
-- Embedded SQLite mirror for OAuth-device narrow paths only (not production-equivalent)
+- SQLite remains limited to separately owned embedded adapters and tests; the IAM database lifecycle root contains PostgreSQL assets only
 - TypeScript packages under `apps/sdkwork-iam-common` and surface roots (PC/H5/Flutter)
 - IMF registry and generated SDK families under `sdks/`
 
@@ -99,6 +99,6 @@ SDKWork applications require a centralized identity and access management domain
 
 - Production bootstrap fails closed when the database node lease, signing master secret, migration, or readiness dependency is unavailable.
 - The standalone gateway binary binds through `SDKWORK_IAM_APPLICATION_PUBLIC_INGRESS_BIND`, exposes graceful shutdown, and uses bounded body size, request timeout, concurrency, CORS, CSRF, WAF, rate-limit, metrics, and tracing defaults.
-- PostgreSQL is authoritative. SQLite is intentionally limited to embedded OAuth-device and local narrow paths and is not a production-parity deployment option.
+- PostgreSQL is the only IAM database lifecycle authority. Any embedded SQLite adapter is non-authoritative and must own a separate client-local contract before production use.
 - Directory writes, password lifecycle changes, signing-key provisioning, and audit events must commit in one transaction; cross-tenant references are rejected by composite database constraints.
 - API authorities are generated from Rust route manifests; `DELETE` is `204` with no body, creates are `201`, and lists use SQL-level pagination under `PAGINATION_SPEC.md`.

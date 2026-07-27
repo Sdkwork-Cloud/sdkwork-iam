@@ -3,9 +3,10 @@ use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
 use sdkwork_iam_web_adapter::{ensure_platform_tenant_application, iam_wire_result_code};
 use sdkwork_routes_iam_app_api::{
-    app_routes, build_sdkwork_iam_app_api_router_with_pool, required_dual_token_headers,
-    HttpMethod, HttpRoute, APP_API_PREFIX, IAM_ANONYMOUS_OPERATION_IDS,
-    IAM_CREDENTIAL_ENTRY_OPERATION_IDS, IAM_FRAMEWORK_SESSION_OPERATION_IDS,
+    app_routes, build_sdkwork_iam_app_api_router_with_initialized_pool,
+    required_dual_token_headers, HttpMethod, HttpRoute, APP_API_PREFIX,
+    IAM_ANONYMOUS_OPERATION_IDS, IAM_CREDENTIAL_ENTRY_OPERATION_IDS,
+    IAM_FRAMEWORK_SESSION_OPERATION_IDS,
 };
 use sdkwork_web_core::bootstrap_access_token_jwt;
 use serde_json::{json, Value};
@@ -869,17 +870,17 @@ fn test_bootstrap_access_token() -> String {
 
 async fn build_postgres_integration_router() -> axum::Router {
     let pool = unified_database_env::integration_database_pool_for_router().await;
-    build_sdkwork_iam_app_api_router_with_pool(pool)
+    build_sdkwork_iam_app_api_router_with_initialized_pool(pool)
         .await
         .expect("router should build")
 }
 
 #[tokio::test]
 async fn credential_entry_login_requires_only_access_token() {
+    let _guard = lock_local_iam_env();
     if !postgres_integration_ready("credential_entry_login_requires_only_access_token").await {
         return;
     }
-    let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
     ensure_credential_entry_bootstrap_runtime_app().await;
     let router = build_postgres_integration_router().await;
@@ -909,12 +910,12 @@ async fn credential_entry_login_requires_only_access_token() {
 
 #[tokio::test]
 async fn qr_login_component_requests_reach_handlers_without_credentials() {
+    let _guard = lock_local_iam_env();
     if !postgres_integration_ready("qr_login_component_requests_reach_handlers_without_credentials")
         .await
     {
         return;
     }
-    let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
     ensure_credential_entry_bootstrap_runtime_app().await;
     let router = build_postgres_integration_router().await;
@@ -979,10 +980,10 @@ async fn qr_login_component_requests_reach_handlers_without_credentials() {
 
 #[tokio::test]
 async fn app_router_does_not_seed_default_local_credentials() {
+    let _guard = lock_local_iam_env();
     if !postgres_integration_ready("app_router_does_not_seed_default_local_credentials").await {
         return;
     }
-    let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
     let router = build_postgres_integration_router().await;
     let (status, body_text, payload) = request_app_route(
@@ -1009,10 +1010,10 @@ async fn app_router_does_not_seed_default_local_credentials() {
 
 #[tokio::test]
 async fn credential_entry_routes_reject_contaminating_headers() {
+    let (_guard, _snapshot) = set_real_local_iam_runtime_env();
     if !postgres_integration_ready("credential_entry_routes_reject_contaminating_headers").await {
         return;
     }
-    let (_guard, _snapshot) = set_real_local_iam_runtime_env();
     ensure_credential_entry_bootstrap_runtime_app().await;
     let cases = [
         (
@@ -1107,10 +1108,10 @@ fn assert_credential_entry_header_rejection(path: &str, payload: &Value, body_te
 
 #[tokio::test]
 async fn app_directory_routes_require_real_session_context() {
+    let _guard = lock_local_iam_env();
     if !postgres_integration_ready("app_directory_routes_require_real_session_context").await {
         return;
     }
-    let _guard = lock_local_iam_env();
     unified_database_env::apply_unified_claw_postgres_env();
     let router = build_postgres_integration_router().await;
 
@@ -1143,12 +1144,12 @@ async fn app_directory_routes_require_real_session_context() {
 
 #[tokio::test]
 async fn authenticated_app_directory_routes_read_registered_local_store() {
+    let (_guard, _snapshot) = set_real_local_iam_runtime_env();
     if !postgres_integration_ready("authenticated_app_directory_routes_read_registered_local_store")
         .await
     {
         return;
     }
-    let (_guard, _snapshot) = set_real_local_iam_runtime_env();
     reset_iam_tenants_for_open_registration().await;
     let router = build_postgres_integration_router().await;
     let unique = format!(

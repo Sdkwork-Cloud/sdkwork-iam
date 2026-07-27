@@ -18,7 +18,7 @@ namespace SDKWork.Iam.AppSdk.Api
         /// <summary>
         /// Department Assignments list.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> DepartmentAssignmentsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse?> DepartmentAssignmentsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
         {
             var queryString = BuildQueryString(new[]
             {
@@ -28,13 +28,13 @@ namespace SDKWork.Iam.AppSdk.Api
                 new QueryParameterSpec("sort", sort, "form", true, false, null),
                 new QueryParameterSpec("q", q, "form", true, false, null),
             });
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/department_assignments"), queryString));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/department_assignments"), queryString));
         }
 
         /// <summary>
         /// Departments list.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> DepartmentsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse?> DepartmentsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
         {
             var queryString = BuildQueryString(new[]
             {
@@ -44,21 +44,21 @@ namespace SDKWork.Iam.AppSdk.Api
                 new QueryParameterSpec("sort", sort, "form", true, false, null),
                 new QueryParameterSpec("q", q, "form", true, false, null),
             });
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/departments"), queryString));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/departments"), queryString));
         }
 
         /// <summary>
         /// Departments tree retrieve.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> DepartmentsTreeRetrieveAsync()
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> DepartmentsTreeRetrieveAsync()
         {
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath("/iam/departments/tree"));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>(ApiPaths.AppPath("/iam/departments/tree"));
         }
 
         /// <summary>
         /// Organization Memberships list.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> OrganizationMembershipsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse?> OrganizationMembershipsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
         {
             var queryString = BuildQueryString(new[]
             {
@@ -68,13 +68,13 @@ namespace SDKWork.Iam.AppSdk.Api
                 new QueryParameterSpec("sort", sort, "form", true, false, null),
                 new QueryParameterSpec("q", q, "form", true, false, null),
             });
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/organization_memberships"), queryString));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/organization_memberships"), queryString));
         }
 
         /// <summary>
         /// Organizations list.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> OrganizationsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse?> OrganizationsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
         {
             var queryString = BuildQueryString(new[]
             {
@@ -84,21 +84,21 @@ namespace SDKWork.Iam.AppSdk.Api
                 new QueryParameterSpec("sort", sort, "form", true, false, null),
                 new QueryParameterSpec("q", q, "form", true, false, null),
             });
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/organizations"), queryString));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/organizations"), queryString));
         }
 
         /// <summary>
         /// Organizations tree retrieve.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> OrganizationsTreeRetrieveAsync()
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> OrganizationsTreeRetrieveAsync()
         {
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath("/iam/organizations/tree"));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>(ApiPaths.AppPath("/iam/organizations/tree"));
         }
 
         /// <summary>
         /// Position Assignments list.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> PositionAssignmentsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse?> PositionAssignmentsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
         {
             var queryString = BuildQueryString(new[]
             {
@@ -108,13 +108,13 @@ namespace SDKWork.Iam.AppSdk.Api
                 new QueryParameterSpec("sort", sort, "form", true, false, null),
                 new QueryParameterSpec("q", q, "form", true, false, null),
             });
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/position_assignments"), queryString));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/position_assignments"), queryString));
         }
 
         /// <summary>
         /// Positions list.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> PositionsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse?> PositionsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
         {
             var queryString = BuildQueryString(new[]
             {
@@ -124,13 +124,13 @@ namespace SDKWork.Iam.AppSdk.Api
                 new QueryParameterSpec("sort", sort, "form", true, false, null),
                 new QueryParameterSpec("q", q, "form", true, false, null),
             });
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/positions"), queryString));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/positions"), queryString));
         }
 
         /// <summary>
         /// Role Bindings list.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> RoleBindingsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse?> RoleBindingsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
         {
             var queryString = BuildQueryString(new[]
             {
@@ -140,63 +140,63 @@ namespace SDKWork.Iam.AppSdk.Api
                 new QueryParameterSpec("sort", sort, "form", true, false, null),
                 new QueryParameterSpec("q", q, "form", true, false, null),
             });
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/role_bindings"), queryString));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/iam/role_bindings"), queryString));
         }
 
         /// <summary>
         /// Users current retrieve.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> UsersCurrentRetrieveAsync()
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> UsersCurrentRetrieveAsync()
         {
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath("/iam/users/current"));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>(ApiPaths.AppPath("/iam/users/current"));
         }
 
         /// <summary>
         /// Users current update.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> UsersCurrentUpdateAsync(Dictionary<string, object>? body = null)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> UsersCurrentUpdateAsync(Dictionary<string, object>? body = null)
         {
-            return await _client.PatchAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath("/iam/users/current"), body, null, null, "application/json");
+            return await _client.PatchAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>(ApiPaths.AppPath("/iam/users/current"), body, null, null, "application/json");
         }
 
         /// <summary>
         /// Users current email Bindings delete.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> UsersCurrentEmailBindingsDeleteAsync()
+        public async Task UsersCurrentEmailBindingsDeleteAsync()
         {
-            return await _client.DeleteAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath("/iam/users/current/email_bindings"));
+            await _client.DeleteAsync<object>(ApiPaths.AppPath("/iam/users/current/email_bindings"));
         }
 
         /// <summary>
         /// Users current email Bindings create.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> UsersCurrentEmailBindingsCreateAsync(Dictionary<string, object> body)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> UsersCurrentEmailBindingsCreateAsync(Dictionary<string, object> body)
         {
-            return await _client.PostAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath("/iam/users/current/email_bindings"), body, null, null, "application/json");
+            return await _client.PostAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>(ApiPaths.AppPath("/iam/users/current/email_bindings"), body, null, null, "application/json");
         }
 
         /// <summary>
         /// Users current password update.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> UsersCurrentPasswordUpdateAsync(Dictionary<string, object> body)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> UsersCurrentPasswordUpdateAsync(Dictionary<string, object>? body = null)
         {
-            return await _client.PostAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath("/iam/users/current/password"), body, null, null, "application/json");
+            return await _client.PatchAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>(ApiPaths.AppPath("/iam/users/current/password"), body, null, null, "application/json");
         }
 
         /// <summary>
         /// Users current phone Bindings delete.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> UsersCurrentPhoneBindingsDeleteAsync()
+        public async Task UsersCurrentPhoneBindingsDeleteAsync()
         {
-            return await _client.DeleteAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath("/iam/users/current/phone_bindings"));
+            await _client.DeleteAsync<object>(ApiPaths.AppPath("/iam/users/current/phone_bindings"));
         }
 
         /// <summary>
         /// Users current phone Bindings create.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> UsersCurrentPhoneBindingsCreateAsync(Dictionary<string, object> body)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> UsersCurrentPhoneBindingsCreateAsync(Dictionary<string, object> body)
         {
-            return await _client.PostAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath("/iam/users/current/phone_bindings"), body, null, null, "application/json");
+            return await _client.PostAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>(ApiPaths.AppPath("/iam/users/current/phone_bindings"), body, null, null, "application/json");
         }
 
 

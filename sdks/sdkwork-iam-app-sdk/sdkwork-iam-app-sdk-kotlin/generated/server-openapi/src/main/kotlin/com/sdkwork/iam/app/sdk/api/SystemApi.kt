@@ -9,21 +9,21 @@ import com.sdkwork.iam.app.sdk.http.HttpClient
 class SystemApi(private val client: HttpClient) {
 
     /** Iam account Binding Policy retrieve. */
-    suspend fun iamAccountBindingPolicyRetrieve(): AppbaseApiResult? {
-        val raw = client.request("GET", ApiPaths.appPath("/system/iam/account_binding_policy"), null, null, null, null, true)
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    suspend fun iamAccountBindingPolicyRetrieve(): SdkWorkResourceResponse? {
+        val raw = client.request("GET", ApiPaths.appPath("/system/iam/account_binding_policy"), null, null, null, null, false, true)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
     /** Iam runtime retrieve. */
-    suspend fun iamRuntimeRetrieve(): AppbaseApiResult? {
-        val raw = client.request("GET", ApiPaths.appPath("/system/iam/runtime"), null, null, null, null, true)
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    suspend fun iamRuntimeRetrieve(): SdkWorkResourceResponse? {
+        val raw = client.request("GET", ApiPaths.appPath("/system/iam/runtime"), null, null, null, null, false, true)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
     /** Iam verification Policy retrieve. */
-    suspend fun iamVerificationPolicyRetrieve(): AppbaseApiResult? {
-        val raw = client.request("GET", ApiPaths.appPath("/system/iam/verification_policy"), null, null, null, null, true)
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    suspend fun iamVerificationPolicyRetrieve(): SdkWorkResourceResponse? {
+        val raw = client.request("GET", ApiPaths.appPath("/system/iam/verification_policy"), null, null, null, null, false, true)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
 

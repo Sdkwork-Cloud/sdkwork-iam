@@ -74,7 +74,7 @@ print(result)
 ### oauth
 
 ```swift
-// Oauth account Links list.
+// Account Links list.
 let params: [String: Any] = [
     "page": 1,
     "page_size": 2,

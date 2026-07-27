@@ -90,7 +90,7 @@ async fn assemble_owner_api_surfaces_with_host(
 ) -> Result<ApiAssembly, String> {
     let mut router = Router::new();
     router = router.merge(
-        sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_business_router_with_pool(
+        sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_business_router_with_initialized_pool(
             host.pool().clone(),
         )
         .await?,
@@ -132,10 +132,11 @@ async fn assemble_owner_api_surfaces_with_host(
 pub async fn assemble_app_api_contribution() -> Result<ApiAssemblyContribution, String> {
     let host = bootstrap_iam_application_state().await?;
     let route_manifest = sdkwork_routes_iam_app_api::iam_app_api_route_manifest();
-    let router = sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_business_router_with_pool(
-        host.pool().clone(),
-    )
-    .await?;
+    let router =
+        sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_business_router_with_initialized_pool(
+            host.pool().clone(),
+        )
+        .await?;
     let openapi = sdkwork_web_contract::build_openapi_document(
         "SDKWork IAM App API",
         route_manifest.routes(),
@@ -163,8 +164,7 @@ pub async fn bootstrap_iam_for_application() -> Result<(ApiAssembly, IamDatabase
 async fn bootstrap_iam_application_state() -> Result<IamDatabaseHost, String> {
     let host = bootstrap_iam_database_from_env().await?;
     let environment = resolve_bootstrap_environment();
-    let fallback_app_root =
-        std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let fallback_app_root = default_iam_application_root();
     ensure_tenant_application_from_app_root_with_env_and_fallback(
         &environment,
         fallback_app_root,
@@ -175,6 +175,18 @@ async fn bootstrap_iam_application_state() -> Result<IamDatabaseHost, String> {
     .map_err(|error| format!("provision IAM tenant application failed: {error}"))?;
 
     Ok(host)
+}
+
+fn default_iam_application_root() -> std::path::PathBuf {
+    std::env::current_dir()
+        .ok()
+        .and_then(|current_dir| {
+            current_dir
+                .ancestors()
+                .find(|candidate| candidate.join("sdkwork.app.config.json").is_file())
+                .map(std::path::Path::to_path_buf)
+        })
+        .unwrap_or_else(|| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
 }
 
 fn permission_catalog(routes: &[HttpRoute]) -> Vec<&'static str> {
@@ -194,6 +206,16 @@ fn permission_catalog(routes: &[HttpRoute]) -> Vec<&'static str> {
 mod tests {
     use super::*;
     use sdkwork_web_contract::{route_inventory_from_openapi, route_inventory_from_routes};
+
+    #[test]
+    fn default_application_root_resolves_the_iam_manifest() {
+        assert!(
+            default_iam_application_root()
+                .join("sdkwork.app.config.json")
+                .is_file(),
+            "IAM application root must contain sdkwork.app.config.json"
+        );
+    }
 
     #[test]
     fn app_api_manifest_openapi_and_auth_inventories_match() {

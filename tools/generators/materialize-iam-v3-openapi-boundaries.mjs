@@ -29,6 +29,7 @@ const routeSources = [
     packageName: 'sdkwork-routes-iam-backend-api',
     path: resolve(iamRoot, 'crates/sdkwork-routes-iam-backend-api/src/manifest.rs'),
     constructors: [
+      'HttpRoute::bootstrap_body',
       'HttpRoute::credential_entry_bootstrap',
       'HttpRoute::refresh_token',
       'HttpRoute::public',
@@ -449,7 +450,11 @@ function buildOperation(surface, route) {
   if (permission) {
     operation['x-sdkwork-permission'] = permission;
   }
-  if (surface.sdkType === 'backend' && route.routeKind !== 'public') {
+  if (
+    surface.sdkType === 'backend'
+    && route.routeKind !== 'public'
+    && route.routeKind !== 'bootstrap_body'
+  ) {
     operation['x-sdkwork-required-surface'] = 'organizationMember';
   }
 
@@ -940,6 +945,9 @@ function operationAuthMode(surface, route) {
   if (route.routeKind === 'credential_entry_bootstrap') {
     return 'credential-entry-bootstrap';
   }
+  if (route.routeKind === 'bootstrap_body') {
+    return 'bootstrap-body';
+  }
   if (route.routeKind === 'refresh_token') {
     return 'refresh-token';
   }
@@ -951,7 +959,7 @@ function operationAuthMode(surface, route) {
 
 function resolveOperationSecurity(surface, route) {
   const authMode = operationAuthMode(surface, route);
-  if (authMode === 'anonymous') {
+  if (authMode === 'anonymous' || authMode === 'bootstrap-body' || authMode === 'refresh-token') {
     return [];
   }
   if (surface.sdkType === 'open') {
@@ -963,7 +971,7 @@ function resolveOperationSecurity(surface, route) {
     }
     return [{ ApiKey: [] }, { OAuthBearer: [] }];
   }
-  if (authMode === 'credential-entry-bootstrap' || authMode === 'refresh-token') {
+  if (authMode === 'credential-entry-bootstrap') {
     return [{ AccessToken: [] }];
   }
   return [{ AuthToken: [], AccessToken: [] }];
@@ -978,6 +986,9 @@ function resolveRouteKind(routeExpression) {
   }
   if (routeExpression.includes('HttpRoute::credential_entry_bootstrap')) {
     return 'credential_entry_bootstrap';
+  }
+  if (routeExpression.includes('HttpRoute::bootstrap_body')) {
+    return 'bootstrap_body';
   }
   if (routeExpression.includes('HttpRoute::refresh_token')) {
     return 'refresh_token';
@@ -1000,6 +1011,7 @@ function resolveRouteKind(routeExpression) {
 function operationForbidsCredentialHeaders(surface, route) {
   const authMode = operationAuthMode(surface, route);
   return authMode === 'anonymous'
+    || authMode === 'bootstrap-body'
     || authMode === 'refresh-token'
     || authMode === 'credential-entry-bootstrap'
     || (surface.sdkType === 'app' && credentialHeaderForbiddenAppOperationIds.has(route.operationId));

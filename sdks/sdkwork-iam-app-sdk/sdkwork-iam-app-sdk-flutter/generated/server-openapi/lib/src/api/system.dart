@@ -12,7 +12,7 @@ class SystemApi {
 
   /// Iam account Binding Policy retrieve.
   Future<SdkWorkResourceResponse?> iamAccountBindingPolicyRetrieve() async {
-    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/account_binding_policy'), skipAuth: true);
+    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/account_binding_policy'), accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : SdkWorkResourceResponse.fromJson(map);
@@ -21,7 +21,7 @@ class SystemApi {
 
   /// Iam runtime retrieve.
   Future<SdkWorkResourceResponse?> iamRuntimeRetrieve() async {
-    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/runtime'), skipAuth: true);
+    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/runtime'), accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : SdkWorkResourceResponse.fromJson(map);
@@ -30,7 +30,7 @@ class SystemApi {
 
   /// Iam verification Policy retrieve.
   Future<SdkWorkResourceResponse?> iamVerificationPolicyRetrieve() async {
-    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/verification_policy'), skipAuth: true);
+    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/verification_policy'), accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : SdkWorkResourceResponse.fromJson(map);

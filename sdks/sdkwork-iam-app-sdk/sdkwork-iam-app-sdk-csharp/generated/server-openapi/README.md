@@ -76,7 +76,7 @@ Console.WriteLine(result);
 ### oauth
 
 ```csharp
-// Oauth account Links list.
+// Account Links list.
 var query = new Dictionary<string, object>
 {
     ["page"] = 1,

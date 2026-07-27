@@ -79,7 +79,7 @@ println(result)
 ### oauth
 
 ```kotlin
-// Oauth account Links list.
+// Account Links list.
 val params = linkedMapOf<String, Any>(
     "page" to 1,
     "page_size" to 2,

@@ -84,12 +84,15 @@ test("auth-runtime-pc-react documents and exposes approved PC auth runtime facto
     "utf8",
   );
   assert.match(runtimeSource, /export function createSdkworkAppbasePcAuthRuntime/);
-  assert.match(runtimeSource, /wrapCredentialEntryClient/);
-  assert.match(runtimeSource, /credentialEntry\?\.skipWrap/);
+  assert.match(runtimeSource, /initializeCredentialEntryTokenManager/);
+  assert.doesNotMatch(runtimeSource, /wrapCredentialEntryClient/);
+  assert.doesNotMatch(runtimeSource, /skipWrap/);
 
   const readme = fs.readFileSync(path.join(AUTH_RUNTIME_ROOT, "README.md"), "utf8");
   assert.match(readme, /createSdkworkAppbasePcAuthRuntime/);
   assert.match(readme, /SdkworkAuthGate/);
+  assert.match(readme, /access-token-only/);
+  assert.doesNotMatch(readme, /skipWrap|wrapCredentialEntryClient/);
 });
 
 test("iam-core-pc-react keeps low-level IAM runtime wiring out of public value exports", () => {

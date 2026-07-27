@@ -37,7 +37,7 @@ node E:\sdkwork-space\sdkwork-specs\tools\check-pagination.mjs --workspace E:\sd
 
 ## Security and tenancy
 
-- **PostgreSQL only** for production HTTP surfaces. SQLite supports OAuth-device embedded paths only.
+- **PostgreSQL only** for IAM lifecycle and production HTTP surfaces. Embedded SQLite adapters are non-authoritative and are not a production database option.
 - **Tenant isolation**: backend tenant path operations require the session tenant or platform tenant (`100001`).
 - **Permission catalog**: `iam_permission` create/update/delete is restricted to the platform tenant.
 - **OAuth inbound IdP**: OIDC identity resolution requires verified userinfo; unverified `id_token` payloads are never trusted.

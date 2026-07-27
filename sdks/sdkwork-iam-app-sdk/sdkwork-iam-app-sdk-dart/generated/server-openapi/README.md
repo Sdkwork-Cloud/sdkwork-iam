@@ -69,7 +69,7 @@ print(result);
 ### oauth
 
 ```dart
-// Oauth account Links list.
+// Account Links list.
 final params = <String, dynamic>{
   'page': 1,
   'page_size': 2,

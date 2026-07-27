@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 from ..http_client import HttpClient
-from ..models import AppbaseApiResult
+from ..models import SdkWorkResourceResponse
 
 def _append_query_string(path: str, raw_query_string: str) -> str:
     query = raw_query_string.lstrip('?')
@@ -38,9 +38,9 @@ class SystemIamAccountBindingPolicyApi:
         self._client = client
 
 
-    def retrieve(self) -> AppbaseApiResult:
+    def retrieve(self) -> SdkWorkResourceResponse:
         """Iam account Binding Policy retrieve."""
-        return self._client.get(f"/app/v3/api/system/iam/account_binding_policy", skip_auth=True)
+        return self._client.get(f"/app/v3/api/system/iam/account_binding_policy", access_token_only=True)
 
 class SystemIamRuntimeApi:
     """system system.iam.runtime API client."""
@@ -49,9 +49,9 @@ class SystemIamRuntimeApi:
         self._client = client
 
 
-    def retrieve(self) -> AppbaseApiResult:
+    def retrieve(self) -> SdkWorkResourceResponse:
         """Iam runtime retrieve."""
-        return self._client.get(f"/app/v3/api/system/iam/runtime", skip_auth=True)
+        return self._client.get(f"/app/v3/api/system/iam/runtime", access_token_only=True)
 
 class SystemIamVerificationPolicyApi:
     """system system.iam.verification_policy API client."""
@@ -60,6 +60,6 @@ class SystemIamVerificationPolicyApi:
         self._client = client
 
 
-    def retrieve(self) -> AppbaseApiResult:
+    def retrieve(self) -> SdkWorkResourceResponse:
         """Iam verification Policy retrieve."""
-        return self._client.get(f"/app/v3/api/system/iam/verification_policy", skip_auth=True)
+        return self._client.get(f"/app/v3/api/system/iam/verification_policy", access_token_only=True)

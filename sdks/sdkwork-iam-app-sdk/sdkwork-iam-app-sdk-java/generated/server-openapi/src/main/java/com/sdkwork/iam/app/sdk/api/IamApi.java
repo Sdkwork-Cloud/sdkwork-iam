@@ -14,7 +14,7 @@ public class IamApi {
     }
 
     /** Department Assignments list. */
-    public AppbaseApiResult departmentAssignmentsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
+    public SdkWorkListResponse departmentAssignmentsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -23,11 +23,11 @@ public class IamApi {
             new QueryParameterSpec("q", q, "form", true, false, null)
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/department_assignments"), query));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkListResponse>() {});
     }
 
     /** Departments list. */
-    public AppbaseApiResult departmentsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
+    public SdkWorkListResponse departmentsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -36,17 +36,17 @@ public class IamApi {
             new QueryParameterSpec("q", q, "form", true, false, null)
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/departments"), query));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkListResponse>() {});
     }
 
     /** Departments tree retrieve. */
-    public AppbaseApiResult departmentsTreeRetrieve() throws Exception {
+    public SdkWorkResourceResponse departmentsTreeRetrieve() throws Exception {
         Object raw = client.get(ApiPaths.appPath("/iam/departments/tree"));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
     /** Organization Memberships list. */
-    public AppbaseApiResult organizationMembershipsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
+    public SdkWorkListResponse organizationMembershipsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -55,11 +55,11 @@ public class IamApi {
             new QueryParameterSpec("q", q, "form", true, false, null)
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/organization_memberships"), query));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkListResponse>() {});
     }
 
     /** Organizations list. */
-    public AppbaseApiResult organizationsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
+    public SdkWorkListResponse organizationsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -68,17 +68,17 @@ public class IamApi {
             new QueryParameterSpec("q", q, "form", true, false, null)
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/organizations"), query));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkListResponse>() {});
     }
 
     /** Organizations tree retrieve. */
-    public AppbaseApiResult organizationsTreeRetrieve() throws Exception {
+    public SdkWorkResourceResponse organizationsTreeRetrieve() throws Exception {
         Object raw = client.get(ApiPaths.appPath("/iam/organizations/tree"));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
     /** Position Assignments list. */
-    public AppbaseApiResult positionAssignmentsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
+    public SdkWorkListResponse positionAssignmentsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -87,11 +87,11 @@ public class IamApi {
             new QueryParameterSpec("q", q, "form", true, false, null)
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/position_assignments"), query));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkListResponse>() {});
     }
 
     /** Positions list. */
-    public AppbaseApiResult positionsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
+    public SdkWorkListResponse positionsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -100,11 +100,11 @@ public class IamApi {
             new QueryParameterSpec("q", q, "form", true, false, null)
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/positions"), query));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkListResponse>() {});
     }
 
     /** Role Bindings list. */
-    public AppbaseApiResult roleBindingsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
+    public SdkWorkListResponse roleBindingsList(Integer page, Integer pageSize, String cursor, String sort, String q) throws Exception {
         String query = buildQueryString(List.of(
             new QueryParameterSpec("page", page, "form", true, false, null),
             new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -113,49 +113,49 @@ public class IamApi {
             new QueryParameterSpec("q", q, "form", true, false, null)
         ));
         Object raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/iam/role_bindings"), query));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkListResponse>() {});
     }
 
     /** Users current retrieve. */
-    public AppbaseApiResult usersCurrentRetrieve() throws Exception {
+    public SdkWorkResourceResponse usersCurrentRetrieve() throws Exception {
         Object raw = client.get(ApiPaths.appPath("/iam/users/current"));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
     /** Users current update. */
-    public AppbaseApiResult usersCurrentUpdate(Map<String, Object> body) throws Exception {
+    public SdkWorkResourceResponse usersCurrentUpdate(Map<String, Object> body) throws Exception {
         Object raw = client.patch(ApiPaths.appPath("/iam/users/current"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
     /** Users current email Bindings delete. */
-    public AppbaseApiResult usersCurrentEmailBindingsDelete() throws Exception {
-        Object raw = client.delete(ApiPaths.appPath("/iam/users/current/email_bindings"));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    public Void usersCurrentEmailBindingsDelete() throws Exception {
+        client.delete(ApiPaths.appPath("/iam/users/current/email_bindings"));
+        return null;
     }
 
     /** Users current email Bindings create. */
-    public AppbaseApiResult usersCurrentEmailBindingsCreate(Map<String, Object> body) throws Exception {
+    public SdkWorkResourceResponse usersCurrentEmailBindingsCreate(Map<String, Object> body) throws Exception {
         Object raw = client.post(ApiPaths.appPath("/iam/users/current/email_bindings"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
     /** Users current password update. */
-    public AppbaseApiResult usersCurrentPasswordUpdate(Map<String, Object> body) throws Exception {
-        Object raw = client.post(ApiPaths.appPath("/iam/users/current/password"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    public SdkWorkResourceResponse usersCurrentPasswordUpdate(Map<String, Object> body) throws Exception {
+        Object raw = client.patch(ApiPaths.appPath("/iam/users/current/password"), body, null, null, "application/json");
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
     /** Users current phone Bindings delete. */
-    public AppbaseApiResult usersCurrentPhoneBindingsDelete() throws Exception {
-        Object raw = client.delete(ApiPaths.appPath("/iam/users/current/phone_bindings"));
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+    public Void usersCurrentPhoneBindingsDelete() throws Exception {
+        client.delete(ApiPaths.appPath("/iam/users/current/phone_bindings"));
+        return null;
     }
 
     /** Users current phone Bindings create. */
-    public AppbaseApiResult usersCurrentPhoneBindingsCreate(Map<String, Object> body) throws Exception {
+    public SdkWorkResourceResponse usersCurrentPhoneBindingsCreate(Map<String, Object> body) throws Exception {
         Object raw = client.post(ApiPaths.appPath("/iam/users/current/phone_bindings"), body, null, null, "application/json");
-        return client.convertValue(raw, new TypeReference<AppbaseApiResult>() {});
+        return client.convertValue(raw, new TypeReference<SdkWorkResourceResponse>() {});
     }
 
 

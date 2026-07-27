@@ -2,8 +2,8 @@
 
 Status: active
 Owner: SDKWork maintainers
-Updated: 2026-07-14
-Specs: IAM_SPEC.md, WEB_FRAMEWORK_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, API_SPEC.md
+Updated: 2026-07-27
+Specs: IAM_SPEC.md, WEB_FRAMEWORK_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, API_SPEC.md, ARCHITECTURE_DECISION_SPEC.md
 
 ## 1. Architecture Overview
 
@@ -30,7 +30,7 @@ Specs: IAM_SPEC.md, WEB_FRAMEWORK_SPEC.md, DATABASE_FRAMEWORK_SPEC.md, API_SPEC.
 | Framework | Integration |
 | --- | --- |
 | sdkwork-web-framework | `sdkwork-iam-web-adapter` + route crates (app/backend/open-api) |
-| sdkwork-database | `sdkwork-iam-database-host` lifecycle SPI + `database/` module (PostgreSQL authoritative; SQLite embedded mirror only) |
+| sdkwork-database | `sdkwork-iam-database-host` lifecycle SPI + authoritative PostgreSQL-only `database/` module |
 | sdkwork-utils | `sdkwork-utils-rust` (Rust) + `@sdkwork/utils` (TypeScript) |
 | sdkwork-discovery | Deferred until runnable IAM RPC servers ship |
 | sdkwork-drive | Required when avatar/media upload surfaces are added |
@@ -82,7 +82,7 @@ OAuth authorization-server access tokens use tenant RS256 signing keys and JWKS 
 
 The callback route accepts provider wire formats (`application/xml` and `application/json`) and returns provider acknowledgements rather than SDKWork envelopes. Safe-mode WeChat payloads use SHA-1 `msg_signature`, AES-256-CBC with tenant-scoped `EncodingAESKey`, decrypted AppID verification, and accepted-event deduplication.
 
-The PostgreSQL baseline enforces tenant-leading composite foreign keys for users, organizations, memberships, departments, assignments, credentials, sessions, and closure tables. SQLite remains an embedded narrow-path mirror and is governed separately from the PostgreSQL lifecycle.
+The PostgreSQL baseline enforces tenant-leading composite foreign keys for users, organizations, memberships, departments, assignments, credentials, sessions, and closure tables. Embedded SQLite adapters are non-authoritative implementation or test boundaries and do not share the IAM lifecycle asset tree.
 
 PC admin audit visibility: `@sdkwork/iam-pc-admin-audit` (`auditEvents.list`/`retrieve`, `securityEvents.list`/`retrieve`) with typed OpenAPI page/resource schemas; list responses omit `detailJson`, retrieve returns `data.item.detailJson` via `sdkwork_resource_json`.
 

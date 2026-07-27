@@ -8,8 +8,8 @@ import com.sdkwork.iam.app.sdk.http.HttpClient
 
 class OauthApi(private val client: HttpClient) {
 
-    /** Oauth account Links list. */
-    suspend fun accountLinksList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): AppbaseApiResult? {
+    /** Account Links list. */
+    suspend fun accountLinksList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): SdkWorkListResponse? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
             QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -18,65 +18,70 @@ class OauthApi(private val client: HttpClient) {
             QueryParameterSpec("q", q, "form", true, false, null)
         ))
         val raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/account_links"), query))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkListResponse>() {})
     }
 
-    /** Oauth account Links delete. */
-    suspend fun accountLinksDelete(accountLinkId: String): AppbaseApiResult? {
-        val raw = client.delete(ApiPaths.appPath("/oauth/account_links/${serializePathParameter(accountLinkId, PathParameterSpec("accountLinkId", "simple", false))}"))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Account Links delete. */
+    suspend fun accountLinksDelete(accountLinkId: String): Unit {
+        client.delete(ApiPaths.appPath("/oauth/account_links/${serializePathParameter(accountLinkId, PathParameterSpec("accountLinkId", "simple", false))}"))
     }
 
-    /** Oauth authorization Urls create. */
-    suspend fun authorizationUrlsCreate(body: Map<String, Any>): AppbaseApiResult? {
-        val raw = client.request("POST", ApiPaths.appPath("/oauth/authorization_urls"), body, null, null, "application/json", true)
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Authorization Urls create. */
+    suspend fun authorizationUrlsCreate(body: Map<String, Any>): SdkWorkResourceResponse? {
+        val raw = client.request("POST", ApiPaths.appPath("/oauth/authorization_urls"), body, null, null, "application/json", false, true)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
-    /** Oauth callbacks handle Get. */
-    suspend fun callbacksHandleGet(providerCode: String): AppbaseApiResult? {
-        val raw = client.get(ApiPaths.appPath("/oauth/callbacks/${serializePathParameter(providerCode, PathParameterSpec("providerCode", "simple", false))}"))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Authorizations completions create. */
+    suspend fun authorizationsCompletionsCreate(authorizationStateId: String, body: Map<String, Any>): SdkWorkResourceResponse? {
+        val raw = client.post(ApiPaths.appPath("/oauth/authorizations/${serializePathParameter(authorizationStateId, PathParameterSpec("authorizationStateId", "simple", false))}/completions"), body, null, null, "application/json")
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
-    /** Oauth callbacks handle Post. */
-    suspend fun callbacksHandlePost(providerCode: String, body: Map<String, Any>): AppbaseApiResult? {
-        val raw = client.post(ApiPaths.appPath("/oauth/callbacks/${serializePathParameter(providerCode, PathParameterSpec("providerCode", "simple", false))}"), body, null, null, "application/json")
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Callbacks retrieve. */
+    suspend fun callbacksRetrieve(providerCode: String): SdkWorkResourceResponse? {
+        val raw = client.request("GET", ApiPaths.appPath("/oauth/callbacks/${serializePathParameter(providerCode, PathParameterSpec("providerCode", "simple", false))}"), null, null, null, null, false, true)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
-    /** Oauth device Authorizations create. */
-    suspend fun deviceAuthorizationsCreate(body: Map<String, Any>): AppbaseApiResult? {
-        val raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations"), body, null, null, "application/json", true)
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Callbacks create. */
+    suspend fun callbacksCreate(providerCode: String, body: Map<String, Any>): SdkWorkResourceResponse? {
+        val raw = client.request("POST", ApiPaths.appPath("/oauth/callbacks/${serializePathParameter(providerCode, PathParameterSpec("providerCode", "simple", false))}"), body, null, null, "application/json", false, true)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
-    /** Oauth device Authorizations retrieve. */
-    suspend fun deviceAuthorizationsRetrieve(deviceAuthorizationId: String): AppbaseApiResult? {
-        val raw = client.request("GET", ApiPaths.appPath("/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, PathParameterSpec("deviceAuthorizationId", "simple", false))}"), null, null, null, null, true)
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Device Authorizations create. */
+    suspend fun deviceAuthorizationsCreate(body: Map<String, Any>): SdkWorkResourceResponse? {
+        val raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations"), body, null, null, "application/json", true, false)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
-    /** Oauth device Authorizations password Completions create. */
-    suspend fun deviceAuthorizationsPasswordCompletionsCreate(deviceAuthorizationId: String, body: Map<String, Any>): AppbaseApiResult? {
-        val raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, PathParameterSpec("deviceAuthorizationId", "simple", false))}/password_completions"), body, null, null, "application/json", true)
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Device Authorizations retrieve. */
+    suspend fun deviceAuthorizationsRetrieve(deviceAuthorizationId: String): SdkWorkResourceResponse? {
+        val raw = client.request("GET", ApiPaths.appPath("/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, PathParameterSpec("deviceAuthorizationId", "simple", false))}"), null, null, null, null, true, false)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
-    /** Oauth device Authorizations scans create. */
-    suspend fun deviceAuthorizationsScansCreate(deviceAuthorizationId: String, body: Map<String, Any>): AppbaseApiResult? {
-        val raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, PathParameterSpec("deviceAuthorizationId", "simple", false))}/scans"), body, null, null, "application/json", true)
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Device Authorizations password Completions create. */
+    suspend fun deviceAuthorizationsPasswordCompletionsCreate(deviceAuthorizationId: String, body: Map<String, Any>): SdkWorkResourceResponse? {
+        val raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, PathParameterSpec("deviceAuthorizationId", "simple", false))}/password_completions"), body, null, null, "application/json", false, true)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
-    /** Oauth device Authorizations session Exchanges create. */
-    suspend fun deviceAuthorizationsSessionExchangesCreate(deviceAuthorizationId: String, body: Map<String, Any>): AppbaseApiResult? {
-        val raw = client.post(ApiPaths.appPath("/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, PathParameterSpec("deviceAuthorizationId", "simple", false))}/session_exchanges"), body, null, null, "application/json")
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Device Authorizations scans create. */
+    suspend fun deviceAuthorizationsScansCreate(deviceAuthorizationId: String, body: Map<String, Any>): SdkWorkResourceResponse? {
+        val raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, PathParameterSpec("deviceAuthorizationId", "simple", false))}/scans"), body, null, null, "application/json", false, true)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
-    /** Oauth grants list. */
-    suspend fun grantsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): AppbaseApiResult? {
+    /** Device Authorizations session Exchanges create. */
+    suspend fun deviceAuthorizationsSessionExchangesCreate(deviceAuthorizationId: String, body: Map<String, Any>): SdkWorkResourceResponse? {
+        val raw = client.request("POST", ApiPaths.appPath("/oauth/device_authorizations/${serializePathParameter(deviceAuthorizationId, PathParameterSpec("deviceAuthorizationId", "simple", false))}/session_exchanges"), body, null, null, "application/json", true, false)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
+    }
+
+    /** Grants list. */
+    suspend fun grantsList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): SdkWorkListResponse? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
             QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -85,23 +90,22 @@ class OauthApi(private val client: HttpClient) {
             QueryParameterSpec("q", q, "form", true, false, null)
         ))
         val raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/grants"), query))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        return client.convertValue(raw, object : TypeReference<SdkWorkListResponse>() {})
     }
 
-    /** Oauth grants delete. */
-    suspend fun grantsDelete(grantId: String): AppbaseApiResult? {
-        val raw = client.delete(ApiPaths.appPath("/oauth/grants/${serializePathParameter(grantId, PathParameterSpec("grantId", "simple", false))}"))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Grants delete. */
+    suspend fun grantsDelete(grantId: String): Unit {
+        client.delete(ApiPaths.appPath("/oauth/grants/${serializePathParameter(grantId, PathParameterSpec("grantId", "simple", false))}"))
     }
 
-    /** Oauth mini Program Sessions create. */
-    suspend fun miniProgramSessionsCreate(body: Map<String, Any>): AppbaseApiResult? {
-        val raw = client.post(ApiPaths.appPath("/oauth/mini_program_sessions"), body, null, null, "application/json")
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Mini Program Sessions create. */
+    suspend fun miniProgramSessionsCreate(body: WechatMiniProgramSessionCreateCommand): SdkWorkResourceResponse? {
+        val raw = client.request("POST", ApiPaths.appPath("/oauth/mini_program_sessions"), body, null, null, "application/json", false, true)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
-    /** Oauth providers list. */
-    suspend fun providersList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): AppbaseApiResult? {
+    /** Providers list. */
+    suspend fun providersList(page: Int? = null, pageSize: Int? = null, cursor: String? = null, sort: String? = null, q: String? = null): SdkWorkListResponse? {
         val query = buildQueryString(listOf(
             QueryParameterSpec("page", page, "form", true, false, null),
             QueryParameterSpec("page_size", pageSize, "form", true, false, null),
@@ -109,14 +113,14 @@ class OauthApi(private val client: HttpClient) {
             QueryParameterSpec("sort", sort, "form", true, false, null),
             QueryParameterSpec("q", q, "form", true, false, null)
         ))
-        val raw = client.get(ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/providers"), query))
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+        val raw = client.request("GET", ApiPaths.appendQueryString(ApiPaths.appPath("/oauth/providers"), query), null, null, null, null, false, true)
+        return client.convertValue(raw, object : TypeReference<SdkWorkListResponse>() {})
     }
 
-    /** Oauth sessions create. */
-    suspend fun sessionsCreate(body: Map<String, Any>): AppbaseApiResult? {
-        val raw = client.request("POST", ApiPaths.appPath("/oauth/sessions"), body, null, null, "application/json", true)
-        return client.convertValue(raw, object : TypeReference<AppbaseApiResult>() {})
+    /** Sessions create. */
+    suspend fun sessionsCreate(body: AppbaseSessionCreateCommand): SdkWorkResourceResponse? {
+        val raw = client.request("POST", ApiPaths.appPath("/oauth/sessions"), body, null, null, "application/json", false, true)
+        return client.convertValue(raw, object : TypeReference<SdkWorkResourceResponse>() {})
     }
 
     private data class PathParameterSpec(val name: String, val style: String, val explode: Boolean)

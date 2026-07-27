@@ -36,7 +36,7 @@ Canonical API surface:
 - `sdkwork_iam_web_adapter::TenantSigningKeyResolver`
 - `sdkwork_iam_web_adapter::tenant_signing_key_store_for_database_config`
 
-Kid format: `{tenant_id}:local-hs256:primary` for bootstrap keys; rotation may add UUID-based kids.
+Kid format: `{tenant_id}:local-hs256:primary` for bootstrap keys; rotation adds UUID-based kids. Local session rotation is restricted to `HS256` keys and never mutates OAuth authorization-server `RS256` keys. Rotation is serialized per tenant and is idempotent while an earlier key remains inside its overlapping validation window.
 
 ## IAM Scope Resolution
 
@@ -56,7 +56,7 @@ Do not add parallel migration logic in consumer repositories; extend `legacy_sub
 
 ## Account Binding Policy
 
-Tenant account-binding policy is stored in `iam_policy.policy_json` (`jsonb`). Use `sdkwork_iam_web_adapter::load_account_binding_policy` and `save_account_binding_policy`; do not insert raw text into `policy_json` or RFC3339 strings into timestamp columns.
+Tenant account-binding policy is stored as serialized JSON in the `iam_policy.policy_json` `TEXT` column. Use `sdkwork_iam_web_adapter::load_account_binding_policy` and `save_account_binding_policy` so serialization and strict decoding remain inside the adapter; callers must not hand-write policy payloads or RFC3339 strings into timestamp columns.
 
 ## PostgreSQL Integration Tests
 

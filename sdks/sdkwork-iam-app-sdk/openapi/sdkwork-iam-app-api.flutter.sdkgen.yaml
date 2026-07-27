@@ -1349,11 +1349,7 @@
             }
           }
         },
-        "security": [
-          {
-            "AccessToken": []
-          }
-        ],
+        "security": [],
         "x-sdkwork-auth-mode": "refresh-token",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",

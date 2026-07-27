@@ -931,7 +931,7 @@ async fn prune_expired_rotating_signing_keys(pg: &PgPool, tenant_id: &str) -> Re
     let now_text = now.to_rfc3339();
     sqlx::query(
         "UPDATE iam_tenant_signing_key SET status = 'revoked', updated_at = $3 \
-         WHERE tenant_id = $1 AND status = 'rotating' \
+         WHERE tenant_id = $1 AND alg = 'HS256' AND status = 'rotating' \
            AND active_until IS NOT NULL AND active_until <= $2",
     )
     .bind(tenant_id)
@@ -946,17 +946,51 @@ async fn prune_expired_rotating_signing_keys(pg: &PgPool, tenant_id: &str) -> Re
 async fn rotate_tenant_signing_key(pg: &PgPool, tenant_id: &str) -> Result<(), String> {
     let now = current_timestamp_utc();
     let now_text = now.to_rfc3339();
-    let current = sqlx::query(
-        "SELECT id, kid FROM iam_tenant_signing_key \
-         WHERE tenant_id = $1 AND status = 'active' \
-         ORDER BY active_from DESC LIMIT 1",
+    let mut tx = pg
+        .begin()
+        .await
+        .map_err(|error| format!("begin signing key rotation failed: {error}"))?;
+
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1))")
+        .bind(format!("iam:tenant_signing_key_rotation:{tenant_id}"))
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|error| format!("lock signing key rotation failed: {error}"))?;
+
+    let rotation_in_progress = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS( \
+           SELECT 1 FROM iam_tenant_signing_key \
+           WHERE tenant_id = $1 AND alg = 'HS256' AND status = 'rotating' \
+             AND active_until IS NOT NULL AND active_until > $2 \
+         )",
     )
     .bind(tenant_id)
-    .fetch_optional(pg)
+    .bind(&now_text)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|error| format!("check signing key rotation state failed: {error}"))?;
+    if rotation_in_progress {
+        tx.commit()
+            .await
+            .map_err(|error| format!("commit unchanged signing key rotation failed: {error}"))?;
+        return Ok(());
+    }
+
+    let current = sqlx::query(
+        "SELECT id, kid FROM iam_tenant_signing_key \
+         WHERE tenant_id = $1 AND alg = 'HS256' AND status = 'active' \
+         ORDER BY active_from DESC LIMIT 1 \
+         FOR UPDATE",
+    )
+    .bind(tenant_id)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|error| format!("load active signing key for rotation failed: {error}"))?;
 
     let Some(current) = current else {
+        tx.commit()
+            .await
+            .map_err(|error| format!("commit empty signing key rotation failed: {error}"))?;
         return Ok(());
     };
 
@@ -970,12 +1004,7 @@ async fn rotate_tenant_signing_key(pg: &PgPool, tenant_id: &str) -> Result<(), S
     let secret_ref = sdkwork_iam_web_adapter::encode_signing_secret_ref(&secret);
     let secret_hash = hash_token(&secret_ref);
 
-    let mut tx = pg
-        .begin()
-        .await
-        .map_err(|error| format!("begin signing key rotation failed: {error}"))?;
-
-    sqlx::query(
+    let updated = sqlx::query(
         "UPDATE iam_tenant_signing_key \
          SET status = 'rotating', active_until = $3, rotated_at = $4, updated_at = $4 \
          WHERE id = $1 AND tenant_id = $2 AND status = 'active'",
@@ -987,6 +1016,9 @@ async fn rotate_tenant_signing_key(pg: &PgPool, tenant_id: &str) -> Result<(), S
     .execute(&mut *tx)
     .await
     .map_err(|error| format!("mark signing key rotating failed: {error}"))?;
+    if updated.rows_affected() != 1 {
+        return Err("active signing key changed during rotation".to_string());
+    }
 
     sqlx::query(
         "INSERT INTO iam_tenant_signing_key (id, tenant_id, kid, alg, secret_ref, secret_hash, status, active_from, created_at, updated_at) \

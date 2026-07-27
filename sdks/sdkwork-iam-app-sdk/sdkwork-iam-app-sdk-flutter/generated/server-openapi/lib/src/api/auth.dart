@@ -13,7 +13,7 @@ class AuthApi {
   /// Password Reset Requests create.
   Future<SdkWorkResourceResponse?> passwordResetRequestsCreate(Map<String, dynamic> body) async {
     final payload = body;
-    final response = await _client.post(ApiPaths.appPath('/auth/password_reset_requests'), body: payload, contentType: 'application/json');
+    final response = await _client.request('POST', ApiPaths.appPath('/auth/password_reset_requests'), body: payload, contentType: 'application/json', accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : SdkWorkResourceResponse.fromJson(map);
@@ -23,7 +23,7 @@ class AuthApi {
   /// Password Resets create.
   Future<SdkWorkResourceResponse?> passwordResetsCreate(Map<String, dynamic> body) async {
     final payload = body;
-    final response = await _client.post(ApiPaths.appPath('/auth/password_resets'), body: payload, contentType: 'application/json');
+    final response = await _client.request('POST', ApiPaths.appPath('/auth/password_resets'), body: payload, contentType: 'application/json', accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : SdkWorkResourceResponse.fromJson(map);
@@ -33,7 +33,7 @@ class AuthApi {
   /// Registrations create.
   Future<SdkWorkResourceResponse?> registrationsCreate(Map<String, dynamic> body) async {
     final payload = body;
-    final response = await _client.post(ApiPaths.appPath('/auth/registrations'), body: payload, contentType: 'application/json');
+    final response = await _client.request('POST', ApiPaths.appPath('/auth/registrations'), body: payload, contentType: 'application/json', accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : SdkWorkResourceResponse.fromJson(map);
@@ -43,7 +43,7 @@ class AuthApi {
   /// Sessions create.
   Future<SdkWorkResourceResponse?> sessionsCreate(AppbaseSessionCreateCommand body) async {
     final payload = body.toJson();
-    final response = await _client.post(ApiPaths.appPath('/auth/sessions'), body: payload, contentType: 'application/json');
+    final response = await _client.request('POST', ApiPaths.appPath('/auth/sessions'), body: payload, contentType: 'application/json', accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : SdkWorkResourceResponse.fromJson(map);
@@ -77,7 +77,7 @@ class AuthApi {
   /// Sessions login Context Selection create.
   Future<SdkWorkResourceResponse?> sessionsLoginContextSelectionCreate(Map<String, dynamic> body) async {
     final payload = body;
-    final response = await _client.post(ApiPaths.appPath('/auth/sessions/login_context_selection'), body: payload, contentType: 'application/json');
+    final response = await _client.request('POST', ApiPaths.appPath('/auth/sessions/login_context_selection'), body: payload, contentType: 'application/json', accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : SdkWorkResourceResponse.fromJson(map);
@@ -87,7 +87,7 @@ class AuthApi {
   /// Sessions organization Selection create.
   Future<SdkWorkResourceResponse?> sessionsOrganizationSelectionCreate(Map<String, dynamic> body) async {
     final payload = body;
-    final response = await _client.post(ApiPaths.appPath('/auth/sessions/organization_selection'), body: payload, contentType: 'application/json');
+    final response = await _client.request('POST', ApiPaths.appPath('/auth/sessions/organization_selection'), body: payload, contentType: 'application/json', accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
       return map == null ? null : SdkWorkResourceResponse.fromJson(map);

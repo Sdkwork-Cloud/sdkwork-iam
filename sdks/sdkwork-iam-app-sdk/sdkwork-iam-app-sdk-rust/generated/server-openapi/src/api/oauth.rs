@@ -5,7 +5,7 @@ use reqwest::Method;
 use crate::api::paths::app_path;
 use crate::api::paths::append_query_string;
 use crate::http::{SdkworkError, SdkworkHttpClient};
-use crate::models::{AppbaseApiResult};
+use crate::models::{AppbaseSessionCreateCommand, SdkWorkPageData, WechatMiniProgramSessionCreateCommand};
 
 #[derive(Clone)]
 pub struct OauthApi {
@@ -17,8 +17,8 @@ impl OauthApi {
         Self { client }
     }
 
-    /// Oauth account Links list.
-    pub async fn account_links_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Account Links list.
+    pub async fn account_links_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -30,62 +30,68 @@ impl OauthApi {
         self.client.get(&path, None, None).await
     }
 
-    /// Oauth account Links delete.
-    pub async fn account_links_delete(&self, account_link_id: &str) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Account Links delete.
+    pub async fn account_links_delete(&self, account_link_id: &str) -> Result<(), SdkworkError> {
         let path = app_path(&format!("/oauth/account_links/{}", serialize_path_parameter(account_link_id, PathParameterSpec::new("accountLinkId", "simple", false))));
         self.client.delete(&path, None, None).await
     }
 
-    /// Oauth authorization Urls create.
-    pub async fn authorization_urls_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Authorization Urls create.
+    pub async fn authorization_urls_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&"/oauth/authorization_urls".to_string());
-        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), false, true).await
     }
 
-    /// Oauth callbacks handle Get.
-    pub async fn callbacks_handle_get(&self, provider_code: &str) -> Result<AppbaseApiResult, SdkworkError> {
-        let path = app_path(&format!("/oauth/callbacks/{}", serialize_path_parameter(provider_code, PathParameterSpec::new("providerCode", "simple", false))));
-        self.client.get(&path, None, None).await
-    }
-
-    /// Oauth callbacks handle Post.
-    pub async fn callbacks_handle_post(&self, provider_code: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
-        let path = app_path(&format!("/oauth/callbacks/{}", serialize_path_parameter(provider_code, PathParameterSpec::new("providerCode", "simple", false))));
+    /// Authorizations completions create.
+    pub async fn authorizations_completions_create(&self, authorization_state_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
+        let path = app_path(&format!("/oauth/authorizations/{}/completions", serialize_path_parameter(authorization_state_id, PathParameterSpec::new("authorizationStateId", "simple", false))));
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
-    /// Oauth device Authorizations create.
-    pub async fn device_authorizations_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Callbacks retrieve.
+    pub async fn callbacks_retrieve(&self, provider_code: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
+        let path = app_path(&format!("/oauth/callbacks/{}", serialize_path_parameter(provider_code, PathParameterSpec::new("providerCode", "simple", false))));
+        self.client.request_method(Method::GET, &path, Option::<&serde_json::Value>::None, None, None, None, false, true).await
+    }
+
+    /// Callbacks create.
+    pub async fn callbacks_create(&self, provider_code: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
+        let path = app_path(&format!("/oauth/callbacks/{}", serialize_path_parameter(provider_code, PathParameterSpec::new("providerCode", "simple", false))));
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), false, true).await
+    }
+
+    /// Device Authorizations create.
+    pub async fn device_authorizations_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&"/oauth/device_authorizations".to_string());
-        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true, false).await
     }
 
-    /// Oauth device Authorizations retrieve.
-    pub async fn device_authorizations_retrieve(&self, device_authorization_id: &str) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Device Authorizations retrieve.
+    pub async fn device_authorizations_retrieve(&self, device_authorization_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&format!("/oauth/device_authorizations/{}", serialize_path_parameter(device_authorization_id, PathParameterSpec::new("deviceAuthorizationId", "simple", false))));
-        self.client.request_method(Method::GET, &path, Option::<&serde_json::Value>::None, None, None, None, true).await
+        self.client.request_method(Method::GET, &path, Option::<&serde_json::Value>::None, None, None, None, true, false).await
     }
 
-    /// Oauth device Authorizations password Completions create.
-    pub async fn device_authorizations_password_completions_create(&self, device_authorization_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Device Authorizations password Completions create.
+    pub async fn device_authorizations_password_completions_create(&self, device_authorization_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&format!("/oauth/device_authorizations/{}/password_completions", serialize_path_parameter(device_authorization_id, PathParameterSpec::new("deviceAuthorizationId", "simple", false))));
-        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), false, true).await
     }
 
-    /// Oauth device Authorizations scans create.
-    pub async fn device_authorizations_scans_create(&self, device_authorization_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Device Authorizations scans create.
+    pub async fn device_authorizations_scans_create(&self, device_authorization_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&format!("/oauth/device_authorizations/{}/scans", serialize_path_parameter(device_authorization_id, PathParameterSpec::new("deviceAuthorizationId", "simple", false))));
-        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), false, true).await
     }
 
-    /// Oauth device Authorizations session Exchanges create.
-    pub async fn device_authorizations_session_exchanges_create(&self, device_authorization_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Device Authorizations session Exchanges create.
+    pub async fn device_authorizations_session_exchanges_create(&self, device_authorization_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&format!("/oauth/device_authorizations/{}/session_exchanges", serialize_path_parameter(device_authorization_id, PathParameterSpec::new("deviceAuthorizationId", "simple", false))));
-        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true, false).await
     }
 
-    /// Oauth grants list.
-    pub async fn grants_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Grants list.
+    pub async fn grants_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -97,20 +103,20 @@ impl OauthApi {
         self.client.get(&path, None, None).await
     }
 
-    /// Oauth grants delete.
-    pub async fn grants_delete(&self, grant_id: &str) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Grants delete.
+    pub async fn grants_delete(&self, grant_id: &str) -> Result<(), SdkworkError> {
         let path = app_path(&format!("/oauth/grants/{}", serialize_path_parameter(grant_id, PathParameterSpec::new("grantId", "simple", false))));
         self.client.delete(&path, None, None).await
     }
 
-    /// Oauth mini Program Sessions create.
-    pub async fn mini_program_sessions_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Mini Program Sessions create.
+    pub async fn mini_program_sessions_create(&self, body: &WechatMiniProgramSessionCreateCommand) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&"/oauth/mini_program_sessions".to_string());
-        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), false, true).await
     }
 
-    /// Oauth providers list.
-    pub async fn providers_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Providers list.
+    pub async fn providers_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -119,13 +125,13 @@ impl OauthApi {
             QueryParameterSpec::new("q", q, "form", true, false, None),
         ]);
         let path = append_query_string(app_path(&"/oauth/providers".to_string()), &query);
-        self.client.get(&path, None, None).await
+        self.client.request_method(Method::GET, &path, Option::<&serde_json::Value>::None, None, None, None, false, true).await
     }
 
-    /// Oauth sessions create.
-    pub async fn sessions_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<AppbaseApiResult, SdkworkError> {
+    /// Sessions create.
+    pub async fn sessions_create(&self, body: &AppbaseSessionCreateCommand) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = app_path(&"/oauth/sessions".to_string());
-        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), false, true).await
     }
 
 }

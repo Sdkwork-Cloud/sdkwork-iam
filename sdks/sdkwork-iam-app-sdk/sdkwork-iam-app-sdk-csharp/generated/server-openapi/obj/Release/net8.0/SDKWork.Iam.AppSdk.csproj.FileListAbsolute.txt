@@ -1,0 +1,17 @@
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\bin\Release\net8.0\SDKWork.Iam.AppSdk.deps.json
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\bin\Release\net8.0\SDKWork.Iam.AppSdk.dll
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\bin\Release\net8.0\SDKWork.Iam.AppSdk.pdb
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\bin\Release\net8.0\SDKwork.Common.dll
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\bin\Release\net8.0\SDKwork.Common.pdb
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\bin\Release\net8.0\SDKwork.Common.xml
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\obj\Release\net8.0\SDKWork.Iam.AppSdk.csproj.AssemblyReference.cache
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\obj\Release\net8.0\SDKWork.Iam.AppSdk.GeneratedMSBuildEditorConfig.editorconfig
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\obj\Release\net8.0\SDKWork.Iam.AppSdk.AssemblyInfoInputs.cache
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\obj\Release\net8.0\SDKWork.Iam.AppSdk.AssemblyInfo.cs
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\obj\Release\net8.0\SDKWork.Iam.AppSdk.csproj.CoreCompileInputs.cache
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\obj\Release\net8.0\SDKWork.Iam.AppSdk.sourcelink.json
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\obj\Release\net8.0\SDKWork..E261B6B1.Up2Date
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\obj\Release\net8.0\SDKWork.Iam.AppSdk.dll
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\obj\Release\net8.0\refint\SDKWork.Iam.AppSdk.dll
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\obj\Release\net8.0\SDKWork.Iam.AppSdk.pdb
+E:\sdkwork-space\sdkwork-iam\sdks\sdkwork-iam-app-sdk\sdkwork-iam-app-sdk-csharp\generated\server-openapi\obj\Release\net8.0\ref\SDKWork.Iam.AppSdk.dll

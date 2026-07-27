@@ -65,10 +65,26 @@ pub(crate) async fn build_sdkwork_iam_app_api_router_with_pool(
         .map(build_sdkwork_iam_app_api_router_with_state)
 }
 
+pub(crate) async fn build_sdkwork_iam_app_api_router_with_initialized_pool(
+    pool: sdkwork_database_sqlx::DatabasePool,
+) -> Result<Router, String> {
+    LocalIamState::from_initialized_pool(pool)
+        .await
+        .map(build_sdkwork_iam_app_api_router_with_state)
+}
+
 pub(crate) async fn build_sdkwork_iam_app_api_business_router_with_pool(
     pool: sdkwork_database_sqlx::DatabasePool,
 ) -> Result<Router, String> {
     LocalIamState::from_pool(pool)
+        .await
+        .map(build_sdkwork_iam_app_api_core_router)
+}
+
+pub(crate) async fn build_sdkwork_iam_app_api_business_router_with_initialized_pool(
+    pool: sdkwork_database_sqlx::DatabasePool,
+) -> Result<Router, String> {
+    LocalIamState::from_initialized_pool(pool)
         .await
         .map(build_sdkwork_iam_app_api_core_router)
 }
@@ -1488,7 +1504,7 @@ async fn create_password_reset(
         return invalid_password_reset_error();
     };
 
-    if let Err(message) = crate::passwords::validate_password_reset_verification(
+    if let Err(error) = crate::passwords::validate_password_reset_verification(
         pg,
         &state.config,
         &user,
@@ -1497,11 +1513,24 @@ async fn create_password_reset(
     )
     .await
     {
-        return appbase_error(
-            StatusCode::BAD_REQUEST,
-            "iam_verification_code_invalid",
-            &message,
-        );
+        return match error {
+            crate::passwords::PasswordResetVerificationError::InvalidChallenge => {
+                invalid_password_reset_error()
+            }
+            crate::passwords::PasswordResetVerificationError::NotConfigured => appbase_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "iam_password_reset_verification_unavailable",
+                "password reset verification is not configured",
+            ),
+            crate::passwords::PasswordResetVerificationError::Storage(error) => {
+                tracing::error!(%error, "password reset verification storage failed");
+                appbase_error(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "iam_password_reset_verification_unavailable",
+                    "password reset verification is temporarily unavailable",
+                )
+            }
+        };
     }
     if let Err(error) = replace_user_password(pg, &state.config, &user.id, &new_password).await {
         return appbase_error(

@@ -390,12 +390,15 @@ fn backend_route_manifest_matches_the_standard_management_operation_surface() {
 
 #[test]
 fn service_account_token_exchange_is_a_credential_entry_route() {
+    use sdkwork_web_contract::RouteAuth;
+
     let routes = backend_routes();
     let route = routes
         .iter()
         .find(|route| route.operation_id == "serviceAccountTokens.create")
         .expect("service account token exchange route");
     assert!(route.auth.skips_credential_resolution());
+    assert_eq!(RouteAuth::BootstrapBody, route.auth);
     assert!(route.forbid_credential_headers);
 }
 

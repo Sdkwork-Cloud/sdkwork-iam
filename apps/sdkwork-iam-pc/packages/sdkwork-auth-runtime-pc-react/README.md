@@ -34,7 +34,7 @@ The runtime-backed controller keeps login, registration, verification code, pass
 
 ## Standard Appbase PC Auth Runtime
 
-Applications that want the minimum PC auth integration should use `createSdkworkAppbasePcAuthRuntime`. The factory creates the appbase app SDK client, optional appbase backend SDK client, one global token manager, the IAM runtime, and binds every downstream token-manager-aware SDK client to the same manager.
+Applications that want the minimum PC auth integration should use `createSdkworkAppbasePcAuthRuntime`. The factory creates the IAM app SDK client, one global token manager, the IAM runtime, and binds every downstream token-manager-aware app SDK client to the same manager.
 
 ```ts
 import { createSdkworkAppbasePcAuthRuntime } from "@sdkwork/auth-runtime-pc-react";
@@ -48,14 +48,12 @@ export const authRuntime = createSdkworkAppbasePcAuthRuntime({
   },
   baseUrls: {
     appbaseAppApiBaseUrl,
-    appbaseBackendApiBaseUrl,
   },
   hooks: {
     onSessionChanged: clearRealtimeAndSensitiveCaches,
   },
   sdkClients: [
     productAppSdk,
-    productBackendSdk,
   ],
   sessionBridge: {
     clearSession,
@@ -69,17 +67,17 @@ Product applications provide only app identity, base URLs, optional read/commit/
 
 ### Credential-Entry Bootstrap Access Token
 
-`createSdkworkAppbasePcAuthRuntime` wraps the IAM app SDK with `@sdkwork/iam-credential-entry` by default. Before login, registration, QR auth session creation, password reset request/completion, and equivalent anonymous credential-entry operations, the runtime:
+`createSdkworkAppbasePcAuthRuntime` initializes the global token manager once with the bootstrap access token. The generated IAM app SDK classifies login, registration, QR auth session creation, password reset request/completion, and equivalent credential-entry operations as access-token-only. Before dispatch, generated transport removes stale session credentials and request-supplied credential headers, then injects only the canonical stored `Access-Token`.
 
-1. Clears any stale session tokens from the global TokenManager.
-2. Seeds bootstrap `accessToken` from private `process.env.SDKWORK_ACCESS_TOKEN` when present.
-3. Sends `Access-Token: <JWT access_token>` through the generated SDK credential hook.
+1. The runtime seeds bootstrap `accessToken` from private `process.env.SDKWORK_ACCESS_TOKEN` when present.
+2. Generated transport fails before dispatch when an access-token-only operation has no canonical `Access-Token`.
+3. Refresh operations use the typed refresh proof body and suppress all automatic credential headers.
 
 Rules:
 
 - Tracked env templates document `SDKWORK_ACCESS_TOKEN=` with blank value per `ENVIRONMENT_SPEC.md`.
 - Dev orchestrators or local bootstrap overlays generate the JWT; browser public config must not expose it through `VITE_*`.
-- Applications that already wrap the IAM app SDK manually must pass `credentialEntry: { skipWrap: true }`.
+- Applications must not add request-time credential wrappers around the generated IAM app SDK.
 - After interactive login succeeds, runtime session tokens supersede bootstrap credentials.
 
 Shared helpers live in `@sdkwork/iam-credential-entry` (`createDevBootstrapAccessTokenJwt`, `mergeBootstrapAccessTokenEnv`) and `sdkwork-iam/scripts/dev/create-dev-bootstrap-access-token-env.mjs`. Topology dev orchestrators use `mergeRepoDevBootstrapAccessTokenEnv`; standalone renderers use `run-renderer-dev-with-bootstrap.mjs` (`run-pc-renderer-dev-with-bootstrap.mjs` is the PC compatibility entrypoint).

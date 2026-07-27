@@ -17,8 +17,8 @@ func NewOauthApi(client *sdkhttp.Client) *OauthApi {
     return &OauthApi{client: client}
 }
 
-// Oauth account Links list.
-func (a *OauthApi) AccountLinksList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.AppbaseApiResult, error) {
+// Account Links list.
+func (a *OauthApi) AccountLinksList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.SdkWorkListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page", Value: func() interface{} { if page == nil { return nil }; return *page }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -28,104 +28,114 @@ func (a *OauthApi) AccountLinksList(page *int, pageSize *int, cursor *string, so
     })
     raw, err := a.client.Get(AppendQueryString(AppApiPath("/oauth/account_links"), query), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkListResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkListResponse](raw)
 }
 
-// Oauth account Links delete.
-func (a *OauthApi) AccountLinksDelete(accountLinkId string) (sdktypes.AppbaseApiResult, error) {
+// Account Links delete.
+func (a *OauthApi) AccountLinksDelete(accountLinkId string) (struct{}, error) {
     raw, err := a.client.Delete(AppApiPath(fmt.Sprintf("/oauth/account_links/%s", SerializePathParameter(accountLinkId, PathParameterSpec{Name: "accountLinkId", Style: "simple", Explode: false}))), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero struct{}
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[struct{}](raw)
 }
 
-// Oauth authorization Urls create.
-func (a *OauthApi) AuthorizationUrlsCreate(body sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Request("POST", AppApiPath("/oauth/authorization_urls"), body, nil, nil, "application/json", true)
+// Authorization Urls create.
+func (a *OauthApi) AuthorizationUrlsCreate(body sdktypes.AppbaseOperationCommand) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("POST", AppApiPath("/oauth/authorization_urls"), body, nil, nil, "application/json", false, true)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
-// Oauth callbacks handle Get.
-func (a *OauthApi) CallbacksHandleGet(providerCode string) (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Get(AppApiPath(fmt.Sprintf("/oauth/callbacks/%s", SerializePathParameter(providerCode, PathParameterSpec{Name: "providerCode", Style: "simple", Explode: false}))), nil, nil)
+// Authorizations completions create.
+func (a *OauthApi) AuthorizationsCompletionsCreate(authorizationStateId string, body sdktypes.AppbaseOperationCommand) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/oauth/authorizations/%s/completions", SerializePathParameter(authorizationStateId, PathParameterSpec{Name: "authorizationStateId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
-// Oauth callbacks handle Post.
-func (a *OauthApi) CallbacksHandlePost(providerCode string, body sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/oauth/callbacks/%s", SerializePathParameter(providerCode, PathParameterSpec{Name: "providerCode", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
+// Callbacks retrieve.
+func (a *OauthApi) CallbacksRetrieve(providerCode string) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("GET", AppApiPath(fmt.Sprintf("/oauth/callbacks/%s", SerializePathParameter(providerCode, PathParameterSpec{Name: "providerCode", Style: "simple", Explode: false}))), nil, nil, nil, "", false, true)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
-// Oauth device Authorizations create.
-func (a *OauthApi) DeviceAuthorizationsCreate(body sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Request("POST", AppApiPath("/oauth/device_authorizations"), body, nil, nil, "application/json", true)
+// Callbacks create.
+func (a *OauthApi) CallbacksCreate(providerCode string, body sdktypes.AppbaseOperationCommand) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("POST", AppApiPath(fmt.Sprintf("/oauth/callbacks/%s", SerializePathParameter(providerCode, PathParameterSpec{Name: "providerCode", Style: "simple", Explode: false}))), body, nil, nil, "application/json", false, true)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
-// Oauth device Authorizations retrieve.
-func (a *OauthApi) DeviceAuthorizationsRetrieve(deviceAuthorizationId string) (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Request("GET", AppApiPath(fmt.Sprintf("/oauth/device_authorizations/%s", SerializePathParameter(deviceAuthorizationId, PathParameterSpec{Name: "deviceAuthorizationId", Style: "simple", Explode: false}))), nil, nil, nil, "", true)
+// Device Authorizations create.
+func (a *OauthApi) DeviceAuthorizationsCreate(body sdktypes.AppbaseOperationCommand) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("POST", AppApiPath("/oauth/device_authorizations"), body, nil, nil, "application/json", true, false)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
-// Oauth device Authorizations password Completions create.
-func (a *OauthApi) DeviceAuthorizationsPasswordCompletionsCreate(deviceAuthorizationId string, body sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Request("POST", AppApiPath(fmt.Sprintf("/oauth/device_authorizations/%s/password_completions", SerializePathParameter(deviceAuthorizationId, PathParameterSpec{Name: "deviceAuthorizationId", Style: "simple", Explode: false}))), body, nil, nil, "application/json", true)
+// Device Authorizations retrieve.
+func (a *OauthApi) DeviceAuthorizationsRetrieve(deviceAuthorizationId string) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("GET", AppApiPath(fmt.Sprintf("/oauth/device_authorizations/%s", SerializePathParameter(deviceAuthorizationId, PathParameterSpec{Name: "deviceAuthorizationId", Style: "simple", Explode: false}))), nil, nil, nil, "", true, false)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
-// Oauth device Authorizations scans create.
-func (a *OauthApi) DeviceAuthorizationsScansCreate(deviceAuthorizationId string, body sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Request("POST", AppApiPath(fmt.Sprintf("/oauth/device_authorizations/%s/scans", SerializePathParameter(deviceAuthorizationId, PathParameterSpec{Name: "deviceAuthorizationId", Style: "simple", Explode: false}))), body, nil, nil, "application/json", true)
+// Device Authorizations password Completions create.
+func (a *OauthApi) DeviceAuthorizationsPasswordCompletionsCreate(deviceAuthorizationId string, body sdktypes.AppbaseOperationCommand) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("POST", AppApiPath(fmt.Sprintf("/oauth/device_authorizations/%s/password_completions", SerializePathParameter(deviceAuthorizationId, PathParameterSpec{Name: "deviceAuthorizationId", Style: "simple", Explode: false}))), body, nil, nil, "application/json", false, true)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
-// Oauth device Authorizations session Exchanges create.
-func (a *OauthApi) DeviceAuthorizationsSessionExchangesCreate(deviceAuthorizationId string, body sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Post(AppApiPath(fmt.Sprintf("/oauth/device_authorizations/%s/session_exchanges", SerializePathParameter(deviceAuthorizationId, PathParameterSpec{Name: "deviceAuthorizationId", Style: "simple", Explode: false}))), body, nil, nil, "application/json")
+// Device Authorizations scans create.
+func (a *OauthApi) DeviceAuthorizationsScansCreate(deviceAuthorizationId string, body sdktypes.AppbaseOperationCommand) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("POST", AppApiPath(fmt.Sprintf("/oauth/device_authorizations/%s/scans", SerializePathParameter(deviceAuthorizationId, PathParameterSpec{Name: "deviceAuthorizationId", Style: "simple", Explode: false}))), body, nil, nil, "application/json", false, true)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
-// Oauth grants list.
-func (a *OauthApi) GrantsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.AppbaseApiResult, error) {
+// Device Authorizations session Exchanges create.
+func (a *OauthApi) DeviceAuthorizationsSessionExchangesCreate(deviceAuthorizationId string, body sdktypes.AppbaseOperationCommand) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("POST", AppApiPath(fmt.Sprintf("/oauth/device_authorizations/%s/session_exchanges", SerializePathParameter(deviceAuthorizationId, PathParameterSpec{Name: "deviceAuthorizationId", Style: "simple", Explode: false}))), body, nil, nil, "application/json", true, false)
+    if err != nil {
+        var zero sdktypes.SdkWorkResourceResponse
+        return zero, err
+    }
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
+}
+
+// Grants list.
+func (a *OauthApi) GrantsList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.SdkWorkListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page", Value: func() interface{} { if page == nil { return nil }; return *page }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -135,34 +145,34 @@ func (a *OauthApi) GrantsList(page *int, pageSize *int, cursor *string, sort *st
     })
     raw, err := a.client.Get(AppendQueryString(AppApiPath("/oauth/grants"), query), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkListResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkListResponse](raw)
 }
 
-// Oauth grants delete.
-func (a *OauthApi) GrantsDelete(grantId string) (sdktypes.AppbaseApiResult, error) {
+// Grants delete.
+func (a *OauthApi) GrantsDelete(grantId string) (struct{}, error) {
     raw, err := a.client.Delete(AppApiPath(fmt.Sprintf("/oauth/grants/%s", SerializePathParameter(grantId, PathParameterSpec{Name: "grantId", Style: "simple", Explode: false}))), nil, nil)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero struct{}
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[struct{}](raw)
 }
 
-// Oauth mini Program Sessions create.
-func (a *OauthApi) MiniProgramSessionsCreate(body sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Post(AppApiPath("/oauth/mini_program_sessions"), body, nil, nil, "application/json")
+// Mini Program Sessions create.
+func (a *OauthApi) MiniProgramSessionsCreate(body sdktypes.WechatMiniProgramSessionCreateCommand) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("POST", AppApiPath("/oauth/mini_program_sessions"), body, nil, nil, "application/json", false, true)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
-// Oauth providers list.
-func (a *OauthApi) ProvidersList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.AppbaseApiResult, error) {
+// Providers list.
+func (a *OauthApi) ProvidersList(page *int, pageSize *int, cursor *string, sort *string, q *string) (sdktypes.SdkWorkListResponse, error) {
     query := BuildQueryString([]QueryParameterSpec{
         {Name: "page", Value: func() interface{} { if page == nil { return nil }; return *page }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "page_size", Value: func() interface{} { if pageSize == nil { return nil }; return *pageSize }(), Style: "form", Explode: true, AllowReserved: false},
@@ -170,22 +180,22 @@ func (a *OauthApi) ProvidersList(page *int, pageSize *int, cursor *string, sort 
         {Name: "sort", Value: func() interface{} { if sort == nil { return nil }; return *sort }(), Style: "form", Explode: true, AllowReserved: false},
         {Name: "q", Value: func() interface{} { if q == nil { return nil }; return *q }(), Style: "form", Explode: true, AllowReserved: false},
     })
-    raw, err := a.client.Get(AppendQueryString(AppApiPath("/oauth/providers"), query), nil, nil)
+    raw, err := a.client.Request("GET", AppendQueryString(AppApiPath("/oauth/providers"), query), nil, nil, nil, "", false, true)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkListResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkListResponse](raw)
 }
 
-// Oauth sessions create.
-func (a *OauthApi) SessionsCreate(body sdktypes.AppbaseOperationCommand) (sdktypes.AppbaseApiResult, error) {
-    raw, err := a.client.Request("POST", AppApiPath("/oauth/sessions"), body, nil, nil, "application/json", true)
+// Sessions create.
+func (a *OauthApi) SessionsCreate(body sdktypes.AppbaseSessionCreateCommand) (sdktypes.SdkWorkResourceResponse, error) {
+    raw, err := a.client.Request("POST", AppApiPath("/oauth/sessions"), body, nil, nil, "application/json", false, true)
     if err != nil {
-        var zero sdktypes.AppbaseApiResult
+        var zero sdktypes.SdkWorkResourceResponse
         return zero, err
     }
-    return decodeResult[sdktypes.AppbaseApiResult](raw)
+    return decodeResult[sdktypes.SdkWorkResourceResponse](raw)
 }
 
 type PathParameterSpec struct {

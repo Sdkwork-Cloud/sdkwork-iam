@@ -144,7 +144,7 @@
           }
         },
         "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-auth-mode": "bootstrap-body",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-backend-api",
@@ -866,7 +866,7 @@
           }
         },
         "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-auth-mode": "bootstrap-body",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-backend-api",
@@ -19670,7 +19670,7 @@
           }
         },
         "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-auth-mode": "bootstrap-body",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-backend-api",
@@ -20670,7 +20670,7 @@
           }
         },
         "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-auth-mode": "bootstrap-body",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-backend-api",
@@ -20947,7 +20947,7 @@
           }
         },
         "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-auth-mode": "bootstrap-body",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-backend-api",
@@ -21089,7 +21089,7 @@
           }
         },
         "security": [],
-        "x-sdkwork-auth-mode": "anonymous",
+        "x-sdkwork-auth-mode": "bootstrap-body",
         "x-sdkwork-forbid-credential-headers": true,
         "x-sdkwork-owner": "sdkwork-iam",
         "x-sdkwork-api-authority": "sdkwork-iam-backend-api",

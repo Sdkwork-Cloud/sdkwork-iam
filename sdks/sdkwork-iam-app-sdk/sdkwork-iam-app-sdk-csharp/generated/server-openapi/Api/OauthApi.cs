@@ -16,9 +16,9 @@ namespace SDKWork.Iam.AppSdk.Api
         }
 
         /// <summary>
-        /// Oauth account Links list.
+        /// Account Links list.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> AccountLinksListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse?> AccountLinksListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
         {
             var queryString = BuildQueryString(new[]
             {
@@ -28,117 +28,93 @@ namespace SDKWork.Iam.AppSdk.Api
                 new QueryParameterSpec("sort", sort, "form", true, false, null),
                 new QueryParameterSpec("q", q, "form", true, false, null),
             });
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/oauth/account_links"), queryString));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/oauth/account_links"), queryString));
         }
 
         /// <summary>
-        /// Oauth account Links delete.
+        /// Account Links delete.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> AccountLinksDeleteAsync(string accountLinkId)
+        public async Task AccountLinksDeleteAsync(string accountLinkId)
         {
-            return await _client.DeleteAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath($"/oauth/account_links/{SerializePathParameter(accountLinkId, new PathParameterSpec("accountLinkId", "simple", false))}"));
+            await _client.DeleteAsync<object>(ApiPaths.AppPath($"/oauth/account_links/{SerializePathParameter(accountLinkId, new PathParameterSpec("accountLinkId", "simple", false))}"));
         }
 
         /// <summary>
-        /// Oauth authorization Urls create.
+        /// Authorization Urls create.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> AuthorizationUrlsCreateAsync(Dictionary<string, object> body)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> AuthorizationUrlsCreateAsync(Dictionary<string, object> body)
         {
-            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>("POST", ApiPaths.AppPath("/oauth/authorization_urls"), body, null, null, "application/json", true);
+            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>("POST", ApiPaths.AppPath("/oauth/authorization_urls"), body, null, null, "application/json", false, true);
         }
 
         /// <summary>
-        /// Oauth callbacks handle Get.
+        /// Authorizations completions create.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> CallbacksHandleGetAsync(string providerCode)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> AuthorizationsCompletionsCreateAsync(string authorizationStateId, Dictionary<string, object> body)
         {
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath($"/oauth/callbacks/{SerializePathParameter(providerCode, new PathParameterSpec("providerCode", "simple", false))}"));
+            return await _client.PostAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>(ApiPaths.AppPath($"/oauth/authorizations/{SerializePathParameter(authorizationStateId, new PathParameterSpec("authorizationStateId", "simple", false))}/completions"), body, null, null, "application/json");
         }
 
         /// <summary>
-        /// Oauth callbacks handle Post.
+        /// Callbacks retrieve.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> CallbacksHandlePostAsync(string providerCode, Dictionary<string, object> body)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> CallbacksRetrieveAsync(string providerCode)
         {
-            return await _client.PostAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath($"/oauth/callbacks/{SerializePathParameter(providerCode, new PathParameterSpec("providerCode", "simple", false))}"), body, null, null, "application/json");
+            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>("GET", ApiPaths.AppPath($"/oauth/callbacks/{SerializePathParameter(providerCode, new PathParameterSpec("providerCode", "simple", false))}"), null, null, null, null, false, true);
         }
 
         /// <summary>
-        /// Oauth device Authorizations create.
+        /// Callbacks create.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> DeviceAuthorizationsCreateAsync(Dictionary<string, object> body)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> CallbacksCreateAsync(string providerCode, Dictionary<string, object> body)
         {
-            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>("POST", ApiPaths.AppPath("/oauth/device_authorizations"), body, null, null, "application/json", true);
+            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>("POST", ApiPaths.AppPath($"/oauth/callbacks/{SerializePathParameter(providerCode, new PathParameterSpec("providerCode", "simple", false))}"), body, null, null, "application/json", false, true);
         }
 
         /// <summary>
-        /// Oauth device Authorizations retrieve.
+        /// Device Authorizations create.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> DeviceAuthorizationsRetrieveAsync(string deviceAuthorizationId)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> DeviceAuthorizationsCreateAsync(Dictionary<string, object> body)
         {
-            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>("GET", ApiPaths.AppPath($"/oauth/device_authorizations/{SerializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false))}"), null, null, null, null, true);
+            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>("POST", ApiPaths.AppPath("/oauth/device_authorizations"), body, null, null, "application/json", true, false);
         }
 
         /// <summary>
-        /// Oauth device Authorizations password Completions create.
+        /// Device Authorizations retrieve.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> DeviceAuthorizationsPasswordCompletionsCreateAsync(string deviceAuthorizationId, Dictionary<string, object> body)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> DeviceAuthorizationsRetrieveAsync(string deviceAuthorizationId)
         {
-            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>("POST", ApiPaths.AppPath($"/oauth/device_authorizations/{SerializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false))}/password_completions"), body, null, null, "application/json", true);
+            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>("GET", ApiPaths.AppPath($"/oauth/device_authorizations/{SerializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false))}"), null, null, null, null, true, false);
         }
 
         /// <summary>
-        /// Oauth device Authorizations scans create.
+        /// Device Authorizations password Completions create.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> DeviceAuthorizationsScansCreateAsync(string deviceAuthorizationId, Dictionary<string, object> body)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> DeviceAuthorizationsPasswordCompletionsCreateAsync(string deviceAuthorizationId, Dictionary<string, object> body)
         {
-            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>("POST", ApiPaths.AppPath($"/oauth/device_authorizations/{SerializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false))}/scans"), body, null, null, "application/json", true);
+            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>("POST", ApiPaths.AppPath($"/oauth/device_authorizations/{SerializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false))}/password_completions"), body, null, null, "application/json", false, true);
         }
 
         /// <summary>
-        /// Oauth device Authorizations session Exchanges create.
+        /// Device Authorizations scans create.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> DeviceAuthorizationsSessionExchangesCreateAsync(string deviceAuthorizationId, Dictionary<string, object> body)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> DeviceAuthorizationsScansCreateAsync(string deviceAuthorizationId, Dictionary<string, object> body)
         {
-            return await _client.PostAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath($"/oauth/device_authorizations/{SerializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false))}/session_exchanges"), body, null, null, "application/json");
+            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>("POST", ApiPaths.AppPath($"/oauth/device_authorizations/{SerializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false))}/scans"), body, null, null, "application/json", false, true);
         }
 
         /// <summary>
-        /// Oauth grants list.
+        /// Device Authorizations session Exchanges create.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> GrantsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> DeviceAuthorizationsSessionExchangesCreateAsync(string deviceAuthorizationId, Dictionary<string, object> body)
         {
-            var queryString = BuildQueryString(new[]
-            {
-                new QueryParameterSpec("page", page, "form", true, false, null),
-                new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
-                new QueryParameterSpec("cursor", cursor, "form", true, false, null),
-                new QueryParameterSpec("sort", sort, "form", true, false, null),
-                new QueryParameterSpec("q", q, "form", true, false, null),
-            });
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/oauth/grants"), queryString));
+            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>("POST", ApiPaths.AppPath($"/oauth/device_authorizations/{SerializePathParameter(deviceAuthorizationId, new PathParameterSpec("deviceAuthorizationId", "simple", false))}/session_exchanges"), body, null, null, "application/json", true, false);
         }
 
         /// <summary>
-        /// Oauth grants delete.
+        /// Grants list.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> GrantsDeleteAsync(string grantId)
-        {
-            return await _client.DeleteAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath($"/oauth/grants/{SerializePathParameter(grantId, new PathParameterSpec("grantId", "simple", false))}"));
-        }
-
-        /// <summary>
-        /// Oauth mini Program Sessions create.
-        /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> MiniProgramSessionsCreateAsync(Dictionary<string, object> body)
-        {
-            return await _client.PostAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppPath("/oauth/mini_program_sessions"), body, null, null, "application/json");
-        }
-
-        /// <summary>
-        /// Oauth providers list.
-        /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> ProvidersListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse?> GrantsListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
         {
             var queryString = BuildQueryString(new[]
             {
@@ -148,15 +124,47 @@ namespace SDKWork.Iam.AppSdk.Api
                 new QueryParameterSpec("sort", sort, "form", true, false, null),
                 new QueryParameterSpec("q", q, "form", true, false, null),
             });
-            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/oauth/providers"), queryString));
+            return await _client.GetAsync<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse>(ApiPaths.AppendQueryString(ApiPaths.AppPath("/oauth/grants"), queryString));
         }
 
         /// <summary>
-        /// Oauth sessions create.
+        /// Grants delete.
         /// </summary>
-        public async Task<SDKWork.Iam.AppSdk.Models.AppbaseApiResult?> SessionsCreateAsync(Dictionary<string, object> body)
+        public async Task GrantsDeleteAsync(string grantId)
         {
-            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.AppbaseApiResult>("POST", ApiPaths.AppPath("/oauth/sessions"), body, null, null, "application/json", true);
+            await _client.DeleteAsync<object>(ApiPaths.AppPath($"/oauth/grants/{SerializePathParameter(grantId, new PathParameterSpec("grantId", "simple", false))}"));
+        }
+
+        /// <summary>
+        /// Mini Program Sessions create.
+        /// </summary>
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> MiniProgramSessionsCreateAsync(SDKWork.Iam.AppSdk.Models.WechatMiniProgramSessionCreateCommand body)
+        {
+            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>("POST", ApiPaths.AppPath("/oauth/mini_program_sessions"), body, null, null, "application/json", false, true);
+        }
+
+        /// <summary>
+        /// Providers list.
+        /// </summary>
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse?> ProvidersListAsync(int? page = null, int? pageSize = null, string? cursor = null, string? sort = null, string? q = null)
+        {
+            var queryString = BuildQueryString(new[]
+            {
+                new QueryParameterSpec("page", page, "form", true, false, null),
+                new QueryParameterSpec("page_size", pageSize, "form", true, false, null),
+                new QueryParameterSpec("cursor", cursor, "form", true, false, null),
+                new QueryParameterSpec("sort", sort, "form", true, false, null),
+                new QueryParameterSpec("q", q, "form", true, false, null),
+            });
+            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.SdkWorkListResponse>("GET", ApiPaths.AppendQueryString(ApiPaths.AppPath("/oauth/providers"), queryString), null, null, null, null, false, true);
+        }
+
+        /// <summary>
+        /// Sessions create.
+        /// </summary>
+        public async Task<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse?> SessionsCreateAsync(SDKWork.Iam.AppSdk.Models.AppbaseSessionCreateCommand body)
+        {
+            return await _client.RequestAsync<SDKWork.Iam.AppSdk.Models.SdkWorkResourceResponse>("POST", ApiPaths.AppPath("/oauth/sessions"), body, null, null, "application/json", false, true);
         }
 
         private sealed record PathParameterSpec(string Name, string Style, bool Explode);

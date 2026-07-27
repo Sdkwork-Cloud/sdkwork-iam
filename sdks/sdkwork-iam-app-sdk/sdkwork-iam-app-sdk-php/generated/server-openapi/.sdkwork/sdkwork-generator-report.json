@@ -10,155 +10,37 @@
   },
   "status": "ok",
   "mode": "apply",
-  "hasChanges": true,
+  "hasChanges": false,
   "hasDestructiveChanges": false,
-  "changeFingerprint": "d21025538bd597e8960c4f2a5f23843524fff8efbcea667c22710a8af506f979",
+  "changeFingerprint": "bab693f7d091b405e418573ca6d25f14028e6873030181956a05c9fe6433cafe",
   "changeImpact": {
     "schemaVersion": 1,
-    "areas": [
-      "api-surface",
-      "models",
-      "runtime",
-      "build-metadata",
-      "publish-workflow",
-      "documentation",
-      "custom-scaffold",
-      "unknown"
-    ],
-    "details": [
-      {
-        "area": "api-surface",
-        "paths": [
-          "src/Api/Auth.php",
-          "src/Api/BaseApi.php",
-          "src/Api/Iam.php",
-          "src/Api/Oauth.php",
-          "src/Api/System.php",
-          "src/SdkworkAppClient.php"
-        ]
-      },
-      {
-        "area": "models",
-        "paths": [
-          "src/Models/AppbaseAccessCredentialCreateCommand.php",
-          "src/Models/AppbaseApiResult.php",
-          "src/Models/AppbaseApplicationRegisterCommand.php",
-          "src/Models/AppbaseSessionCreateCommand.php",
-          "src/Models/AppbaseTenantApplicationEnableCommand.php",
-          "src/Models/AppbaseTenantApplicationProvisionCommand.php",
-          "src/Models/AppbaseTenantApplicationUpdateCommand.php",
-          "src/Models/FieldError.php",
-          "src/Models/ProblemDetail.php"
-        ]
-      },
-      {
-        "area": "runtime",
-        "paths": [
-          "src/Http/HttpClient.php"
-        ]
-      },
-      {
-        "area": "build-metadata",
-        "paths": [
-          "composer.json",
-          "sdkwork-sdk.json"
-        ]
-      },
-      {
-        "area": "publish-workflow",
-        "paths": [
-          "bin/publish-core.mjs",
-          "bin/publish.ps1",
-          "bin/publish.sh"
-        ]
-      },
-      {
-        "area": "documentation",
-        "paths": [
-          "CHANGELOG.md",
-          "custom/README.md",
-          "README.md"
-        ]
-      },
-      {
-        "area": "custom-scaffold",
-        "paths": [
-          "custom/README.md"
-        ]
-      },
-      {
-        "area": "unknown",
-        "paths": [
-          "LICENSE",
-          "src/SdkConfig.php"
-        ]
-      }
-    ],
-    "requiresVerification": true,
-    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+    "areas": [],
+    "details": [],
+    "requiresVerification": false,
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
   },
   "executionDecision": {
     "schemaVersion": 1,
-    "riskLevel": "high",
-    "nextAction": "verify",
+    "riskLevel": "low",
+    "nextAction": "skip",
     "requiresManualReview": false,
     "applyRequiresExpectedFingerprint": false,
-    "summary": "Changes have been applied. Run the required verification plan now.",
+    "summary": "No actionable changes were detected. No apply or verification step is required.",
     "reasons": [
-      "manual-review-required",
-      "preserved-legacy-files",
-      "unknown-impact",
-      "verification-required"
+      "no-actionable-changes"
     ]
   },
   "executionHandoff": {
     "schemaVersion": 1,
-    "summary": "Run the required verification commands now.",
-    "steps": [
-      {
-        "id": "verify-check",
-        "title": "Unified package check",
-        "required": true,
-        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-iam\\sdks\\sdkwork-iam-app-sdk\\sdkwork-iam-app-sdk-php\\generated\\server-openapi",
-        "command": "node",
-        "args": [
-          "./bin/publish-core.mjs",
-          "--language",
-          "php",
-          "--project-dir",
-          ".",
-          "--action",
-          "check"
-        ],
-        "displayCommand": "node ./bin/publish-core.mjs --language php --project-dir . --action check"
-      }
-    ]
+    "summary": "No further commands are required.",
+    "steps": []
   },
   "verificationPlan": {
-    "shouldRun": true,
-    "runPhase": "now",
-    "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
-    "steps": [
-      {
-        "id": "check",
-        "title": "Unified package check",
-        "required": true,
-        "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
-        "workingDirectory": "E:\\sdkwork-space\\sdkwork-iam\\sdks\\sdkwork-iam-app-sdk\\sdkwork-iam-app-sdk-php\\generated\\server-openapi",
-        "command": "node",
-        "args": [
-          "./bin/publish-core.mjs",
-          "--language",
-          "php",
-          "--project-dir",
-          ".",
-          "--action",
-          "check"
-        ],
-        "displayCommand": "node ./bin/publish-core.mjs --language php --project-dir . --action check"
-      }
-    ]
+    "shouldRun": false,
+    "runPhase": "skip",
+    "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
+    "steps": []
   },
   "sdk": {
     "name": "sdkwork-iam-app-sdk",
@@ -174,8 +56,8 @@
     "localVersions": []
   },
   "stats": {
-    "totalFiles": 26,
-    "models": 9,
+    "totalFiles": 29,
+    "models": 12,
     "apis": 4,
     "types": 0
   },
@@ -183,14 +65,16 @@
   "syncSummary": {
     "dryRun": false,
     "controlPlaneEnabled": true,
-    "writtenFiles": 26,
-    "skippedScaffoldFiles": 0,
-    "skippedUnchangedGeneratedFiles": 0,
+    "writtenFiles": 0,
+    "skippedScaffoldFiles": 1,
+    "skippedUnchangedGeneratedFiles": 28,
     "deletedGeneratedFiles": 0,
     "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
-    "changeFingerprint": "d21025538bd597e8960c4f2a5f23843524fff8efbcea667c22710a8af506f979",
+    "changeFingerprint": "bab693f7d091b405e418573ca6d25f14028e6873030181956a05c9fe6433cafe",
     "changes": {
-      "createdGeneratedFiles": [
+      "createdGeneratedFiles": [],
+      "updatedGeneratedFiles": [],
+      "unchangedGeneratedFiles": [
         "bin/publish-core.mjs",
         "bin/publish.ps1",
         "bin/publish.sh",
@@ -205,151 +89,53 @@
         "src/Api/Oauth.php",
         "src/Api/System.php",
         "src/Http/HttpClient.php",
-        "src/Models/AppbaseAccessCredentialCreateCommand.php",
-        "src/Models/AppbaseApiResult.php",
-        "src/Models/AppbaseApplicationRegisterCommand.php",
         "src/Models/AppbaseSessionCreateCommand.php",
-        "src/Models/AppbaseTenantApplicationEnableCommand.php",
-        "src/Models/AppbaseTenantApplicationProvisionCommand.php",
-        "src/Models/AppbaseTenantApplicationUpdateCommand.php",
         "src/Models/FieldError.php",
+        "src/Models/PageInfo.php",
         "src/Models/ProblemDetail.php",
+        "src/Models/SdkWorkApiResponse.php",
+        "src/Models/SdkWorkCommandData.php",
+        "src/Models/SdkWorkCommandResponse.php",
+        "src/Models/SdkWorkListResponse.php",
+        "src/Models/SdkWorkPageData.php",
+        "src/Models/SdkWorkResourceData.php",
+        "src/Models/SdkWorkResourceResponse.php",
+        "src/Models/WechatMiniProgramSessionCreateCommand.php",
         "src/SdkConfig.php",
         "src/SdkworkAppClient.php"
       ],
-      "updatedGeneratedFiles": [],
-      "unchangedGeneratedFiles": [],
       "deletedGeneratedFiles": [],
-      "scaffoldedFiles": [
+      "scaffoldedFiles": [],
+      "preservedScaffoldFiles": [
         "custom/README.md"
       ],
-      "preservedScaffoldFiles": [],
       "backedUpFiles": []
     },
     "impact": {
       "schemaVersion": 1,
-      "areas": [
-        "api-surface",
-        "models",
-        "runtime",
-        "build-metadata",
-        "publish-workflow",
-        "documentation",
-        "custom-scaffold",
-        "unknown"
-      ],
-      "details": [
-        {
-          "area": "api-surface",
-          "paths": [
-            "src/Api/Auth.php",
-            "src/Api/BaseApi.php",
-            "src/Api/Iam.php",
-            "src/Api/Oauth.php",
-            "src/Api/System.php",
-            "src/SdkworkAppClient.php"
-          ]
-        },
-        {
-          "area": "models",
-          "paths": [
-            "src/Models/AppbaseAccessCredentialCreateCommand.php",
-            "src/Models/AppbaseApiResult.php",
-            "src/Models/AppbaseApplicationRegisterCommand.php",
-            "src/Models/AppbaseSessionCreateCommand.php",
-            "src/Models/AppbaseTenantApplicationEnableCommand.php",
-            "src/Models/AppbaseTenantApplicationProvisionCommand.php",
-            "src/Models/AppbaseTenantApplicationUpdateCommand.php",
-            "src/Models/FieldError.php",
-            "src/Models/ProblemDetail.php"
-          ]
-        },
-        {
-          "area": "runtime",
-          "paths": [
-            "src/Http/HttpClient.php"
-          ]
-        },
-        {
-          "area": "build-metadata",
-          "paths": [
-            "composer.json",
-            "sdkwork-sdk.json"
-          ]
-        },
-        {
-          "area": "publish-workflow",
-          "paths": [
-            "bin/publish-core.mjs",
-            "bin/publish.ps1",
-            "bin/publish.sh"
-          ]
-        },
-        {
-          "area": "documentation",
-          "paths": [
-            "CHANGELOG.md",
-            "custom/README.md",
-            "README.md"
-          ]
-        },
-        {
-          "area": "custom-scaffold",
-          "paths": [
-            "custom/README.md"
-          ]
-        },
-        {
-          "area": "unknown",
-          "paths": [
-            "LICENSE",
-            "src/SdkConfig.php"
-          ]
-        }
-      ],
-      "requiresVerification": true,
-      "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required."
+      "areas": [],
+      "details": [],
+      "requiresVerification": false,
+      "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped."
     },
     "verificationPlan": {
-      "shouldRun": true,
-      "runPhase": "now",
-      "summary": "Detected impact areas: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown. Verification is required. Run the required verification commands now against the generated SDK output.",
-      "steps": [
-        {
-          "id": "check",
-          "title": "Unified package check",
-          "required": true,
-          "rationale": "Validate the generated package with the unified publish helper. Triggered by: api-surface, models, runtime, build-metadata, publish-workflow, documentation, custom-scaffold, unknown.",
-          "workingDirectory": "E:\\sdkwork-space\\sdkwork-iam\\sdks\\sdkwork-iam-app-sdk\\sdkwork-iam-app-sdk-php\\generated\\server-openapi",
-          "command": "node",
-          "args": [
-            "./bin/publish-core.mjs",
-            "--language",
-            "php",
-            "--project-dir",
-            ".",
-            "--action",
-            "check"
-          ],
-          "displayCommand": "node ./bin/publish-core.mjs --language php --project-dir . --action check"
-        }
-      ]
+      "shouldRun": false,
+      "runPhase": "skip",
+      "summary": "No generated, scaffold, or backup changes detected. Verification can be skipped.",
+      "steps": []
     },
     "executionDecision": {
       "schemaVersion": 1,
-      "riskLevel": "high",
-      "nextAction": "verify",
+      "riskLevel": "low",
+      "nextAction": "skip",
       "requiresManualReview": false,
       "applyRequiresExpectedFingerprint": false,
-      "summary": "Changes have been applied. Run the required verification plan now.",
+      "summary": "No actionable changes were detected. No apply or verification step is required.",
       "reasons": [
-        "manual-review-required",
-        "preserved-legacy-files",
-        "unknown-impact",
-        "verification-required"
+        "no-actionable-changes"
       ]
     },
     "backedUpFiles": [],
-    "preservedLegacyFiles": true
+    "preservedLegacyFiles": false
   }
 }

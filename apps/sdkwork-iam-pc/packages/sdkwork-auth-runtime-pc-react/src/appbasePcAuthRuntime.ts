@@ -86,8 +86,6 @@ export interface SdkworkAppbasePcAuthRuntimeHooks {
 
 export interface SdkworkAppbasePcAuthRuntimeCredentialEntryOptions {
   prepareTokens?: () => void;
-  /** @deprecated Credential-entry clients no longer need request-time wrapping. */
-  skipWrap?: boolean;
 }
 
 export type SdkworkAppbasePcAuthRuntimeSdkClient = Partial<IamRuntimeTokenManagerAwareClient>;

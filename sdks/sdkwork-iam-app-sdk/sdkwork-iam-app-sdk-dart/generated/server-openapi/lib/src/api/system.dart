@@ -11,29 +11,29 @@ class SystemApi {
   SystemApi(this._client);
 
   /// Iam account Binding Policy retrieve.
-  Future<AppbaseApiResult?> iamAccountBindingPolicyRetrieve() async {
-    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/account_binding_policy'), skipAuth: true);
+  Future<SdkWorkResourceResponse?> iamAccountBindingPolicyRetrieve() async {
+    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/account_binding_policy'), accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
   /// Iam runtime retrieve.
-  Future<AppbaseApiResult?> iamRuntimeRetrieve() async {
-    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/runtime'), skipAuth: true);
+  Future<SdkWorkResourceResponse?> iamRuntimeRetrieve() async {
+    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/runtime'), accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 
   /// Iam verification Policy retrieve.
-  Future<AppbaseApiResult?> iamVerificationPolicyRetrieve() async {
-    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/verification_policy'), skipAuth: true);
+  Future<SdkWorkResourceResponse?> iamVerificationPolicyRetrieve() async {
+    final response = await _client.request('GET', ApiPaths.appPath('/system/iam/verification_policy'), accessTokenOnly: true);
     return (() {
       final map = sdkworkResponseAsMap(response);
-      return map == null ? null : AppbaseApiResult.fromJson(map);
+      return map == null ? null : SdkWorkResourceResponse.fromJson(map);
     })();
   }
 }
