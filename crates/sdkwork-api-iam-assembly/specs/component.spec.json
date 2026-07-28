@@ -14,7 +14,7 @@
     "languages": [
       "rust"
     ],
-    "generated": true,
+    "generated": false,
     "private": false,
     "manifests": [
       "Cargo.toml",
@@ -51,11 +51,35 @@
   "contracts": {
     "publicExports": [
       "sdkwork_api_iam_assembly::assemble_api_router",
+      "sdkwork_api_iam_assembly::assemble_owner_api_surfaces",
+      "sdkwork_api_iam_assembly::assemble_app_api_contribution",
+      "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_module_manifests",
+      "sdkwork_api_iam_assembly::bootstrap_iam_for_application",
       "sdkwork_api_iam_assembly::ApiAssembly",
+      "sdkwork_api_iam_assembly::ApiAssemblyContribution",
       "sdkwork_api_iam_assembly::assembly_route_count"
     ],
+    "providedPorts": [
+      {
+        "name": "iamOwnerApiAssembly",
+        "export": "sdkwork_api_iam_assembly::assemble_owner_api_surfaces"
+      },
+      {
+        "name": "iamAppApiContribution",
+        "export": "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_module_manifests"
+      }
+    ],
+    "requiredPorts": [
+      {
+        "name": "iamDatabaseLifecycle",
+        "export": "crate-root",
+        "provider": "sdkwork-iam-database-host"
+      }
+    ],
     "runtimeEntrypoints": [
-      "sdkwork_api_iam_assembly::assemble_api_router"
+      "sdkwork_api_iam_assembly::assemble_api_router",
+      "sdkwork_api_iam_assembly::assemble_owner_api_surfaces",
+      "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_module_manifests"
     ],
     "routeManifest": null,
     "sdkClients": [],
