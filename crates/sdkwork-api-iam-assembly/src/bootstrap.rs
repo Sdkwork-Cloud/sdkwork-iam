@@ -4,6 +4,7 @@
 //! The consuming gateway owns process middleware and infrastructure routes.
 
 use std::collections::BTreeSet;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::Router;
@@ -130,7 +131,17 @@ async fn assemble_owner_api_surfaces_with_host(
 
 /// Builds the IAM App API contribution from one initialized database host.
 pub async fn assemble_app_api_contribution() -> Result<ApiAssemblyContribution, String> {
+    assemble_app_api_contribution_with_module_manifests(&[]).await
+}
+
+/// Builds the IAM App API contribution after materializing consumer-owned IAM modules.
+pub async fn assemble_app_api_contribution_with_module_manifests(
+    manifest_paths: &[PathBuf],
+) -> Result<ApiAssemblyContribution, String> {
     let host = bootstrap_iam_application_state().await?;
+    sdkwork_iam_database_host::materialize_iam_application_modules(host.pool(), manifest_paths)
+        .await
+        .map_err(|error| format!("materialize consumer IAM modules failed: {error}"))?;
     let route_manifest = sdkwork_routes_iam_app_api::iam_app_api_route_manifest();
     let router =
         sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_business_router_with_initialized_pool(
