@@ -1,6 +1,6 @@
 {
   "kind": "sdkwork.iam.registry.lock",
-  "materializedAt": "2026-07-29T00:27:51.747727700+00:00",
+  "materializedAt": "2026-07-29T07:57:14.041079500+00:00",
   "modules": [
     {
       "catalogVersion": "1.0.0",
@@ -51,9 +51,14 @@
       "catalogVersion": "1.0.0",
       "manifestSha256": "cb94ef77a2531967ef42222f4c3a2009d1808a29b277da2292a7174b42cb716e",
       "moduleId": "system"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "b205f809c9d33411a507219179801f6dc41fac6e0a581d869e445d1b5942c391",
+      "moduleId": "web"
     }
   ],
-  "permissionCount": 172,
+  "permissionCount": 185,
   "profile": "operational",
   "roleCount": 8,
   "schemaVersion": 1
