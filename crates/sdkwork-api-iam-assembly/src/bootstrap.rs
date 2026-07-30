@@ -3,40 +3,23 @@
 //! Owner contributions contain business routes and their executable contract only.
 //! The consuming gateway owns process middleware and infrastructure routes.
 
-use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::Router;
-use sdkwork_iam_database_host::{bootstrap_iam_database_from_env, IamDatabaseHost};
+use sdkwork_database_sqlx::DatabasePool;
+use sdkwork_iam_database_host::{
+    bootstrap_iam_database, bootstrap_iam_database_from_env, IamDatabaseHost,
+};
 use sdkwork_iam_embedded_application_bootstrap::{
     ensure_tenant_application_from_app_root_with_env_and_fallback, resolve_bootstrap_environment,
 };
 use sdkwork_iam_web_adapter::IamAppContextInjector;
+pub use sdkwork_web_bootstrap::ApiAssemblyContribution;
 use sdkwork_web_bootstrap::{ReadinessCheck, ReadinessFuture};
-use sdkwork_web_core::{DomainContextInjector, HttpRoute, HttpRouteManifest};
+use sdkwork_web_core::HttpRouteManifest;
 
-pub struct ApiAssembly {
-    pub router: Router,
-    pub route_manifest: HttpRouteManifest,
-    pub openapi: serde_json::Value,
-    pub permission_catalog: Vec<&'static str>,
-    pub domain_context_injectors: Vec<Arc<dyn DomainContextInjector>>,
-    pub readiness_check: Arc<dyn ReadinessCheck>,
-}
-
-/// IAM-owned App API contribution for a gateway-selected runtime profile.
-///
-/// The router is raw: it contains no Web Framework layer, CORS middleware, or
-/// infrastructure routes. All contract views are derived from one route manifest.
-pub struct ApiAssemblyContribution {
-    pub router: Router,
-    pub route_manifest: HttpRouteManifest,
-    pub openapi: serde_json::Value,
-    pub permission_catalog: Vec<&'static str>,
-    pub domain_context_injectors: Vec<Arc<dyn DomainContextInjector>>,
-    pub readiness_check: Arc<dyn ReadinessCheck>,
-}
+pub type ApiAssembly = ApiAssemblyContribution;
 
 #[derive(Clone)]
 struct IamDatabaseReadinessCheck {
@@ -86,6 +69,14 @@ pub async fn assemble_owner_api_surfaces() -> Result<ApiAssembly, String> {
     assemble_owner_api_surfaces_with_host(host).await
 }
 
+/// Assembles all IAM surfaces from the final host's process-shared database pool.
+pub async fn assemble_owner_api_surfaces_with_pool(
+    pool: DatabasePool,
+) -> Result<ApiAssembly, String> {
+    let host = bootstrap_iam_application_state_with_pool(pool).await?;
+    assemble_owner_api_surfaces_with_host(host).await
+}
+
 async fn assemble_owner_api_surfaces_with_host(
     host: IamDatabaseHost,
 ) -> Result<ApiAssembly, String> {
@@ -114,19 +105,14 @@ async fn assemble_owner_api_surfaces_with_host(
     );
     routes.extend_from_slice(sdkwork_routes_iam_open_api::open_route_manifest().routes());
     let route_manifest = HttpRouteManifest::from_owned_routes(routes);
-    let routes = route_manifest.routes();
-    let openapi =
-        sdkwork_web_contract::build_openapi_document("SDKWork IAM Owner API Surfaces", routes);
-    let permission_catalog = permission_catalog(routes);
-
-    Ok(ApiAssembly {
+    ApiAssemblyContribution::from_manifest(
+        "sdkwork-iam",
+        "SDKWork IAM Owner API Surfaces",
         router,
         route_manifest,
-        openapi,
-        permission_catalog,
-        domain_context_injectors: vec![Arc::new(IamAppContextInjector)],
-        readiness_check: Arc::new(IamDatabaseReadinessCheck::new(host)),
-    })
+        vec![Arc::new(IamAppContextInjector)],
+        Arc::new(IamDatabaseReadinessCheck::new(host)),
+    )
 }
 
 /// Builds the IAM App API contribution from one initialized database host.
@@ -139,6 +125,21 @@ pub async fn assemble_app_api_contribution_with_module_manifests(
     manifest_paths: &[PathBuf],
 ) -> Result<ApiAssemblyContribution, String> {
     let host = bootstrap_iam_application_state().await?;
+    assemble_app_api_contribution_with_host(host, manifest_paths).await
+}
+
+/// Builds the IAM App API contribution from the final host's process-shared pool.
+pub async fn assemble_app_api_contribution_with_pool(
+    pool: DatabasePool,
+) -> Result<ApiAssemblyContribution, String> {
+    let host = bootstrap_iam_application_state_with_pool(pool).await?;
+    assemble_app_api_contribution_with_host(host, &[]).await
+}
+
+async fn assemble_app_api_contribution_with_host(
+    host: IamDatabaseHost,
+    manifest_paths: &[PathBuf],
+) -> Result<ApiAssemblyContribution, String> {
     sdkwork_iam_database_host::materialize_iam_application_modules(host.pool(), manifest_paths)
         .await
         .map_err(|error| format!("materialize consumer IAM modules failed: {error}"))?;
@@ -148,20 +149,14 @@ pub async fn assemble_app_api_contribution_with_module_manifests(
             host.pool().clone(),
         )
         .await?;
-    let openapi = sdkwork_web_contract::build_openapi_document(
+    ApiAssemblyContribution::from_manifest(
+        "sdkwork-iam",
         "SDKWork IAM App API",
-        route_manifest.routes(),
-    );
-    let permission_catalog = permission_catalog(route_manifest.routes());
-
-    Ok(ApiAssemblyContribution {
         router,
         route_manifest,
-        openapi,
-        permission_catalog,
-        domain_context_injectors: vec![Arc::new(IamAppContextInjector)],
-        readiness_check: Arc::new(IamDatabaseReadinessCheck::new(host)),
-    })
+        vec![Arc::new(IamAppContextInjector)],
+        Arc::new(IamDatabaseReadinessCheck::new(host)),
+    )
 }
 
 /// Initializes IAM persistence and tenant-application state, then assembles all
@@ -172,8 +167,27 @@ pub async fn bootstrap_iam_for_application() -> Result<(ApiAssembly, IamDatabase
     Ok((assembly, host))
 }
 
+/// Initializes IAM persistence and tenant-application state, then exports only
+/// the App API contribution selected by an application gateway.
+pub async fn bootstrap_iam_app_for_application() -> Result<(ApiAssembly, IamDatabaseHost), String> {
+    let host = bootstrap_iam_application_state().await?;
+    let assembly = assemble_app_api_contribution_with_host(host.clone(), &[]).await?;
+    Ok((assembly, host))
+}
+
 async fn bootstrap_iam_application_state() -> Result<IamDatabaseHost, String> {
     let host = bootstrap_iam_database_from_env().await?;
+    finalize_iam_application_state(host).await
+}
+
+async fn bootstrap_iam_application_state_with_pool(
+    pool: DatabasePool,
+) -> Result<IamDatabaseHost, String> {
+    let host = bootstrap_iam_database(pool).await?;
+    finalize_iam_application_state(host).await
+}
+
+async fn finalize_iam_application_state(host: IamDatabaseHost) -> Result<IamDatabaseHost, String> {
     let environment = resolve_bootstrap_environment();
     let fallback_app_root = default_iam_application_root();
     ensure_tenant_application_from_app_root_with_env_and_fallback(
@@ -198,19 +212,6 @@ fn default_iam_application_root() -> std::path::PathBuf {
                 .map(std::path::Path::to_path_buf)
         })
         .unwrap_or_else(|| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
-}
-
-fn permission_catalog(routes: &[HttpRoute]) -> Vec<&'static str> {
-    let mut permissions = BTreeSet::new();
-    for route in routes {
-        if let Some(permission) = route.required_permission {
-            permissions.insert(permission);
-        }
-        if let Some(alternate_permissions) = route.alternate_permissions {
-            permissions.extend(alternate_permissions.iter().copied());
-        }
-    }
-    permissions.into_iter().collect()
 }
 
 #[cfg(test)]
@@ -243,7 +244,7 @@ mod tests {
     #[test]
     fn app_api_permission_catalog_is_the_manifest_permission_union() {
         let manifest = sdkwork_routes_iam_app_api::iam_app_api_route_manifest();
-        let catalog = permission_catalog(manifest.routes());
+        let catalog = sdkwork_web_bootstrap::permission_catalog(manifest.routes());
         let mut expected = manifest
             .routes()
             .iter()

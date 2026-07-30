@@ -2,7 +2,7 @@ import {
   isSdkworkAuthLoginMethod,
   type SdkworkAuthDevelopmentPrefillConfig,
 } from "../../sdkwork-auth-pc-react/src/auth-runtime-config.ts";
-import type { IdentityDeploymentProfile } from "../../sdkwork-user-center-core-pc-react/src/index.ts";
+import type { IdentityDeploymentProfile } from "@sdkwork/user-center-core-pc-react";
 
 function normalizeOptionalText(value: unknown): string | undefined {
   const normalized = typeof value === "string" ? value.trim() : "";

@@ -1693,10 +1693,14 @@ async fn create_oauth_authorization_url(
     }
 
     let oauth_state = crate::tokens::generate_opaque_token("oauthstate");
+    let (pkce_verifier, pkce_challenge) = crate::oauth_login::create_oauth_pkce(&provider)
+        .map(|(verifier, challenge)| (Some(verifier), Some(challenge)))
+        .unwrap_or((None, None));
     if let Err(error) = crate::ephemeral::upsert_oauth_state(
         pg,
         LOCAL_EPHEMERAL_SCOPE,
         &crate::ephemeral::OAuthStateRecord {
+            pkce_verifier,
             provider: provider.clone(),
             redirect_uri: redirect_uri.clone(),
             state: oauth_state.clone(),
@@ -1723,6 +1727,7 @@ async fn create_oauth_authorization_url(
         &provider,
         &redirect_uri,
         Some(oauth_state.as_str()),
+        pkce_challenge.as_deref(),
     )
     .await
     {
@@ -1886,6 +1891,7 @@ async fn create_oauth_session(
         &provider,
         &code,
         Some(redirect_uri.as_str()),
+        stored_state.pkce_verifier.as_deref(),
     )
     .await
     {

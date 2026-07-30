@@ -35,6 +35,15 @@ export function canSubmitIntegration(draft: SdkworkIamOauthIntegrationDraft): bo
   return Boolean(draft.displayName.trim() && draft.integrationCode.trim() && draft.providerCode.trim());
 }
 
+export function canSubmitProviderConnection(draft: SdkworkIamOauthIntegrationDraft): boolean {
+  return Boolean(
+    canSubmitIntegration(draft)
+    && draft.providerClientId?.trim()
+    && draft.providerClientSecret?.trim()
+    && draft.redirectUri?.trim(),
+  );
+}
+
 export function canSubmitProviderCatalog(draft: SdkworkIamOauthProviderCatalogDraft): boolean {
   return Boolean(draft.providerCode.trim() && draft.providerName.trim());
 }
@@ -54,7 +63,7 @@ export function canSubmitSecret(draft: SdkworkIamOauthSecretDraft): boolean {
     draft.secretKind.trim()
     && draft.secretOwnerId.trim()
     && draft.secretOwnerKind.trim()
-    && draft.secretRef.trim(),
+    && draft.secretValue.trim(),
   );
 }
 
@@ -126,7 +135,9 @@ export function canSubmitFlowConfig(draft: SdkworkIamOauthFlowConfigDraft): bool
 export function canSubmitSurface(draft: SdkworkIamOauthSurfaceDraft): boolean {
   return Boolean(
     draft.displayName.trim()
-    && draft.providerCode.trim()
+    && draft.integrationId.trim()
+    && draft.oauthClientId.trim()
+    && draft.redirectUri.trim()
     && draft.surfaceCode.trim()
     && draft.surfaceKind.trim(),
   );
@@ -220,6 +231,15 @@ export function extractProviderCodes(catalog: unknown[]): string[] {
     return readString(record.providerCode ?? record.provider_code);
   }).filter(Boolean);
   return [...new Set(codes)].sort();
+}
+
+export function findProviderCatalogId(catalog: unknown[], providerCode: string): string {
+  const normalized = providerCode.trim().toLowerCase();
+  const match = catalog.find((item) => {
+    const record = toRecord(item);
+    return readString(record.providerCode ?? record.provider_code).toLowerCase() === normalized;
+  });
+  return match ? readProviderCatalogId(match) : "";
 }
 
 export function formatDiagnosticRunDetail(detail: unknown): string {

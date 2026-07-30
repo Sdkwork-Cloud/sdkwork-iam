@@ -5,7 +5,9 @@ use aes_gcm::{
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use rand_core::{OsRng, RngCore};
 use sha2::{Digest, Sha256};
-use sqlx::{PgPool, Row, SqlitePool};
+use sqlx::{PgPool, Row};
+#[cfg(feature = "sqlite")]
+use sqlx::SqlitePool;
 
 const LEGACY_ENCRYPTED_PREFIX: &str = "enc:v1:";
 const PRIMARY_SIGNING_KID_SUFFIX: &str = "local-hs256:primary";
@@ -92,6 +94,7 @@ pub async fn ensure_postgres_tenant_signing_key(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn ensure_sqlite_tenant_signing_key(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -124,6 +127,7 @@ pub async fn ensure_sqlite_tenant_signing_key(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn load_sqlite_active_tenant_signing_key(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -194,6 +198,7 @@ pub async fn load_postgres_active_tenant_signing_key(
     }))
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn resolve_sqlite_tenant_signing_key_by_kid(
     pool: &SqlitePool,
     kid: &str,

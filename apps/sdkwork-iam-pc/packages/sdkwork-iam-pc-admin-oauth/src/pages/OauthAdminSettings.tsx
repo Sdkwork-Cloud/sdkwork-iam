@@ -62,7 +62,7 @@ import {
   canSubmitClient,
   canSubmitDiagnosticRun,
   canSubmitFlowConfig,
-  canSubmitIntegration,
+  canSubmitProviderConnection,
   canSubmitOperationalResource,
   canSubmitOperatorPlatform,
   canSubmitPolicy,
@@ -76,8 +76,34 @@ import {
   canSubmitTenantBinding,
   canSubmitWebhookConfig,
   extractProviderCodes,
+  findProviderCatalogId,
   formatResourceDetail,
 } from "../utils/oauth-admin-utils";
+
+const FEATURED_PROVIDER_NAMES: Readonly<Record<string, string>> = {
+  google: "Google",
+  github: "GitHub",
+  wechat: "WeChat",
+  twitter: "X (Twitter)",
+  facebook: "Facebook",
+  qq: "QQ",
+  tiktok: "TikTok",
+  douyin: "Douyin",
+};
+
+function providerDisplayName(providerCode: string): string {
+  return FEATURED_PROVIDER_NAMES[providerCode] ?? providerCode;
+}
+
+function providerClientIdLabel(providerCode: string): string {
+  if (providerCode === "wechat" || providerCode === "qq") {
+    return "App ID";
+  }
+  if (providerCode === "douyin" || providerCode === "tiktok") {
+    return "Client key";
+  }
+  return "Client ID";
+}
 
 const OAUTH_VIEW_RESOURCE_KEYS: Readonly<Record<
   SdkworkIamOauthAdminView,
@@ -127,9 +153,17 @@ export function SdkworkIamOauthAdminSettings({
   const [resourceDetail, setResourceDetail] = useState(controller.getState().lastResourceDetail);
   const catalogProviderCodes = extractProviderCodes(providerCatalog);
   const [integrationDraft, setIntegrationDraft] = useState<SdkworkIamOauthIntegrationDraft>({
+    appId: "",
     displayName: "",
+    enabled: true,
     integrationCode: "",
+    providerCatalogId: "",
+    providerClientId: "",
+    providerClientSecret: "",
     providerCode: "",
+    providerTenantId: "",
+    redirectUri: "",
+    surfaceKind: "web",
   });
   const [providerCatalogDraft, setProviderCatalogDraft] = useState<SdkworkIamOauthProviderCatalogDraft>({
     providerCode: "",
@@ -148,7 +182,7 @@ export function SdkworkIamOauthAdminSettings({
     secretKind: "client_secret",
     secretOwnerId: "",
     secretOwnerKind: "oauth_client",
-    secretRef: "",
+    secretValue: "",
   });
   const [scopeProfileDraft, setScopeProfileDraft] = useState<SdkworkIamOauthScopeProfileDraft>({
     displayName: "",
@@ -203,7 +237,9 @@ export function SdkworkIamOauthAdminSettings({
   });
   const [surfaceDraft, setSurfaceDraft] = useState<SdkworkIamOauthSurfaceDraft>({
     displayName: "",
-    providerCode: "",
+    integrationId: "",
+    oauthClientId: "",
+    redirectUri: "",
     surfaceCode: "",
     surfaceKind: "web",
   });
@@ -343,21 +379,29 @@ export function SdkworkIamOauthAdminSettings({
             }}
           />
         </div>
-        <CreateResourceDrawer description="Register an inbound OAuth provider integration." triggerLabel="Add integration">
+        <CreateResourceDrawer description="Register provider credentials, callback surface, and initial status in one transaction." triggerLabel="Add provider connection">
           <Label htmlFor="oauth-provider-code">Provider code</Label>
           {catalogProviderCodes.length > 0 ? (
             <select
               className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
               id="oauth-provider-code"
-              onChange={(event) => setIntegrationDraft((current) => ({
-                ...current,
-                providerCode: event.target.value,
-              }))}
+              onChange={(event) => {
+                const providerCode = event.target.value;
+                setIntegrationDraft((current) => ({
+                  ...current,
+                  displayName: providerCode ? `${providerDisplayName(providerCode)} login` : "",
+                  integrationCode: providerCode ? `login-${providerCode}` : "",
+                  providerCatalogId: findProviderCatalogId(providerCatalog, providerCode),
+                  providerCode,
+                }));
+              }}
               value={integrationDraft.providerCode}
             >
               <option value="">Select catalog provider</option>
               {catalogProviderCodes.map((providerCode) => (
-                <option key={providerCode} value={providerCode}>{providerCode}</option>
+                <option key={providerCode} value={providerCode}>
+                  {providerDisplayName(providerCode)} ({providerCode})
+                </option>
               ))}
             </select>
           ) : (
@@ -394,15 +438,95 @@ export function SdkworkIamOauthAdminSettings({
             placeholder="WeChat login"
             value={integrationDraft.displayName}
           />
+          <Label htmlFor="oauth-runtime-app-id">SDKWork app ID (optional)</Label>
+          <input
+            className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
+            id="oauth-runtime-app-id"
+            onChange={(event) => setIntegrationDraft((current) => ({ ...current, appId: event.target.value }))}
+            placeholder="Leave blank for all tenant applications"
+            value={integrationDraft.appId}
+          />
+          <Label htmlFor="oauth-provider-client-id">
+            {providerClientIdLabel(integrationDraft.providerCode)}
+          </Label>
+          <input
+            autoComplete="off"
+            className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
+            id="oauth-provider-client-id"
+            onChange={(event) => setIntegrationDraft((current) => ({ ...current, providerClientId: event.target.value }))}
+            value={integrationDraft.providerClientId}
+          />
+          <Label htmlFor="oauth-provider-client-secret">Client secret</Label>
+          <input
+            autoComplete="new-password"
+            className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
+            id="oauth-provider-client-secret"
+            onChange={(event) => setIntegrationDraft((current) => ({ ...current, providerClientSecret: event.target.value }))}
+            type="password"
+            value={integrationDraft.providerClientSecret}
+          />
+          <Label htmlFor="oauth-provider-tenant-id">Provider tenant / union scope ID (optional)</Label>
+          <input
+            className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
+            id="oauth-provider-tenant-id"
+            onChange={(event) => setIntegrationDraft((current) => ({ ...current, providerTenantId: event.target.value }))}
+            value={integrationDraft.providerTenantId}
+          />
+          <Label htmlFor="oauth-provider-redirect-uri">Redirect URI</Label>
+          <input
+            className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
+            id="oauth-provider-redirect-uri"
+            onChange={(event) => setIntegrationDraft((current) => ({ ...current, redirectUri: event.target.value }))}
+            placeholder="https://app.example.com/auth/oauth/callback"
+            type="url"
+            value={integrationDraft.redirectUri}
+          />
+          <Label htmlFor="oauth-provider-surface-kind">Surface</Label>
+          <select
+            className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
+            id="oauth-provider-surface-kind"
+            onChange={(event) => setIntegrationDraft((current) => ({ ...current, surfaceKind: event.target.value }))}
+            value={integrationDraft.surfaceKind}
+          >
+            <option value="web">Web</option>
+            <option value="h5">H5</option>
+            <option value="desktop">Desktop</option>
+            <option value="ios">iOS</option>
+            <option value="android">Android</option>
+          </select>
+          <label className="flex items-center gap-2 text-sm" htmlFor="oauth-provider-enabled">
+            <input
+              checked={integrationDraft.enabled ?? true}
+              id="oauth-provider-enabled"
+              onChange={(event) => setIntegrationDraft((current) => ({ ...current, enabled: event.target.checked }))}
+              type="checkbox"
+            />
+            Enabled for login
+          </label>
+          <StatusNotice tone="default">
+            The client secret is stored as protected server-side material and is never returned by the backend.
+          </StatusNotice>
           <Button
-            disabled={status === "loading" || status === "saving" || !canSubmitIntegration(integrationDraft)}
+            disabled={status === "loading" || status === "saving" || !canSubmitProviderConnection(integrationDraft)}
             loading={status === "saving"}
             onClick={() => {
               void controller.createIntegration(integrationDraft).then(() => {
                 setIntegrations(controller.getState().integrations);
                 setStatus(controller.getState().status);
                 setError(controller.getState().lastError);
-                setIntegrationDraft({ displayName: "", integrationCode: "", providerCode: "" });
+                setIntegrationDraft({
+                  appId: "",
+                  displayName: "",
+                  enabled: true,
+                  integrationCode: "",
+                  providerCatalogId: "",
+                  providerClientId: "",
+                  providerClientSecret: "",
+                  providerCode: "",
+                  providerTenantId: "",
+                  redirectUri: "",
+                  surfaceKind: "web",
+                });
               }).catch(() => {
                 setStatus(controller.getState().status);
                 setError(controller.getState().lastError);
@@ -410,7 +534,7 @@ export function SdkworkIamOauthAdminSettings({
             }}
             type="button"
           >
-            Add integration
+            Save connection
           </Button>
         </CreateResourceDrawer>
       </SettingsSection>
@@ -649,7 +773,7 @@ export function SdkworkIamOauthAdminSettings({
         title="OAuth secrets"
       >
         <StatusNotice tone="default">
-          Provide a vault or KMS secret reference only. Do not paste production secrets into browser devtools or logs.
+          Secret values are accepted as write-only input, protected by the backend, and never returned.
         </StatusNotice>
         <div className="space-y-3">
           <Label>Registered secrets ({secrets.length})</Label>
@@ -665,7 +789,7 @@ export function SdkworkIamOauthAdminSettings({
             secrets={secrets}
           />
         </div>
-        <CreateResourceDrawer description="Register a secret reference without exposing plaintext credentials." triggerLabel="Add secret">
+        <CreateResourceDrawer description="Rotate or add a write-only credential for an OAuth client." triggerLabel="Add secret">
           <Label htmlFor="oauth-secret-owner-kind">Secret owner kind</Label>
           <input
             className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
@@ -699,18 +823,17 @@ export function SdkworkIamOauthAdminSettings({
             placeholder="client_secret"
             value={secretDraft.secretKind}
           />
-          <Label htmlFor="oauth-secret-ref">Secret reference</Label>
+          <Label htmlFor="oauth-secret-value">Secret value</Label>
           <input
-            autoComplete="off"
+            autoComplete="new-password"
             className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
-            id="oauth-secret-ref"
+            id="oauth-secret-value"
             onChange={(event) => setSecretDraft((current) => ({
               ...current,
-              secretRef: event.target.value,
+              secretValue: event.target.value,
             }))}
-            placeholder="vault://tenant/oauth/client-secret"
             type="password"
-            value={secretDraft.secretRef}
+            value={secretDraft.secretValue}
           />
           <Button
             disabled={status === "loading" || status === "saving" || !canSubmitSecret(secretDraft)}
@@ -724,7 +847,7 @@ export function SdkworkIamOauthAdminSettings({
                   secretKind: "client_secret",
                   secretOwnerId: "",
                   secretOwnerKind: "oauth_client",
-                  secretRef: "",
+                  secretValue: "",
                 });
               }).catch(() => {
                 setStatus(controller.getState().status);
@@ -733,7 +856,7 @@ export function SdkworkIamOauthAdminSettings({
             }}
             type="button"
           >
-            Register secret reference
+            Register secret
           </Button>
         </CreateResourceDrawer>
       </SettingsSection>
@@ -1156,16 +1279,27 @@ export function SdkworkIamOauthAdminSettings({
           />
         </div>
         <CreateResourceDrawer description="Register a browser, mobile, or provider OAuth surface." triggerLabel="Add OAuth surface">
-          <Label htmlFor="oauth-surface-provider">Provider code</Label>
+          <Label htmlFor="oauth-surface-integration">Integration ID</Label>
           <input
             className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
-            id="oauth-surface-provider"
+            id="oauth-surface-integration"
             onChange={(event) => setSurfaceDraft((current) => ({
               ...current,
-              providerCode: event.target.value,
+              integrationId: event.target.value,
             }))}
-            placeholder="wechat"
-            value={surfaceDraft.providerCode}
+            placeholder="iamoi-..."
+            value={surfaceDraft.integrationId}
+          />
+          <Label htmlFor="oauth-surface-client">OAuth client ID</Label>
+          <input
+            className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
+            id="oauth-surface-client"
+            onChange={(event) => setSurfaceDraft((current) => ({
+              ...current,
+              oauthClientId: event.target.value,
+            }))}
+            placeholder="iamoc-..."
+            value={surfaceDraft.oauthClientId}
           />
           <Label htmlFor="oauth-surface-code">Surface code</Label>
           <input
@@ -1200,6 +1334,17 @@ export function SdkworkIamOauthAdminSettings({
             placeholder="Web login"
             value={surfaceDraft.displayName}
           />
+          <Label htmlFor="oauth-surface-redirect-uri">Redirect URI</Label>
+          <input
+            className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
+            id="oauth-surface-redirect-uri"
+            onChange={(event) => setSurfaceDraft((current) => ({
+              ...current,
+              redirectUri: event.target.value,
+            }))}
+            type="url"
+            value={surfaceDraft.redirectUri}
+          />
           <Button
             disabled={listDisabled || !canSubmitSurface(surfaceDraft)}
             loading={status === "saving"}
@@ -1208,7 +1353,9 @@ export function SdkworkIamOauthAdminSettings({
                 syncLists();
                 setSurfaceDraft({
                   displayName: "",
-                  providerCode: "",
+                  integrationId: "",
+                  oauthClientId: "",
+                  redirectUri: "",
                   surfaceCode: "",
                   surfaceKind: "web",
                 });

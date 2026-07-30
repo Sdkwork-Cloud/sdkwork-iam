@@ -54,6 +54,7 @@
       "sdkwork_api_iam_assembly::assemble_owner_api_surfaces",
       "sdkwork_api_iam_assembly::assemble_app_api_contribution",
       "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_module_manifests",
+      "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_pool",
       "sdkwork_api_iam_assembly::bootstrap_iam_for_application",
       "sdkwork_api_iam_assembly::ApiAssembly",
       "sdkwork_api_iam_assembly::ApiAssemblyContribution",
@@ -67,6 +68,10 @@
       {
         "name": "iamAppApiContribution",
         "export": "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_module_manifests"
+      },
+      {
+        "name": "iamAppApiContributionWithPool",
+        "export": "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_pool"
       }
     ],
     "requiredPorts": [
@@ -79,7 +84,8 @@
     "runtimeEntrypoints": [
       "sdkwork_api_iam_assembly::assemble_api_router",
       "sdkwork_api_iam_assembly::assemble_owner_api_surfaces",
-      "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_module_manifests"
+      "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_module_manifests",
+      "sdkwork_api_iam_assembly::assemble_app_api_contribution_with_pool"
     ],
     "routeManifest": null,
     "sdkClients": [],

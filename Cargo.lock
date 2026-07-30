@@ -1939,6 +1939,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "http-body-util",
+ "sdkwork-database-sqlx",
  "sdkwork-iam-database-host",
  "sdkwork-iam-embedded-application-bootstrap",
  "sdkwork-iam-web-adapter",
@@ -2367,6 +2368,7 @@ dependencies = [
  "async-trait",
  "axum",
  "http",
+ "sdkwork-database-sqlx",
  "sdkwork-web-axum",
  "sdkwork-web-contract",
  "sdkwork-web-core",

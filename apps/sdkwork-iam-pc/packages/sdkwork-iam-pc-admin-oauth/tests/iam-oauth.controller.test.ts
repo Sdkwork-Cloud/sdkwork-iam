@@ -99,6 +99,7 @@ describe("SDKWork IAM OAuth PC admin controller", () => {
       providerClientId: "wx-mini-1",
       providerCode: "wechat_mini_program",
       providerTenantId: "wx-open-platform-1",
+      enabled: true,
     });
 
     await controller.createPolicy({
@@ -137,6 +138,38 @@ describe("SDKWork IAM OAuth PC admin controller", () => {
       integrationId: "i1",
       providerCode: "wechat",
       runKind: "manual",
+    });
+  });
+
+  it("provisions a complete enabled provider connection without exposing the secret again", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    await controller.createIntegration({
+      appId: "iam-app-1",
+      displayName: "Google login",
+      enabled: true,
+      integrationCode: "login-google",
+      providerCatalogId: "catalog:0:google",
+      providerClientId: "google-client-id",
+      providerClientSecret: "write-only-secret",
+      providerCode: "google",
+      providerTenantId: "",
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+      surfaceKind: "web",
+    });
+
+    expect(service.iam.oauth.integrations.create).toHaveBeenCalledWith({
+      appId: "iam-app-1",
+      displayName: "Google login",
+      enabled: true,
+      integrationCode: "login-google",
+      providerCatalogId: "catalog:0:google",
+      providerClientId: "google-client-id",
+      providerClientSecret: "write-only-secret",
+      providerCode: "google",
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+      surfaceKind: "web",
     });
   });
 

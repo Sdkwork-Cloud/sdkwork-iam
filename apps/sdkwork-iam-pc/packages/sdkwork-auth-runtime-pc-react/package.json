@@ -48,10 +48,13 @@
     "@sdkwork/iam-contracts": "workspace:*",
     "@sdkwork/iam-credential-entry": "workspace:*",
     "@sdkwork/iam-runtime": "workspace:*",
+    "@sdkwork/user-center-core-pc-react": "workspace:*",
     "@sdkwork/sdk-common": "^1.0.2"
   },
   "devDependencies": {
-    "typescript": "^6.0.2"
+    "@testing-library/jest-dom": "catalog:",
+    "typescript": "^6.0.2",
+    "vitest": "catalog:"
   },
   "sdkwork": {
     "workspace": "sdkwork-iam",

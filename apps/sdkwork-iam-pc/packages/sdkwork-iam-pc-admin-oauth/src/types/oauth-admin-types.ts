@@ -2,9 +2,17 @@ import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 export interface SdkworkIamOauthIntegrationDraft {
+  appId?: string;
   displayName: string;
+  enabled?: boolean;
   integrationCode: string;
+  providerCatalogId?: string;
+  providerClientId?: string;
+  providerClientSecret?: string;
   providerCode: string;
+  providerTenantId?: string;
+  redirectUri?: string;
+  surfaceKind?: string;
 }
 
 export interface SdkworkIamOauthProviderCatalogDraft {
@@ -15,7 +23,9 @@ export interface SdkworkIamOauthProviderCatalogDraft {
 
 export interface SdkworkIamOauthSurfaceDraft {
   displayName: string;
-  providerCode: string;
+  integrationId: string;
+  oauthClientId: string;
+  redirectUri: string;
   surfaceCode: string;
   surfaceKind: string;
 }
@@ -57,7 +67,7 @@ export interface SdkworkIamOauthSecretDraft {
   secretKind: string;
   secretOwnerId: string;
   secretOwnerKind: string;
-  secretRef: string;
+  secretValue: string;
 }
 
 export interface SdkworkIamOauthScopeProfileDraft {

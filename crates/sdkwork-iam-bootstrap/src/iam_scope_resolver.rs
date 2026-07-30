@@ -1,4 +1,6 @@
-use sqlx::{Executor, PgPool, Postgres, Row, Sqlite, SqlitePool};
+use sqlx::{Executor, PgPool, Postgres, Row};
+#[cfg(feature = "sqlite")]
+use sqlx::{Sqlite, SqlitePool};
 
 use crate::constants::{DEFAULT_IAM_ORGANIZATION_CODE, DEFAULT_IAM_TENANT_CODE};
 use crate::iam_sql_subject::{parse_iam_sql_organization_id, parse_iam_sql_tenant_id};
@@ -28,6 +30,7 @@ pub fn effective_iam_organization_code(organization_code: Option<&str>) -> &str 
         .unwrap_or(DEFAULT_IAM_ORGANIZATION_CODE)
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn resolve_sqlite_iam_scope(
     pool: &SqlitePool,
     tenant_code: Option<&str>,
@@ -75,6 +78,7 @@ pub async fn resolve_postgres_iam_scope(
     ))
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn resolve_sqlite_iam_tenant_id_string<'e, E>(
     executor: E,
     tenant_code: Option<&str>,
@@ -119,6 +123,7 @@ where
         .ok_or_else(|| sqlx::Error::Protocol(iam_tenant_not_found_message()))
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn resolve_sqlite_iam_organization_id_string<'e, E>(
     executor: E,
     tenant_id: &str,
@@ -167,6 +172,7 @@ where
         .ok_or_else(|| sqlx::Error::Protocol(iam_organization_not_found_message()))
 }
 
+#[cfg(feature = "sqlite")]
 fn tenant_deleted_filter_sqlite(options: IamScopeResolveOptions) -> &'static str {
     if options.exclude_soft_deleted {
         " AND deleted_at IS NULL"
@@ -183,6 +189,7 @@ fn tenant_deleted_filter_postgres(options: IamScopeResolveOptions) -> &'static s
     }
 }
 
+#[cfg(feature = "sqlite")]
 fn organization_deleted_filter_sqlite(options: IamScopeResolveOptions) -> &'static str {
     if options.exclude_soft_deleted {
         " AND deleted_at IS NULL"
@@ -207,6 +214,7 @@ fn iam_organization_not_found_message() -> String {
     "active IAM organization was not found or has a non-numeric id".to_owned()
 }
 
+#[cfg(feature = "sqlite")]
 fn sqlite_string_cell(row: &sqlx::sqlite::SqliteRow, column: &str) -> String {
     row.try_get::<String, _>(column)
         .ok()

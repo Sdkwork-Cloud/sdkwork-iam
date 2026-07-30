@@ -135,6 +135,7 @@ pub async fn exchange_oauth_authorization_code(
     ctx: &OAuthIntegrationExchangeContext,
     code: &str,
     redirect_uri: &str,
+    pkce_verifier: Option<&str>,
 ) -> Result<LocalOAuthProviderProfile, String> {
     let code = code.trim();
     if code.is_empty() {
@@ -145,7 +146,7 @@ pub async fn exchange_oauth_authorization_code(
         return Err("OAuth redirectUri is required".to_string());
     }
 
-    let token = request_oauth_token(ctx, code, redirect_uri).await?;
+    let token = request_oauth_token(ctx, code, redirect_uri, pkce_verifier).await?;
     let claims = resolve_identity_claims(ctx, &token).await?;
     map_claims_to_profile(
         &ctx.provider_code,
@@ -325,6 +326,7 @@ async fn request_oauth_token(
     ctx: &OAuthIntegrationExchangeContext,
     code: &str,
     redirect_uri: &str,
+    pkce_verifier: Option<&str>,
 ) -> Result<OAuthTokenResponse, String> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(20))
@@ -367,14 +369,27 @@ async fn request_oauth_token(
         request = request.header(AUTHORIZATION, format!("Basic {credentials}"));
     }
 
+    let client_id_parameter = match ctx.provider_code.as_str() {
+        "douyin" | "tiktok" => "client_key",
+        _ => "client_id",
+    };
     let mut form = vec![
         ("grant_type".to_string(), "authorization_code".to_string()),
         ("code".to_string(), code.to_string()),
         ("redirect_uri".to_string(), redirect_uri.to_string()),
-        ("client_id".to_string(), ctx.provider_client_id.clone()),
+        (
+            client_id_parameter.to_string(),
+            ctx.provider_client_id.clone(),
+        ),
     ];
     if auth_method != "client_secret_basic" && auth_method != "none" {
         form.push(("client_secret".to_string(), ctx.client_secret.clone()));
+    }
+    if let Some(verifier) = pkce_verifier
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        form.push(("code_verifier".to_string(), verifier.to_string()));
     }
 
     let response = request
@@ -406,6 +421,9 @@ async fn resolve_identity_claims(
     ctx: &OAuthIntegrationExchangeContext,
     token: &OAuthTokenResponse,
 ) -> Result<Value, String> {
+    if ctx.provider_code == "qq" {
+        return fetch_qq_userinfo_claims(ctx, token).await;
+    }
     if ctx.supports_userinfo {
         if let Some(endpoint) = ctx.userinfo_endpoint.as_deref() {
             let mut claims = fetch_userinfo_claims(
@@ -451,11 +469,18 @@ async fn fetch_userinfo_claims(
 
     let mut request = client.get(endpoint).header(ACCEPT, "application/json");
 
-    if matches!(provider_code, "wechat" | "wechat_open") {
+    if matches!(provider_code, "wechat" | "wechat_open" | "douyin") {
         request = request.query(&[
             ("access_token", access_token),
             ("openid", open_id.unwrap_or_default()),
-            ("lang", "zh_CN"),
+            (
+                "lang",
+                if provider_code == "douyin" {
+                    "zh-CN"
+                } else {
+                    "zh_CN"
+                },
+            ),
         ]);
     } else {
         request = request.header(AUTHORIZATION, format!("Bearer {access_token}"));
@@ -463,6 +488,9 @@ async fn fetch_userinfo_claims(
 
     if provider_code == "github" {
         request = request.header("User-Agent", "sdkwork-iam-oauth");
+    }
+    if provider_code == "tiktok" {
+        request = request.query(&[("fields", "open_id,union_id,avatar_url,display_name")]);
     }
 
     let response = request
@@ -486,6 +514,94 @@ async fn fetch_userinfo_claims(
 
     serde_json::from_str(&body)
         .map_err(|error| format!("parse oauth userinfo response failed: {error}"))
+}
+
+async fn fetch_qq_userinfo_claims(
+    ctx: &OAuthIntegrationExchangeContext,
+    token: &OAuthTokenResponse,
+) -> Result<Value, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .map_err(|error| format!("create QQ OAuth client failed: {error}"))?;
+    let openid_response = client
+        .get("https://graph.qq.com/oauth2.0/me")
+        .query(&[
+            ("access_token", token.access_token.as_str()),
+            ("fmt", "json"),
+        ])
+        .header(ACCEPT, "application/json")
+        .send()
+        .await
+        .map_err(|error| format!("QQ OAuth openid request failed: {error}"))?;
+    let status = openid_response.status();
+    let body = openid_response
+        .text()
+        .await
+        .map_err(|error| format!("read QQ OAuth openid response failed: {error}"))?;
+    if !status.is_success() {
+        return Err(format!(
+            "QQ OAuth openid request failed with status {}: {}",
+            status.as_u16(),
+            summarize_oauth_error_body(&body)
+        ));
+    }
+    let openid_payload = parse_json_or_jsonp(&body)
+        .map_err(|error| format!("parse QQ OAuth openid response failed: {error}"))?;
+    let openid = pick_string_claim(&openid_payload, &["openid", "open_id"])
+        .ok_or_else(|| "QQ OAuth openid response is missing openid".to_string())?;
+    let userinfo_endpoint = ctx
+        .userinfo_endpoint
+        .as_deref()
+        .unwrap_or("https://graph.qq.com/user/get_user_info");
+    let response = client
+        .get(userinfo_endpoint)
+        .query(&[
+            ("access_token", token.access_token.as_str()),
+            ("oauth_consumer_key", ctx.provider_client_id.as_str()),
+            ("openid", openid.as_str()),
+        ])
+        .header(ACCEPT, "application/json")
+        .send()
+        .await
+        .map_err(|error| format!("QQ OAuth userinfo request failed: {error}"))?;
+    let status = response.status();
+    let body = response
+        .text()
+        .await
+        .map_err(|error| format!("read QQ OAuth userinfo response failed: {error}"))?;
+    if !status.is_success() {
+        return Err(format!(
+            "QQ OAuth userinfo failed with status {}: {}",
+            status.as_u16(),
+            summarize_oauth_error_body(&body)
+        ));
+    }
+    let mut claims: Value = serde_json::from_str(&body)
+        .map_err(|error| format!("parse QQ OAuth userinfo response failed: {error}"))?;
+    if claims.get("ret").and_then(Value::as_i64).unwrap_or(0) != 0 {
+        return Err(format!(
+            "QQ OAuth userinfo rejected the request: {}",
+            summarize_oauth_error_body(&body)
+        ));
+    }
+    if let Some(object) = claims.as_object_mut() {
+        object.insert("openid".to_string(), Value::String(openid));
+    }
+    Ok(claims)
+}
+
+fn parse_json_or_jsonp(body: &str) -> Result<Value, String> {
+    if let Ok(value) = serde_json::from_str(body.trim()) {
+        return Ok(value);
+    }
+    let start = body
+        .find('{')
+        .ok_or_else(|| "response does not contain a JSON object".to_string())?;
+    let end = body
+        .rfind('}')
+        .ok_or_else(|| "response does not contain a complete JSON object".to_string())?;
+    serde_json::from_str(&body[start..=end]).map_err(|error| error.to_string())
 }
 
 fn parse_token_response(body: &str, provider_code: &str) -> Result<OAuthTokenResponse, String> {
@@ -521,6 +637,11 @@ fn parse_token_response(body: &str, provider_code: &str) -> Result<OAuthTokenRes
 }
 
 fn extract_token_response(value: Value) -> Result<OAuthTokenResponse, String> {
+    if value.get("access_token").is_none() {
+        if let Some(data) = value.get("data") {
+            return extract_token_response(data.clone());
+        }
+    }
     let access_token = value
         .get("access_token")
         .and_then(Value::as_str)
@@ -556,6 +677,14 @@ fn map_claims_to_profile(
     union_scope_id: Option<&str>,
     claims: Value,
 ) -> Result<LocalOAuthProviderProfile, String> {
+    if let Some(user) = claims
+        .get("data")
+        .and_then(|data| data.get("user").or(Some(data)))
+    {
+        if user.is_object() {
+            return map_claims_to_profile(provider_code, union_scope_id, user.clone());
+        }
+    }
     let subject = extract_subject(&claims)
         .ok_or_else(|| "OAuth provider identity is missing subject".to_string())?;
 
@@ -593,7 +722,15 @@ fn map_claims_to_profile(
             "profile_image_url",
             "profile_image_url_https",
         ],
-    );
+    )
+    .or_else(|| {
+        claims
+            .get("picture")
+            .and_then(|picture| picture.get("data"))
+            .and_then(|data| data.get("url"))
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    });
 
     if provider_code == "twitter" {
         if let Some(data) = claims.get("data") {
@@ -682,7 +819,7 @@ pub fn builtin_token_endpoint(provider_code: &str) -> Option<&'static str> {
         "google" => Some("https://oauth2.googleapis.com/token"),
         "github" => Some("https://github.com/login/oauth/access_token"),
         "twitter" => Some("https://api.twitter.com/2/oauth2/token"),
-        "facebook" => Some("https://graph.facebook.com/v18.0/oauth/access_token"),
+        "facebook" => Some("https://graph.facebook.com/oauth/access_token"),
         "microsoft" => Some("https://login.microsoftonline.com/common/oauth2/v2.0/token"),
         "apple" => Some("https://appleid.apple.com/auth/token"),
         "linkedin" => Some("https://www.linkedin.com/oauth/v2/accessToken"),
@@ -737,7 +874,7 @@ pub fn builtin_authorization_endpoint(provider_code: &str) -> Option<&'static st
         "google" => Some("https://accounts.google.com/o/oauth2/v2/auth"),
         "github" => Some("https://github.com/login/oauth/authorize"),
         "twitter" => Some("https://twitter.com/i/oauth2/authorize"),
-        "facebook" => Some("https://www.facebook.com/v18.0/dialog/oauth"),
+        "facebook" => Some("https://www.facebook.com/dialog/oauth"),
         "microsoft" => Some("https://login.microsoftonline.com/common/oauth2/v2.0/authorize"),
         "apple" => Some("https://appleid.apple.com/auth/authorize"),
         "linkedin" => Some("https://www.linkedin.com/oauth/v2/authorization"),
@@ -939,6 +1076,44 @@ mod tests {
         )
         .expect("token");
         assert_eq!(token.access_token, "ghs_123");
+    }
+
+    #[test]
+    fn parses_douyin_and_tiktok_nested_payloads() {
+        let token = parse_token_response(
+            r#"{"data":{"access_token":"token-1","open_id":"open-1"}}"#,
+            "douyin",
+        )
+        .expect("nested token");
+        assert_eq!(token.access_token, "token-1");
+        assert_eq!(token.open_id.as_deref(), Some("open-1"));
+
+        let profile = map_claims_to_profile(
+            "tiktok",
+            None,
+            json!({"data":{"user":{"open_id":"tt-1","display_name":"TikTok User","avatar_url":"https://cdn.example.com/t.png"}}}),
+        )
+        .expect("nested profile");
+        assert_eq!(profile.subject, "tt-1");
+        assert_eq!(profile.name.as_deref(), Some("TikTok User"));
+    }
+
+    #[test]
+    fn parses_qq_jsonp_and_facebook_nested_avatar() {
+        let qq = parse_json_or_jsonp(r#"callback( {"client_id":"qq-app","openid":"qq-user"} );"#)
+            .expect("QQ JSONP");
+        assert_eq!(qq.get("openid").and_then(Value::as_str), Some("qq-user"));
+
+        let facebook = map_claims_to_profile(
+            "facebook",
+            None,
+            json!({"id":"fb-1","name":"Facebook User","picture":{"data":{"url":"https://cdn.example.com/f.png"}}}),
+        )
+        .expect("Facebook profile");
+        assert_eq!(
+            facebook.avatar.as_deref(),
+            Some("https://cdn.example.com/f.png")
+        );
     }
 
     #[test]

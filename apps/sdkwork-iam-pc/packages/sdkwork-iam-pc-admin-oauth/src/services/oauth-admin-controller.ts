@@ -266,12 +266,22 @@ export function createSdkworkIamOauthAdminController(
     },
     createIntegration(body) {
       return wrapCreate(
-        () => service.iam.oauth.integrations.create({
-          displayName: body.displayName.trim(),
-          integrationCode: body.integrationCode.trim(),
-          providerCode: body.providerCode.trim(),
-          enabled: true,
-        }),
+        () => {
+          const optional = (value: string | undefined) => value?.trim() || undefined;
+          return service.iam.oauth.integrations.create({
+            displayName: body.displayName.trim(),
+            integrationCode: body.integrationCode.trim(),
+            providerCode: body.providerCode.trim(),
+            enabled: body.enabled ?? true,
+            ...(optional(body.appId) ? { appId: optional(body.appId) } : {}),
+            ...(optional(body.providerCatalogId) ? { providerCatalogId: optional(body.providerCatalogId) } : {}),
+            ...(optional(body.providerClientId) ? { providerClientId: optional(body.providerClientId) } : {}),
+            ...(optional(body.providerClientSecret) ? { providerClientSecret: optional(body.providerClientSecret) } : {}),
+            ...(optional(body.providerTenantId) ? { providerTenantId: optional(body.providerTenantId) } : {}),
+            ...(optional(body.redirectUri) ? { redirectUri: optional(body.redirectUri) } : {}),
+            ...(optional(body.surfaceKind) ? { surfaceKind: optional(body.surfaceKind) } : {}),
+          });
+        },
         "Failed to create OAuth integration",
         true,
       );
@@ -286,6 +296,7 @@ export function createSdkworkIamOauthAdminController(
             integrationId: body.integrationId.trim(),
             providerClientId: body.providerClientId.trim(),
             providerCode: body.providerCode.trim(),
+            enabled: true,
             ...(providerTenantId ? { providerTenantId } : {}),
           });
         },
@@ -299,7 +310,7 @@ export function createSdkworkIamOauthAdminController(
           secretKind: body.secretKind.trim(),
           secretOwnerId: body.secretOwnerId.trim(),
           secretOwnerKind: body.secretOwnerKind.trim(),
-          secretRef: body.secretRef.trim(),
+          secretValue: body.secretValue.trim(),
         }),
         "Failed to register OAuth secret",
         true,
@@ -418,7 +429,9 @@ export function createSdkworkIamOauthAdminController(
       return wrapCreate(
         () => service.iam.oauth.surfaces.create({
           displayName: body.displayName.trim(),
-          providerCode: body.providerCode.trim(),
+          integrationId: body.integrationId.trim(),
+          oauthClientId: body.oauthClientId.trim(),
+          redirectUri: body.redirectUri.trim(),
           surfaceCode: body.surfaceCode.trim(),
           surfaceKind: body.surfaceKind.trim(),
           enabled: true,

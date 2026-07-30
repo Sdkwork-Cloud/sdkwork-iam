@@ -14,7 +14,7 @@ import {
   type UserCenterBridgeConfigInput,
   type UserCenterDeploymentProfile,
   type UserCenterDeploymentProfileSet,
-} from "../../sdkwork-user-center-core-pc-react/src/index.ts";
+} from "@sdkwork/user-center-core-pc-react";
 import { resolveCanonicalAuthDevelopmentPrefill } from "./authRuntimeDevelopmentPrefill.ts";
 
 function resolveSurface(

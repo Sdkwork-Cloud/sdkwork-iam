@@ -10,7 +10,9 @@ use chrono::Utc;
 use sdkwork_iam_context_service::{
     APP_USER_ROLE_CODE, ORG_ADMIN_ROLE_CODE, PLATFORM_SUPER_ADMIN_ROLE_CODE,
 };
-use sqlx::{PgPool, SqlitePool};
+use sqlx::PgPool;
+#[cfg(feature = "sqlite")]
+use sqlx::SqlitePool;
 
 use crate::{
     ensure_role_assignment_allowed, standard_role_id, upsert_postgres_standard_roles,
@@ -164,6 +166,7 @@ pub async fn ensure_postgres_bootstrap_admin_user(
     })
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn ensure_sqlite_bootstrap_admin_user(
     pool: &SqlitePool,
 ) -> Result<BootstrapAdminUserOutcome, sqlx::Error> {
@@ -391,6 +394,7 @@ pub async fn ensure_postgres_bootstrap_manager_user(
     })
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn ensure_sqlite_bootstrap_manager_user(
     pool: &SqlitePool,
 ) -> Result<BootstrapManagerUserOutcome, sqlx::Error> {
@@ -524,6 +528,7 @@ async fn postgres_tenant_has_bootstrap_manager(
     Ok(count > 0)
 }
 
+#[cfg(feature = "sqlite")]
 async fn sqlite_tenant_has_bootstrap_manager(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -599,6 +604,7 @@ async fn ensure_postgres_bootstrap_admin_organization(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn ensure_sqlite_bootstrap_admin_organization(
     pool: &SqlitePool,
     now: &str,
@@ -683,6 +689,7 @@ async fn ensure_postgres_bootstrap_admin_membership(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn ensure_sqlite_bootstrap_admin_membership(
     pool: &SqlitePool,
     membership_id: &str,
@@ -731,6 +738,7 @@ async fn ensure_postgres_bootstrap_manager_membership(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn ensure_sqlite_bootstrap_manager_membership(
     pool: &SqlitePool,
     membership_id: &str,
@@ -790,6 +798,7 @@ async fn retire_postgres_legacy_manager_tenant_org_admin_binding(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn retire_sqlite_legacy_manager_tenant_org_admin_binding(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -854,6 +863,7 @@ async fn ensure_postgres_bootstrap_manager_role_bindings(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn ensure_sqlite_bootstrap_manager_role_bindings(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -928,6 +938,7 @@ async fn postgres_bootstrap_admin_is_fully_provisioned(
     Ok(count > 0)
 }
 
+#[cfg(feature = "sqlite")]
 async fn sqlite_bootstrap_admin_is_fully_provisioned(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -1006,6 +1017,7 @@ async fn ensure_postgres_bootstrap_role_bindings(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn ensure_sqlite_bootstrap_role_bindings(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -1112,6 +1124,7 @@ async fn ensure_postgres_tenant_user_role_binding(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn ensure_sqlite_organization_role_binding(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -1146,6 +1159,7 @@ async fn ensure_sqlite_organization_role_binding(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn ensure_sqlite_tenant_user_role_binding(
     pool: &SqlitePool,
     tenant_id: &str,

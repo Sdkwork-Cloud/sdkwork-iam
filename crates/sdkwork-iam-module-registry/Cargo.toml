@@ -9,6 +9,11 @@ description = "IAM module federation discovery, validation, and catalog material
 name = "sdkwork_iam_module_registry"
 path = "src/lib.rs"
 
+[features]
+default = ["postgres"]
+postgres = []
+sqlite = ["sqlx/sqlite"]
+
 [dependencies]
 chrono = { workspace = true }
 serde = { workspace = true }

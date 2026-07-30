@@ -324,6 +324,39 @@ where
         .with_domain_injector(std::sync::Arc::new(IamAppContextInjector))
 }
 
+/// Builds the IAM-configured framework host before a composed API assembly is bound.
+pub fn build_web_framework_builder<R>(
+    resolver: R,
+    route_manifest: HttpRouteManifest,
+    extra_public_path_prefixes: Vec<String>,
+) -> sdkwork_web_bootstrap::WebFrameworkBuilder<R>
+where
+    R: sdkwork_web_core::WebRequestContextResolver + Clone + std::any::Any,
+{
+    let environment = resolve_web_environment_from_process_env();
+    let security_policy = iam_web_security_policy(&environment);
+    let authorization_policy =
+        std::sync::Arc::new(IamAuthorizationPolicy::new(route_manifest.clone()));
+    sdkwork_web_bootstrap::WebFramework::builder(resolver)
+        .profile(WebRequestContextProfile {
+            open_api_prefixes: vec![
+                "/open/v3/api".to_owned(),
+                "/iam/v3/api".to_owned(),
+                "/iam/v3/oauth".to_owned(),
+            ],
+            public_path_prefixes: extra_public_path_prefixes,
+            environment,
+            ..WebRequestContextProfile::default()
+        })
+        .security_policy(security_policy)
+        .route_manifest(route_manifest)
+        .authorization_policy(authorization_policy)
+        .tenant_isolation_policy(std::sync::Arc::new(
+            sdkwork_web_core::EnforcePrincipalTenantIsolationPolicy,
+        ))
+        .domain_injector(std::sync::Arc::new(IamAppContextInjector))
+}
+
 pub fn build_iam_app_web_framework_layer(
     resolver: IamWebRequestContextResolver,
     route_manifest: HttpRouteManifest,

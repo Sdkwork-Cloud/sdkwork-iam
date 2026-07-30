@@ -461,6 +461,7 @@ fn session_from_json(value: &Value) -> Option<LocalSession> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct OAuthStateRecord {
+    pub(crate) pkce_verifier: Option<String>,
     pub(crate) provider: String,
     pub(crate) redirect_uri: String,
     pub(crate) state: String,
@@ -475,6 +476,7 @@ pub(crate) async fn upsert_oauth_state(
 ) -> Result<(), String> {
     let storage_key = artifact_key(tenant_id, KIND_OAUTH_STATE, &record.state);
     let payload = json!({
+        "pkceVerifier": record.pkce_verifier,
         "provider": record.provider,
         "redirectUri": record.redirect_uri,
         "state": record.state,
@@ -575,7 +577,16 @@ pub(crate) async fn take_oauth_state(
         .filter(|value| !value.is_empty())
         .map(str::to_string)
         .unwrap_or_default();
+    let pkce_verifier = payload
+        .0
+        .get("pkceVerifier")
+        .or_else(|| payload.0.get("pkce_verifier"))
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string);
     Ok(Some(OAuthStateRecord {
+        pkce_verifier,
         provider,
         redirect_uri,
         state: state.to_string(),

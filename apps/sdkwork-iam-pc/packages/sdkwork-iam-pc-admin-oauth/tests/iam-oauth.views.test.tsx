@@ -51,12 +51,14 @@ describe("SDKWork IAM OAuth focused admin views", () => {
     const providers = renderView("providers");
     expect(providers).toContain("Focused view");
     expect(providers).toContain("Provider catalog");
+    expect(providers).toContain("Add provider connection");
     expect(providers).not.toContain("OAuth clients");
 
     const applications = renderView("applications");
     expect(applications).toContain("SDKWork OAuth relying party");
     expect(applications).toContain("OAuth clients");
     expect(applications).toContain("OAuth secrets");
+    expect(applications).toContain("write-only input");
     expect(applications).not.toContain("Provider catalog");
 
     const loginConfiguration = renderView("login-configuration");

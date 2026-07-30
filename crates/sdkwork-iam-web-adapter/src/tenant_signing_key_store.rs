@@ -174,18 +174,35 @@ pub async fn tenant_signing_key_store_for_database_config(
         .map_err(|error| error.to_string())?;
     match config.engine {
         DatabaseEngine::Sqlite => {
-            let sqlite = pool
-                .as_sqlite()
-                .cloned()
-                .ok_or_else(|| "expected sqlite database pool".to_owned())?;
-            Ok(Arc::new(SqliteTenantSigningKeyStore::new(sqlite)))
+            #[cfg(feature = "sqlite")]
+            {
+                let sqlite = pool
+                    .as_sqlite()
+                    .cloned()
+                    .ok_or_else(|| "expected sqlite database pool".to_owned())?;
+                Ok(Arc::new(SqliteTenantSigningKeyStore::new(sqlite)))
+            }
+            #[cfg(not(feature = "sqlite"))]
+            {
+                Err("sqlite database support is not enabled for sdkwork-iam-web-adapter".to_owned())
+            }
         }
         DatabaseEngine::Postgres => {
-            let postgres = pool
-                .as_postgres()
-                .cloned()
-                .ok_or_else(|| "expected postgres database pool".to_owned())?;
-            Ok(Arc::new(PostgresTenantSigningKeyStore::new(postgres)))
+            #[cfg(feature = "postgres")]
+            {
+                let postgres = pool
+                    .as_postgres()
+                    .cloned()
+                    .ok_or_else(|| "expected postgres database pool".to_owned())?;
+                Ok(Arc::new(PostgresTenantSigningKeyStore::new(postgres)))
+            }
+            #[cfg(not(feature = "postgres"))]
+            {
+                Err(
+                    "postgres database support is not enabled for sdkwork-iam-web-adapter"
+                        .to_owned(),
+                )
+            }
         }
     }
 }

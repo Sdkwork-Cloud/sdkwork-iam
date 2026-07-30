@@ -1,6 +1,8 @@
 //! Repairs legacy opaque IAM user ids (`iamu_*`, UUID strings) into numeric snowflake ids.
 
-use sqlx::{PgPool, Row, SqlitePool};
+use sqlx::{PgPool, Row};
+#[cfg(feature = "sqlite")]
+use sqlx::SqlitePool;
 
 use crate::iam_entity_ids::new_iam_user_id;
 use crate::iam_sql_subject::is_legacy_opaque_iam_subject_id;
@@ -36,6 +38,7 @@ pub async fn repair_postgres_legacy_opaque_iam_user_ids(
     Ok(LegacyIamSubjectRepairReport { repaired_users })
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn repair_sqlite_legacy_opaque_iam_user_ids(
     pool: &SqlitePool,
 ) -> Result<LegacyIamSubjectRepairReport, sqlx::Error> {
@@ -79,6 +82,7 @@ async fn repair_postgres_iam_user_id_references(
     tx.commit().await
 }
 
+#[cfg(feature = "sqlite")]
 async fn repair_sqlite_iam_user_id_references(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -112,6 +116,7 @@ fn postgres_user_id_reference_updates() -> [&'static str; 10] {
     ]
 }
 
+#[cfg(feature = "sqlite")]
 fn sqlite_user_id_reference_updates() -> [&'static str; 10] {
     [
         "UPDATE iam_session SET user_id = ?1 WHERE tenant_id = ?2 AND user_id = ?3",

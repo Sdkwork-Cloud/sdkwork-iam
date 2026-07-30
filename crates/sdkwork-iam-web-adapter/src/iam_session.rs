@@ -10,7 +10,9 @@ use sdkwork_iam_context_service::{
 use sdkwork_web_core::{validate_token_version_json, TokenVersionPolicy};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use sqlx::{types::Json, PgPool, Row, SqlitePool};
+#[cfg(feature = "sqlite")]
+use sqlx::SqlitePool;
+use sqlx::{types::Json, PgPool, Row};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 type HmacSha256 = Hmac<Sha256>;
@@ -89,49 +91,51 @@ pub async fn resolve_iam_app_context_from_dual_tokens_pool(
     raw_auth_token: &str,
     raw_access_token: &str,
 ) -> Option<IamAppContext> {
-    match pool {
-        DatabasePool::Postgres(pg, _) => {
-            resolve_iam_app_context_from_dual_tokens(pg, raw_auth_token, raw_access_token).await
-        }
-        DatabasePool::Sqlite(sqlite, _) => {
-            resolve_sqlite_iam_app_context_from_dual_tokens(
-                sqlite,
-                raw_auth_token,
-                raw_access_token,
-            )
-            .await
-        }
+    if let Some(pg) = pool.as_postgres() {
+        return resolve_iam_app_context_from_dual_tokens(pg, raw_auth_token, raw_access_token)
+            .await;
     }
+    #[cfg(feature = "sqlite")]
+    if let Some(sqlite) = pool.as_sqlite() {
+        return resolve_sqlite_iam_app_context_from_dual_tokens(
+            sqlite,
+            raw_auth_token,
+            raw_access_token,
+        )
+        .await;
+    }
+    None
 }
 
 pub async fn resolve_iam_app_context_from_access_token_pool(
     pool: &DatabasePool,
     raw_access_token: &str,
 ) -> Option<IamAppContext> {
-    match pool {
-        DatabasePool::Postgres(pg, _) => {
-            resolve_iam_app_context_from_access_token(pg, raw_access_token).await
-        }
-        DatabasePool::Sqlite(sqlite, _) => {
-            resolve_sqlite_iam_app_context_from_access_token(sqlite, raw_access_token).await
-        }
+    if let Some(pg) = pool.as_postgres() {
+        return resolve_iam_app_context_from_access_token(pg, raw_access_token).await;
     }
+    #[cfg(feature = "sqlite")]
+    if let Some(sqlite) = pool.as_sqlite() {
+        return resolve_sqlite_iam_app_context_from_access_token(sqlite, raw_access_token).await;
+    }
+    None
 }
 
 pub async fn resolve_iam_app_context_from_oauth_bearer_pool(
     pool: &DatabasePool,
     raw_bearer_token: &str,
 ) -> Option<IamAppContext> {
-    match pool {
-        DatabasePool::Postgres(pg, _) => {
-            resolve_iam_app_context_from_oauth_bearer(pg, raw_bearer_token).await
-        }
-        DatabasePool::Sqlite(sqlite, _) => {
-            resolve_sqlite_iam_app_context_from_access_token(sqlite, raw_bearer_token).await
-        }
+    if let Some(pg) = pool.as_postgres() {
+        return resolve_iam_app_context_from_oauth_bearer(pg, raw_bearer_token).await;
     }
+    #[cfg(feature = "sqlite")]
+    if let Some(sqlite) = pool.as_sqlite() {
+        return resolve_sqlite_iam_app_context_from_access_token(sqlite, raw_bearer_token).await;
+    }
+    None
 }
 
+#[cfg(feature = "sqlite")]
 async fn resolve_sqlite_iam_app_context_from_dual_tokens(
     sqlite: &SqlitePool,
     raw_auth_token: &str,
@@ -167,6 +171,7 @@ async fn resolve_sqlite_iam_app_context_from_dual_tokens(
     Some(context)
 }
 
+#[cfg(feature = "sqlite")]
 async fn resolve_sqlite_iam_app_context_from_access_token(
     sqlite: &SqlitePool,
     raw_access_token: &str,
@@ -191,6 +196,7 @@ async fn resolve_sqlite_iam_app_context_from_access_token(
     Some(context)
 }
 
+#[cfg(feature = "sqlite")]
 fn sqlite_session_context_query(token_predicate: &str) -> String {
     format!(
         "SELECT s.id, s.tenant_id, s.organization_id, s.login_scope, s.user_id, \
@@ -205,6 +211,7 @@ fn sqlite_session_context_query(token_predicate: &str) -> String {
     )
 }
 
+#[cfg(feature = "sqlite")]
 fn iam_context_from_sqlite_session_row(row: &sqlx::sqlite::SqliteRow) -> Option<IamAppContext> {
     let organization_id: Option<String> = row.try_get(2).ok()?;
     let principal_id: String = row.try_get(4).ok()?;
@@ -242,6 +249,7 @@ fn iam_context_from_sqlite_session_row(row: &sqlx::sqlite::SqliteRow) -> Option<
     })
 }
 
+#[cfg(feature = "sqlite")]
 fn sqlite_json_string_vec(row: &sqlx::sqlite::SqliteRow, index: usize) -> Vec<String> {
     row.try_get::<String, _>(index)
         .ok()
@@ -791,6 +799,7 @@ async fn load_signing_key_by_kid(pg: &PgPool, kid: &str) -> Option<TenantSigning
         })
 }
 
+#[cfg(feature = "sqlite")]
 async fn load_sqlite_signing_key_by_kid(
     sqlite: &SqlitePool,
     kid: &str,

@@ -13,10 +13,13 @@ pub mod tenant_signing_key;
 
 pub use bootstrap_operator::{
     ensure_postgres_bootstrap_admin_user, ensure_postgres_bootstrap_manager_user,
-    ensure_sqlite_bootstrap_admin_user, ensure_sqlite_bootstrap_manager_user,
     resolve_bootstrap_admin_password_from_env, resolve_bootstrap_manager_password_from_env,
     BootstrapAdminUserOutcome, BootstrapManagerUserOutcome, SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV,
     SDKWORK_IAM_MANAGER_PASSWORD_ENV, SDKWORK_IAM_SUPER_ADMIN_PASSWORD_ENV,
+};
+#[cfg(feature = "sqlite")]
+pub use bootstrap_operator::{
+    ensure_sqlite_bootstrap_admin_user, ensure_sqlite_bootstrap_manager_user,
 };
 pub use constants::*;
 pub use iam_entity_ids::{
@@ -25,17 +28,22 @@ pub use iam_entity_ids::{
 pub use iam_scope_resolver::{
     effective_iam_organization_code, effective_iam_tenant_code,
     resolve_postgres_iam_organization_id_string, resolve_postgres_iam_scope,
-    resolve_postgres_iam_tenant_id_string, resolve_sqlite_iam_organization_id_string,
-    resolve_sqlite_iam_scope, resolve_sqlite_iam_tenant_id_string, IamScopeResolveOptions,
+    resolve_postgres_iam_tenant_id_string, IamScopeResolveOptions,
+};
+#[cfg(feature = "sqlite")]
+pub use iam_scope_resolver::{
+    resolve_sqlite_iam_organization_id_string, resolve_sqlite_iam_scope,
+    resolve_sqlite_iam_tenant_id_string,
 };
 pub use iam_sql_subject::{
     is_legacy_opaque_iam_subject_id, parse_iam_sql_organization_id, parse_iam_sql_tenant_id,
     parse_iam_sql_user_id, IamSqlSubjectParseError,
 };
 pub use legacy_subject_repair::{
-    repair_postgres_legacy_opaque_iam_user_ids, repair_sqlite_legacy_opaque_iam_user_ids,
-    LegacyIamSubjectRepairReport,
+    repair_postgres_legacy_opaque_iam_user_ids, LegacyIamSubjectRepairReport,
 };
+#[cfg(feature = "sqlite")]
+pub use legacy_subject_repair::repair_sqlite_legacy_opaque_iam_user_ids;
 pub use limits::{
     IAM_ACTIVE_ORGANIZATION_MEMBERSHIP_ROW_LIMIT, IAM_ACTIVE_TENANT_LIST_LIMIT,
     IAM_RBAC_BINDING_ROW_LIMIT, IAM_RBAC_DATA_SCOPE_ROW_LIMIT, IAM_RBAC_EXCLUSION_ROW_LIMIT,
@@ -58,13 +66,20 @@ pub use role_catalog::{
 };
 pub use tenant_signing_key::{
     decode_signing_secret_ref, encode_signing_secret_ref, ensure_postgres_tenant_signing_key,
-    ensure_sqlite_tenant_signing_key, hash_secret_ref, load_postgres_active_tenant_signing_key,
-    load_sqlite_active_tenant_signing_key, resolve_postgres_tenant_signing_key_by_kid,
-    resolve_sqlite_tenant_signing_key_by_kid, tenant_primary_signing_kid, TenantSigningKeyMaterial,
+    hash_secret_ref, load_postgres_active_tenant_signing_key,
+    resolve_postgres_tenant_signing_key_by_kid, tenant_primary_signing_kid,
+    TenantSigningKeyMaterial,
+};
+#[cfg(feature = "sqlite")]
+pub use tenant_signing_key::{
+    ensure_sqlite_tenant_signing_key, load_sqlite_active_tenant_signing_key,
+    resolve_sqlite_tenant_signing_key_by_kid,
 };
 
 use chrono::Utc;
-use sqlx::{PgPool, SqlitePool};
+use sqlx::PgPool;
+#[cfg(feature = "sqlite")]
+use sqlx::SqlitePool;
 
 use crate::permission_catalog::IAM_STANDARD_PERMISSION_SEEDS;
 
@@ -87,6 +102,7 @@ pub fn permission_id(code: &str) -> String {
     format!("iam-permission-{normalized}")
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn upsert_sqlite_default_subject(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let now = Utc::now().to_rfc3339();
     sqlx::query(
@@ -251,6 +267,7 @@ pub async fn upsert_postgres_default_subject(pool: &PgPool) -> Result<(), sqlx::
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn upsert_sqlite_permissions(
     pool: &SqlitePool,
     seeds: &[PermissionSeed],
@@ -309,6 +326,7 @@ pub async fn upsert_postgres_permissions(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn sqlite_default_subject_seed_complete(pool: &SqlitePool) -> Result<bool, sqlx::Error> {
     let count: i64 = sqlx::query_scalar(
         r#"
@@ -355,6 +373,7 @@ pub async fn postgres_default_subject_seed_complete(pool: &PgPool) -> Result<boo
     Ok(count == 1)
 }
 
+#[cfg(feature = "sqlite")]
 async fn sqlite_permission_seed_complete(
     pool: &SqlitePool,
     seeds: &[PermissionSeed],
@@ -407,6 +426,7 @@ async fn postgres_permission_seed_complete(
     Ok(true)
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn sqlite_standard_permission_seed_complete(
     pool: &SqlitePool,
 ) -> Result<bool, sqlx::Error> {
@@ -439,6 +459,7 @@ pub async fn postgres_standard_permission_seed_complete(
     postgres_permission_seed_complete(pool, IAM_STANDARD_PERMISSION_SEEDS).await
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn sqlite_default_iam_seed_complete(pool: &SqlitePool) -> Result<bool, sqlx::Error> {
     if !sqlite_default_subject_seed_complete(pool).await? {
         return Ok(false);
@@ -460,6 +481,7 @@ pub async fn import_postgres_default_iam_seed(pool: &PgPool) -> Result<(), sqlx:
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn import_sqlite_default_iam_seed(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     sdkwork_iam_module_registry::materialize_sqlite_catalog(pool, None, "operational")
         .await
@@ -476,6 +498,7 @@ pub async fn upsert_postgres_standard_roles(
         .map_err(sqlx::Error::Protocol)
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn upsert_sqlite_standard_roles(
     pool: &SqlitePool,
     tenant_id: &str,

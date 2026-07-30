@@ -48,6 +48,7 @@
       "sdkwork_iam_web_adapter::IamOpenApiWebRequestContextResolver",
       "sdkwork_iam_web_adapter::iam_web_request_context_resolver_from_env",
       "sdkwork_iam_web_adapter::resolve_iam_postgres_pool_from_env",
+      "sdkwork_iam_web_adapter::build_web_framework_builder",
       "sdkwork_iam_web_adapter::IamApiKeyLookupService",
       "sdkwork_iam_web_adapter::IamOAuthTokenLookupService",
       "sdkwork_iam_web_adapter::wrap_router_with_iam_app_web_framework",

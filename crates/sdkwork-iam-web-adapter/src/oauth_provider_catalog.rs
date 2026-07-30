@@ -505,5 +505,23 @@ mod tests {
 
         let sdkwork = catalog_entry_for_provider("sdkwork").expect("sdkwork provider");
         assert_eq!(sdkwork.protocol_family, "sdkwork_oidc");
+
+        for provider in [
+            "google", "github", "wechat", "twitter", "facebook", "qq", "tiktok", "douyin",
+        ] {
+            let entry = catalog_entry_for_provider(provider)
+                .unwrap_or_else(|| panic!("missing built-in provider {provider}"));
+            assert!(entry.supports_login, "{provider} must support login");
+            assert!(
+                super::super::oauth_integration_exchange::builtin_authorization_endpoint(provider)
+                    .is_some(),
+                "{provider} must have an authorization endpoint",
+            );
+            assert!(
+                super::super::oauth_integration_exchange::builtin_token_endpoint(provider)
+                    .is_some(),
+                "{provider} must have a token endpoint",
+            );
+        }
     }
 }

@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Row};
@@ -121,6 +122,7 @@ pub(crate) async fn create_oauth_authorization_url(
     provider: &str,
     redirect_uri: &str,
     state: Option<&str>,
+    pkce_challenge: Option<&str>,
 ) -> Result<String, String> {
     let normalized = normalize_oauth_provider_code(provider)
         .ok_or_else(|| "OAuth provider is invalid".to_string())?;
@@ -154,6 +156,7 @@ pub(crate) async fn create_oauth_authorization_url(
                 Some(runtime_app_id),
                 redirect_uri,
                 state,
+                pkce_challenge,
             )
             .await?
             {
@@ -175,6 +178,7 @@ pub(crate) async fn resolve_oauth_login_user(
     provider: &str,
     code: &str,
     redirect_uri: Option<&str>,
+    pkce_verifier: Option<&str>,
 ) -> Result<LocalIamUser, String> {
     let normalized = normalize_oauth_provider_code(provider)
         .ok_or_else(|| "OAuth provider is invalid".to_string())?;
@@ -211,7 +215,8 @@ pub(crate) async fn resolve_oauth_login_user(
             .ok_or_else(|| {
                 "OAuth redirectUri is required for configured provider integrations".to_string()
             })?;
-        let profile = exchange_oauth_authorization_code(&ctx, code, redirect_uri).await?;
+        let profile =
+            exchange_oauth_authorization_code(&ctx, code, redirect_uri, pkce_verifier).await?;
         (profile, ctx.integration_id.clone())
     } else {
         return Err(
@@ -274,6 +279,7 @@ async fn build_integration_authorization_url(
     runtime_app_id: Option<&str>,
     redirect_uri: &str,
     state: Option<&str>,
+    pkce_challenge: Option<&str>,
 ) -> Result<Option<String>, String> {
     let row = sqlx::query(
         "SELECT c.provider_client_id, \
@@ -314,10 +320,10 @@ async fn build_integration_authorization_url(
     let scope = serde_json::from_str::<Vec<String>>(&default_scopes_json)
         .unwrap_or_else(|_| sdkwork_iam_web_adapter::builtin_default_scopes(provider_code))
         .join(" ");
-    let client_id_parameter = if matches!(provider_code, "wechat" | "wechat_open") {
-        "appid"
-    } else {
-        "client_id"
+    let client_id_parameter = match provider_code {
+        "wechat" | "wechat_open" => "appid",
+        "douyin" | "tiktok" => "client_key",
+        _ => "client_id",
     };
     let mut params = vec![
         ("response_type".to_string(), "code".to_string()),
@@ -330,12 +336,29 @@ async fn build_integration_authorization_url(
     if !scope.is_empty() {
         params.push(("scope".to_string(), scope));
     }
+    if let Some(challenge) = pkce_challenge
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        params.push(("code_challenge".to_string(), challenge.to_string()));
+        params.push(("code_challenge_method".to_string(), "S256".to_string()));
+    }
 
     let mut authorization_url = append_query_parameters(&authorization_endpoint, &params);
     if provider_code == "wechat" {
         authorization_url.push_str("#wechat_redirect");
     }
     Ok(Some(authorization_url))
+}
+
+pub(crate) fn create_oauth_pkce(provider: &str) -> Option<(String, String)> {
+    let provider = normalize_oauth_provider_code(provider)?;
+    if provider != "twitter" {
+        return None;
+    }
+    let verifier = crate::tokens::generate_opaque_token("oauthpkce");
+    let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
+    Some((verifier, challenge))
 }
 
 pub(crate) async fn find_active_integration_tenant_for_tenant(
@@ -596,4 +619,25 @@ fn percent_encode(value: &str) -> String {
 #[allow(dead_code)]
 fn canonical_oauth_account(provider: &str, subject: &str) -> String {
     canonical_identity(&format!("{provider}:{subject}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn twitter_uses_pkce_and_other_featured_providers_keep_standard_flow() {
+        let (verifier, challenge) = create_oauth_pkce("twitter").expect("Twitter PKCE");
+        assert!(verifier.len() >= 43);
+        assert!(!challenge.contains('='));
+
+        for provider in [
+            "google", "github", "wechat", "facebook", "qq", "tiktok", "douyin",
+        ] {
+            assert!(
+                create_oauth_pkce(provider).is_none(),
+                "unexpected PKCE for {provider}"
+            );
+        }
+    }
 }

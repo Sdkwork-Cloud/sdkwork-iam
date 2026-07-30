@@ -18,7 +18,7 @@ Backend OAuth management per `IAM_OAUTH_SPEC.md`. Use `SdkworkIamOauthAdminWorks
 | Provider catalog | list, create, retrieve, activate/deactivate |
 | Integrations | list, create, retrieve, enable/disable, delete |
 | OAuth clients | list, create, retrieve, enable/disable, delete |
-| OAuth secrets | list, create, delete (secret reference only) |
+| OAuth secrets | list, create, delete (write-only secret value) |
 | Scope profiles | list, create, activate/deactivate |
 | Claim mappings | list, create, activate/deactivate |
 | Webhook configs | list, create, enable/disable, verify |
@@ -49,7 +49,8 @@ Consumes `@sdkwork/iam-service` (`service.iam.oauth.*`, `service.iam.tenantAppli
 
 ## Security
 
-- Secret registration accepts vault/KMS `secretRef` only; plaintext is not echoed after create.
+- Provider onboarding creates the integration, client, protected secret, and redirect surface in one backend transaction.
+- Secret registration accepts `secretValue` as write-only input; the backend encodes it into the protected secret reference and never returns plaintext.
 - Relying-party `clientSecretHash` must be a precomputed argon2id hash; plaintext secrets are never stored.
 - Grant revocation calls backend delete to invalidate server-side token lookup (§7).
 - Disabling an integration or surface fails closed for inbound OAuth login when tenant policy requires enabled registrations.

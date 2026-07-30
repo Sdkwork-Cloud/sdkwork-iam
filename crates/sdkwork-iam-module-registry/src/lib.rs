@@ -29,9 +29,12 @@ pub use discover::{
 pub use manifest::IamModuleManifest;
 pub use materialize::{
     ensure_department_closure_postgres, materialize_postgres_catalog,
-    materialize_postgres_catalog_with_manifests, materialize_sqlite_catalog,
-    materialize_sqlite_catalog_with_manifests, upsert_tenant_roles_postgres,
-    upsert_tenant_roles_sqlite, MaterializeReport,
+    materialize_postgres_catalog_with_manifests, upsert_tenant_roles_postgres, MaterializeReport,
+};
+#[cfg(feature = "sqlite")]
+pub use materialize::{
+    materialize_sqlite_catalog, materialize_sqlite_catalog_with_manifests,
+    upsert_tenant_roles_sqlite,
 };
 pub use merge::MergedIamCatalog;
 pub use validate::validate_catalog;

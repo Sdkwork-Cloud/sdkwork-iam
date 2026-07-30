@@ -9,6 +9,11 @@ description = "Shared IAM default subject and permission catalog bootstrap for S
 name = "sdkwork_iam_bootstrap"
 path = "src/lib.rs"
 
+[features]
+default = ["postgres"]
+postgres = ["sdkwork-database-id/postgres"]
+sqlite = ["postgres", "sdkwork-database-id/sqlite", "sdkwork_iam_module_registry/sqlite", "sqlx/sqlite"]
+
 [dependencies]
 argon2 = "0.5"
 aes-gcm = "0.10"

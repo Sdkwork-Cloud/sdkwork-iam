@@ -25,7 +25,14 @@
   },
   "devDependencies": {
     "@sdkwork/core-pc-react": "workspace:*",
-    "typescript": "^6.0.2"
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@types/qrcode": "catalog:",
+    "jsdom": "catalog:",
+    "typescript": "^6.0.2",
+    "vitest": "catalog:"
   },
   "dependencies": {
     "@sdkwork/iam-contracts": "workspace:*",

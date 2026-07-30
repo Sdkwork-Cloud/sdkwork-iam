@@ -178,8 +178,13 @@ async fn tenant_patch(
     };
 
     let now = Utc::now().to_rfc3339();
+    let cascade_enabled = if spec.table == "iam_oauth_integration" {
+        read_i32_field(body, &["enabled"])
+    } else {
+        None
+    };
     let mut assignments = collect_resource_patch_assignments(body, spec.table);
-    assignments.push(("updated_at".to_owned(), now));
+    assignments.push(("updated_at".to_owned(), now.clone()));
 
     let audit_detail = json!({
         "updatedFields": assignments
@@ -207,10 +212,34 @@ async fn tenant_patch(
                 let table = table_name.clone();
                 let id = id_owned.clone();
                 let assignments = assignments.clone();
-
-                patch_tenant_row_tx(&mut **tx, &tenant_id, &table, &id, &assignments)
-                    .await
-                    .map(|updated| if updated { 1_u64 } else { 0_u64 })
+                let updated =
+                    patch_tenant_row_tx(&mut **tx, &tenant_id, &table, &id, &assignments)
+                        .await?;
+                if updated {
+                    if let Some(enabled) = cascade_enabled {
+                        sqlx::query(
+                            "UPDATE iam_oauth_client SET enabled = $1, updated_at = $2 \
+                             WHERE tenant_id = $3 AND integration_id = $4",
+                        )
+                        .bind(enabled)
+                        .bind(&now)
+                        .bind(&tenant_id)
+                        .bind(&id)
+                        .execute(&mut **tx)
+                        .await?;
+                        sqlx::query(
+                            "UPDATE iam_oauth_surface SET enabled = $1, updated_at = $2 \
+                             WHERE tenant_id = $3 AND integration_id = $4",
+                        )
+                        .bind(enabled)
+                        .bind(&now)
+                        .bind(&tenant_id)
+                        .bind(&id)
+                        .execute(&mut **tx)
+                        .await?;
+                    }
+                }
+                Ok(if updated { 1_u64 } else { 0_u64 })
             })
         },
         |rows_affected| *rows_affected > 0,
@@ -745,14 +774,13 @@ async fn create_integration(
     let integration_code = read_string_field(&body, &["integrationCode", "integration_code"]);
     let display_name = read_string_field(&body, &["displayName", "display_name"]);
     if provider_code.as_deref().unwrap_or("").is_empty()
-        || provider_catalog_id.as_deref().unwrap_or("").is_empty()
         || integration_code.as_deref().unwrap_or("").is_empty()
         || display_name.as_deref().unwrap_or("").is_empty()
     {
         return appbase_error(
             StatusCode::BAD_REQUEST,
             "iam_oauth_integration_invalid",
-            "providerCode, providerCatalogId, integrationCode, and displayName are required",
+            "providerCode, integrationCode, and displayName are required",
         );
     }
 
@@ -764,18 +792,47 @@ async fn create_integration(
     let app_id = read_string_field(&body, &["appId", "app_id"])
         .unwrap_or_else(|| "0".to_owned());
     let enabled = read_i32_field(&body, &["enabled"]).unwrap_or(0);
+    let provider_client_id =
+        read_string_field(&body, &["providerClientId", "provider_client_id"]);
+    let provider_client_secret =
+        read_string_field(&body, &["providerClientSecret", "provider_client_secret"]);
+    let provider_tenant_id =
+        read_string_field(&body, &["providerTenantId", "provider_tenant_id"]);
+    let redirect_uri = read_string_field(&body, &["redirectUri", "redirect_uri"]);
+    let surface_kind = read_string_field(&body, &["surfaceKind", "surface_kind"])
+        .unwrap_or_else(|| "web".to_owned());
+    let has_connection_details = provider_client_id.is_some()
+        || provider_client_secret.is_some()
+        || redirect_uri.is_some();
+    if has_connection_details
+        && (provider_client_id.as_deref().unwrap_or("").is_empty()
+            || provider_client_secret.as_deref().unwrap_or("").is_empty()
+            || redirect_uri.as_deref().unwrap_or("").is_empty())
+    {
+        return appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_oauth_connection_invalid",
+            "providerClientId, providerClientSecret, and redirectUri are required when provisioning a provider connection",
+        );
+    }
     let catalog_row = sqlx::query(
-        "SELECT region_group, protocol_family FROM iam_oauth_provider_catalog \
-         WHERE id = $1 AND provider_code = $2 AND status = 'active' \
-           AND (owner_tenant_id = $3 OR owner_tenant_id = '0') LIMIT 1",
+        "SELECT id, region_group, protocol_family FROM iam_oauth_provider_catalog \
+         WHERE provider_code = $1 AND status = 'active' \
+           AND (owner_tenant_id = $2 OR owner_tenant_id = '0') \
+           AND ($3::text IS NULL OR id = $3) \
+         ORDER BY CASE WHEN owner_tenant_id = $2 THEN 0 ELSE 1 END LIMIT 1",
     )
-    .bind(provider_catalog_id.as_ref().expect("validated"))
     .bind(provider_code.as_ref().expect("validated"))
     .bind(&tenant_id)
+    .bind(&provider_catalog_id)
     .fetch_optional(pg)
     .await;
-    let (region_group, protocol_family) = match catalog_row {
-        Ok(Some(row)) => (row.get::<String, _>(0), row.get::<String, _>(1)),
+    let (provider_catalog_id, region_group, protocol_family) = match catalog_row {
+        Ok(Some(row)) => (
+            row.get::<String, _>(0),
+            row.get::<String, _>(1),
+            row.get::<String, _>(2),
+        ),
         Ok(None) => {
             return appbase_error(
                 StatusCode::BAD_REQUEST,
@@ -791,9 +848,12 @@ async fn create_integration(
     let insert_id = id.clone();
     let now = Utc::now().to_rfc3339();
     let provider_code_value = provider_code.as_ref().expect("validated").clone();
-    let provider_catalog_id_value = provider_catalog_id.as_ref().expect("validated").clone();
+    let provider_catalog_id_value = provider_catalog_id;
     let integration_code_value = integration_code.as_ref().expect("validated").clone();
     let display_name_value = display_name.as_ref().expect("validated").clone();
+    let oauth_client_id = format!("iamoc-{}", Uuid::new_v4());
+    let oauth_secret_id = format!("iamos-{}", Uuid::new_v4());
+    let oauth_surface_id = format!("iamosurf-{}", Uuid::new_v4());
     let tenant_id_insert = tenant_id.clone();
     oauth_commit_create(
         &state,
@@ -814,9 +874,17 @@ async fn create_integration(
             let provider_catalog_id_value = provider_catalog_id_value.clone();
             let integration_code_value = integration_code_value.clone();
             let display_name_value = display_name_value.clone();
+            let provider_client_id = provider_client_id.clone();
+            let provider_client_secret = provider_client_secret.clone();
+            let provider_tenant_id = provider_tenant_id.clone();
+            let redirect_uri = redirect_uri.clone();
+            let surface_kind = surface_kind.clone();
+            let oauth_client_id = oauth_client_id.clone();
+            let oauth_secret_id = oauth_secret_id.clone();
+            let oauth_surface_id = oauth_surface_id.clone();
             let now = now.clone();
-            
-                sqlx::query(
+
+            sqlx::query(
                     "INSERT INTO iam_oauth_integration \
                         (id, uuid, tenant_id, organization_id, app_id, environment, deployment_mode, provider_code, \
                          provider_catalog_id, integration_code, display_name, region_group, protocol_family, enabled, health_status, status, created_at, updated_at) \
@@ -839,7 +907,95 @@ async fn create_integration(
                 .bind(&now)
                 .execute(&mut **tx)
                 .await
-                .map(|_| ())
+                .map(|_| ())?;
+
+            if let (Some(provider_client_id), Some(provider_client_secret), Some(redirect_uri)) = (
+                provider_client_id,
+                provider_client_secret,
+                redirect_uri,
+            ) {
+                let client_auth_method = if provider_code_value == "twitter" {
+                    "client_secret_basic"
+                } else {
+                    "client_secret_post"
+                };
+                let pkce_mode = if provider_code_value == "twitter" {
+                    "required"
+                } else {
+                    "optional"
+                };
+                sqlx::query(
+                    "INSERT INTO iam_oauth_client \
+                        (id, uuid, tenant_id, organization_id, integration_id, provider_code, client_code, display_name, \
+                         provider_client_id, provider_tenant_id, client_auth_method, pkce_default_mode, \
+                         secret_config_status, enabled, status, created_at, updated_at) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, \
+                             'configured', $13, 'active', $14, $14)",
+                )
+                .bind(&oauth_client_id)
+                .bind(Uuid::new_v4().to_string())
+                .bind(&tenant_id)
+                .bind(&organization_id)
+                .bind(&insert_id)
+                .bind(&provider_code_value)
+                .bind(format!("{}-client", integration_code_value))
+                .bind(format!("{} client", display_name_value))
+                .bind(&provider_client_id)
+                .bind(provider_tenant_id)
+                .bind(client_auth_method)
+                .bind(pkce_mode)
+                .bind(enabled)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await?;
+
+                let secret_ref =
+                    sdkwork_iam_bootstrap::encode_signing_secret_ref(provider_client_secret.as_bytes());
+                let secret_hash = sdkwork_iam_bootstrap::hash_secret_ref(&secret_ref);
+                sqlx::query(
+                    "INSERT INTO iam_oauth_secret \
+                        (id, uuid, tenant_id, organization_id, secret_owner_kind, secret_owner_id, oauth_client_id, \
+                         secret_kind, secret_ref, secret_hash, active_from, status, created_at, updated_at) \
+                     VALUES ($1, $2, $3, $4, 'oauth_client', $5, $5, 'client_secret', $6, $7, $8, \
+                             'active', $8, $8)",
+                )
+                .bind(&oauth_secret_id)
+                .bind(Uuid::new_v4().to_string())
+                .bind(&tenant_id)
+                .bind(&organization_id)
+                .bind(&oauth_client_id)
+                .bind(secret_ref)
+                .bind(secret_hash)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await?;
+
+                sqlx::query(
+                    "INSERT INTO iam_oauth_surface \
+                        (id, uuid, tenant_id, organization_id, integration_id, oauth_client_id, surface_kind, surface_code, \
+                         display_name, redirect_uri, redirect_validation_mode, pkce_mode, client_auth_method, enabled, \
+                         status, created_at, updated_at) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'strict', $11, $12, $13, \
+                             'active', $14, $14)",
+                )
+                .bind(&oauth_surface_id)
+                .bind(Uuid::new_v4().to_string())
+                .bind(&tenant_id)
+                .bind(&organization_id)
+                .bind(&insert_id)
+                .bind(&oauth_client_id)
+                .bind(&surface_kind)
+                .bind(format!("{}-{}", integration_code_value, surface_kind))
+                .bind(format!("{} {}", display_name_value, surface_kind))
+                .bind(redirect_uri)
+                .bind(pkce_mode)
+                .bind(client_auth_method)
+                .bind(enabled)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await?;
+            }
+            Ok(())
             }),
     )
     .await

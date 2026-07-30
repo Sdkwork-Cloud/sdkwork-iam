@@ -7,7 +7,9 @@ use sdkwork_iam_context_service::{
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use sqlx::{PgPool, SqlitePool};
+use sqlx::PgPool;
+#[cfg(feature = "sqlite")]
+use sqlx::SqlitePool;
 
 use crate::bootstrap_subject::{
     DEFAULT_IAM_ORGANIZATION_CODE, DEFAULT_IAM_ORGANIZATION_DATA_BOUNDARY_KIND,
@@ -142,6 +144,7 @@ pub async fn materialize_postgres_catalog_with_manifests(
     })
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn materialize_sqlite_catalog(
     pool: &SqlitePool,
     app_root: Option<&Path>,
@@ -150,6 +153,7 @@ pub async fn materialize_sqlite_catalog(
     materialize_sqlite_catalog_with_manifests(pool, app_root, profile, &[]).await
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn materialize_sqlite_catalog_with_manifests(
     pool: &SqlitePool,
     app_root: Option<&Path>,
@@ -241,6 +245,7 @@ async fn upsert_postgres_default_subject(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn upsert_sqlite_default_subject(pool: &SqlitePool) -> Result<(), String> {
     let now = Utc::now().to_rfc3339();
     sqlx::query(
@@ -334,6 +339,7 @@ async fn upsert_postgres_permissions_from_catalog(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn upsert_sqlite_permissions_from_catalog(
     pool: &SqlitePool,
     merged: &crate::merge::MergedIamCatalog,
@@ -384,6 +390,7 @@ pub async fn upsert_tenant_roles_postgres(
         .map_err(|error| format!("commit tenant roles transaction failed: {error}"))
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn upsert_tenant_roles_sqlite(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -484,6 +491,7 @@ async fn upsert_postgres_roles(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn upsert_sqlite_roles(
     pool: &SqlitePool,
     tenant_id: &str,

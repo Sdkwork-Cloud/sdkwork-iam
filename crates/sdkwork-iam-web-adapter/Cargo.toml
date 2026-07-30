@@ -9,6 +9,11 @@ description = "IAM adapters for sdkwork-web-framework request context pipeline."
 name = "sdkwork_iam_web_adapter"
 path = "src/lib.rs"
 
+[features]
+default = ["postgres"]
+postgres = ["sdkwork_iam_bootstrap/postgres", "sdkwork_database_sqlx/postgres"]
+sqlite = ["postgres", "sdkwork_iam_bootstrap/sqlite", "sdkwork_database_sqlx/sqlite"]
+
 [dependencies]
 aes-gcm = "0.10"
 aes = "0.8"
@@ -22,7 +27,7 @@ chrono.workspace = true
 sdkwork_iam_bootstrap.workspace = true
 sdkwork_iam_context_service.workspace = true
 sdkwork-database-config.workspace = true
-sdkwork_database_sqlx.workspace = true
+sdkwork_database_sqlx = { workspace = true, default-features = false }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 quick-xml = "0.41"
 serde.workspace = true

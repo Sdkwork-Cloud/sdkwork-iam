@@ -128,7 +128,7 @@ impl SeedProvider for IamDatabaseModule {
             .map_err(|error| SpiError::Seed(format!("create database pool failed: {error}")))?
             .ok_or_else(|| {
                 SpiError::Seed(format!(
-                    "database URL not configured; set SDKWORK_{service_code}_DATABASE_URL"
+                    "database URL not configured for module {service_code}; set SDKWORK_DATABASE_*"
                 ))
             })?;
         let pg = pool.as_postgres().ok_or_else(|| {
