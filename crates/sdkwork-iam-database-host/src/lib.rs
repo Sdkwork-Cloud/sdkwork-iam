@@ -122,17 +122,16 @@ pub async fn materialize_iam_application_modules(
         return Ok(());
     }
     let app_root = resolve_iam_app_root();
-    match pool {
-        DatabasePool::Postgres(pg, _) => {
-            sdkwork_iam_module_registry::materialize_postgres_catalog_with_manifests(
-                pg,
-                Some(&app_root),
-                "operational",
-                manifest_paths,
-            )
-            .await?;
-        }
-    }
+    let pg = pool.as_postgres().ok_or_else(|| {
+        "IAM module materialization requires an authoritative PostgreSQL pool".to_owned()
+    })?;
+    sdkwork_iam_module_registry::materialize_postgres_catalog_with_manifests(
+        pg,
+        Some(&app_root),
+        "operational",
+        manifest_paths,
+    )
+    .await?;
     Ok(())
 }
 
