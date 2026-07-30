@@ -6,12 +6,17 @@ use async_trait::async_trait;
 use sdkwork_database_config::{DatabaseConfig, DatabaseEngine};
 use sdkwork_database_sqlx::create_pool_from_config;
 use sdkwork_iam_bootstrap::{
-    ensure_postgres_tenant_signing_key, ensure_sqlite_tenant_signing_key,
-    load_postgres_active_tenant_signing_key, load_sqlite_active_tenant_signing_key,
-    resolve_postgres_tenant_signing_key_by_kid, resolve_sqlite_tenant_signing_key_by_kid,
-    TenantSigningKeyMaterial,
+    ensure_postgres_tenant_signing_key, load_postgres_active_tenant_signing_key,
+    resolve_postgres_tenant_signing_key_by_kid, TenantSigningKeyMaterial,
 };
-use sqlx::{PgPool, SqlitePool};
+#[cfg(feature = "sqlite")]
+use sdkwork_iam_bootstrap::{
+    ensure_sqlite_tenant_signing_key, load_sqlite_active_tenant_signing_key,
+    resolve_sqlite_tenant_signing_key_by_kid,
+};
+use sqlx::PgPool;
+#[cfg(feature = "sqlite")]
+use sqlx::SqlitePool;
 
 pub type TenantSigningKeyFuture<'a, T> =
     Pin<Box<dyn Future<Output = Result<T, String>> + Send + 'a>>;
@@ -28,10 +33,12 @@ pub trait TenantSigningKeyStore: Send + Sync {
     ) -> TenantSigningKeyFuture<'a, Option<TenantSigningKeyMaterial>>;
 }
 
+#[cfg(feature = "sqlite")]
 pub struct SqliteTenantSigningKeyStore {
     pool: SqlitePool,
 }
 
+#[cfg(feature = "sqlite")]
 impl SqliteTenantSigningKeyStore {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
@@ -48,6 +55,7 @@ impl PostgresTenantSigningKeyStore {
     }
 }
 
+#[cfg(feature = "sqlite")]
 impl TenantSigningKeyStore for SqliteTenantSigningKeyStore {
     fn ensure_active_key<'a>(
         &'a self,
@@ -89,7 +97,7 @@ impl TenantSigningKeyStore for PostgresTenantSigningKeyStore {
 }
 
 /// Development and test fallback when no SQL-backed tenant signing store is wired.
-/// Production runtimes must use [`SqliteTenantSigningKeyStore`] or [`PostgresTenantSigningKeyStore`].
+/// Production runtimes must use [`PostgresTenantSigningKeyStore`].
 pub struct LegacyGlobalTenantSigningKeyStore {
     signing_secret: Vec<u8>,
 }
@@ -207,6 +215,7 @@ pub async fn tenant_signing_key_store_for_database_config(
     }
 }
 
+#[cfg(feature = "sqlite")]
 async fn ensure_active_key_sqlite(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -231,6 +240,7 @@ async fn ensure_active_key_postgres(
         .ok_or_else(|| "tenant signing key not found after ensure".to_owned())
 }
 
+#[cfg(feature = "sqlite")]
 async fn load_active_key_sqlite(
     pool: &SqlitePool,
     tenant_id: &str,
@@ -249,6 +259,7 @@ async fn load_active_key_postgres(
         .map_err(|error| format!("failed to load tenant signing key: {error}"))
 }
 
+#[cfg(feature = "sqlite")]
 async fn resolve_by_kid_sqlite(
     pool: &SqlitePool,
     kid: &str,

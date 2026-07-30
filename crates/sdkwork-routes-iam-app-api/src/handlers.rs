@@ -389,6 +389,7 @@ async fn create_session(
         Ok(tenant_id) => tenant_id,
         Err(response) => return response,
     };
+    #[cfg(feature = "sqlite")]
     if let Some(sqlite) = state.pool.as_sqlite() {
         let runtime_app_id = match ctx
             .principal
@@ -888,6 +889,7 @@ async fn retrieve_current_session(
     State(state): State<LocalIamState>,
     headers: HeaderMap,
 ) -> Response {
+    #[cfg(feature = "sqlite")]
     if let Some(sqlite) = state.pool.as_sqlite() {
         return match crate::sqlite_sessions::resolve_session_from_headers(
             &state.pool,
@@ -1035,6 +1037,7 @@ async fn delete_current_session(
     State(state): State<LocalIamState>,
     headers: HeaderMap,
 ) -> Response {
+    #[cfg(feature = "sqlite")]
     if let Some(sqlite) = state.pool.as_sqlite() {
         let Some(session) =
             crate::sqlite_sessions::resolve_session_from_headers(&state.pool, sqlite, &headers)

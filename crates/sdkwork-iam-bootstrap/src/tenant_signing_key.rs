@@ -5,9 +5,9 @@ use aes_gcm::{
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use rand_core::{OsRng, RngCore};
 use sha2::{Digest, Sha256};
-use sqlx::{PgPool, Row};
 #[cfg(feature = "sqlite")]
 use sqlx::SqlitePool;
+use sqlx::{PgPool, Row};
 
 const LEGACY_ENCRYPTED_PREFIX: &str = "enc:v1:";
 const PRIMARY_SIGNING_KID_SUFFIX: &str = "local-hs256:primary";

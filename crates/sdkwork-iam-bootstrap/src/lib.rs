@@ -39,11 +39,11 @@ pub use iam_sql_subject::{
     is_legacy_opaque_iam_subject_id, parse_iam_sql_organization_id, parse_iam_sql_tenant_id,
     parse_iam_sql_user_id, IamSqlSubjectParseError,
 };
+#[cfg(feature = "sqlite")]
+pub use legacy_subject_repair::repair_sqlite_legacy_opaque_iam_user_ids;
 pub use legacy_subject_repair::{
     repair_postgres_legacy_opaque_iam_user_ids, LegacyIamSubjectRepairReport,
 };
-#[cfg(feature = "sqlite")]
-pub use legacy_subject_repair::repair_sqlite_legacy_opaque_iam_user_ids;
 pub use limits::{
     IAM_ACTIVE_ORGANIZATION_MEMBERSHIP_ROW_LIMIT, IAM_ACTIVE_TENANT_LIST_LIMIT,
     IAM_RBAC_BINDING_ROW_LIMIT, IAM_RBAC_DATA_SCOPE_ROW_LIMIT, IAM_RBAC_EXCLUSION_ROW_LIMIT,
@@ -76,6 +76,7 @@ pub use tenant_signing_key::{
     resolve_sqlite_tenant_signing_key_by_kid,
 };
 
+#[cfg(feature = "sqlite")]
 use chrono::Utc;
 use sqlx::PgPool;
 #[cfg(feature = "sqlite")]

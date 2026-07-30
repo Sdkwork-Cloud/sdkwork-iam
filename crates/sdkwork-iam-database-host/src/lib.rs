@@ -132,15 +132,6 @@ pub async fn materialize_iam_application_modules(
             )
             .await?;
         }
-        DatabasePool::Sqlite(sqlite, _) => {
-            sdkwork_iam_module_registry::materialize_sqlite_catalog_with_manifests(
-                sqlite,
-                Some(&app_root),
-                "operational",
-                manifest_paths,
-            )
-            .await?;
-        }
     }
     Ok(())
 }
@@ -171,13 +162,10 @@ pub async fn ensure_iam_id_generator_initialized(pool: &DatabasePool) -> Result<
 }
 
 async fn run_post_bootstrap_hooks(pool: &DatabasePool) -> Result<(), String> {
-    if let Some(pg) = pool.as_postgres() {
-        return run_postgres_bootstrap_hooks(pg).await;
-    }
-    if let Some(sqlite) = pool.as_sqlite() {
-        return run_sqlite_bootstrap_hooks(sqlite).await;
-    }
-    Err("IAM database pool must provide a PostgreSQL or SQLite connection".to_owned())
+    let pg = pool
+        .as_postgres()
+        .ok_or_else(|| "IAM database pool must provide a PostgreSQL connection".to_owned())?;
+    run_postgres_bootstrap_hooks(pg).await
 }
 
 async fn run_postgres_bootstrap_hooks(pg: &PgPool) -> Result<(), String> {
@@ -200,22 +188,6 @@ async fn run_postgres_bootstrap_hooks(pg: &PgPool) -> Result<(), String> {
         Err(error) => return Err(format!("ensure bootstrap admin user failed: {error}")),
     }
     match sdkwork_iam_bootstrap::ensure_postgres_bootstrap_manager_user(pg).await {
-        Ok(outcome) => tracing::info!(?outcome, "IAM bootstrap manager user seed finished"),
-        Err(error) => return Err(format!("ensure bootstrap manager user failed: {error}")),
-    }
-    Ok(())
-}
-
-async fn run_sqlite_bootstrap_hooks(sqlite: &sqlx::SqlitePool) -> Result<(), String> {
-    let app_root = resolve_iam_app_root();
-    sdkwork_iam_module_registry::materialize_sqlite_catalog(sqlite, Some(&app_root), "operational")
-        .await
-        .map_err(|error| format!("materialize iam module catalog failed: {error}"))?;
-    match sdkwork_iam_bootstrap::ensure_sqlite_bootstrap_admin_user(sqlite).await {
-        Ok(outcome) => tracing::info!(?outcome, "IAM bootstrap admin user seed finished"),
-        Err(error) => return Err(format!("ensure bootstrap admin user failed: {error}")),
-    }
-    match sdkwork_iam_bootstrap::ensure_sqlite_bootstrap_manager_user(sqlite).await {
         Ok(outcome) => tracing::info!(?outcome, "IAM bootstrap manager user seed finished"),
         Err(error) => return Err(format!("ensure bootstrap manager user failed: {error}")),
     }

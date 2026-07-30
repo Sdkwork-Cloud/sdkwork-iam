@@ -274,6 +274,7 @@ async fn ensure_ephemeral_artifact_table(pool: &DatabasePool) -> Result<(), Stri
                     format!("iam_ephemeral_artifact table is unavailable on postgres: {error}")
                 })?;
         }
+        #[cfg(feature = "sqlite")]
         DatabasePool::Sqlite(sqlite, _) => {
             sqlx::query("SELECT 1 FROM iam_ephemeral_artifact WHERE artifact_key = ? LIMIT 1")
                 .bind("__schema_probe__")
@@ -296,6 +297,7 @@ async fn repair_legacy_opaque_user_ids(pool: &DatabasePool) -> Result<(), String
                 .await
                 .map_err(|error| format!("repair legacy IAM user ids failed: {error}"))?;
         }
+        #[cfg(feature = "sqlite")]
         DatabasePool::Sqlite(sqlite, _) => {
             sdkwork_iam_bootstrap::repair_sqlite_legacy_opaque_iam_user_ids(sqlite)
                 .await

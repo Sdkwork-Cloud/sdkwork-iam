@@ -1,8 +1,8 @@
 //! Repairs legacy opaque IAM user ids (`iamu_*`, UUID strings) into numeric snowflake ids.
 
-use sqlx::{PgPool, Row};
 #[cfg(feature = "sqlite")]
 use sqlx::SqlitePool;
+use sqlx::{PgPool, Row};
 
 use crate::iam_entity_ids::new_iam_user_id;
 use crate::iam_sql_subject::is_legacy_opaque_iam_subject_id;

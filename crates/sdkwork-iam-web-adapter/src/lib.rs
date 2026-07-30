@@ -87,7 +87,9 @@ pub use embedded_bootstrap::{
     postgres_iam_foundation_schema_ready, resolve_application_app_root,
     resolve_application_app_root_with_fallback, resolve_bootstrap_environment,
 };
-pub use ephemeral_rate_limit::{check_rate_limit, check_rate_limit_sqlite};
+pub use ephemeral_rate_limit::check_rate_limit;
+#[cfg(feature = "sqlite")]
+pub use ephemeral_rate_limit::check_rate_limit_sqlite;
 pub use http_responses::{iam_api_error, iam_api_success, iam_wire_result_code};
 pub use iam_audit::{
     backend_environment_from_context, hash_session_id, record_audit_event, record_audit_event_tx,
@@ -177,9 +179,13 @@ pub use service_account_credentials::{
 };
 pub use signing_secrets::{
     decode_signing_secret_ref, encode_signing_secret_ref, ensure_postgres_tenant_signing_key,
-    ensure_sqlite_tenant_signing_key, load_postgres_active_tenant_signing_key,
-    load_sqlite_active_tenant_signing_key, resolve_postgres_tenant_signing_key_by_kid,
-    resolve_sqlite_tenant_signing_key_by_kid, tenant_primary_signing_kid, TenantSigningKeyMaterial,
+    load_postgres_active_tenant_signing_key, resolve_postgres_tenant_signing_key_by_kid,
+    tenant_primary_signing_kid, TenantSigningKeyMaterial,
+};
+#[cfg(feature = "sqlite")]
+pub use signing_secrets::{
+    ensure_sqlite_tenant_signing_key, load_sqlite_active_tenant_signing_key,
+    resolve_sqlite_tenant_signing_key_by_kid,
 };
 pub use super_admin_auth::{
     allows_automatic_super_admin_auth, ensure_actor_tenant_scope, ensure_bootstrap_permission,
@@ -187,10 +193,12 @@ pub use super_admin_auth::{
     AccessTokenActor, SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV, SDKWORK_IAM_SUPER_ADMIN_PASSWORD_ENV,
     SDKWORK_SUPER_ADMIN_PROFILE_ENV, SDKWORK_USERS_DIR_ENV,
 };
+#[cfg(feature = "sqlite")]
+pub use tenant_signing_key_store::SqliteTenantSigningKeyStore;
 pub use tenant_signing_key_store::{
     tenant_signing_key_store_for_database_config, LegacyGlobalTenantSigningKeyStore,
-    PostgresTenantSigningKeyStore, SqliteTenantSigningKeyStore, TenantSigningKeyFuture,
-    TenantSigningKeyResolver, TenantSigningKeyStore, TenantSigningKeyStoreWebResolver,
+    PostgresTenantSigningKeyStore, TenantSigningKeyFuture, TenantSigningKeyResolver,
+    TenantSigningKeyStore, TenantSigningKeyStoreWebResolver,
 };
 
 pub fn iam_app_context_from_web_request(context: &WebRequestContext) -> Option<IamAppContext> {

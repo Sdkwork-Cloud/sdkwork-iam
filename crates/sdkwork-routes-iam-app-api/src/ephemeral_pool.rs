@@ -1,18 +1,29 @@
 //! Database-engine aware ephemeral artifact storage for IAM pre-auth flows.
 
+#[cfg(feature = "sqlite")]
 use chrono::{DateTime, Utc};
 use sdkwork_database_sqlx::DatabasePool;
-use serde_json::{json, Value};
-use sqlx::{Row, SqlitePool};
+#[cfg(feature = "sqlite")]
+use serde_json::json;
+use serde_json::Value;
+#[cfg(feature = "sqlite")]
+use sqlx::Row;
+#[cfg(feature = "sqlite")]
+use sqlx::SqlitePool;
 
-use crate::{directory::session_to_json, state::*, utils::*};
+#[cfg(feature = "sqlite")]
+use crate::directory::session_to_json;
+use crate::{state::*, utils::*};
 
+#[cfg(feature = "sqlite")]
 const KIND_QR_SESSION: &str = "qr_session";
 
+#[cfg(feature = "sqlite")]
 fn artifact_key(tenant_id: &str, kind: &str, key: &str) -> String {
     format!("{tenant_id}:{kind}:{key}")
 }
 
+#[cfg(feature = "sqlite")]
 fn millis_to_timestamp(millis: u128) -> DateTime<Utc> {
     let seconds = (millis / 1000) as i64;
     let nanos = ((millis % 1000) * 1_000_000) as u32;
@@ -22,6 +33,7 @@ fn millis_to_timestamp(millis: u128) -> DateTime<Utc> {
 pub(crate) async fn cleanup_expired_artifacts(pool: &DatabasePool) -> Result<(), String> {
     match pool {
         DatabasePool::Postgres(pg, _) => crate::ephemeral::cleanup_expired_artifacts(pg).await,
+        #[cfg(feature = "sqlite")]
         DatabasePool::Sqlite(sqlite, _) => {
             sqlx::query("DELETE FROM iam_ephemeral_artifact WHERE expires_at <= ?")
                 .bind(current_timestamp_utc().to_rfc3339())
@@ -45,6 +57,7 @@ pub(crate) async fn check_rate_limit(
             crate::ephemeral::check_rate_limit(pg, tenant_id, key, max_requests, window_seconds)
                 .await
         }
+        #[cfg(feature = "sqlite")]
         DatabasePool::Sqlite(sqlite, _) => {
             sdkwork_iam_web_adapter::check_rate_limit_sqlite(
                 sqlite,
@@ -67,6 +80,7 @@ pub(crate) async fn upsert_qr_session(
         DatabasePool::Postgres(pg, _) => {
             crate::ephemeral::upsert_qr_session(pg, tenant_id, session).await
         }
+        #[cfg(feature = "sqlite")]
         DatabasePool::Sqlite(sqlite, _) => {
             upsert_qr_session_sqlite(sqlite, tenant_id, session).await
         }
@@ -82,6 +96,7 @@ pub(crate) async fn get_qr_session(
         DatabasePool::Postgres(pg, _) => {
             crate::ephemeral::get_qr_session(pg, tenant_id, session_key).await
         }
+        #[cfg(feature = "sqlite")]
         DatabasePool::Sqlite(sqlite, _) => {
             get_qr_session_sqlite(sqlite, tenant_id, session_key).await
         }
@@ -97,6 +112,7 @@ pub(crate) async fn qr_session_exists(
         DatabasePool::Postgres(pg, _) => {
             crate::ephemeral::qr_session_exists(pg, tenant_id, session_key).await
         }
+        #[cfg(feature = "sqlite")]
         DatabasePool::Sqlite(sqlite, _) => {
             qr_session_exists_sqlite(sqlite, tenant_id, session_key).await
         }
@@ -113,12 +129,14 @@ pub(crate) async fn mutate_qr_session(
         DatabasePool::Postgres(pg, _) => {
             crate::ephemeral::mutate_qr_session(pg, tenant_id, session_key, mutate).await
         }
+        #[cfg(feature = "sqlite")]
         DatabasePool::Sqlite(sqlite, _) => {
             mutate_qr_session_sqlite(sqlite, tenant_id, session_key, mutate).await
         }
     }
 }
 
+#[cfg(feature = "sqlite")]
 async fn upsert_qr_session_sqlite(
     sqlite: &SqlitePool,
     tenant_id: &str,
@@ -150,6 +168,7 @@ async fn upsert_qr_session_sqlite(
     Ok(())
 }
 
+#[cfg(feature = "sqlite")]
 async fn get_qr_session_sqlite(
     sqlite: &SqlitePool,
     tenant_id: &str,
@@ -172,6 +191,7 @@ async fn get_qr_session_sqlite(
     }))
 }
 
+#[cfg(feature = "sqlite")]
 async fn qr_session_exists_sqlite(
     sqlite: &SqlitePool,
     tenant_id: &str,
@@ -192,6 +212,7 @@ async fn qr_session_exists_sqlite(
     Ok(exists != 0)
 }
 
+#[cfg(feature = "sqlite")]
 async fn mutate_qr_session_sqlite(
     sqlite: &SqlitePool,
     tenant_id: &str,
@@ -245,6 +266,7 @@ async fn mutate_qr_session_sqlite(
     Ok(Some(session))
 }
 
+#[cfg(feature = "sqlite")]
 fn qr_session_to_payload(session: &LocalQrSession) -> Value {
     json!({
         "completedSession": session.completed_session.as_ref().map(session_to_json),
@@ -261,6 +283,7 @@ fn qr_session_to_payload(session: &LocalQrSession) -> Value {
     })
 }
 
+#[cfg(feature = "sqlite")]
 fn qr_session_from_payload(payload: &Value, session_key: &str) -> Option<LocalQrSession> {
     let completed_session = payload.get("completedSession").and_then(session_from_json);
     Some(LocalQrSession {

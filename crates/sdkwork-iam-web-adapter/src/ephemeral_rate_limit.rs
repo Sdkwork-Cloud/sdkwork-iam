@@ -2,7 +2,9 @@
 
 use chrono::{DateTime, Utc};
 use serde_json::json;
-use sqlx::{types::Json, PgPool, Row, SqlitePool};
+#[cfg(feature = "sqlite")]
+use sqlx::SqlitePool;
+use sqlx::{types::Json, PgPool, Row};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const KIND_RATE_LIMIT: &str = "rate_limit";
@@ -125,6 +127,7 @@ pub async fn check_rate_limit(
     Ok(true)
 }
 
+#[cfg(feature = "sqlite")]
 pub async fn check_rate_limit_sqlite(
     sqlite: &SqlitePool,
     tenant_id: &str,

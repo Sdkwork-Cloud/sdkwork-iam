@@ -9,6 +9,16 @@ description = "SDKWork canonical IAM HTTP route contracts for Rust local/private
 name = "sdkwork_routes_iam_app_api"
 path = "src/lib.rs"
 
+[features]
+default = ["postgres"]
+postgres = []
+sqlite = [
+    "sqlx/sqlite",
+    "sdkwork_database_sqlx/sqlite",
+    "sdkwork_iam_bootstrap/sqlite",
+    "sdkwork_iam_web_adapter/sqlite",
+]
+
 [dependencies]
 argon2 = "0.5"
 axum.workspace = true
