@@ -31,8 +31,8 @@ fn lock_local_iam_env() -> MutexGuard<'static, ()> {
 }
 
 fn iam_postgres_url() -> Option<String> {
-    unified_database_env::apply_unified_claw_postgres_env();
-    std::env::var("SDKWORK_IAM_DATABASE_URL")
+    unified_database_env::apply_workspace_postgres_env();
+    std::env::var("SDKWORK_DATABASE_URL")
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
@@ -56,7 +56,7 @@ async fn backend_postgres_router_wires_database_pool_for_user_list() {
         return;
     };
 
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let pg = connect_iam_postgres().await;
     sdkwork_iam_bootstrap::upsert_postgres_default_subject(&pg)
         .await
@@ -96,7 +96,7 @@ async fn backend_postgres_user_list_query_reads_seeded_directory_rows() {
         return;
     };
 
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let pg = connect_iam_postgres().await;
     sdkwork_iam_bootstrap::upsert_postgres_default_subject(&pg)
         .await
@@ -157,7 +157,7 @@ async fn backend_postgres_authenticated_user_list_roundtrip() {
         return;
     };
 
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     configure_backend_integration_runtime_env();
 
     let pg = connect_iam_postgres().await;

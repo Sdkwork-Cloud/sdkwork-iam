@@ -1,9 +1,11 @@
 //! Canonical default IAM tenant and organization identifiers for database bootstrap.
 
 pub const DEFAULT_IAM_TENANT_ID: &str = "100001";
+pub const DEFAULT_IAM_TENANT_SQL_ID: i64 = 100_001;
 pub const DEFAULT_IAM_TENANT_CODE: &str = "SDKWORK";
 pub const DEFAULT_IAM_TENANT_NAME: &str = "SDKWork";
 pub const DEFAULT_IAM_ORGANIZATION_ID: &str = "0";
+pub const DEFAULT_IAM_ORGANIZATION_SQL_ID: i64 = 0;
 pub const DEFAULT_IAM_ORGANIZATION_CODE: &str = "root";
 pub const DEFAULT_IAM_ORGANIZATION_NAME: &str = "Root Organization";
 pub const DEFAULT_IAM_ORGANIZATION_PATH: &str = "/0";

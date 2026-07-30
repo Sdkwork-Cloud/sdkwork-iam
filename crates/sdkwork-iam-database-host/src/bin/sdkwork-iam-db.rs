@@ -6,7 +6,7 @@ use sdkwork_database_drift::DriftEngine;
 use sdkwork_database_lifecycle::LifecycleOrchestrator;
 use sdkwork_database_spi::{traits::SeedProvider, validate_module_layout, LocaleTag, SeedProfile};
 use sdkwork_database_sqlx::{create_pool_from_env, DatabasePool};
-use sdkwork_iam_database_host::unified_postgres_env::apply_unified_claw_postgres_env;
+use sdkwork_iam_database_host::unified_postgres_env::apply_workspace_postgres_env;
 use sdkwork_iam_database_host::IamDatabaseModule;
 
 #[derive(Parser)]
@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
             println!("validate passed");
         }
         command => {
-            apply_unified_claw_postgres_env(&cli.app_root);
+            apply_workspace_postgres_env(&cli.app_root);
             let service_code = cli
                 .service
                 .unwrap_or_else(|| module.manifest().service_code.clone());

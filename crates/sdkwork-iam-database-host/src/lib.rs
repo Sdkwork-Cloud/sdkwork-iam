@@ -10,7 +10,7 @@ use sdkwork_database_lifecycle::{lifecycle_options_from_env, LifecycleOrchestrat
 use sdkwork_database_spi::{DatabaseAssetProvider, DatabaseManifest};
 use sdkwork_database_sqlx::DatabasePool;
 use sqlx::PgPool;
-use unified_postgres_env::apply_unified_claw_postgres_env;
+use unified_postgres_env::apply_workspace_postgres_env;
 
 static IAM_DATABASE_HOST: OnceLock<Arc<IamDatabaseHost>> = OnceLock::new();
 
@@ -104,12 +104,12 @@ pub async fn bootstrap_iam_database_from_env() -> Result<IamDatabaseHost, String
     }
 
     let app_root = resolve_iam_app_root();
-    apply_unified_claw_postgres_env(&app_root);
+    apply_workspace_postgres_env(&app_root);
     let pool = sdkwork_database_sqlx::create_pool_from_env("IAM")
         .await
         .map_err(|error| format!("create IAM database pool failed: {error}"))?
         .ok_or_else(|| {
-            "PostgreSQL database configuration is required. Set SDKWORK_IAM_DATABASE_URL or the unified claw-router profile.".to_string()
+            "PostgreSQL database configuration is required. Set SDKWORK_DATABASE_URL or the unified claw-router profile.".to_string()
         })?;
     bootstrap_iam_database(pool).await
 }

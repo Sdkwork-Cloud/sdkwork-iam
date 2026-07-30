@@ -8,8 +8,8 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use sdkwork_database_config::claw_database::{
-    postgres_url_with_search_path, resolve_unified_database_url,
+use sdkwork_database_config::workspace_database::{
+    normalize_workspace_postgres_url, resolve_workspace_database_url,
 };
 use sdkwork_iam_bootstrap::upsert_postgres_default_subject;
 use sqlx::postgres::PgPoolOptions;
@@ -56,7 +56,8 @@ pub fn resolve_bootstrap_environment() -> String {
 
 /// Connects a short-lived PostgreSQL pool for tenant application bootstrap.
 pub async fn connect_iam_postgres_bootstrap_pool(database_url: &str) -> Result<PgPool, String> {
-    let database_url = postgres_url_with_search_path(database_url, "SDKWORK_IAM");
+    let database_url = normalize_workspace_postgres_url(database_url)
+        .map_err(|error| format!("normalize workspace PostgreSQL URL failed: {error}"))?;
     let pool = PgPoolOptions::new()
         .max_connections(TENANT_APPLICATION_BOOTSTRAP_POOL_CONNECTIONS)
         .connect(database_url.as_str())
@@ -122,8 +123,8 @@ pub async fn ensure_tenant_application_from_app_root(
     primary_runtime: Option<&EmbeddedApplicationRuntimeBinding>,
     additional_runtimes: &[EmbeddedApplicationRuntimeBinding],
 ) -> Result<(), String> {
-    let database_url = resolve_unified_database_url("SDKWORK_IAM")
-        .map_err(|error| format!("resolve unified postgres IAM database URL failed: {error}"))?;
+    let database_url = resolve_workspace_database_url()
+        .map_err(|error| format!("resolve workspace database URL failed: {error}"))?;
     if database_url.starts_with("sqlite:") {
         return Ok(());
     }

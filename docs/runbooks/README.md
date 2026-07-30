@@ -20,6 +20,6 @@ pnpm run verify
 ## Incident response
 
 1. Check `/readyz` and `/livez` on the IAM gateway assembly.
-2. Confirm PostgreSQL connectivity (`SDKWORK_IAM_DATABASE_URL`).
+2. Confirm PostgreSQL connectivity (`SDKWORK_DATABASE_URL`).
 3. Review `iam_security_event` and `iam_audit_event` via backend-api (`SdkWorkAuditEventListResponse` / `SdkWorkSecurityEventListResponse`) or the PC admin audit module (`@sdkwork/iam-pc-admin-audit`, debounced `q` search).
 4. Ensure production hardening is active (`assert_production_hardening()`).

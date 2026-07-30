@@ -24,7 +24,7 @@ test("forbidden credential env key pattern rejects scoped and browser token keys
   assert.match("VITE_ACCESS_TOKEN=", forbiddenEnvKeyPattern);
   assert.match("VITE_GEMINI_API_KEY=", forbiddenEnvKeyPattern);
   assert.match("SDKWORK_FORUM_SEARCH_ACCESS_TOKEN=", forbiddenEnvKeyPattern);
-  assert.match("SDKWORK_OPS_DATABASE_AUTH_TOKEN=", forbiddenEnvKeyPattern);
+  assert.match("SDKWORK_DATABASE_AUTH_TOKEN=", forbiddenEnvKeyPattern);
   assert.doesNotMatch("SDKWORK_ACCESS_TOKEN=", forbiddenEnvKeyPattern);
   assert.doesNotMatch("VITE_DRIVE_PC_TOKEN_MANAGER_MODE=appbase-global", forbiddenEnvKeyPattern);
   assert.doesNotMatch("VITE_DRIVE_PC_TOKEN_STORAGE=browser-local", forbiddenEnvKeyPattern);

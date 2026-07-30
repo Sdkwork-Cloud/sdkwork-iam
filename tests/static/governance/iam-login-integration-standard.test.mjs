@@ -123,6 +123,6 @@ test("root workspace keeps postgres integration profile template for IAM Rust te
     ".env.postgres.example must exist for unified PostgreSQL integration tests",
   );
   const example = readText(".env.postgres.example");
-  assert.match(example, /SDKWORK_CLAW_DATABASE_ENGINE=postgresql/);
-  assert.match(example, /SDKWORK_CLAW_DATABASE_HOST=/);
+  assert.match(example, /SDKWORK_DATABASE_ENGINE=postgresql/);
+  assert.match(example, /SDKWORK_DATABASE_HOST=/);
 });

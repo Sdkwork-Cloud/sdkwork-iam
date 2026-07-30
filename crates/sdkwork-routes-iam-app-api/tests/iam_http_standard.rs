@@ -881,7 +881,7 @@ async fn credential_entry_login_requires_only_access_token() {
     if !postgres_integration_ready("credential_entry_login_requires_only_access_token").await {
         return;
     }
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     ensure_credential_entry_bootstrap_runtime_app().await;
     let router = build_postgres_integration_router().await;
     let bootstrap_access_token = test_bootstrap_access_token();
@@ -916,7 +916,7 @@ async fn qr_login_component_requests_reach_handlers_without_credentials() {
     {
         return;
     }
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     ensure_credential_entry_bootstrap_runtime_app().await;
     let router = build_postgres_integration_router().await;
     let (create_status, create_body, create_payload) = request_app_route_with_headers(
@@ -984,7 +984,7 @@ async fn app_router_does_not_seed_default_local_credentials() {
     if !postgres_integration_ready("app_router_does_not_seed_default_local_credentials").await {
         return;
     }
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let router = build_postgres_integration_router().await;
     let (status, body_text, payload) = request_app_route(
         router,
@@ -1112,7 +1112,7 @@ async fn app_directory_routes_require_real_session_context() {
     if !postgres_integration_ready("app_directory_routes_require_real_session_context").await {
         return;
     }
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let router = build_postgres_integration_router().await;
 
     for path in [
@@ -1540,7 +1540,7 @@ async fn ensure_credential_entry_bootstrap_runtime_app() {
     if iam_postgres_url().is_none() {
         return;
     }
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let pg = unified_database_env::postgres_pool_for_integration_tests().await;
     ensure_platform_tenant_application(&pg, OPEN_REGISTRATION_TENANT_ID)
         .await
@@ -1548,7 +1548,7 @@ async fn ensure_credential_entry_bootstrap_runtime_app() {
 }
 
 async fn reset_iam_tenants_for_open_registration() {
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let pg = unified_database_env::postgres_pool_for_integration_tests().await;
     unified_database_env::deactivate_non_fixture_tenants_for_open_registration(&pg)
         .await
@@ -1563,7 +1563,7 @@ async fn reset_iam_tenants_for_open_registration() {
 
 fn set_real_local_iam_runtime_env() -> (MutexGuard<'static, ()>, EnvSnapshot) {
     let guard = lock_local_iam_env();
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let snapshot = EnvSnapshot::capture(&[
         "SDKWORK_IAM_RATE_LIMIT_MAX_REQUESTS",
         "SDKWORK_IAM_RATE_LIMIT_WINDOW_SECONDS",
@@ -1575,7 +1575,7 @@ fn set_real_local_iam_runtime_env() -> (MutexGuard<'static, ()>, EnvSnapshot) {
 }
 
 fn iam_postgres_url() -> Option<String> {
-    std::env::var("SDKWORK_IAM_DATABASE_URL")
+    std::env::var("SDKWORK_DATABASE_URL")
         .ok()
         .or_else(|| std::env::var("DATABASE_URL").ok())
 }
@@ -1592,7 +1592,7 @@ async fn postgres_integration_ready(test_name: &str) -> bool {
     if !skip_unless_postgres_profile_configured(test_name) {
         return false;
     }
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let probe = async {
         let pg = unified_database_env::postgres_pool_for_integration_tests().await;
         sqlx::query("SELECT 1").execute(&pg).await

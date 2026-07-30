@@ -62,7 +62,7 @@ Tenant account-binding policy is stored as serialized JSON in the `iam_policy.po
 
 - Profile resolution: `crates/sdkwork-routes-iam-app-api/tests/unified_database_env.rs` (same order as `run-iam-standard-contracts.mjs`).
 - Serial execution: `--test-threads 1` for `iam_http_standard`, `iam_local_app_router_test`, and backend postgres suites.
-- Pool caps: integration helpers set `SDKWORK_IAM_DATABASE_MAX_CONNECTIONS=2`, `MIN_CONNECTIONS=0`, and share one seeding pool per test binary (headroom for seed helpers plus router bootstrap).
+- Pool caps: integration helpers set `SDKWORK_DATABASE_MAX_CONNECTIONS=2`, `MIN_CONNECTIONS=0`, and share one seeding pool per test binary (headroom for seed helpers plus router bootstrap).
 - HTTP standard postgres cases skip automatically when no profile file is present (CI without a sibling claw-router checkout).
 - On `PoolTimedOut`, restart PostgreSQL or terminate stale IAM test binaries before re-running `pnpm run verify`.
 
@@ -118,7 +118,7 @@ The function executes three steps in order:
 
 | Variable | Purpose | Required |
 | --- | --- | --- |
-| `SDKWORK_IAM_DATABASE_URL` | PostgreSQL connection string for the IAM schema | Yes |
+| `SDKWORK_DATABASE_URL` | PostgreSQL connection string for the IAM schema | Yes |
 | `SDKWORK_APP_ROOT` (or `SDKWORK_IAM_APP_ROOT`) | Consumer application root containing `sdkwork.app.config.json` for tenant application provisioning | Yes for embedded integration |
 | `SDKWORK_IAM_SUPER_ADMIN_PASSWORD` | Bootstrap super-admin password credential | Yes (dev) / N/A (prod) |
 | `SDKWORK_IAM_BOOTSTRAP_PASSWORD` | Fallback for super-admin password when `SUPER_ADMIN_PASSWORD` is unset | Optional |
@@ -136,7 +136,7 @@ When `SDKWORK_IM_ENVIRONMENT` is `dev` or `test`, the bootstrap provisions the s
 | 401 on first authenticated request | Database not bootstrapped — no `iam_user` / `iam_credential` / `iam_role_binding` rows | Call `bootstrap_iam_for_application()` before serving traffic |
 | 401 on app-api auth (token issuance) | Tenant application not provisioned — `iam_tenant_application` row missing for the runtime `app_id`, so auth runtime cannot resolve signing keys or access scopes | Set `SDKWORK_APP_ROOT` to the consumer app root containing `sdkwork.app.config.json`; `bootstrap_iam_for_application()` provisions it automatically |
 | 401 on backend-api mutations | `build_sdkwork_iam_backend_api_router()` (fail-closed) mounts without a database pool | Use `gateway_mount()` / `_from_env()` constructors or the assembly-level `bootstrap_iam_for_application()` |
-| 503 `iam_database_unavailable` | Backend route state has `pool: None` | Same as above — the `_from_env` constructor resolves the pool from `SDKWORK_IAM_DATABASE_URL` |
+| 503 `iam_database_unavailable` | Backend route state has `pool: None` | Same as above — the `_from_env` constructor resolves the pool from `SDKWORK_DATABASE_URL` |
 
 ## Verification
 

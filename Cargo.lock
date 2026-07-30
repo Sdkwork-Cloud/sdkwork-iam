@@ -1980,6 +1980,7 @@ dependencies = [
  "thiserror",
  "toml",
  "tracing",
+ "url",
 ]
 
 [[package]]

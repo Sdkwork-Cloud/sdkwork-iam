@@ -94,10 +94,9 @@ pub use iam_audit::{
     record_security_event,
 };
 pub use iam_database_env::{
-    bridge_iam_database_env_from_im, install_iam_database_pool_for_process,
-    install_iam_postgres_pool_for_process, installed_iam_database_pool_for_process,
-    installed_iam_postgres_pool_for_process, resolve_iam_database_pool_from_env,
-    resolve_iam_postgres_pool_from_env,
+    install_iam_database_pool_for_process, install_iam_postgres_pool_for_process,
+    installed_iam_database_pool_for_process, installed_iam_postgres_pool_for_process,
+    resolve_iam_database_pool_from_env, resolve_iam_postgres_pool_from_env,
 };
 pub use iam_session::{
     resolve_iam_app_context_from_access_token, resolve_iam_app_context_from_access_token_pool,

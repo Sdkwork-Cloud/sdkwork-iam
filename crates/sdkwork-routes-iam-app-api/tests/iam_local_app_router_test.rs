@@ -212,7 +212,7 @@ async fn build_router_with_env_internal(
     if cleanup_fixtures {
         cleanup_configured_tenant_integration_fixtures().await;
     }
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let _snapshot = EnvSnapshot::capture(RUNTIME_ENV_KEYS);
 
     configure_real_local_runtime_env();
@@ -238,7 +238,7 @@ async fn build_router_with_env_internal(
 async fn build_router_with_configured_owner(extra_organizations: &[(&str, &str)]) -> axum::Router {
     let _guard = lock_local_iam_env();
     cleanup_configured_tenant_integration_fixtures().await;
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let _snapshot = EnvSnapshot::capture(RUNTIME_ENV_KEYS);
 
     configure_real_local_runtime_env();
@@ -270,7 +270,7 @@ async fn build_router_for_open_registration() -> axum::Router {
     {
         let _guard = lock_local_iam_env();
         prepare_open_registration_database().await;
-        unified_database_env::apply_unified_claw_postgres_env();
+        unified_database_env::apply_workspace_postgres_env();
     }
     build_router_with_env_without_fixture_cleanup(None, None).await
 }
@@ -285,7 +285,7 @@ async fn build_router_and_directory_without_bootstrap() -> (
 ) {
     let _guard = lock_local_iam_env();
     cleanup_configured_tenant_integration_fixtures().await;
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let _snapshot = EnvSnapshot::capture(RUNTIME_ENV_KEYS);
 
     configure_real_local_runtime_env();
@@ -1432,7 +1432,7 @@ async fn local_app_router_rejects_wrong_bootstrap_password() {
 async fn local_app_router_rotates_signing_keys_with_overlapping_validation_window() {
     let _guard = lock_local_iam_env();
     cleanup_configured_tenant_integration_fixtures().await;
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let _snapshot = EnvSnapshot::capture(RUNTIME_ENV_KEYS);
 
     configure_real_local_runtime_env();
@@ -2984,7 +2984,7 @@ async fn local_app_router_oauth_device_scan_requires_poll_secret() {
 async fn local_app_router_locks_account_after_repeated_failed_logins() {
     let _guard = lock_local_iam_env();
     prepare_open_registration_database().await;
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let _snapshot = EnvSnapshot::capture(RUNTIME_ENV_KEYS);
     configure_real_local_runtime_env();
     set_optional_env(LOGIN_MAX_ATTEMPTS_ENV, Some("3"));
@@ -3150,7 +3150,7 @@ const SECONDARY_TENANT_ID: &str = "tenant_secondary_login";
 const TERTIARY_TENANT_ID: &str = "tenant_tertiary_login";
 
 async fn postgres_pool_for_tests() -> sqlx::PgPool {
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     unified_database_env::integration_database_pool_for_router()
         .await
         .as_postgres()
@@ -3752,7 +3752,7 @@ async fn local_app_router_open_registration_defaults_to_canonical_tenant_with_mu
     cleanup_secondary_tenant_login_fixtures().await;
     let _guard = lock_local_iam_env();
     prepare_open_registration_database().await;
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     let _snapshot = EnvSnapshot::capture(RUNTIME_ENV_KEYS);
     configure_real_local_runtime_env();
     let app = sdkwork_routes_iam_app_api::build_sdkwork_iam_app_api_router()

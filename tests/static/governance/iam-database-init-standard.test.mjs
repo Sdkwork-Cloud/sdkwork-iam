@@ -76,13 +76,13 @@ test("IAM database host integrates sdkwork-database lifecycle orchestrator", () 
   const databaseHostBin = readText("crates/sdkwork-iam-database-host/src/bin/sdkwork-iam-db.rs");
   assert.match(databaseHostBin, /Commands::Init/u);
   assert.match(databaseHostBin, /Commands::Bootstrap/u);
-  assert.match(databaseHostBin, /apply_unified_claw_postgres_env/u);
+  assert.match(databaseHostBin, /apply_workspace_postgres_env/u);
   assert.doesNotMatch(databaseHostBin, /SDKWork Appbase IAM database/u);
 });
 
 test("IAM database host loads unified postgres profile before pool creation", () => {
   const databaseHostLib = readText("crates/sdkwork-iam-database-host/src/lib.rs");
-  assert.match(databaseHostLib, /apply_unified_claw_postgres_env\(&app_root\)/u);
+  assert.match(databaseHostLib, /apply_workspace_postgres_env\(&app_root\)/u);
   assert.ok(
     fs.existsSync(
       path.join(iamRoot, "crates/sdkwork-iam-database-host/src/unified_postgres_env.rs"),

@@ -49,7 +49,7 @@ fn configure_integration_signing_env() {
 }
 
 async fn postgres_pool_for_tests() -> PgPool {
-    unified_database_env::apply_unified_claw_postgres_env();
+    unified_database_env::apply_workspace_postgres_env();
     unified_database_env::configure_integration_test_database_pool();
     unified_database_env::postgres_pool_for_integration_tests().await
 }
