@@ -284,6 +284,11 @@ async fn ensure_ephemeral_artifact_table(pool: &DatabasePool) -> Result<(), Stri
                     format!("iam_ephemeral_artifact table is unavailable on sqlite: {error}")
                 })?;
         }
+        #[cfg(not(feature = "sqlite"))]
+        #[allow(unreachable_patterns)]
+        _ => {
+            return Err("IAM app-api was given an unsupported database pool engine".to_owned());
+        }
     }
     Ok(())
 }
@@ -302,6 +307,11 @@ async fn repair_legacy_opaque_user_ids(pool: &DatabasePool) -> Result<(), String
             sdkwork_iam_bootstrap::repair_sqlite_legacy_opaque_iam_user_ids(sqlite)
                 .await
                 .map_err(|error| format!("repair legacy IAM user ids failed: {error}"))?;
+        }
+        #[cfg(not(feature = "sqlite"))]
+        #[allow(unreachable_patterns)]
+        _ => {
+            return Err("IAM app-api was given an unsupported database pool engine".to_owned());
         }
     }
     Ok(())

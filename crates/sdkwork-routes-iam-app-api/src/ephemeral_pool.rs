@@ -42,6 +42,9 @@ pub(crate) async fn cleanup_expired_artifacts(pool: &DatabasePool) -> Result<(),
                 .map_err(|error| format!("cleanup ephemeral artifacts failed: {error}"))?;
             Ok(())
         }
+        #[cfg(not(feature = "sqlite"))]
+        #[allow(unreachable_patterns)]
+        _ => Err("IAM app-api was given an unsupported database pool engine".to_owned()),
     }
 }
 
@@ -68,6 +71,9 @@ pub(crate) async fn check_rate_limit(
             )
             .await
         }
+        #[cfg(not(feature = "sqlite"))]
+        #[allow(unreachable_patterns)]
+        _ => Err("IAM app-api was given an unsupported database pool engine".to_owned()),
     }
 }
 
@@ -84,6 +90,9 @@ pub(crate) async fn upsert_qr_session(
         DatabasePool::Sqlite(sqlite, _) => {
             upsert_qr_session_sqlite(sqlite, tenant_id, session).await
         }
+        #[cfg(not(feature = "sqlite"))]
+        #[allow(unreachable_patterns)]
+        _ => Err("IAM app-api was given an unsupported database pool engine".to_owned()),
     }
 }
 
@@ -100,6 +109,9 @@ pub(crate) async fn get_qr_session(
         DatabasePool::Sqlite(sqlite, _) => {
             get_qr_session_sqlite(sqlite, tenant_id, session_key).await
         }
+        #[cfg(not(feature = "sqlite"))]
+        #[allow(unreachable_patterns)]
+        _ => Err("IAM app-api was given an unsupported database pool engine".to_owned()),
     }
 }
 
@@ -116,6 +128,9 @@ pub(crate) async fn qr_session_exists(
         DatabasePool::Sqlite(sqlite, _) => {
             qr_session_exists_sqlite(sqlite, tenant_id, session_key).await
         }
+        #[cfg(not(feature = "sqlite"))]
+        #[allow(unreachable_patterns)]
+        _ => Err("IAM app-api was given an unsupported database pool engine".to_owned()),
     }
 }
 
@@ -133,6 +148,9 @@ pub(crate) async fn mutate_qr_session(
         DatabasePool::Sqlite(sqlite, _) => {
             mutate_qr_session_sqlite(sqlite, tenant_id, session_key, mutate).await
         }
+        #[cfg(not(feature = "sqlite"))]
+        #[allow(unreachable_patterns)]
+        _ => Err("IAM app-api was given an unsupported database pool engine".to_owned()),
     }
 }
 
