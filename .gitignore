@@ -78,3 +78,12 @@ __pycache__/
 **/.turbo/
 **/.cache/
 
+
+# SDKWork local-only and generated artifacts
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.log
+.DS_Store
+Thumbs.db
