@@ -47,6 +47,10 @@
       "sdkwork_iam_web_adapter::IamWebRequestContextResolver",
       "sdkwork_iam_web_adapter::IamOpenApiWebRequestContextResolver",
       "sdkwork_iam_web_adapter::iam_web_request_context_resolver_from_env",
+      "sdkwork_iam_web_adapter::iam_web_request_context_resolver_from_env_for_audiences",
+      "sdkwork_iam_web_adapter::iam_web_request_context_resolver_from_database_pool_for_audiences",
+      "sdkwork_iam_web_adapter::IamAuditEmitter",
+      "sdkwork_iam_web_adapter::IamSecurityEventEmitter",
       "sdkwork_iam_web_adapter::resolve_iam_postgres_pool_from_env",
       "sdkwork_iam_web_adapter::build_web_framework_builder",
       "sdkwork_iam_web_adapter::IamApiKeyLookupService",
@@ -75,7 +79,9 @@
       "SDKWORK_IAM_ENVIRONMENT",
       "SDKWORK_APP_ROOT",
       "SDKWORK_CORS_ALLOWED_ORIGINS",
-      "SDKWORK_IAM_CORS_ALLOWED_ORIGINS"
+      "SDKWORK_IAM_CORS_ALLOWED_ORIGINS",
+      "SDKWORK_IAM_OAUTH_ISSUER",
+      "SDKWORK_IAM_SIGNING_MASTER_SECRET"
     ]
   },
   "integration": {

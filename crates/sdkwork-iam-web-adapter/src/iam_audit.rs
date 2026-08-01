@@ -20,6 +20,39 @@ pub async fn record_audit_event(
     environment: &str,
     detail: Value,
 ) -> Result<(), String> {
+    record_audit_event_with_app_id(
+        pg,
+        tenant_id,
+        organization_id,
+        actor_user_id,
+        action,
+        resource_type,
+        resource_id,
+        request_id,
+        "",
+        environment,
+        detail,
+    )
+    .await
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "internal bridge preserves the stable IAM audit record contract"
+)]
+pub(crate) async fn record_audit_event_with_app_id(
+    pg: &PgPool,
+    tenant_id: &str,
+    organization_id: Option<&str>,
+    actor_user_id: Option<&str>,
+    action: &str,
+    resource_type: &str,
+    resource_id: Option<&str>,
+    request_id: Option<&str>,
+    app_id: &str,
+    environment: &str,
+    detail: Value,
+) -> Result<(), String> {
     let organization_id = organization_id
         .filter(|value| !value.trim().is_empty())
         .unwrap_or("0");
@@ -39,7 +72,7 @@ pub async fn record_audit_event(
     .bind(resource_type)
     .bind(resource_id)
     .bind(request_id)
-    .bind("")
+    .bind(app_id)
     .bind(environment)
     .bind(tenant_id)
     .bind(Json(detail))

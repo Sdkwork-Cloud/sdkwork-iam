@@ -7,6 +7,7 @@ mod authorization_policy;
 mod dev_runtime;
 mod embedded_bootstrap;
 mod ephemeral_rate_limit;
+mod framework_events;
 mod http_responses;
 mod iam_audit;
 mod iam_database_env;
@@ -90,6 +91,7 @@ pub use embedded_bootstrap::{
 pub use ephemeral_rate_limit::check_rate_limit;
 #[cfg(feature = "sqlite")]
 pub use ephemeral_rate_limit::check_rate_limit_sqlite;
+pub use framework_events::{IamAuditEmitter, IamSecurityEventEmitter};
 pub use http_responses::{iam_api_error, iam_api_success, iam_wire_result_code};
 pub use iam_audit::{
     backend_environment_from_context, hash_session_id, record_audit_event, record_audit_event_tx,
@@ -345,7 +347,13 @@ where
     let security_policy = iam_web_security_policy(&environment);
     let authorization_policy =
         std::sync::Arc::new(IamAuthorizationPolicy::new(route_manifest.clone()));
-    sdkwork_web_bootstrap::WebFramework::builder(resolver)
+    let builder = sdkwork_web_bootstrap::WebFramework::builder(resolver);
+    let builder = if matches!(environment, WebEnvironment::Prod) {
+        builder.production_defaults()
+    } else {
+        builder
+    };
+    builder
         .profile(WebRequestContextProfile {
             open_api_prefixes: vec![
                 "/open/v3/api".to_owned(),
@@ -471,4 +479,58 @@ pub async fn iam_web_request_context_resolver_from_env() -> IamWebRequestContext
         embedded_bootstrap::try_auto_provision_tenant_application(pg).await;
     }
     IamWebRequestContextResolver::from_database_pool(iam_pool)
+}
+
+/// Builds the IAM resolver for one or more application audiences.
+///
+/// Production uses tenant-bound signing keys, database-backed session revocation,
+/// server-side API-key/OAuth lookup, and an explicit issuer/audience policy.
+pub async fn iam_web_request_context_resolver_from_env_for_audiences(
+    audiences: &[&str],
+) -> Result<IamWebRequestContextResolver, String> {
+    let iam_pool = resolve_iam_database_pool_from_env().await;
+    if let Some(pg) = iam_pool.as_ref().and_then(|pool| pool.as_postgres()) {
+        embedded_bootstrap::try_auto_provision_tenant_application(pg).await;
+    }
+    configure_iam_resolver_for_audiences(iam_pool, audiences)
+}
+
+/// Builds an audience-bound IAM resolver from the process-shared application pool.
+pub async fn iam_web_request_context_resolver_from_database_pool_for_audiences(
+    iam_pool: sdkwork_database_sqlx::DatabasePool,
+    audiences: &[&str],
+) -> Result<IamWebRequestContextResolver, String> {
+    if let Some(pg) = iam_pool.as_postgres() {
+        embedded_bootstrap::try_auto_provision_tenant_application(pg).await;
+    }
+    configure_iam_resolver_for_audiences(Some(iam_pool), audiences)
+}
+
+fn configure_iam_resolver_for_audiences(
+    iam_pool: Option<sdkwork_database_sqlx::DatabasePool>,
+    audiences: &[&str],
+) -> Result<IamWebRequestContextResolver, String> {
+    let resolver = IamWebRequestContextResolver::from_database_pool(iam_pool);
+    if !matches!(
+        resolve_web_environment_from_process_env(),
+        WebEnvironment::Prod
+    ) {
+        return Ok(resolver);
+    }
+
+    assert_production_hardening()?;
+    let audiences = audiences
+        .iter()
+        .map(|audience| audience.trim())
+        .filter(|audience| !audience.is_empty())
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    let mut issuers = vec![iam_session::LOCAL_SESSION_TOKEN_ISSUER.to_owned()];
+    let oauth_issuer = iam_session::oauth_issuer_base_url();
+    if !issuers.contains(&oauth_issuer) {
+        issuers.push(oauth_issuer);
+    }
+    resolver.try_with_saas_production_claim_policy(
+        sdkwork_web_core::JwtProductionClaimPolicy::saas_production(issuers, audiences),
+    )
 }

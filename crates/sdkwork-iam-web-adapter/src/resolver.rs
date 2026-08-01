@@ -3,8 +3,8 @@ use sdkwork_database_sqlx::DatabasePool;
 use sdkwork_web_core::{
     DefaultAccessTokenParser, DefaultApiKeyParser, DefaultAuthTokenParser,
     DefaultOAuthBearerParser, DefaultOpenApiWebRequestContextResolver,
-    DefaultWebRequestContextResolver, OpenApiWebRequestParserResolver, WebFrameworkError,
-    WebRequestContextResolver, WebRequestPrincipal,
+    DefaultWebRequestContextResolver, JwtProductionClaimPolicy, OpenApiWebRequestParserResolver,
+    ResolverProductionProfile, WebFrameworkError, WebRequestContextResolver, WebRequestPrincipal,
 };
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -34,6 +34,7 @@ pub struct IamDatabaseWebRequestContextResolver {
     open_api_database: Option<IamDatabaseOpenApiResolver>,
     open_api_dev_fallback: DefaultOpenApiWebRequestContextResolver,
     jwt_fallback: DefaultWebRequestContextResolver,
+    production_claim_policy: Option<JwtProductionClaimPolicy>,
 }
 
 /// Alias documenting IAM open-api multi-scheme resolver wiring.
@@ -59,6 +60,7 @@ impl IamDatabaseWebRequestContextResolver {
             open_api_database,
             open_api_dev_fallback: DefaultOpenApiWebRequestContextResolver::default(),
             jwt_fallback: DefaultWebRequestContextResolver::default(),
+            production_claim_policy: None,
         }
     }
 
@@ -72,6 +74,55 @@ impl IamDatabaseWebRequestContextResolver {
         resolver.iam_database_pool = iam_database_pool;
         resolver
     }
+
+    pub fn try_with_saas_production_claim_policy(
+        mut self,
+        policy: JwtProductionClaimPolicy,
+    ) -> Result<Self, String> {
+        if self.iam_pool.is_none() {
+            return Err(
+                "production IAM resolver requires an authoritative PostgreSQL pool".to_owned(),
+            );
+        }
+        if !policy.has_saas_issuer_audience_allowlist() {
+            return Err(
+                "production IAM resolver requires non-empty issuer and audience allowlists"
+                    .to_owned(),
+            );
+        }
+        if !policy
+            .expected_issuers
+            .iter()
+            .any(|issuer| issuer == crate::iam_session::LOCAL_SESSION_TOKEN_ISSUER)
+        {
+            return Err(format!(
+                "production IAM issuer allowlist must include {}",
+                crate::iam_session::LOCAL_SESSION_TOKEN_ISSUER,
+            ));
+        }
+        self.production_claim_policy = Some(policy);
+        Ok(self)
+    }
+
+    fn validate_production_principal(
+        &self,
+        principal: WebRequestPrincipal,
+    ) -> Result<WebRequestPrincipal, WebFrameworkError> {
+        let Some(policy) = &self.production_claim_policy else {
+            return Ok(principal);
+        };
+        if policy
+            .expected_audiences
+            .iter()
+            .any(|audience| audience == principal.app_id())
+        {
+            Ok(principal)
+        } else {
+            Err(WebFrameworkError::invalid_credentials(
+                "IAM credential audience is not allowed for this application host",
+            ))
+        }
+    }
 }
 
 fn iam_database_unavailable_error() -> WebFrameworkError {
@@ -82,12 +133,25 @@ fn iam_database_unavailable_error() -> WebFrameworkError {
 
 #[async_trait]
 impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
+    fn resolver_production_profile(&self) -> ResolverProductionProfile {
+        if self.production_claim_policy.is_some() {
+            ResolverProductionProfile::TenantBoundSaaS
+        } else {
+            ResolverProductionProfile::Unspecified
+        }
+    }
+
+    fn jwt_production_claim_policy(&self) -> Option<JwtProductionClaimPolicy> {
+        self.production_claim_policy.clone()
+    }
+
     async fn resolve_api_key(
         &self,
         raw_api_key: &str,
     ) -> Result<WebRequestPrincipal, WebFrameworkError> {
         if let Some(resolver) = &self.open_api_database {
-            return resolver.resolve_api_key(raw_api_key).await;
+            return self
+                .validate_production_principal(resolver.resolve_api_key(raw_api_key).await?);
         }
         if allows_dev_authentication_fallback() {
             return self
@@ -103,13 +167,15 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
         raw_bearer_token: &str,
     ) -> Result<WebRequestPrincipal, WebFrameworkError> {
         if let Some(resolver) = &self.open_api_database {
-            return resolver.resolve_oauth_bearer(raw_bearer_token).await;
+            return self.validate_production_principal(
+                resolver.resolve_oauth_bearer(raw_bearer_token).await?,
+            );
         }
         if let Some(pool) = &self.iam_database_pool {
             if let Some(context) =
                 resolve_iam_app_context_from_oauth_bearer_pool(pool, raw_bearer_token).await
             {
-                return Ok(web_request_principal_from_iam(context));
+                return self.validate_production_principal(web_request_principal_from_iam(context));
             }
             if allows_dev_authentication_fallback() {
                 return self
@@ -125,7 +191,7 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
             if let Some(context) =
                 resolve_iam_app_context_from_oauth_bearer(pool, raw_bearer_token).await
             {
-                return Ok(web_request_principal_from_iam(context));
+                return self.validate_production_principal(web_request_principal_from_iam(context));
             }
             return Err(WebFrameworkError::invalid_credentials(
                 "invalid or expired IAM OAuth bearer token",
@@ -153,7 +219,9 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
             )
             .await
             {
-                Some(context) => Ok(web_request_principal_from_iam(context)),
+                Some(context) => {
+                    self.validate_production_principal(web_request_principal_from_iam(context))
+                }
                 None => Err(WebFrameworkError::invalid_credentials(
                     "invalid or expired IAM session",
                 )),
@@ -171,7 +239,9 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
 
         match resolve_iam_app_context_from_dual_tokens(pool, raw_auth_token, raw_access_token).await
         {
-            Some(context) => Ok(web_request_principal_from_iam(context)),
+            Some(context) => {
+                self.validate_production_principal(web_request_principal_from_iam(context))
+            }
             None => Err(WebFrameworkError::invalid_credentials(
                 "invalid or expired IAM session",
             )),
@@ -182,14 +252,11 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
         &self,
         raw_access_token: &str,
     ) -> Result<WebRequestPrincipal, WebFrameworkError> {
-        if let Some(resolver) = &self.open_api_database {
-            return resolver.resolve_access_token(raw_access_token).await;
-        }
         if let Some(pool) = &self.iam_database_pool {
             if let Some(context) =
                 resolve_iam_app_context_from_access_token_pool(pool, raw_access_token).await
             {
-                return Ok(web_request_principal_from_iam(context));
+                return self.validate_production_principal(web_request_principal_from_iam(context));
             }
             if allows_dev_authentication_fallback() {
                 return self
@@ -205,7 +272,7 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
             if let Some(context) =
                 resolve_iam_app_context_from_access_token(pool, raw_access_token).await
             {
-                return Ok(web_request_principal_from_iam(context));
+                return self.validate_production_principal(web_request_principal_from_iam(context));
             }
             return Err(WebFrameworkError::invalid_credentials(
                 "invalid or expired IAM access token",
@@ -292,5 +359,46 @@ pub(crate) fn iam_principal_record_from_context(
             .to_owned(),
         ),
         metadata: credential.metadata.clone(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn production_policy() -> JwtProductionClaimPolicy {
+        JwtProductionClaimPolicy::saas_production(
+            vec![crate::iam_session::LOCAL_SESSION_TOKEN_ISSUER.to_owned()],
+            vec!["sdkwork-community".to_owned()],
+        )
+    }
+
+    #[test]
+    fn production_profile_requires_an_authoritative_pool() {
+        let error = IamDatabaseWebRequestContextResolver::new(None)
+            .try_with_saas_production_claim_policy(production_policy())
+            .err()
+            .expect("missing pool must fail closed");
+        assert!(error.contains("PostgreSQL pool"));
+    }
+
+    #[tokio::test]
+    async fn production_profile_reports_session_revocation_and_claim_policy() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgresql://sdkwork@127.0.0.1/sdkwork")
+            .expect("lazy PostgreSQL pool");
+        let resolver = IamDatabaseWebRequestContextResolver::new(Some(Arc::new(pool)))
+            .try_with_saas_production_claim_policy(production_policy())
+            .expect("production resolver");
+
+        assert_eq!(
+            ResolverProductionProfile::TenantBoundSaaS,
+            resolver.resolver_production_profile(),
+        );
+        assert!(resolver
+            .jwt_production_claim_policy()
+            .is_some_and(|policy| policy.has_saas_issuer_audience_allowlist()));
+        assert!(!resolver.uses_default_api_key_lookup());
+        assert!(!resolver.uses_default_oauth_token_lookup());
     }
 }

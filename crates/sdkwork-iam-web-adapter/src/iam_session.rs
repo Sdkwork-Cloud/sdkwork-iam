@@ -17,6 +17,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 type HmacSha256 = Hmac<Sha256>;
 
+pub(crate) const LOCAL_SESSION_TOKEN_ISSUER: &str = "sdkwork-iam-local";
+
 pub(crate) const IAM_SESSION_CONTEXT_SELECT: &str =
     "s.id, s.tenant_id, s.organization_id, s.login_scope, s.user_id, s.app_id, \
      s.environment, s.deployment_mode, s.auth_level, \
@@ -449,7 +451,7 @@ async fn oauth_access_token_grant_is_active(pg: &PgPool, access_token_hash: &str
     .is_some()
 }
 
-fn oauth_issuer_base_url() -> String {
+pub(crate) fn oauth_issuer_base_url() -> String {
     std::env::var("SDKWORK_IAM_OAUTH_ISSUER")
         .ok()
         .map(|value| value.trim().trim_end_matches('/').to_string())
@@ -659,7 +661,7 @@ fn verify_local_session_token_flexible(
         return None;
     }
     let iss = payload.get("iss").and_then(Value::as_str)?;
-    if iss != "sdkwork-iam-local" {
+    if iss != LOCAL_SESSION_TOKEN_ISSUER {
         return None;
     }
     let aud = payload.get("aud").and_then(Value::as_str)?;
@@ -847,7 +849,7 @@ fn verify_local_session_token(
         return None;
     }
     let iss = payload.get("iss").and_then(Value::as_str)?;
-    if iss != "sdkwork-iam-local" {
+    if iss != LOCAL_SESSION_TOKEN_ISSUER {
         return None;
     }
     let aud = payload.get("aud").and_then(Value::as_str)?;

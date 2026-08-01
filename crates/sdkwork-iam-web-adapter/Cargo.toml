@@ -42,6 +42,7 @@ sdkwork_utils_rust.workspace = true
 sdkwork-web-axum.workspace = true
 sdkwork-web-bootstrap.workspace = true
 sdkwork-web-core.workspace = true
+tracing = "0.1"
 urlencoding = "2"
 
 [dev-dependencies]
