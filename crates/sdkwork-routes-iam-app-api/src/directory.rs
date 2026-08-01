@@ -250,7 +250,7 @@ impl SdkworkIamLocalIamDirectory {
             return Err(DirectorySearchError::InvalidListPagination);
         }
         let pattern = format!("%{}%", keyword.trim().to_ascii_lowercase());
-        let rows = sqlx::query(&format!(
+        let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT id, username, display_name, email, phone, status, \
                     COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
              FROM iam_user \
@@ -259,7 +259,7 @@ impl SdkworkIamLocalIamDirectory {
                AND is_deleted = 0 AND status = 'active' \
              ORDER BY display_name, id \
              LIMIT $3 OFFSET $4"
-        ))
+ )       ))
         .bind(tenant_id)
         .bind(&pattern)
         .bind(page_size)

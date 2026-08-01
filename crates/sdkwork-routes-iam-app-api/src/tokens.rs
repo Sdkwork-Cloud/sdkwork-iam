@@ -554,12 +554,12 @@ pub(crate) async fn find_session_by_refresh_token(
     refresh_token: &str,
 ) -> Option<LocalSession> {
     let refresh_hash = hash_token(refresh_token);
-    let row = sqlx::query(&format!(
+    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "{SESSION_REFRESH_SELECT} \
          WHERE s.refresh_token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at::timestamptz > $2::timestamptz \
            AND u.status = 'active' AND u.is_deleted = 0 \
          LIMIT 1"
-    ))
+ )   ))
     .bind(&refresh_hash)
     .bind(current_timestamp_utc())
     .fetch_optional(pg)
@@ -575,13 +575,13 @@ pub(crate) async fn find_session_by_id(
     user_id: &str,
     tenant_id: &str,
 ) -> Option<LocalSession> {
-    let row = sqlx::query(&format!(
+    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "{SESSION_REFRESH_SELECT} \
          WHERE s.id = $1 AND s.user_id = $2 AND s.tenant_id = $3 \
            AND s.revoked_at IS NULL AND s.expires_at::timestamptz > $4::timestamptz \
            AND u.status = 'active' AND u.is_deleted = 0 \
          LIMIT 1"
-    ))
+ )   ))
     .bind(session_id)
     .bind(user_id)
     .bind(tenant_id)
@@ -606,13 +606,13 @@ pub(crate) async fn claim_session_for_refresh(
         .await
         .map_err(|error| format!("begin refresh claim transaction failed: {error}"))?;
 
-    let row = sqlx::query(&format!(
+    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "{SESSION_REFRESH_SELECT} \
          WHERE s.refresh_token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at::timestamptz > $2::timestamptz \
            AND u.status = 'active' AND u.is_deleted = 0 \
          FOR UPDATE OF s \
          LIMIT 1"
-    ))
+ )   ))
     .bind(&refresh_hash)
     .bind(&now)
     .fetch_optional(&mut *tx)

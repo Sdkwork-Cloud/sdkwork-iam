@@ -231,7 +231,7 @@ async fn list_users(
             .expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, username, display_name, email, phone, status, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_user \
@@ -239,7 +239,7 @@ async fn list_users(
            AND ($4::text IS NULL OR LOWER(username) LIKE $4 OR LOWER(display_name) LIKE $4 OR LOWER(COALESCE(email, '')) LIKE $4) \
          ORDER BY username, id \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -298,7 +298,7 @@ async fn list_roles(
             .expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, code, name, status, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_role \
@@ -306,7 +306,7 @@ async fn list_roles(
            AND ($4::text IS NULL OR LOWER(code) LIKE $4 OR LOWER(name) LIKE $4) \
          ORDER BY code, id \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -366,7 +366,7 @@ async fn list_role_permissions(
             .expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT p.id, p.code, p.name, p.resource, p.action, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_role_permission rp \
@@ -377,7 +377,7 @@ async fn list_role_permissions(
                 OR LOWER(p.resource) LIKE $5 OR LOWER(p.action) LIKE $5) \
          ORDER BY p.code \
          LIMIT $3 OFFSET $4"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(&role_id)
     .bind(params.page_size)
@@ -408,7 +408,7 @@ async fn list_permissions(
             .expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, code, name, resource, action, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_permission \
@@ -416,7 +416,7 @@ async fn list_permissions(
                 OR LOWER(resource) LIKE $3 OR LOWER(action) LIKE $3) \
          ORDER BY code \
          LIMIT $1 OFFSET $2"
-    ))
+ )   ))
     .bind(params.page_size)
     .bind(params.offset)
     .bind(&search_pattern)
@@ -482,7 +482,7 @@ async fn list_role_bindings(
     };
     let search_pattern = list_search_pattern(&query);
     let rows = if let Some(organization_id) = organization_id.as_deref() {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT b.id, b.tenant_id, b.organization_id, b.role_id, r.code AS role_code, \
                     b.principal_kind, b.principal_id, b.scope_kind, b.scope_id, b.effect, b.status, \
                     COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
@@ -493,7 +493,7 @@ async fn list_role_bindings(
                AND ($5::text IS NULL OR LOWER(r.code) LIKE $5 OR LOWER(b.principal_id) LIKE $5) \
              ORDER BY r.code, b.id \
              LIMIT $3 OFFSET $4"
-        ))
+ )       ))
         .bind(&tenant_id)
         .bind(organization_id)
         .bind(params.page_size)
@@ -502,7 +502,7 @@ async fn list_role_bindings(
         .fetch_all(pg)
         .await
     } else {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT b.id, b.tenant_id, b.organization_id, b.role_id, r.code AS role_code, \
                     b.principal_kind, b.principal_id, b.scope_kind, b.scope_id, b.effect, b.status, \
                     COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
@@ -512,7 +512,7 @@ async fn list_role_bindings(
                AND ($4::text IS NULL OR LOWER(r.code) LIKE $4 OR LOWER(b.principal_id) LIKE $4) \
              ORDER BY r.code, b.id \
              LIMIT $2 OFFSET $3"
-        ))
+ )       ))
         .bind(&tenant_id)
         .bind(params.page_size)
         .bind(params.offset)
@@ -774,7 +774,7 @@ async fn list_organizations(
             .expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, code, name, status, organization_kind, parent_organization_id, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_organization \
@@ -782,7 +782,7 @@ async fn list_organizations(
            AND ($4::text IS NULL OR LOWER(name) LIKE $4 OR LOWER(code) LIKE $4) \
          ORDER BY name, id \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -818,7 +818,7 @@ async fn list_organization_memberships(
     };
     let search_pattern = list_search_pattern(&query);
     let rows = if let Some(organization_id) = organization_id.as_deref() {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT m.id, m.tenant_id, m.organization_id, m.user_id, m.membership_kind, m.status, \
                     u.username, u.display_name, u.email, \
                     COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
@@ -829,7 +829,7 @@ async fn list_organization_memberships(
                     OR LOWER(COALESCE(u.email, '')) LIKE $5) \
              ORDER BY m.joined_at DESC NULLS LAST, m.id \
              LIMIT $3 OFFSET $4"
-        ))
+ )       ))
         .bind(&tenant_id)
         .bind(organization_id)
         .bind(params.page_size)
@@ -838,7 +838,7 @@ async fn list_organization_memberships(
         .fetch_all(pg)
         .await
     } else {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT m.id, m.tenant_id, m.organization_id, m.user_id, m.membership_kind, m.status, \
                     u.username, u.display_name, u.email, \
                     COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
@@ -849,7 +849,7 @@ async fn list_organization_memberships(
                     OR LOWER(COALESCE(u.email, '')) LIKE $4) \
              ORDER BY m.joined_at DESC NULLS LAST, m.id \
              LIMIT $2 OFFSET $3"
-        ))
+ )       ))
         .bind(&tenant_id)
         .bind(params.page_size)
         .bind(params.offset)
@@ -886,7 +886,7 @@ async fn list_departments(
     };
     let search_pattern = list_search_pattern(&query);
     let rows = if let Some(organization_id) = organization_id.as_deref() {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT id, tenant_id, organization_id, code, name, status, parent_department_id, \
                     COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
              FROM iam_department \
@@ -894,7 +894,7 @@ async fn list_departments(
                AND ($5::text IS NULL OR LOWER(name) LIKE $5 OR LOWER(code) LIKE $5) \
              ORDER BY name, id \
              LIMIT $3 OFFSET $4"
-        ))
+ )       ))
         .bind(&tenant_id)
         .bind(organization_id)
         .bind(params.page_size)
@@ -903,7 +903,7 @@ async fn list_departments(
         .fetch_all(pg)
         .await
     } else {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT id, tenant_id, organization_id, code, name, status, parent_department_id, \
                     COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
              FROM iam_department \
@@ -911,7 +911,7 @@ async fn list_departments(
                AND ($4::text IS NULL OR LOWER(name) LIKE $4 OR LOWER(code) LIKE $4) \
              ORDER BY name, id \
              LIMIT $2 OFFSET $3"
-        ))
+ )       ))
         .bind(&tenant_id)
         .bind(params.page_size)
         .bind(params.offset)
@@ -946,7 +946,7 @@ async fn list_api_keys(
             .expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, organization_id, user_id, name, status, expires_at, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_api_key \
@@ -954,7 +954,7 @@ async fn list_api_keys(
            AND ($4::text IS NULL OR LOWER(name) LIKE $4) \
          ORDER BY created_at DESC NULLS LAST, id \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -1061,14 +1061,14 @@ where
 {
     match params {
         TimelineListParams::Offset(offset) => {
-            let rows = sqlx::query(&format!(
+            let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
                 "SELECT {select}, COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
                  FROM {table} \
                  WHERE tenant_id = $1 \
                    AND ($4::text IS NULL OR {search_predicate}) \
                  ORDER BY created_at DESC NULLS LAST, id \
                  LIMIT $2 OFFSET $3"
-            ))
+ )           ))
             .bind(tenant_id)
             .bind(offset.page_size)
             .bind(offset.offset)
@@ -1079,14 +1079,14 @@ where
         }
         TimelineListParams::CursorOffset(cursor) => {
             let limit = (cursor.page_size + 1) as i64;
-            let rows = sqlx::query(&format!(
+            let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
                 "SELECT {select} \
                  FROM {table} \
                  WHERE tenant_id = $1 \
                    AND ($4::text IS NULL OR {search_predicate}) \
                  ORDER BY created_at DESC NULLS LAST, id \
                  LIMIT $2 OFFSET $3"
-            ))
+ )           ))
             .bind(tenant_id)
             .bind(limit)
             .bind(cursor.offset as i64)
@@ -1109,7 +1109,7 @@ where
         }
         TimelineListParams::CursorKeyset { page_size, cursor } => {
             let limit = (page_size + 1) as i64;
-            let rows = sqlx::query(&format!(
+            let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
                 "SELECT {select} \
                  FROM {table} \
                  WHERE tenant_id = $1 \
@@ -1117,7 +1117,7 @@ where
                    AND (created_at < $4 OR (created_at = $4 AND id < $5)) \
                  ORDER BY created_at DESC NULLS LAST, id \
                  LIMIT $2"
-            ))
+ )           ))
             .bind(tenant_id)
             .bind(limit)
             .bind(&search_pattern)

@@ -321,7 +321,7 @@ pub(crate) async fn list_tenant_rows(
             "SELECT {select}, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN} \
              FROM {table} WHERE tenant_id = $1 ORDER BY {order_by} LIMIT $2 OFFSET $3"
         );
-        return sqlx::query(&sql)
+        return sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
             .bind(tenant_id)
             .bind(params.page_size)
             .bind(params.offset)
@@ -334,7 +334,7 @@ pub(crate) async fn list_tenant_rows(
         "SELECT {select}, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN} \
          FROM {table} WHERE tenant_id = $1 {search_clause} ORDER BY {order_by} LIMIT $3 OFFSET $4"
     );
-    sqlx::query(&sql)
+    sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(tenant_id)
         .bind(search_pattern)
         .bind(params.page_size)
@@ -355,7 +355,7 @@ pub(crate) async fn retrieve_tenant_row(
     id: &str,
 ) -> Result<Option<PgRow>, sqlx::Error> {
     let sql = format!("SELECT {select} FROM {table} WHERE tenant_id = $1 AND id = $2 LIMIT 1");
-    sqlx::query(&sql)
+    sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(tenant_id)
         .bind(id)
         .fetch_optional(pg)
@@ -387,7 +387,7 @@ where
     }
 
     let sql = format!("UPDATE {table} SET {set_clause} WHERE tenant_id = $1 AND id = $2");
-    let mut query = sqlx::query(&sql).bind(tenant_id).bind(id);
+    let mut query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str())).bind(tenant_id).bind(id);
     for (_, value) in assignments {
         query = query.bind(value);
     }

@@ -279,14 +279,14 @@ async fn find_iam_context_from_dual_tokens(
     let auth_hash = hash_token(auth_token);
     let access_hash = hash_token(access_token);
 
-    let row = sqlx::query(&format!(
+    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT {IAM_SESSION_CONTEXT_SELECT} \
          FROM iam_session s {IAM_SESSION_CONTEXT_JOINS} \
          WHERE s.auth_token_hash = $1 AND s.access_token_hash = $2 \
            AND s.revoked_at IS NULL AND s.expires_at::timestamptz > $3::timestamptz \
            AND {IAM_SESSION_PRINCIPAL_ACTIVE} \
          LIMIT 1"
-    ))
+    )))
     .bind(&auth_hash)
     .bind(&access_hash)
     .bind(current_timestamp_utc())
@@ -309,7 +309,7 @@ async fn find_iam_context_from_auth_token(pg: &PgPool, auth_token: &str) -> Opti
         return None;
     }
     let auth_hash = hash_token(auth_token);
-    let row = sqlx::query(&format!(
+    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT {IAM_SESSION_CONTEXT_SELECT} \
          FROM iam_session s {IAM_SESSION_CONTEXT_JOINS} \
          WHERE s.auth_token_hash = $1 \
@@ -319,7 +319,7 @@ async fn find_iam_context_from_auth_token(pg: &PgPool, auth_token: &str) -> Opti
                AND sac.status = 'active' \
                AND (sac.expires_at IS NULL OR sac.expires_at > $2::timestamptz))) \
          LIMIT 1"
-    ))
+    )))
     .bind(&auth_hash)
     .bind(current_timestamp_utc())
     .fetch_optional(pg)
@@ -349,7 +349,7 @@ async fn find_iam_context_from_access_token(
         return None;
     }
     let access_hash = hash_token(access_token);
-    let row = sqlx::query(&format!(
+    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT {IAM_SESSION_CONTEXT_SELECT} \
          FROM iam_session s {IAM_SESSION_CONTEXT_JOINS} \
          WHERE s.access_token_hash = $1 \
@@ -359,7 +359,7 @@ async fn find_iam_context_from_access_token(
                AND sac.status = 'active' \
                AND (sac.expires_at IS NULL OR sac.expires_at > $2::timestamptz))) \
          LIMIT 1"
-    ))
+    )))
     .bind(&access_hash)
     .bind(current_timestamp_utc())
     .fetch_optional(pg)

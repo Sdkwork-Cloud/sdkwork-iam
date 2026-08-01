@@ -417,7 +417,7 @@ pub async fn exchange_authorization_code(
         validate_pkce(code_verifier, &pkce_challenge, &pkce_method)?;
     }
 
-    let session_row = sqlx::query(&format!(
+    let session_row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT {IAM_SESSION_CONTEXT_SELECT} \
          FROM iam_session s \
          JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
@@ -426,7 +426,7 @@ pub async fn exchange_authorization_code(
            AND u.status = 'active' AND u.is_deleted = 0 \
          ORDER BY s.updated_at DESC \
          LIMIT 1"
-    ))
+    )))
     .bind(&tenant_id)
     .bind(&user_id)
     .bind(chrono::Utc::now().to_rfc3339())
@@ -558,7 +558,7 @@ pub async fn exchange_refresh_token(
         return Err("OAuth refresh token has expired".to_string());
     }
 
-    let session_row = sqlx::query(&format!(
+    let session_row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT {IAM_SESSION_CONTEXT_SELECT} \
          FROM iam_session s \
          JOIN iam_user u ON u.id = s.user_id AND u.tenant_id = s.tenant_id \
@@ -567,7 +567,7 @@ pub async fn exchange_refresh_token(
            AND u.status = 'active' AND u.is_deleted = 0 \
          ORDER BY s.updated_at DESC \
          LIMIT 1"
-    ))
+    )))
     .bind(&tenant_id)
     .bind(&user_id)
     .bind(&now_rfc3339)

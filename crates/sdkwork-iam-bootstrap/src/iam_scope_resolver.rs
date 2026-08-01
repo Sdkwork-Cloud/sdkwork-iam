@@ -89,9 +89,9 @@ where
 {
     let tenant_code = effective_iam_tenant_code(tenant_code);
     let tenant_deleted_filter = tenant_deleted_filter_sqlite(options);
-    let tenant_row = sqlx::query(&format!(
+    let tenant_row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id FROM iam_tenant WHERE code = ? AND status = 'active'{tenant_deleted_filter} ORDER BY id LIMIT 1"
-    ))
+    )))
     .bind(tenant_code)
     .fetch_optional(executor)
     .await?;
@@ -111,9 +111,9 @@ where
 {
     let tenant_code = effective_iam_tenant_code(tenant_code);
     let tenant_deleted_filter = tenant_deleted_filter_postgres(options);
-    let tenant_row = sqlx::query(&format!(
+    let tenant_row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id FROM iam_tenant WHERE code = $1 AND status = 'active'{tenant_deleted_filter} ORDER BY id LIMIT 1"
-    ))
+    )))
     .bind(tenant_code)
     .fetch_optional(executor)
     .await?;
@@ -135,9 +135,9 @@ where
 {
     let organization_code = effective_iam_organization_code(organization_code);
     let organization_deleted_filter = organization_deleted_filter_sqlite(options);
-    let organization_row = sqlx::query(&format!(
+    let organization_row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id FROM iam_organization WHERE tenant_id = ? AND code = ? AND status = 'active'{organization_deleted_filter} ORDER BY id LIMIT 1"
-    ))
+    )))
     .bind(tenant_id)
     .bind(organization_code)
     .fetch_optional(executor)
@@ -159,9 +159,9 @@ where
 {
     let organization_code = effective_iam_organization_code(organization_code);
     let organization_deleted_filter = organization_deleted_filter_postgres(options);
-    let organization_row = sqlx::query(&format!(
+    let organization_row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id FROM iam_organization WHERE tenant_id = $1 AND code = $2 AND status = 'active'{organization_deleted_filter} ORDER BY id LIMIT 1"
-    ))
+    )))
     .bind(tenant_id)
     .bind(organization_code)
     .fetch_optional(executor)

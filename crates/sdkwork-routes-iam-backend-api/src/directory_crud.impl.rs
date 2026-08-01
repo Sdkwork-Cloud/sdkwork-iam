@@ -154,7 +154,7 @@ async fn soft_delete(
             let row_id = id.clone();
             let now = now.clone();
 
-                sqlx::query(&sql)
+                sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
                     .bind(&tenant_id)
                     .bind(&row_id)
                     .bind(&now)
@@ -597,7 +597,7 @@ let sql = sql.clone();
             let permission_id = permission_id_for_update.clone();
             let assignment_values = assignment_values.clone();
             
-                let mut query = sqlx::query(&sql).bind(&permission_id);
+                let mut query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str())).bind(&permission_id);
                 for value in &assignment_values {
                     query = query.bind(value);
                 }
@@ -1357,7 +1357,7 @@ async fn list_department_assignments(State(state): State<BackendIamState>, ctx: 
         return list_page_params_or_error(&query).err().expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    match sqlx::query(&format!(
+    match sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, organization_id, organization_membership_id, user_id, department_id, assignment_kind, is_primary, effective_from, status, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_department_assignment \
@@ -1366,7 +1366,7 @@ async fn list_department_assignments(State(state): State<BackendIamState>, ctx: 
                 OR LOWER(department_id) LIKE $4) \
          ORDER BY id \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -1523,7 +1523,7 @@ async fn list_position_assignments(State(state): State<BackendIamState>, ctx: We
         return list_page_params_or_error(&query).err().expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    match sqlx::query(&format!(
+    match sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, organization_id, department_assignment_id, position_id, user_id, is_primary, effective_from, status, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_position_assignment \
@@ -1532,7 +1532,7 @@ async fn list_position_assignments(State(state): State<BackendIamState>, ctx: We
                 OR LOWER(position_id) LIKE $4) \
          ORDER BY id \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -1612,14 +1612,14 @@ async fn list_tenants(State(state): State<BackendIamState>, ctx: WebRequestConte
         return list_page_params_or_error(&query).err().expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    match sqlx::query(&format!(
+    match sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, code, name, status, created_at, updated_at, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_tenant \
          WHERE id = $1 \
            AND ($4::text IS NULL OR LOWER(code) LIKE $4 OR LOWER(name) LIKE $4) \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -1715,7 +1715,7 @@ let sql = sql.clone();
             let tenant_id = tenant_id_owned.clone();
             let assignments = assignments_owned.clone();
             
-                let mut query = sqlx::query(&sql).bind(&tenant_id);
+                let mut query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str())).bind(&tenant_id);
                 for (_, value) in &assignments {
                     query = query.bind(value);
                 }
@@ -1778,7 +1778,7 @@ async fn list_tenant_members(State(state): State<BackendIamState>, ctx: WebReque
         return list_page_params_or_error(&query).err().expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    match sqlx::query(&format!(
+    match sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, user_id, member_kind, status, joined_at, created_at, updated_at, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_tenant_member \
@@ -1786,7 +1786,7 @@ async fn list_tenant_members(State(state): State<BackendIamState>, ctx: WebReque
            AND ($4::text IS NULL OR LOWER(user_id) LIKE $4) \
          ORDER BY joined_at DESC \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -1855,7 +1855,7 @@ async fn update_tenant_member(State(state): State<BackendIamState>, ctx: WebRequ
         user_id.clone(),
         json!({ "userId": user_id }),
         |tx| Box::pin(async move {
-            let mut query = sqlx::query(&sql).bind(tenant_id_update).bind(user_id_update);
+            let mut query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str())).bind(tenant_id_update).bind(user_id_update);
             for (_, value) in assignments { query = query.bind(value); }
             query.execute(&mut **tx).await.map(|result| result.rows_affected())
         }),
@@ -1993,7 +1993,7 @@ async fn list_groups(
         return list_page_params_or_error(&query).err().expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    match sqlx::query(&format!(
+    match sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, organization_id, code, name, group_kind, status, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_group \
@@ -2001,7 +2001,7 @@ async fn list_groups(
            AND ($4::text IS NULL OR LOWER(code) LIKE $4 OR LOWER(name) LIKE $4) \
          ORDER BY code, id \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -2179,7 +2179,7 @@ async fn list_group_members(
         return list_page_params_or_error(&query).err().expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    match sqlx::query(&format!(
+    match sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, group_id, principal_kind, principal_id, joined_at, status, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_group_member \
@@ -2187,7 +2187,7 @@ async fn list_group_members(
            AND ($5::text IS NULL OR LOWER(principal_id) LIKE $5) \
          ORDER BY joined_at, id \
          LIMIT $3 OFFSET $4"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(&group_id)
     .bind(params.page_size)
@@ -2360,7 +2360,7 @@ async fn list_service_accounts(
         return list_page_params_or_error(&query).err().expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    match sqlx::query(&format!(
+    match sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, organization_id, code, name, status, credential_kind, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_service_account \
@@ -2368,7 +2368,7 @@ async fn list_service_accounts(
            AND ($4::text IS NULL OR LOWER(code) LIKE $4 OR LOWER(name) LIKE $4) \
          ORDER BY code, id \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)

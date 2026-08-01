@@ -289,7 +289,7 @@ pub async fn load_binding_permission_rows(
          ORDER BY r.code, b.effect, p.code \
          LIMIT $4"
     );
-    let rows = sqlx::query(&sql)
+    let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(tenant_id)
         .bind(user_id)
         .bind(organization_id.unwrap_or(""))
@@ -385,7 +385,7 @@ pub async fn load_binding_data_scopes(
            {BINDING_SCOPE_SQL} \
          LIMIT $4"
     );
-    let rows = sqlx::query(&sql)
+    let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(tenant_id)
         .bind(user_id)
         .bind(organization_id.unwrap_or(""))
@@ -460,7 +460,7 @@ pub async fn resolve_standard_role_codes(
            {BINDING_SCOPE_SQL} \
          ORDER BY r.code"
     );
-    let rows = sqlx::query(&sql)
+    let rows = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
         .bind(tenant_id)
         .bind(user_id)
         .bind(organization_id.unwrap_or(""))

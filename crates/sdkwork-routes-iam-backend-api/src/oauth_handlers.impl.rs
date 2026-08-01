@@ -145,7 +145,7 @@ async fn tenant_delete(
         |tx| {
             Box::pin(async move {
                 let sql = format!("DELETE FROM {table_owned} WHERE tenant_id = $1 AND id = $2");
-                sqlx::query(&sql)
+                sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
                     .bind(&tenant_id)
                     .bind(&id_owned)
                     .execute(&mut **tx)
@@ -341,7 +341,7 @@ async fn list_provider_catalog(
             .expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, owner_tenant_id, provider_code, provider_name, provider_display_name, status, created_at, updated_at, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_oauth_provider_catalog \
@@ -350,7 +350,7 @@ async fn list_provider_catalog(
                 OR LOWER(provider_display_name) LIKE $4) \
          ORDER BY sort_order, provider_code \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -568,7 +568,7 @@ async fn update_provider_catalog(
         json!({}),
         |tx| {
             Box::pin(async move {
-                let mut query = sqlx::query(&sql)
+                let mut query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
                     .bind(tenant_id_update)
                     .bind(provider_catalog_id_update);
                 for (_, value) in assignments {
@@ -2457,7 +2457,7 @@ where
 
             match sql.as_str() {
                 s if s.contains("iam_oauth_scope_profile") => {
-                    sqlx::query(s)
+                    sqlx::query(sqlx::AssertSqlSafe(s))
                         .bind(&insert_id)
                         .bind(Uuid::new_v4().to_string())
                         .bind(&tenant_id)
@@ -2472,7 +2472,7 @@ where
                         .await
                 }
                 s if s.contains("iam_oauth_claim_mapping") => {
-                    sqlx::query(s)
+                    sqlx::query(sqlx::AssertSqlSafe(s))
                         .bind(&insert_id)
                         .bind(Uuid::new_v4().to_string())
                         .bind(&tenant_id)
@@ -2487,7 +2487,7 @@ where
                         .await
                 }
                 _ => {
-                    sqlx::query(&sql)
+                    sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
                         .bind(&insert_id)
                         .bind(Uuid::new_v4().to_string())
                         .bind(&tenant_id)

@@ -2105,14 +2105,14 @@ async fn list_oauth_account_links(
             .err()
             .expect("error response");
     };
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, provider_code, integration_id, external_account_display_snapshot, linked_at, status, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_oauth_account_link \
          WHERE tenant_id = $1 AND user_id = $2 AND status = 'active' AND unlinked_at IS NULL \
          ORDER BY linked_at DESC \
          LIMIT $3 OFFSET $4"
-    ))
+ )   ))
     .bind(&session.user.tenant_id)
     .bind(&session.user.id)
     .bind(params.page_size)
@@ -2259,7 +2259,7 @@ async fn list_oauth_grants(
             .expect("error response");
     };
     let search = list_search_pattern(&query);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, provider_code, integration_id, grant_owner_kind, flow_kind, status, issued_at, created_at, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_oauth_grant \
@@ -2267,7 +2267,7 @@ async fn list_oauth_grants(
            AND ($5::text IS NULL OR LOWER(provider_code) LIKE $5 OR LOWER(integration_id) LIKE $5) \
          ORDER BY created_at DESC, id \
          LIMIT $3 OFFSET $4"
-    ))
+ )   ))
     .bind(&session.user.tenant_id)
     .bind(&session.user.id)
     .bind(params.page_size)
@@ -3961,7 +3961,7 @@ async fn scoped_organizations_for_session(
         ],
     );
     let tree_limit = sdkwork_iam_bootstrap::IAM_TREE_MAX_NODES + 1;
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, parent_organization_id, name, organization_kind, \
                 tenant_boundary_kind, data_boundary_kind, app_boundary_enabled, \
                 verification_status, status \
@@ -3971,7 +3971,7 @@ async fn scoped_organizations_for_session(
            AND ($4::text IS NULL OR parent_organization_id = $4) \
          ORDER BY name, id \
          LIMIT $5"
-    ))
+ )   ))
     .bind(&session.context.tenant_id)
     .bind(&organization_ids)
     .bind(&org_id)
@@ -4023,7 +4023,7 @@ async fn paged_organizations_for_session(
             "parent_id",
         ],
     );
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, parent_organization_id, name, organization_kind, \
                 tenant_boundary_kind, data_boundary_kind, app_boundary_enabled, \
                 verification_status, status, COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
@@ -4034,7 +4034,7 @@ async fn paged_organizations_for_session(
            AND ($5::text IS NULL OR LOWER(name) LIKE $5 OR LOWER(id) LIKE $5) \
          ORDER BY name, id \
          LIMIT $6 OFFSET $7"
-    ))
+ )   ))
     .bind(&session.context.tenant_id)
     .bind(&organization_ids)
     .bind(&org_id)
@@ -4085,7 +4085,7 @@ async fn paged_organization_memberships(
     let organization_id = optional_query_string(query, &["organizationId", "organization_id"]);
     let user_id = optional_query_string(query, &["userId", "user_id"]);
     let status = optional_query_string(query, &["status"]);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT m.id, m.tenant_id, m.organization_id, m.user_id, m.membership_kind, \
                 m.is_primary, m.status, u.username, u.display_name, u.email, u.phone, \
                 u.email_verified, u.phone_verified, u.last_login_at, u.password_changed_at, \
@@ -4101,7 +4101,7 @@ async fn paged_organization_memberships(
                 OR LOWER(COALESCE(u.email, '')) LIKE $9) \
          ORDER BY m.is_primary DESC, u.display_name, m.id \
          LIMIT $7 OFFSET $8"
-    ))
+ )   ))
     .bind(&session.context.tenant_id)
     .bind(&session.context.user_id)
     .bind(&membership_id)
@@ -4218,7 +4218,7 @@ async fn paged_departments_for_session(
             "parent_id",
         ],
     );
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, organization_id, parent_department_id, name, status, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_department \
@@ -4229,7 +4229,7 @@ async fn paged_departments_for_session(
            AND ($6::text IS NULL OR LOWER(name) LIKE $6 OR LOWER(id) LIKE $6) \
          ORDER BY name, id \
          LIMIT $7 OFFSET $8"
-    ))
+ )   ))
     .bind(&session.context.tenant_id)
     .bind(&organization_ids)
     .bind(&organization_id)
@@ -4287,7 +4287,7 @@ async fn paged_department_assignments(
     );
     let user_id = optional_query_string(query, &["userId", "user_id"]);
     let status = optional_query_string(query, &["status"]);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT a.id, a.tenant_id, a.organization_id, a.organization_membership_id, \
                 a.department_id, a.user_id, a.assignment_kind, a.status, \
                 u.username, u.display_name, u.email, u.phone, u.email_verified, \
@@ -4306,7 +4306,7 @@ async fn paged_department_assignments(
                 OR LOWER(COALESCE(u.email, '')) LIKE $11) \
          ORDER BY u.display_name, a.id \
          LIMIT $9 OFFSET $10"
-    ))
+ )   ))
     .bind(&session.context.tenant_id)
     .bind(&session.context.user_id)
     .bind(&assignment_id)
@@ -4358,7 +4358,7 @@ async fn paged_positions(
     let organization_id = optional_query_string(query, &["organizationId", "organization_id"]);
     let position_id = optional_query_string(query, &["positionId", "position_id", "id"]);
     let status = optional_query_string(query, &["status"]);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, organization_id, name, status, COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_position \
          WHERE tenant_id = $1 AND status = 'active' AND organization_id = ANY($2) \
@@ -4368,7 +4368,7 @@ async fn paged_positions(
            AND ($6::text IS NULL OR LOWER(name) LIKE $6 OR LOWER(id) LIKE $6) \
          ORDER BY name, id \
          LIMIT $7 OFFSET $8"
-    ))
+ )   ))
     .bind(&session.context.tenant_id)
     .bind(&organization_ids)
     .bind(&organization_id)
@@ -4421,7 +4421,7 @@ async fn paged_position_assignments(
     let position_id = optional_query_string(query, &["positionId", "position_id"]);
     let user_id = optional_query_string(query, &["userId", "user_id"]);
     let status = optional_query_string(query, &["status"]);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT a.id, a.tenant_id, a.organization_id, a.department_assignment_id, \
                 a.position_id, a.user_id, a.status, d.department_id, p.name, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
@@ -4439,7 +4439,7 @@ async fn paged_position_assignments(
            AND ($12::text IS NULL OR LOWER(COALESCE(p.name, '')) LIKE $12) \
          ORDER BY p.name, a.id \
          LIMIT $10 OFFSET $11"
-    ))
+ )   ))
     .bind(&session.context.tenant_id)
     .bind(&session.context.user_id)
     .bind(&assignment_id)
@@ -4487,7 +4487,7 @@ async fn paged_role_bindings(
     let scope_kind = optional_query_string(query, &["scopeKind", "scope_kind"]);
     let scope_id = optional_query_string(query, &["scopeId", "scope_id"]);
     let status = optional_query_string(query, &["status"]);
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT b.id, b.tenant_id, b.principal_id, r.code, b.scope_kind, b.scope_id, b.status, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_role_binding b \
@@ -4509,7 +4509,7 @@ async fn paged_role_bindings(
            AND ($11::text IS NULL OR LOWER(r.code) LIKE $11 OR LOWER(b.principal_id) LIKE $11) \
          ORDER BY r.code, b.id \
          LIMIT $9 OFFSET $10"
-    ))
+ )   ))
     .bind(&session.context.tenant_id)
     .bind(&session.context.user_id)
     .bind(&binding_id)

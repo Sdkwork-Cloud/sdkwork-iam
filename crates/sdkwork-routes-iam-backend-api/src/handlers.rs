@@ -732,7 +732,7 @@ async fn list_tenant_applications_handler(
     let search_pattern = list_search_pattern(&query);
     let status = normalized_query_filter(&query, "status");
     let environment = normalized_query_filter(&query, "environment");
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
                 instance_key, display_name, environment, status, primary_domain, \
                 access_permissions_json, created_at::text, updated_at::text, \
@@ -745,7 +745,7 @@ async fn list_tenant_applications_handler(
            AND ($6::text IS NULL OR environment = $6) \
          ORDER BY updated_at DESC, id \
          LIMIT $2 OFFSET $3"
-    ))
+ )   ))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
