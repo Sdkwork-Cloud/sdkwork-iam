@@ -274,6 +274,12 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
             {
                 return self.validate_production_principal(web_request_principal_from_iam(context));
             }
+            if allows_dev_authentication_fallback() {
+                return self
+                    .jwt_fallback
+                    .resolve_access_token(raw_access_token)
+                    .await;
+            }
             return Err(WebFrameworkError::invalid_credentials(
                 "invalid or expired IAM access token",
             ));
