@@ -153,7 +153,10 @@ mod tests {
         apply_workspace_postgres_env(&app_root);
         // The client-local SQLite URL coexists with the workspace profile; the
         // profile must still be loaded for server engines (ENVIRONMENT_SPEC §7.2).
-        assert_eq!(std::env::var("SDKWORK_DATABASE_ENGINE").unwrap(), "postgresql");
+        assert_eq!(
+            std::env::var("SDKWORK_DATABASE_ENGINE").unwrap(),
+            "postgresql"
+        );
         assert_eq!(std::env::var("SDKWORK_DATABASE_HOST").unwrap(), "127.0.0.1");
         assert!(std::env::var("SDKWORK_DATABASE_SQLITE_URL")
             .unwrap()

@@ -745,7 +745,7 @@ async fn list_tenant_applications_handler(
            AND ($6::text IS NULL OR environment = $6) \
          ORDER BY updated_at DESC, id \
          LIMIT $2 OFFSET $3"
- )   ))
+    )))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)

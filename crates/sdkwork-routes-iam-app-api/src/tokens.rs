@@ -581,7 +581,7 @@ pub(crate) async fn find_session_by_id(
            AND s.revoked_at IS NULL AND s.expires_at::timestamptz > $4::timestamptz \
            AND u.status = 'active' AND u.is_deleted = 0 \
          LIMIT 1"
- )   ))
+    )))
     .bind(session_id)
     .bind(user_id)
     .bind(tenant_id)

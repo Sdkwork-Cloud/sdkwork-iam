@@ -306,7 +306,7 @@ async fn list_roles(
            AND ($4::text IS NULL OR LOWER(code) LIKE $4 OR LOWER(name) LIKE $4) \
          ORDER BY code, id \
          LIMIT $2 OFFSET $3"
- )   ))
+    )))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -377,7 +377,7 @@ async fn list_role_permissions(
                 OR LOWER(p.resource) LIKE $5 OR LOWER(p.action) LIKE $5) \
          ORDER BY p.code \
          LIMIT $3 OFFSET $4"
- )   ))
+    )))
     .bind(&tenant_id)
     .bind(&role_id)
     .bind(params.page_size)
@@ -416,7 +416,7 @@ async fn list_permissions(
                 OR LOWER(resource) LIKE $3 OR LOWER(action) LIKE $3) \
          ORDER BY code \
          LIMIT $1 OFFSET $2"
- )   ))
+    )))
     .bind(params.page_size)
     .bind(params.offset)
     .bind(&search_pattern)
@@ -782,7 +782,7 @@ async fn list_organizations(
            AND ($4::text IS NULL OR LOWER(name) LIKE $4 OR LOWER(code) LIKE $4) \
          ORDER BY name, id \
          LIMIT $2 OFFSET $3"
- )   ))
+    )))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -829,7 +829,7 @@ async fn list_organization_memberships(
                     OR LOWER(COALESCE(u.email, '')) LIKE $5) \
              ORDER BY m.joined_at DESC NULLS LAST, m.id \
              LIMIT $3 OFFSET $4"
- )       ))
+        )))
         .bind(&tenant_id)
         .bind(organization_id)
         .bind(params.page_size)
@@ -849,7 +849,7 @@ async fn list_organization_memberships(
                     OR LOWER(COALESCE(u.email, '')) LIKE $4) \
              ORDER BY m.joined_at DESC NULLS LAST, m.id \
              LIMIT $2 OFFSET $3"
- )       ))
+        )))
         .bind(&tenant_id)
         .bind(params.page_size)
         .bind(params.offset)
@@ -894,7 +894,7 @@ async fn list_departments(
                AND ($5::text IS NULL OR LOWER(name) LIKE $5 OR LOWER(code) LIKE $5) \
              ORDER BY name, id \
              LIMIT $3 OFFSET $4"
- )       ))
+        )))
         .bind(&tenant_id)
         .bind(organization_id)
         .bind(params.page_size)
@@ -911,7 +911,7 @@ async fn list_departments(
                AND ($4::text IS NULL OR LOWER(name) LIKE $4 OR LOWER(code) LIKE $4) \
              ORDER BY name, id \
              LIMIT $2 OFFSET $3"
- )       ))
+        )))
         .bind(&tenant_id)
         .bind(params.page_size)
         .bind(params.offset)
@@ -954,7 +954,7 @@ async fn list_api_keys(
            AND ($4::text IS NULL OR LOWER(name) LIKE $4) \
          ORDER BY created_at DESC NULLS LAST, id \
          LIMIT $2 OFFSET $3"
- )   ))
+    )))
     .bind(&tenant_id)
     .bind(params.page_size)
     .bind(params.offset)
@@ -1068,7 +1068,7 @@ where
                    AND ($4::text IS NULL OR {search_predicate}) \
                  ORDER BY created_at DESC NULLS LAST, id \
                  LIMIT $2 OFFSET $3"
- )           ))
+            )))
             .bind(tenant_id)
             .bind(offset.page_size)
             .bind(offset.offset)
@@ -1086,7 +1086,7 @@ where
                    AND ($4::text IS NULL OR {search_predicate}) \
                  ORDER BY created_at DESC NULLS LAST, id \
                  LIMIT $2 OFFSET $3"
- )           ))
+            )))
             .bind(tenant_id)
             .bind(limit)
             .bind(cursor.offset as i64)
@@ -1117,7 +1117,7 @@ where
                    AND (created_at < $4 OR (created_at = $4 AND id < $5)) \
                  ORDER BY created_at DESC NULLS LAST, id \
                  LIMIT $2"
- )           ))
+            )))
             .bind(tenant_id)
             .bind(limit)
             .bind(&search_pattern)

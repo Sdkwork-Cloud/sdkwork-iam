@@ -210,12 +210,15 @@ async fn apply_locale_seed_overlays(
             ))
         })?;
         for statement in split_sql_statements(&sql) {
-            sqlx::query(sqlx::AssertSqlSafe(statement.as_str())).execute(pg).await.map_err(|error| {
-                SpiError::Seed(format!(
-                    "apply locale seed overlay {:?} failed: {error}",
-                    script_path
-                ))
-            })?;
+            sqlx::query(sqlx::AssertSqlSafe(statement.as_str()))
+                .execute(pg)
+                .await
+                .map_err(|error| {
+                    SpiError::Seed(format!(
+                        "apply locale seed overlay {:?} failed: {error}",
+                        script_path
+                    ))
+                })?;
         }
     }
     Ok(())

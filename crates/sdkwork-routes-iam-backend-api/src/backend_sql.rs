@@ -387,7 +387,9 @@ where
     }
 
     let sql = format!("UPDATE {table} SET {set_clause} WHERE tenant_id = $1 AND id = $2");
-    let mut query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str())).bind(tenant_id).bind(id);
+    let mut query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+        .bind(tenant_id)
+        .bind(id);
     for (_, value) in assignments {
         query = query.bind(value);
     }

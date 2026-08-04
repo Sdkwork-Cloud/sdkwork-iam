@@ -3971,7 +3971,7 @@ async fn scoped_organizations_for_session(
            AND ($4::text IS NULL OR parent_organization_id = $4) \
          ORDER BY name, id \
          LIMIT $5"
- )   ))
+    )))
     .bind(&session.context.tenant_id)
     .bind(&organization_ids)
     .bind(&org_id)
@@ -4034,7 +4034,7 @@ async fn paged_organizations_for_session(
            AND ($5::text IS NULL OR LOWER(name) LIKE $5 OR LOWER(id) LIKE $5) \
          ORDER BY name, id \
          LIMIT $6 OFFSET $7"
- )   ))
+    )))
     .bind(&session.context.tenant_id)
     .bind(&organization_ids)
     .bind(&org_id)
@@ -4101,7 +4101,7 @@ async fn paged_organization_memberships(
                 OR LOWER(COALESCE(u.email, '')) LIKE $9) \
          ORDER BY m.is_primary DESC, u.display_name, m.id \
          LIMIT $7 OFFSET $8"
- )   ))
+    )))
     .bind(&session.context.tenant_id)
     .bind(&session.context.user_id)
     .bind(&membership_id)
@@ -4229,7 +4229,7 @@ async fn paged_departments_for_session(
            AND ($6::text IS NULL OR LOWER(name) LIKE $6 OR LOWER(id) LIKE $6) \
          ORDER BY name, id \
          LIMIT $7 OFFSET $8"
- )   ))
+    )))
     .bind(&session.context.tenant_id)
     .bind(&organization_ids)
     .bind(&organization_id)
@@ -4306,7 +4306,7 @@ async fn paged_department_assignments(
                 OR LOWER(COALESCE(u.email, '')) LIKE $11) \
          ORDER BY u.display_name, a.id \
          LIMIT $9 OFFSET $10"
- )   ))
+    )))
     .bind(&session.context.tenant_id)
     .bind(&session.context.user_id)
     .bind(&assignment_id)
@@ -4439,7 +4439,7 @@ async fn paged_position_assignments(
            AND ($12::text IS NULL OR LOWER(COALESCE(p.name, '')) LIKE $12) \
          ORDER BY p.name, a.id \
          LIMIT $10 OFFSET $11"
- )   ))
+    )))
     .bind(&session.context.tenant_id)
     .bind(&session.context.user_id)
     .bind(&assignment_id)
@@ -4509,7 +4509,7 @@ async fn paged_role_bindings(
            AND ($11::text IS NULL OR LOWER(r.code) LIKE $11 OR LOWER(b.principal_id) LIKE $11) \
          ORDER BY r.code, b.id \
          LIMIT $9 OFFSET $10"
- )   ))
+    )))
     .bind(&session.context.tenant_id)
     .bind(&session.context.user_id)
     .bind(&binding_id)
