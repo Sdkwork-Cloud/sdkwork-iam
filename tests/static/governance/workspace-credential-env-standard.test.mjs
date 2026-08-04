@@ -30,13 +30,13 @@ test("forbidden credential env key pattern rejects scoped and browser token keys
   assert.doesNotMatch("VITE_DRIVE_PC_TOKEN_STORAGE=browser-local", forbiddenEnvKeyPattern);
 });
 
-test("documented claw-router server env keys stay outside credential-env enforcement", () => {
+test("documented cloud-router server env keys stay outside credential-env enforcement", () => {
   assert.equal(
-    isForbiddenCredentialEnvAssignment('SDKWORK_CLAW_TOOL_API_SDK_GENERATOR_API_KEY=""'),
+    isForbiddenCredentialEnvAssignment('SDKWORK_CLOUDROUTER_TOOL_API_SDK_GENERATOR_API_KEY=""'),
     false,
   );
   assert.equal(
-    isForbiddenCredentialEnvAssignment("SDKWORK_CLAW_EDGE_CSP_CONNECT_SRC="),
+    isForbiddenCredentialEnvAssignment("SDKWORK_CLOUDROUTER_EDGE_CSP_CONNECT_SRC="),
     false,
   );
   assert.equal(

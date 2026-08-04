@@ -335,10 +335,15 @@ where
 }
 
 /// Builds the IAM-configured framework host before a composed API assembly is bound.
-pub fn build_web_framework_builder<R>(
+///
+/// The gateway's own Open API surface prefixes are contributed by the caller so
+/// surfaces such as `/knowledge/v3/api` are classified as OpenApi instead of
+/// falling through to an unclassified 401.
+pub fn build_web_framework_builder_with_open_api_prefixes<R>(
     resolver: R,
     route_manifest: HttpRouteManifest,
     extra_public_path_prefixes: Vec<String>,
+    open_api_prefixes: Vec<String>,
 ) -> sdkwork_web_bootstrap::WebFrameworkBuilder<R>
 where
     R: sdkwork_web_core::WebRequestContextResolver + Clone + std::any::Any,
@@ -355,11 +360,7 @@ where
     };
     builder
         .profile(WebRequestContextProfile {
-            open_api_prefixes: vec![
-                "/open/v3/api".to_owned(),
-                "/iam/v3/api".to_owned(),
-                "/iam/v3/oauth".to_owned(),
-            ],
+            open_api_prefixes,
             public_path_prefixes: extra_public_path_prefixes,
             environment,
             ..WebRequestContextProfile::default()
@@ -371,6 +372,27 @@ where
             sdkwork_web_core::EnforcePrincipalTenantIsolationPolicy,
         ))
         .domain_injector(std::sync::Arc::new(IamAppContextInjector))
+}
+
+/// Builds the IAM-configured framework host with the default IAM Open API prefixes.
+pub fn build_web_framework_builder<R>(
+    resolver: R,
+    route_manifest: HttpRouteManifest,
+    extra_public_path_prefixes: Vec<String>,
+) -> sdkwork_web_bootstrap::WebFrameworkBuilder<R>
+where
+    R: sdkwork_web_core::WebRequestContextResolver + Clone + std::any::Any,
+{
+    build_web_framework_builder_with_open_api_prefixes(
+        resolver,
+        route_manifest,
+        extra_public_path_prefixes,
+        vec![
+            "/open/v3/api".to_owned(),
+            "/iam/v3/api".to_owned(),
+            "/iam/v3/oauth".to_owned(),
+        ],
+    )
 }
 
 pub fn build_iam_app_web_framework_layer(

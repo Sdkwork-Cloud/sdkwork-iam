@@ -11,7 +11,7 @@ const BOOTSTRAP_ORCHESTRATION_PATTERNS = [
   /mergeRepoDevBootstrapAccessTokenEnv/u,
   /mergeBootstrapAccessTokenEnvFromManifest/u,
   /mergeSdkworkImBootstrapAccessTokenEnv/u,
-  /ensureClawRouterBrowserDevelopmentEnv/u,
+  /ensureCloudRouterBrowserDevelopmentEnv/u,
 ];
 
 const STANDALONE_RENDERER_DEV_SCRIPT_PATTERN =
@@ -19,7 +19,7 @@ const STANDALONE_RENDERER_DEV_SCRIPT_PATTERN =
 
 const IAM_PC_RENDERER_DEV_ORCHESTRATORS = Object.freeze([
   { repo: 'sdkwork-im', relativePath: 'scripts/lib/im-pc-dev.mjs' },
-  { repo: 'sdkwork-clawrouter', relativePath: 'scripts/lib/claw-router-dev-main.mjs' },
+  { repo: 'sdkwork-cloudrouter', relativePath: 'scripts/lib/cloud-router-dev-main.mjs' },
   { repo: 'sdkwork-drive', relativePath: 'scripts/drive-dev.mjs' },
   { repo: 'sdkwork-rtc', relativePath: 'scripts/rtc-dev.mjs' },
   { repo: 'sdkwork-mail', relativePath: 'scripts/mail-dev.mjs' },

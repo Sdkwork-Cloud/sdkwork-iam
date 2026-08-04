@@ -11,7 +11,7 @@ struct LocalIamPermissionSeed {
     action: &'static str,
 }
 
-/// IAM directory permissions granted to the local `owner` role (aligned with claw seeds).
+/// IAM directory permissions granted to the local `owner` role (aligned with cloud seeds).
 const OWNER_ROLE_PERMISSION_SEEDS: &[LocalIamPermissionSeed] = &[
     LocalIamPermissionSeed {
         code: "iam.users.read",

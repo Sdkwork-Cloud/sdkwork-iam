@@ -9,7 +9,7 @@ Specs: IAM_SPEC.md, TECH_ARCHITECTURE.md, SECURITY_SPEC.md
 - PostgreSQL is the only supported production database engine (`database/README.md`).
 - Set `SDKWORK_IAM_SIGNING_MASTER_SECRET` before production startup.
 - Set `SDKWORK_IM_ENVIRONMENT=production` (or `SDKWORK_IM_ENVIRONMENT=development` only for local dev) so `assert_production_hardening()` and dev shortcuts follow the intended posture.
-- Configure `SDKWORK_DATABASE_URL` or the unified claw-router PostgreSQL profile.
+- Configure `SDKWORK_DATABASE_URL` or the unified cloud-router PostgreSQL profile.
 
 ## Gateway surfaces
 

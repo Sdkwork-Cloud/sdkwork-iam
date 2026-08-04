@@ -11,9 +11,16 @@
       "default": "./src/index.ts"
     }
   },
-  "files": ["src", "README.md"],
-  "scripts": { "typecheck": "tsc --noEmit" },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
+    "@sdkwork/iam-contracts": "workspace:*",
+    "@sdkwork/iam-pc-admin-core": "workspace:*",
     "@sdkwork/iam-pc-console-core": "workspace:*",
     "@sdkwork/iam-service": "workspace:*",
     "@sdkwork/ui-pc-react": "workspace:*"
@@ -23,10 +30,16 @@
     "react-dom": ">=18.2.0 <20.0.0"
   },
   "peerDependenciesMeta": {
-    "react": { "optional": true },
-    "react-dom": { "optional": true }
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
   },
-  "devDependencies": { "typescript": "^6.0.2" },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  },
   "sdkwork": {
     "workspace": "sdkwork-iam",
     "architecture": "pc-console",

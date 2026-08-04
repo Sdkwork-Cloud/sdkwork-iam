@@ -53,7 +53,7 @@ pnpm run verify
 
 ## Notes
 
-- Unified PostgreSQL env resolution prefers `sdkwork-iam/.env.postgres`, then claw-router profiles.
+- Unified PostgreSQL env resolution prefers `sdkwork-iam/.env.postgres`, then cloud-router profiles.
 - Integration tests cap IAM SQLx pools (`max_connections=2`, `min_connections=0`) and share one seeding pool per test binary via `tests/unified_database_env.rs`.
 - Local app/backend Postgres suites repair legacy opaque IAM user ids before serving directory reads, so assignment joins must stay aligned with the repaired snowflake `user_id`.
 - If PostgreSQL integration tests fail with `PoolTimedOut`, terminate stale IAM test binaries and release idle connections on the dev database before re-running `pnpm run verify`.

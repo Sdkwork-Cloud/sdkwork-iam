@@ -408,8 +408,8 @@ mod tests {
     fn manifest_mapping_defaults_runtime_app_id_to_app_key() {
         let manifest = SdkworkAppManifest {
             app: ManifestAppSection {
-                key: "sdkwork-clawrouter".to_owned(),
-                name: "SDKWork Claw Router".to_owned(),
+                key: "sdkwork-cloudrouter".to_owned(),
+                name: "SDKWork Cloud Router".to_owned(),
                 display_name: None,
                 app_type: Some("APP_HTML".to_owned()),
             },
@@ -429,8 +429,8 @@ mod tests {
         )
         .expect("command");
 
-        assert_eq!("sdkwork-clawrouter", command.runtime_app_id);
-        assert_eq!("sdkwork_clawrouter_prod", command.instance_key);
+        assert_eq!("sdkwork-cloudrouter", command.runtime_app_id);
+        assert_eq!("sdkwork_cloudrouter_prod", command.instance_key);
     }
 
     #[test]

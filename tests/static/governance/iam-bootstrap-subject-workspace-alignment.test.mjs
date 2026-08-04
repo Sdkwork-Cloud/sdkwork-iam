@@ -117,10 +117,10 @@ test("commerce membership seed uses canonical tenant scope", async (t) => {
   assert.doesNotMatch(seed, /tenant_id = '0'/);
 });
 
-test("claw router composed app registry uses canonical tenant id", async () => {
+test("cloud router composed app registry uses canonical tenant id", async () => {
   const appsPath = path.join(
     workspaceRoot,
-    "sdkwork-clawrouter/data/app/sdkwork-apps.json",
+    "sdkwork-cloudrouter/data/app/sdkwork-apps.json",
   );
   const apps = JSON.parse(await readFile(appsPath, "utf8"));
   for (const entry of apps.apps ?? []) {
@@ -253,11 +253,11 @@ test("DATABASE_SPEC requires tenant isolation and fail-closed distributed ID beh
   assert.doesNotMatch(databaseSpec, /"tenant_id": "1",\s*\n\s*"organization_id": "10"/);
 });
 
-test("claw web bridge maps canonical tenant id from web request context", async () => {
+test("cloud web bridge maps canonical tenant id from web request context", async () => {
   const source = await readFile(
     path.join(
       workspaceRoot,
-      "sdkwork-clawrouter/crates/sdkwork-claw-http/src/web_bridge.rs",
+      "sdkwork-cloudrouter/crates/sdkwork-cloudrouter-http/src/web_bridge.rs",
     ),
     "utf8",
   );

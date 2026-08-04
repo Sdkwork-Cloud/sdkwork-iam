@@ -63,7 +63,7 @@ Tenant account-binding policy is stored as serialized JSON in the `iam_policy.po
 - Profile resolution: `crates/sdkwork-routes-iam-app-api/tests/unified_database_env.rs` (same order as `run-iam-standard-contracts.mjs`).
 - Serial execution: `--test-threads 1` for `iam_http_standard`, `iam_local_app_router_test`, and backend postgres suites.
 - Pool caps: integration helpers set `SDKWORK_DATABASE_MAX_CONNECTIONS=2`, `MIN_CONNECTIONS=0`, and share one seeding pool per test binary (headroom for seed helpers plus router bootstrap).
-- HTTP standard postgres cases skip automatically when no profile file is present (CI without a sibling claw-router checkout).
+- HTTP standard postgres cases skip automatically when no profile file is present (CI without a sibling cloud-router checkout).
 - On `PoolTimedOut`, restart PostgreSQL or terminate stale IAM test binaries before re-running `pnpm run verify`.
 
 ## Web Framework IAM Resolver

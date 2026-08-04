@@ -14,7 +14,7 @@ const authPcReactRoot = path.join(
 );
 
 const IAM_PC_APP_ROOTS = [
-  "sdkwork-clawrouter/apps/sdkwork-clawrouter-pc",
+  "sdkwork-cloudrouter/apps/sdkwork-cloudrouter-pc",
   "sdkwork-dezhou/apps/sdkwork-dezhou-pc",
   "sdkwork-documents/apps/sdkwork-documents-pc",
   "sdkwork-drive/apps/sdkwork-drive-pc",
@@ -89,7 +89,7 @@ for (const appRoot of IAM_PC_APP_ROOTS) {
 
   test(`${appName} uses appbase auth runtime with session-auth enabled by default`, () => {
     const iamRuntimeFiles = findExistingFiles(appRoot, [
-      "packages/sdkwork-clawroutes-pc-commons/src/iam-runtime.ts",
+      "packages/sdkwork-cloudroutes-pc-commons/src/iam-runtime.ts",
       "packages/sdkwork-github-pc-core/src/iam/githubIamRuntime.ts",
       "packages/sdkwork-notary-pc-core/src/appAuthRuntime.ts",
       "packages/sdkwork-im-pc-core/src/sdk/appAuthRuntime.ts",

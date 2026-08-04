@@ -19,10 +19,13 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "typescript": "^6.0.2"
   },
   "dependencies": {
     "@sdkwork/i18n-pc-react": "workspace:*",
+    "@sdkwork/iam-contracts": "workspace:*",
     "@sdkwork/iam-pc-admin-core": "workspace:*",
     "@sdkwork/iam-service": "workspace:*",
     "@sdkwork/ui-pc-react": "workspace:*",

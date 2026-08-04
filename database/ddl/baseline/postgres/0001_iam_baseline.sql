@@ -1239,7 +1239,7 @@ CREATE TABLE IF NOT EXISTS iam_password_history (
 CREATE INDEX IF NOT EXISTS iam_password_history_user_idx ON iam_password_history (tenant_id, user_id, created_at DESC);
 
 -- source: database/ddl/baseline/postgres/0001_iam_legacy_baseline.sql#shared-database-compat
--- Bridge sdkwork-claw-router shared PostgreSQL tables to appbase IAM foundation columns.
+-- Bridge sdkwork-cloudrouter-router shared PostgreSQL tables to appbase IAM foundation columns.
 -- This migration must run before appbase foundation indexes are created on existing tables.
 
 ALTER TABLE iam_organization ADD COLUMN IF NOT EXISTS parent_organization_id TEXT;

@@ -109,7 +109,7 @@ pub async fn bootstrap_iam_database_from_env() -> Result<IamDatabaseHost, String
         .await
         .map_err(|error| format!("create IAM database pool failed: {error}"))?
         .ok_or_else(|| {
-            "PostgreSQL database configuration is required. Set SDKWORK_DATABASE_URL or the unified claw-router profile.".to_string()
+            "PostgreSQL database configuration is required. Set SDKWORK_DATABASE_URL or the unified cloud-router profile.".to_string()
         })?;
     bootstrap_iam_database(pool).await
 }

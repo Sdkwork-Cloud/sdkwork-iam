@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@sdkwork/iam-contracts": "workspace:*",
     "@sdkwork/iam-h5-core": "workspace:*",
     "@sdkwork/iam-service": "workspace:*",
     "@sdkwork/utils": "workspace:*"
@@ -28,8 +29,12 @@
     "react-dom": ">=18.2.0 <20.0.0"
   },
   "peerDependenciesMeta": {
-    "react": { "optional": true },
-    "react-dom": { "optional": true }
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^6.0.2"

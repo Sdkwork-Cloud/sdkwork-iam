@@ -19,6 +19,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "typescript": "^6.0.2"
   },
   "dependencies": {

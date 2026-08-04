@@ -245,7 +245,7 @@ impl LocalIamState {
     }
 
     /// Lightweight IAM state for product runtimes that already installed IAM schema
-    /// (for example Claw Router SQLite) and only need ephemeral/device-authorization routes.
+    /// (for example Cloud Router SQLite) and only need ephemeral/device-authorization routes.
     pub async fn from_pool_for_oauth_device_routes(pool: DatabasePool) -> Result<Self, String> {
         Self::from_pool_for_oauth_device_routes_with_password_session_bridge(pool, None).await
     }

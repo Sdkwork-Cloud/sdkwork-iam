@@ -39,8 +39,8 @@ pub fn resolve_application_app_root_with_fallback(fallback_app_root: PathBuf) ->
 /// Resolves the bootstrap environment from known environment variables.
 pub fn resolve_bootstrap_environment() -> String {
     for key in [
-        "SDKWORK_CLAW_ENVIRONMENT",
-        "SDKWORK_CLAW_INSTALL_ENVIRONMENT",
+        "SDKWORK_CLOUDROUTER_ENVIRONMENT",
+        "SDKWORK_CLOUDROUTER_INSTALL_ENVIRONMENT",
         "SDKWORK_ENVIRONMENT",
         "NODE_ENV",
     ] {

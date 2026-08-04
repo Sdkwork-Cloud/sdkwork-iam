@@ -1799,23 +1799,23 @@ mod tests {
     #[test]
     fn tenant_application_template_id_normalizes_app_key() {
         assert_eq!(
-            "tmpl_sdkwork_clawrouter",
-            tenant_application_template_id("sdkwork-clawrouter")
+            "tmpl_sdkwork_cloudrouter",
+            tenant_application_template_id("sdkwork-cloudrouter")
         );
     }
 
     #[test]
     fn tenant_application_instance_key_scopes_by_app_and_environment() {
         assert_eq!(
-            "sdkwork_clawrouter_dev",
-            tenant_application_instance_key("sdkwork-clawrouter", "development")
+            "sdkwork_cloudrouter_dev",
+            tenant_application_instance_key("sdkwork-cloudrouter", "development")
         );
         assert_eq!(
-            "sdkwork_clawrouter_prod",
-            tenant_application_instance_key("sdkwork-clawrouter", "production")
+            "sdkwork_cloudrouter_prod",
+            tenant_application_instance_key("sdkwork-cloudrouter", "production")
         );
         assert_ne!(
-            tenant_application_instance_key("sdkwork-clawrouter", "production"),
+            tenant_application_instance_key("sdkwork-cloudrouter", "production"),
             "default"
         );
     }
@@ -1823,8 +1823,8 @@ mod tests {
     #[test]
     fn tenant_application_row_id_is_deterministic() {
         assert_eq!(
-            "tapp_100001_0_sdkwork_clawrouter",
-            tenant_application_row_id("100001", "0", "tmpl_sdkwork_clawrouter")
+            "tapp_100001_0_sdkwork_cloudrouter",
+            tenant_application_row_id("100001", "0", "tmpl_sdkwork_cloudrouter")
         );
         assert_eq!(
             "tapp_tenant_configured_0_sdkwork_platform",

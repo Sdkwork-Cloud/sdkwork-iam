@@ -20,8 +20,8 @@ const sdkworkAppbaseRoot = path.resolve(__dirname, "..");
 export function iamPostgresProfileAvailable(cwd = sdkworkAppbaseRoot) {
   const candidates = [
     path.join(cwd, ".env.postgres"),
-    path.join(cwd, "../sdkwork-clawrouter/.env.postgres"),
-    path.join(cwd, "../sdkwork-claw-router/.env.postgres"),
+    path.join(cwd, "../sdkwork-cloudrouter/.env.postgres"),
+    path.join(cwd, "../sdkwork-cloudrouter-router/.env.postgres"),
   ];
   return candidates.some((candidate) => fs.existsSync(candidate));
 }
