@@ -2524,28 +2524,31 @@ where
 
 /// Loads the scan-login configuration JSON for a tenant:
 /// - `urlLogin`: H5 mobile login URL mode settings
-/// - `defaultQrMode`: login page QR mode (`auto` = official account when an
-///   enabled account exists, otherwise URL)
+/// - `defaultQrMode`: login page QR mode (`auto` = first enabled registry mode)
+/// - `modes`: ordered scan-login mode registry (official_account / url /
+///   provider:<code> entries with enabled + sortOrder + displayName)
 /// - `officialAccounts`: wechat official accounts with QR login state and
 ///   message-callback (webhook) status for follow-to-login
 async fn scan_login_settings_json(pg: &PgPool, tenant_id: &str) -> Result<Value, String> {
     let config_row = sqlx::query(
-        "SELECT h5_login_origin, url_login_enabled, default_qr_mode \
+        "SELECT h5_login_origin, url_login_enabled, default_qr_mode, modes_json \
          FROM iam_oauth_scan_login_config WHERE tenant_id = $1",
     )
     .bind(tenant_id)
     .fetch_optional(pg)
     .await
     .map_err(|error| format!("load scan login config failed: {error}"))?;
-    let (h5_login_origin, url_login_enabled, default_qr_mode) = match config_row {
+    let (h5_login_origin, url_login_enabled, default_qr_mode, modes_json) = match config_row {
         Some(row) => {
             let origin: String = row.get(0);
             let enabled: i32 = row.get(1);
             let mode: String = row.get(2);
-            (origin, enabled != 0, mode)
+            let modes: String = row.get(3);
+            (origin, enabled != 0, mode, modes)
         }
-        None => (String::new(), true, "auto".to_string()),
+        None => (String::new(), true, "auto".to_string(), "[]".to_string()),
     };
+    let modes = normalize_scan_login_modes_json(&modes_json);
 
     let accounts = sqlx::query(
         "SELECT ra.id, ra.display_name, ra.enabled, ra.qr_default_enabled, ra.verification_status, \
@@ -2603,6 +2606,7 @@ async fn scan_login_settings_json(pg: &PgPool, tenant_id: &str) -> Result<Value,
 
     Ok(json!({
         "defaultQrMode": default_qr_mode,
+        "modes": modes,
         "officialAccounts": official_accounts,
         "urlLogin": {
             "enabled": url_login_enabled,

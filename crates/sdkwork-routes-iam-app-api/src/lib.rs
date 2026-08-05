@@ -17,6 +17,7 @@ mod paths;
 mod permissions;
 mod responses;
 mod routes;
+mod scan_login;
 mod security_events;
 #[cfg(feature = "sqlite")]
 mod sqlite_sessions;
