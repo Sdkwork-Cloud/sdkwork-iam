@@ -10,7 +10,7 @@ import {
   Power,
   Search,
 } from "lucide-react";
-import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
+import { CatalogPagination } from "@sdkwork/iam-pc-admin-core";
 import {
   Badge,
   Button,
@@ -86,6 +86,8 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
   const [pageInfo, setPageInfo] = useState(initialState.listPageInfo?.applications);
   const [filters, setFilters] = useState<ApplicationFilters>(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<ApplicationFilters>(EMPTY_FILTERS);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [applicationDraft, setApplicationDraft] = useState(emptyApplicationDraft);
   const [updateDraft, setUpdateDraft] = useState<SdkworkIamTenantApplicationUpdateDraft>({ accessPermissions: [], primaryDomain: "" });
   const [editingApplication, setEditingApplication] = useState<SdkworkIamTenantApplication>();
@@ -101,8 +103,8 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
     setPageInfo(state.listPageInfo?.applications);
   };
 
-  const refresh = async (nextFilters = appliedFilters) => {
-    const query = applicationFiltersToQuery(nextFilters);
+  const refresh = async (nextFilters = appliedFilters, nextPage = page, nextPageSize = pageSize) => {
+    const query = { ...applicationFiltersToQuery(nextFilters), page: nextPage, page_size: nextPageSize };
     const [items, nextSummary] = await Promise.all([
       controller.listTenantApplications(tenant.tenantId, query),
       controller.retrieveTenantApplicationSummary(tenant.tenantId),
@@ -189,7 +191,7 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
     {
       id: "environment",
       header: messages.applications.table.environment,
-      cell: (application) => <Badge variant="secondary">{application.environment}</Badge>,
+      cell: (application) => <Badge variant="secondary">{formatEnumLabel(messages.applications.environments, application.environment)}</Badge>,
     },
     {
       id: "domain",
@@ -218,15 +220,35 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
     event.preventDefault();
     const nextFilters = { ...filters, q: filters.q.trim() };
     setAppliedFilters(nextFilters);
+    setPage(1);
     setLoading(true);
     setError(undefined);
-    void refresh(nextFilters)
+    void refresh(nextFilters, 1, pageSize)
+      .catch((loadError) => setError(toErrorMessage(loadError, messages.applications.notices.loadError)))
+      .finally(() => setLoading(false));
+  };
+
+  const changePage = (nextPage: number) => {
+    setPage(nextPage);
+    setLoading(true);
+    setError(undefined);
+    void refresh(appliedFilters, nextPage)
+      .catch((loadError) => setError(toErrorMessage(loadError, messages.applications.notices.loadError)))
+      .finally(() => setLoading(false));
+  };
+
+  const changePageSize = (nextPageSize: number) => {
+    setPageSize(nextPageSize);
+    setPage(1);
+    setLoading(true);
+    setError(undefined);
+    void refresh(appliedFilters, 1, nextPageSize)
       .catch((loadError) => setError(toErrorMessage(loadError, messages.applications.notices.loadError)))
       .finally(() => setLoading(false));
   };
 
   return (
-    <div className="space-y-5">
+    <div className="flex min-h-0 flex-1 flex-col gap-5">
       {error ? <StatusNotice tone="danger">{error}</StatusNotice> : null}
       {notice ? <StatusNotice tone="success">{notice}</StatusNotice> : null}
 
@@ -264,9 +286,9 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
           onValueChange={(environment) => setFilters((current) => ({ ...current, environment }))}
           options={[
             ["all", messages.applications.filters.allEnvironments],
-            ["development", "Development"],
-            ["staging", "Staging"],
-            ["production", "Production"],
+            ["development", messages.applications.environments.development],
+            ["staging", messages.applications.environments.staging],
+            ["production", messages.applications.environments.production],
           ]}
           value={filters.environment}
         />
@@ -277,16 +299,21 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
       </form>
 
       <DataTable
+        className="min-h-0 flex-1"
         columns={columns}
         emptyDescription={messages.applications.emptyDescription}
         emptyTitle={messages.applications.emptyTitle}
         footer={(
-          <SdkworkIamListPaginationControls
+          <CatalogPagination
             busy={busy}
-            onLoadMore={() => void runAction(async () => {
-              setApplications(await controller.loadMoreTenantApplications(tenant.tenantId));
-              syncControllerState();
-            }, messages.applications.notices.loadMoreSuccess, messages.applications.notices.loadError)}
+            copy={{
+              next: messages.pagination.next,
+              pageSize: messages.pagination.pageSize,
+              previous: messages.pagination.previous,
+              total: messages.pagination.total,
+            }}
+            onPageChange={changePage}
+            onPageSizeChange={changePageSize}
             pageInfo={pageInfo}
           />
         )}
@@ -313,6 +340,12 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
           </div>
         )}
         rows={[...applications]}
+        slotProps={{
+          surface: { className: "flex min-h-0 flex-1 flex-col" },
+          viewport: { className: "min-h-0 flex-1" },
+          footer: { className: "shrink-0" },
+        }}
+        stickyHeader
         title={messages.applications.title}
         toolbar={(
           <Button
@@ -475,18 +508,19 @@ function ApplicationRegisterDrawer({ busy, draft, onDraftChange, onOpenChange, o
               <Select onValueChange={updateEnvironment} value={draft.environment}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="development">Development</SelectItem>
-                  <SelectItem value="staging">Staging</SelectItem>
-                  <SelectItem value="production">Production</SelectItem>
+                  <SelectItem value="development">{messages.applications.environments.development}</SelectItem>
+                  <SelectItem value="staging">{messages.applications.environments.staging}</SelectItem>
+                  <SelectItem value="production">{messages.applications.environments.production}</SelectItem>
                 </SelectContent>
               </Select>
             </label>
           </div>
-          <ApplicationField label={messages.applications.drawer.primaryDomain} onChange={(primaryDomain) => onDraftChange({ ...draft, primaryDomain })} placeholder="app.example.com" value={draft.primaryDomain} />
+          <ApplicationField label={messages.applications.drawer.primaryDomain} onChange={(primaryDomain) => onDraftChange({ ...draft, primaryDomain })} placeholder={messages.applications.drawer.primaryDomainPlaceholder} value={draft.primaryDomain} />
           <ApplicationPermissionsField
             helper={messages.applications.drawer.accessPermissionsHint}
             label={messages.applications.drawer.accessPermissions}
             onChange={(accessPermissions) => onDraftChange({ ...draft, accessPermissions })}
+            placeholder={messages.applications.drawer.accessPermissionsPlaceholder}
             value={draft.accessPermissions}
           />
         </DrawerBody>
@@ -515,16 +549,17 @@ function ApplicationEditDrawer({ application, busy, draft, onDraftChange, onOpen
           {application ? (
             <div className="grid gap-3 border-y border-[var(--sdk-color-border-subtle)] py-4 sm:grid-cols-2">
               <ReadOnlyDatum label={messages.applications.table.appId} value={application.appId} />
-              <ReadOnlyDatum label={messages.applications.drawer.environment} value={application.environment} />
+              <ReadOnlyDatum label={messages.applications.drawer.environment} value={formatEnumLabel(messages.applications.environments, application.environment)} />
               <ReadOnlyDatum label={messages.applications.drawer.instanceKey} value={application.instanceKey} />
               <ReadOnlyDatum label={messages.applications.drawer.appKey} value={application.templateId} />
             </div>
           ) : null}
-          <ApplicationField label={messages.applications.drawer.primaryDomain} onChange={(primaryDomain) => onDraftChange({ ...draft, primaryDomain })} placeholder="app.example.com" value={draft.primaryDomain} />
+          <ApplicationField label={messages.applications.drawer.primaryDomain} onChange={(primaryDomain) => onDraftChange({ ...draft, primaryDomain })} placeholder={messages.applications.drawer.primaryDomainPlaceholder} value={draft.primaryDomain} />
           <ApplicationPermissionsField
             helper={messages.applications.drawer.accessPermissionsHint}
             label={messages.applications.drawer.accessPermissions}
             onChange={(accessPermissions) => onDraftChange({ ...draft, accessPermissions })}
+            placeholder={messages.applications.drawer.accessPermissionsPlaceholder}
             value={draft.accessPermissions}
           />
         </DrawerBody>
@@ -547,11 +582,11 @@ function ApplicationField({ helper, label, onChange, placeholder, value }: { hel
   );
 }
 
-function ApplicationPermissionsField({ helper, label, onChange, value }: { helper: string; label: string; onChange: (value: string[]) => void; value: string[] }) {
+function ApplicationPermissionsField({ helper, label, onChange, placeholder, value }: { helper: string; label: string; onChange: (value: string[]) => void; placeholder: string; value: string[] }) {
   return (
     <label className="block space-y-1.5 text-sm">
       <span className="font-medium text-[var(--sdk-color-text-primary)]">{label}</span>
-      <TagInput aria-label={label} onValueChange={onChange} placeholder="iam.users.read" value={value} />
+      <TagInput aria-label={label} onValueChange={onChange} placeholder={placeholder} value={value} />
       <span className="block text-xs leading-5 text-[var(--sdk-color-text-muted)]">{helper}</span>
     </label>
   );
@@ -581,6 +616,11 @@ function applicationStatusLabel(status: string, messages: { disabled: string; en
     case "pending_config": return messages.pendingConfig;
     default: return messages.unknown;
   }
+}
+
+function formatEnumLabel(environments: { development: string; production: string; staging: string; unknown: string }, value: string) {
+  const normalized = value.trim().toLowerCase();
+  return environments[normalized as keyof typeof environments] ?? environments.unknown;
 }
 
 function suggestInstanceKey(appKey: string, environment: string) {

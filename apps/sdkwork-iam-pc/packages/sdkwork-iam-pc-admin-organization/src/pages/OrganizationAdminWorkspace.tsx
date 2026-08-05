@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Briefcase, Building2, GitBranch, Pencil, Plus, Search, ShieldCheck, Trash2, Users } from "lucide-react";
-import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
+import { CatalogPagination } from "@sdkwork/iam-pc-admin-core";
 import {
   Button,
   ConfirmDialog,
@@ -16,7 +16,11 @@ import {
   IconButton,
   Input,
   SegmentedControl,
-  SettingsSection,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   StatusBadge,
   StatusNotice,
 } from "@sdkwork/ui-pc-react";
@@ -39,6 +43,7 @@ type PageInfoState = Pick<SdkworkIamOrganizationState,
   "departmentListPageInfo" | "membershipListPageInfo" | "organizationListPageInfo" | "positionListPageInfo" | "roleBindingListPageInfo">;
 type DrawerMode = "create" | "edit";
 type OrganizationDetailTab = "departments" | "memberships" | "positions" | "roleBindings";
+type ListKind = "organizations" | "departments" | "memberships" | "positions" | "roleBindings";
 
 const emptyOrganizationDraft = (): SdkworkIamOrganizationDraft => ({ name: "" });
 const emptyDepartmentDraft = (organizationId: string): SdkworkIamDepartmentDraft => ({ name: "", organizationId });
@@ -46,7 +51,6 @@ const emptyMembershipDraft = (): SdkworkIamOrganizationMembershipDraft => ({ use
 
 export function SdkworkIamOrganizationAdminWorkspace({
   controller,
-  description,
   onOpenStructure,
   permissions = {
     departments: { create: true, delete: true, read: true, update: true },
@@ -55,7 +59,6 @@ export function SdkworkIamOrganizationAdminWorkspace({
     positions: { read: true },
     roleBindings: { read: true },
   },
-  title,
 }: SdkworkIamOrganizationAdminWorkspaceProps) {
   const messages = useSdkworkIamOrganizationAdminMessages();
   const state = controller.getState();
@@ -86,6 +89,12 @@ export function SdkworkIamOrganizationAdminWorkspace({
   const [activeTab, setActiveTab] = useState<OrganizationDetailTab>();
   const [searchQuery, setSearchQuery] = useState("");
   const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
+  const [pages, setPages] = useState<Record<ListKind, number>>({
+    departments: 1, memberships: 1, organizations: 1, positions: 1, roleBindings: 1,
+  });
+  const [pageSizes, setPageSizes] = useState<Record<ListKind, number>>({
+    departments: 20, memberships: 20, organizations: 20, positions: 20, roleBindings: 20,
+  });
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -118,37 +127,39 @@ export function SdkworkIamOrganizationAdminWorkspace({
     });
   };
 
-  const refreshOrganizations = async (query = appliedSearchQuery) => {
-    const items = await controller.listOrganizations(query ? { q: query } : undefined);
+  const refreshOrganizations = async (query = appliedSearchQuery, nextPage = pages.organizations, nextPageSize = pageSizes.organizations) => {
+    const params: Record<string, unknown> = { page: nextPage, page_size: nextPageSize };
+    if (query) params.q = query;
+    const items = await controller.listOrganizations(params);
     setOrganizations(items);
     syncPageInfo();
     return items;
   };
 
-  const refreshDepartments = async (organizationId: string) => {
-    const items = await controller.listDepartments(organizationId);
+  const refreshDepartments = async (organizationId: string, nextPage = pages.departments, nextPageSize = pageSizes.departments) => {
+    const items = await controller.listDepartments(organizationId, { page: nextPage, page_size: nextPageSize });
     setDepartments(items);
     syncPageInfo();
     return items;
   };
 
-  const refreshMemberships = async (organizationId: string) => {
-    const items = await controller.listMemberships(organizationId);
+  const refreshMemberships = async (organizationId: string, nextPage = pages.memberships, nextPageSize = pageSizes.memberships) => {
+    const items = await controller.listMemberships(organizationId, { page: nextPage, page_size: nextPageSize });
     setMemberships(items);
     syncPageInfo();
     return items;
   };
 
-  const loadDetailTab = async (tab: OrganizationDetailTab, organizationId: string) => {
+  const loadDetailTab = async (tab: OrganizationDetailTab, organizationId: string, nextPage = pages[tab], nextPageSize = pageSizes[tab]) => {
     if (tab === "departments") {
-      await refreshDepartments(organizationId);
+      await refreshDepartments(organizationId, nextPage, nextPageSize);
     } else if (tab === "memberships") {
-      await refreshMemberships(organizationId);
+      await refreshMemberships(organizationId, nextPage, nextPageSize);
     } else if (tab === "positions") {
-      setPositions(await controller.listPositions({ organizationId }));
+      setPositions(await controller.listPositions({ organizationId, page: nextPage, page_size: nextPageSize }));
       syncPageInfo();
     } else {
-      setRoleBindings(await controller.listRoleBindings({ organizationId }));
+      setRoleBindings(await controller.listRoleBindings({ organizationId, page: nextPage, page_size: nextPageSize }));
       syncPageInfo();
     }
   };
@@ -178,11 +189,56 @@ export function SdkworkIamOrganizationAdminWorkspace({
     event.preventDefault();
     const query = searchQuery.trim();
     setAppliedSearchQuery(query);
+    setPages((current) => ({ ...current, organizations: 1 }));
     setLoading(true);
     setError(undefined);
-    void refreshOrganizations(query)
+    void refreshOrganizations(query, 1, pageSizes.organizations)
       .catch((loadError) => setError(toErrorMessage(loadError, messages.notices.loadOrganizationsError)))
       .finally(() => setLoading(false));
+  };
+
+  const changePage = (kind: ListKind, nextPage: number) => {
+    setPages((current) => ({ ...current, [kind]: nextPage }));
+    if (kind === "organizations") {
+      setLoading(true);
+      setError(undefined);
+      void refreshOrganizations(appliedSearchQuery, nextPage)
+        .catch((loadError) => setError(toErrorMessage(loadError, messages.notices.loadOrganizationsError)))
+        .finally(() => setLoading(false));
+      return;
+    }
+    if (!selectedOrganization) return;
+    setDetailLoading(true);
+    setError(undefined);
+    void loadDetailTab(kind as OrganizationDetailTab, selectedOrganization.organizationId, nextPage)
+      .catch((loadError) => setError(toErrorMessage(loadError, detailLoadError(kind as OrganizationDetailTab, messages.notices))))
+      .finally(() => setDetailLoading(false));
+  };
+
+  const changePageSize = (kind: ListKind, nextPageSize: number) => {
+    setPageSizes((current) => ({ ...current, [kind]: nextPageSize }));
+    setPages((current) => ({ ...current, [kind]: 1 }));
+    if (kind === "organizations") {
+      setLoading(true);
+      setError(undefined);
+      void refreshOrganizations(appliedSearchQuery, 1, nextPageSize)
+        .catch((loadError) => setError(toErrorMessage(loadError, messages.notices.loadOrganizationsError)))
+        .finally(() => setLoading(false));
+      return;
+    }
+    if (!selectedOrganization) return;
+    setDetailLoading(true);
+    setError(undefined);
+    void loadDetailTab(kind as OrganizationDetailTab, selectedOrganization.organizationId, 1, nextPageSize)
+      .catch((loadError) => setError(toErrorMessage(loadError, detailLoadError(kind as OrganizationDetailTab, messages.notices))))
+      .finally(() => setDetailLoading(false));
+  };
+
+  const paginationCopy = {
+    next: messages.pagination.next,
+    pageSize: messages.pagination.pageSize,
+    previous: messages.pagination.previous,
+    total: messages.pagination.total,
   };
 
   const selectOrganization = async (organization: SdkworkIamOrganization) => {
@@ -205,9 +261,10 @@ export function SdkworkIamOrganizationAdminWorkspace({
     if (!selectedOrganization || !detailTabs.some((tab) => tab.value === value)) return;
     const nextTab = value as OrganizationDetailTab;
     setActiveTab(nextTab);
+    setPages((current) => ({ ...current, [nextTab]: 1 }));
     setDetailLoading(true);
     setError(undefined);
-    void loadDetailTab(nextTab, selectedOrganization.organizationId)
+    void loadDetailTab(nextTab, selectedOrganization.organizationId, 1, pageSizes[nextTab])
       .catch((loadError) => setError(toErrorMessage(loadError, detailLoadError(nextTab, messages.notices))))
       .finally(() => setDetailLoading(false));
   };
@@ -251,50 +308,48 @@ export function SdkworkIamOrganizationAdminWorkspace({
     { id: "name", header: messages.organizations.table.organization, cell: (item) => item.name },
     { id: "code", header: messages.organizations.table.code, cell: (item) => item.code || "-" },
     { id: "parent", header: messages.organizations.table.parent, cell: (item) => item.parentId || "-" },
-    { id: "status", header: messages.organizations.table.status, cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "-" },
+    { id: "status", header: messages.organizations.table.status, cell: (item) => item.status ? <StatusBadge label={statusLabel(messages.organizations.statuses, item.status)} showIcon status={item.status} /> : "-" },
   ], [messages]);
 
   const departmentColumns = useMemo<DataTableColumn<SdkworkIamDepartment>[]>(() => [
     { id: "name", header: messages.departments.table.department, cell: (item) => item.name },
     { id: "code", header: messages.departments.table.code, cell: (item) => item.code || "-" },
     { id: "parent", header: messages.departments.table.parent, cell: (item) => item.parentDepartmentId || "-" },
-    { id: "status", header: messages.departments.table.status, cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "-" },
+    { id: "status", header: messages.departments.table.status, cell: (item) => item.status ? <StatusBadge label={statusLabel(messages.departments.statuses, item.status)} showIcon status={item.status} /> : "-" },
   ], [messages]);
 
   const membershipColumns = useMemo<DataTableColumn<SdkworkIamOrganizationMembership>[]>(() => [
     { id: "member", header: messages.memberships.table.member, cell: (item) => item.displayName || item.username || item.email || item.userId },
     { id: "role", header: messages.memberships.table.role, cell: (item) => item.roleCode || "-" },
-    { id: "kind", header: messages.memberships.table.kind, cell: (item) => item.membershipKind || "-" },
-    { id: "status", header: messages.memberships.table.status, cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "-" },
+    { id: "kind", header: messages.memberships.table.kind, cell: (item) => item.membershipKind ? kindLabel(messages.memberships.membershipKinds, item.membershipKind) : "-" },
+    { id: "status", header: messages.memberships.table.status, cell: (item) => item.status ? <StatusBadge label={statusLabel(messages.memberships.statuses, item.status)} showIcon status={item.status} /> : "-" },
   ], [messages]);
 
   const positionColumns = useMemo<DataTableColumn<SdkworkIamPosition>[]>(() => [
     { id: "name", header: messages.positions.table.position, cell: (item) => item.name },
     { id: "department", header: messages.positions.table.department, cell: (item) => item.departmentId || "-" },
-    { id: "status", header: messages.positions.table.status, cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "-" },
+    { id: "status", header: messages.positions.table.status, cell: (item) => item.status ? <StatusBadge label={statusLabel(messages.positions.statuses, item.status)} showIcon status={item.status} /> : "-" },
   ], [messages]);
 
   const bindingColumns = useMemo<DataTableColumn<SdkworkIamRoleBinding>[]>(() => [
-    { id: "principal", header: messages.roleBindings.table.principal, cell: (item) => `${item.principalKind || "principal"}:${item.principalId || item.id}` },
+    { id: "principal", header: messages.roleBindings.table.principal, cell: (item) => `${kindLabel(messages.roleBindings.principalKinds, item.principalKind) ?? messages.roleBindings.principalFallback}:${item.principalId || item.id}` },
     { id: "role", header: messages.roleBindings.table.role, cell: (item) => item.roleId || "-" },
-    { id: "scope", header: messages.roleBindings.table.scope, cell: (item) => `${item.scopeKind || "-"}:${item.scopeId || "-"}` },
-    { id: "status", header: messages.roleBindings.table.status, cell: (item) => item.status ? <StatusBadge label={item.status} showIcon status={item.status} /> : "-" },
+    { id: "scope", header: messages.roleBindings.table.scope, cell: (item) => `${kindLabel(messages.roleBindings.scopeKinds, item.scopeKind) ?? messages.roleBindings.scopeFallback}:${item.scopeId || "-"}` },
+    { id: "status", header: messages.roleBindings.table.status, cell: (item) => item.status ? <StatusBadge label={statusLabel(messages.roleBindings.statuses, item.status)} showIcon status={item.status} /> : "-" },
   ], [messages]);
 
   return (
-    <div className="space-y-6">
-      <SettingsSection description={description ?? messages.organizations.description} title={title ?? messages.organizations.title}>
+    <div className="flex h-full min-h-0 flex-col gap-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
         {error ? <StatusNotice tone="danger">{error}</StatusNotice> : null}
         {notice ? <StatusNotice tone="success">{notice}</StatusNotice> : null}
 
         <DataTable
+          className={selectedOrganization ? "max-h-[40vh]" : "min-h-0 flex-1"}
           columns={organizationColumns}
           emptyDescription={messages.organizations.emptyDescription}
           emptyTitle={messages.organizations.emptyTitle}
-          footer={<SdkworkIamListPaginationControls busy={busy} onLoadMore={() => void runAction(async () => {
-            setOrganizations(await controller.loadMoreOrganizations());
-            syncPageInfo();
-          }, messages.organizations.loadedMore, messages.notices.loadOrganizationsError)} pageInfo={pageInfo.organizationListPageInfo} />}
+          footer={<CatalogPagination busy={busy} copy={paginationCopy} onPageChange={(page) => changePage("organizations", page)} onPageSizeChange={(pageSize) => changePageSize("organizations", pageSize)} pageInfo={pageInfo.organizationListPageInfo} />}
           getRowId={(item) => item.organizationId}
           loading={loading}
           onRowClick={(item) => void selectOrganization(item)}
@@ -320,7 +375,12 @@ export function SdkworkIamOrganizationAdminWorkspace({
             </div>
           )}
           rows={[...organizations]}
-          title={messages.organizations.title}
+          slotProps={{
+            surface: { className: "flex min-h-0 flex-1 flex-col" },
+            viewport: { className: "min-h-0 flex-1" },
+            footer: { className: "shrink-0" },
+          }}
+          stickyHeader
           toolbar={(
             <div className="flex w-full flex-wrap items-center gap-2">
               <form className="flex min-w-[16rem] flex-1 items-center gap-2" onSubmit={submitSearch} role="search">
@@ -341,7 +401,7 @@ export function SdkworkIamOrganizationAdminWorkspace({
         />
 
         {selectedOrganization ? (
-          <section className="mt-6 border-t border-[var(--sdk-color-border-subtle)] pt-5">
+          <section className="flex min-h-0 flex-1 flex-col border-t border-[var(--sdk-color-border-subtle)] pt-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--sdk-radius-control)] bg-[var(--sdk-color-surface-panel-muted)] text-[var(--sdk-color-text-secondary)]">
@@ -365,15 +425,14 @@ export function SdkworkIamOrganizationAdminWorkspace({
               ) : null}
             </div>
 
-            <div className="mt-5">
+            <div className="mt-5 flex min-h-0 flex-1 flex-col">
               {activeTab === "departments" ? (
                 <DataTable
+                  className="min-h-0 flex-1"
                   columns={departmentColumns}
                   emptyDescription={messages.departments.emptyDescription}
                   emptyTitle={messages.departments.emptyTitle}
-                  footer={<SdkworkIamListPaginationControls busy={busy} onLoadMore={() => void runAction(async () => {
-                    setDepartments(await controller.loadMoreDepartments(selectedOrganization.organizationId)); syncPageInfo();
-                  }, messages.departments.loadedMore, messages.notices.loadDepartmentsError)} pageInfo={pageInfo.departmentListPageInfo} />}
+                  footer={<CatalogPagination busy={busy} copy={paginationCopy} onPageChange={(page) => changePage("departments", page)} onPageSizeChange={(pageSize) => changePageSize("departments", pageSize)} pageInfo={pageInfo.departmentListPageInfo} />}
                   getRowId={(item) => item.departmentId}
                   loading={detailLoading}
                   onRowClick={permissions.departments.update ? openDepartmentEditor : undefined}
@@ -384,6 +443,12 @@ export function SdkworkIamOrganizationAdminWorkspace({
                     </div>
                   ) : undefined}
                   rows={[...departments]}
+                  slotProps={{
+                    surface: { className: "flex min-h-0 flex-1 flex-col" },
+                    viewport: { className: "min-h-0 flex-1" },
+                    footer: { className: "shrink-0" },
+                  }}
+                  stickyHeader
                   title={template(messages.departments.titleTemplate, { name: selectedOrganization.name })}
                   toolbar={permissions.departments.create ? <Button onClick={() => { setSelectedDepartment(undefined); setDepartmentDraft(emptyDepartmentDraft(selectedOrganization.organizationId)); setDepartmentDrawerMode("create"); }} type="button"><Plus className="h-4 w-4" />{messages.departments.create}</Button> : undefined}
                 />
@@ -391,33 +456,38 @@ export function SdkworkIamOrganizationAdminWorkspace({
 
               {activeTab === "memberships" ? (
                 <DataTable
+                  className="min-h-0 flex-1"
                   columns={membershipColumns}
                   emptyDescription={messages.memberships.emptyDescription}
                   emptyTitle={messages.memberships.emptyTitle}
-                  footer={<SdkworkIamListPaginationControls busy={busy} onLoadMore={() => void runAction(async () => {
-                    setMemberships(await controller.loadMoreMemberships(selectedOrganization.organizationId)); syncPageInfo();
-                  }, messages.memberships.loadedMore, messages.notices.loadMembershipsError)} pageInfo={pageInfo.membershipListPageInfo} />}
+                  footer={<CatalogPagination busy={busy} copy={paginationCopy} onPageChange={(page) => changePage("memberships", page)} onPageSizeChange={(pageSize) => changePageSize("memberships", pageSize)} pageInfo={pageInfo.membershipListPageInfo} />}
                   getRowId={(item) => item.id}
                   loading={detailLoading}
                   onRowClick={permissions.memberships.update ? openMembershipEditor : undefined}
                   rowActions={permissions.memberships.update ? (item) => <IconButton aria-label={messages.common.edit} onClick={() => openMembershipEditor(item)} title={messages.common.edit} variant="ghost"><Pencil className="h-3.5 w-3.5" /></IconButton> : undefined}
                   rows={[...memberships]}
+                  slotProps={{
+                    surface: { className: "flex min-h-0 flex-1 flex-col" },
+                    viewport: { className: "min-h-0 flex-1" },
+                    footer: { className: "shrink-0" },
+                  }}
+                  stickyHeader
                   title={template(messages.memberships.titleTemplate, { name: selectedOrganization.name })}
                   toolbar={permissions.memberships.create ? <Button onClick={() => { setSelectedMembership(undefined); setMembershipDraft(emptyMembershipDraft()); setMembershipDrawerMode("create"); }} type="button"><Plus className="h-4 w-4" />{messages.memberships.add}</Button> : undefined}
                 />
               ) : null}
 
               {activeTab === "positions" ? (
-                <DataTable columns={positionColumns} emptyDescription={messages.positions.emptyDescription} emptyTitle={messages.positions.emptyTitle} footer={<SdkworkIamListPaginationControls busy={busy} onLoadMore={() => void runAction(async () => { setPositions(await controller.loadMorePositions()); syncPageInfo(); }, messages.positions.loadedMore, messages.notices.loadPositionsError)} pageInfo={pageInfo.positionListPageInfo} />} getRowId={(item) => item.positionId} loading={detailLoading} rows={[...positions]} title={template(messages.positions.titleTemplate, { name: selectedOrganization.name })} />
+                <DataTable className="min-h-0 flex-1" columns={positionColumns} emptyDescription={messages.positions.emptyDescription} emptyTitle={messages.positions.emptyTitle} footer={<CatalogPagination busy={busy} copy={paginationCopy} onPageChange={(page) => changePage("positions", page)} onPageSizeChange={(pageSize) => changePageSize("positions", pageSize)} pageInfo={pageInfo.positionListPageInfo} />} getRowId={(item) => item.positionId} loading={detailLoading} rows={[...positions]} slotProps={{ surface: { className: "flex min-h-0 flex-1 flex-col" }, viewport: { className: "min-h-0 flex-1" }, footer: { className: "shrink-0" } }} stickyHeader title={template(messages.positions.titleTemplate, { name: selectedOrganization.name })} />
               ) : null}
 
               {activeTab === "roleBindings" ? (
-                <DataTable columns={bindingColumns} emptyDescription={messages.roleBindings.emptyDescription} emptyTitle={messages.roleBindings.emptyTitle} footer={<SdkworkIamListPaginationControls busy={busy} onLoadMore={() => void runAction(async () => { setRoleBindings(await controller.loadMoreRoleBindings()); syncPageInfo(); }, messages.roleBindings.loadedMore, messages.notices.loadRoleBindingsError)} pageInfo={pageInfo.roleBindingListPageInfo} />} getRowId={(item) => item.id} loading={detailLoading} rows={[...roleBindings]} title={template(messages.roleBindings.titleTemplate, { name: selectedOrganization.name })} />
+                <DataTable className="min-h-0 flex-1" columns={bindingColumns} emptyDescription={messages.roleBindings.emptyDescription} emptyTitle={messages.roleBindings.emptyTitle} footer={<CatalogPagination busy={busy} copy={paginationCopy} onPageChange={(page) => changePage("roleBindings", page)} onPageSizeChange={(pageSize) => changePageSize("roleBindings", pageSize)} pageInfo={pageInfo.roleBindingListPageInfo} />} getRowId={(item) => item.id} loading={detailLoading} rows={[...roleBindings]} slotProps={{ surface: { className: "flex min-h-0 flex-1 flex-col" }, viewport: { className: "min-h-0 flex-1" }, footer: { className: "shrink-0" } }} stickyHeader title={template(messages.roleBindings.titleTemplate, { name: selectedOrganization.name })} />
               ) : null}
             </div>
           </section>
         ) : null}
-      </SettingsSection>
+      </div>
 
       <ResourceDrawer busy={busy} description={organizationDrawerMode === "edit" ? messages.drawers.organization.editDescription : messages.drawers.organization.createDescription} mode={organizationDrawerMode} onOpenChange={(open) => { if (!open) { setOrganizationDrawerMode(undefined); setOrganizationEditTarget(undefined); } }} onSubmit={() => void runAction(async () => {
         if (organizationDrawerMode === "edit" && organizationEditTarget) {
@@ -437,7 +507,7 @@ export function SdkworkIamOrganizationAdminWorkspace({
         <Field label={messages.drawers.organization.name} onChange={(name) => setOrganizationDraft({ ...organizationDraft, name })} value={organizationDraft.name} />
         <Field label={messages.drawers.organization.code} onChange={(code) => setOrganizationDraft({ ...organizationDraft, code })} value={organizationDraft.code ?? ""} />
         <Field label={messages.drawers.organization.parentId} onChange={(parentId) => setOrganizationDraft({ ...organizationDraft, parentId })} value={organizationDraft.parentId ?? ""} />
-        {organizationDrawerMode === "edit" ? <Field label={messages.drawers.organization.status} onChange={(status) => setOrganizationDraft({ ...organizationDraft, status })} value={organizationDraft.status ?? ""} /> : null}
+        {organizationDrawerMode === "edit" ? <StatusSelectField label={messages.drawers.organization.status} onChange={(status) => setOrganizationDraft({ ...organizationDraft, status })} statuses={messages.organizations.statuses} value={organizationDraft.status ?? ""} /> : null}
       </ResourceDrawer>
 
       <ResourceDrawer busy={busy} description={departmentDrawerMode === "edit" ? messages.drawers.department.editDescription : messages.drawers.department.createDescription} mode={departmentDrawerMode} onOpenChange={(open) => { if (!open) setDepartmentDrawerMode(undefined); }} onSubmit={() => {
@@ -452,7 +522,7 @@ export function SdkworkIamOrganizationAdminWorkspace({
         <Field label={messages.drawers.department.name} onChange={(name) => setDepartmentDraft({ ...departmentDraft, name })} value={departmentDraft.name} />
         <Field label={messages.drawers.department.code} onChange={(code) => setDepartmentDraft({ ...departmentDraft, code })} value={departmentDraft.code ?? ""} />
         <Field label={messages.drawers.department.parentId} onChange={(parentDepartmentId) => setDepartmentDraft({ ...departmentDraft, parentDepartmentId })} value={departmentDraft.parentDepartmentId ?? ""} />
-        {departmentDrawerMode === "edit" ? <Field label={messages.drawers.department.status} onChange={(status) => setDepartmentDraft({ ...departmentDraft, status })} value={departmentDraft.status ?? ""} /> : null}
+        {departmentDrawerMode === "edit" ? <StatusSelectField label={messages.drawers.department.status} onChange={(status) => setDepartmentDraft({ ...departmentDraft, status })} statuses={messages.departments.statuses} value={departmentDraft.status ?? ""} /> : null}
       </ResourceDrawer>
 
       <ResourceDrawer busy={busy} description={membershipDrawerMode === "edit" ? messages.drawers.membership.editDescription : messages.drawers.membership.createDescription} mode={membershipDrawerMode} onOpenChange={(open) => { if (!open) setMembershipDrawerMode(undefined); }} onSubmit={() => {
@@ -466,8 +536,8 @@ export function SdkworkIamOrganizationAdminWorkspace({
       }} submitDisabled={!membershipDraft.userId.trim()} submitLabel={membershipDrawerMode === "edit" ? messages.common.save : messages.common.create} title={membershipDrawerMode === "edit" ? messages.drawers.membership.editTitle : messages.drawers.membership.createTitle}>
         <Field disabled={membershipDrawerMode === "edit"} label={messages.drawers.membership.userId} onChange={(userId) => setMembershipDraft({ ...membershipDraft, userId })} value={membershipDraft.userId} />
         <Field label={messages.drawers.membership.roleCode} onChange={(roleCode) => setMembershipDraft({ ...membershipDraft, roleCode })} value={membershipDraft.roleCode ?? ""} />
-        <Field label={messages.drawers.membership.kind} onChange={(membershipKind) => setMembershipDraft({ ...membershipDraft, membershipKind })} value={membershipDraft.membershipKind ?? ""} />
-        {membershipDrawerMode === "edit" ? <Field label={messages.drawers.membership.status} onChange={(status) => setMembershipDraft({ ...membershipDraft, status })} value={membershipDraft.status ?? ""} /> : null}
+        <KindSelectField label={messages.drawers.membership.kind} kinds={messages.memberships.membershipKinds} onChange={(membershipKind) => setMembershipDraft({ ...membershipDraft, membershipKind })} value={membershipDraft.membershipKind ?? ""} />
+        {membershipDrawerMode === "edit" ? <StatusSelectField label={messages.drawers.membership.status} onChange={(status) => setMembershipDraft({ ...membershipDraft, status })} statuses={messages.memberships.statuses} value={membershipDraft.status ?? ""} /> : null}
       </ResourceDrawer>
 
       <ConfirmDialog closeOnConfirm={false} confirmLabel={messages.organizations.delete} confirmLoading={busy} description={deleteOrganizationTarget ? template(messages.organizations.deleteDescriptionTemplate, { name: deleteOrganizationTarget.name }) : undefined} onConfirm={() => {
@@ -527,6 +597,60 @@ function Field({ disabled, label, onChange, value }: { disabled?: boolean; label
       <Input disabled={disabled} onChange={(event) => onChange(event.target.value)} value={value} />
     </label>
   );
+}
+
+function StatusSelectField({ label, onChange, statuses, value }: { label: string; onChange: (value: string) => void; statuses: { active: string; disabled: string; unknown: string }; value: string }) {
+  const normalized = value.trim().toLowerCase();
+  const options = [
+    ["active", statuses.active],
+    ["disabled", statuses.disabled],
+  ] as const;
+  const currentUnknown = options.some(([optionValue]) => optionValue === normalized) ? undefined : value;
+  return (
+    <label className="block space-y-1.5 text-sm">
+      <span className="font-medium text-[var(--sdk-color-text-primary)]">{label}</span>
+      <Select onValueChange={onChange} value={value}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {options.map(([optionValue, optionLabel]) => <SelectItem key={optionValue} value={optionValue}>{optionLabel}</SelectItem>)}
+          {currentUnknown ? <SelectItem key={currentUnknown} value={currentUnknown}>{statusLabel(statuses, currentUnknown)}</SelectItem> : null}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
+
+function KindSelectField({ label, kinds, onChange, value }: { label: string; kinds: { employee: string; member: string; owner: string; unknown: string }; onChange: (value: string) => void; value: string }) {
+  const normalized = value.trim().toLowerCase();
+  const options = [
+    ["employee", kinds.employee],
+    ["member", kinds.member],
+    ["owner", kinds.owner],
+  ] as const;
+  const currentUnknown = options.some(([optionValue]) => optionValue === normalized) ? undefined : value;
+  return (
+    <label className="block space-y-1.5 text-sm">
+      <span className="font-medium text-[var(--sdk-color-text-primary)]">{label}</span>
+      <Select onValueChange={onChange} value={value}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {options.map(([optionValue, optionLabel]) => <SelectItem key={optionValue} value={optionValue}>{optionLabel}</SelectItem>)}
+          {currentUnknown ? <SelectItem key={currentUnknown} value={currentUnknown}>{kindLabel(kinds, currentUnknown)}</SelectItem> : null}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
+
+function statusLabel(statuses: { active: string; disabled: string; unknown: string }, value: string) {
+  const normalized = value.trim().toLowerCase();
+  return statuses[normalized as keyof typeof statuses] ?? statuses.unknown;
+}
+
+function kindLabel(labels: Record<string, string>, value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const normalized = value.trim().toLowerCase();
+  return labels[normalized] ?? value;
 }
 
 function detailLoadError(tab: OrganizationDetailTab, notices: ReturnType<typeof useSdkworkIamOrganizationAdminMessages>["notices"]) {

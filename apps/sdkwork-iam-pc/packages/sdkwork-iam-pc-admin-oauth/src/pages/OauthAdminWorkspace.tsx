@@ -1,66 +1,57 @@
 import { useState } from "react";
-import { Button } from "@sdkwork/ui-pc-react";
+import {
+  Activity,
+  Landmark,
+  PlugZap,
+  ShieldCheck,
+} from "lucide-react";
+import { SegmentedControl } from "@sdkwork/ui-pc-react";
 
 import type {
   SdkworkIamOauthAdminTab,
   SdkworkIamOauthAdminWorkspaceProps,
 } from "../types/oauth-admin-types";
+import { useSdkworkIamOauthAdminMessages } from "../i18n";
 import { SdkworkIamOauthAdminSettings } from "./OauthAdminSettings";
 
-const TABS: Array<{ id: SdkworkIamOauthAdminTab; label: string; summary: string }> = [
-  {
-    id: "inbound",
-    label: "Inbound IdP",
-    summary: "Tenant integrations, clients, secrets, surfaces, flows, scopes, claims, webhooks",
-  },
-  {
-    id: "provider",
-    label: "Authorization server",
-    summary: "SDKWork relying parties, grants, account links",
-  },
-  {
-    id: "extended",
-    label: "Extended platform",
-    summary: "Policies, bindings, operator platforms, resource accounts, operational assets",
-  },
-  {
-    id: "audit",
-    label: "Diagnostics & audit",
-    summary: "Diagnostic runs, callback events, operational verification queues",
-  },
-];
+const TAB_IDS: readonly SdkworkIamOauthAdminTab[] = ["inbound", "provider", "extended", "audit"];
+
+const TAB_ICONS: Record<SdkworkIamOauthAdminTab, typeof PlugZap> = {
+  audit: Activity,
+  extended: ShieldCheck,
+  inbound: PlugZap,
+  provider: Landmark,
+};
 
 export function SdkworkIamOauthAdminWorkspace({
   controller,
-  description = "Configure OAuth provider integrations, authorization-server relying parties, and tenant policy.",
-  title = "OAuth administration",
 }: SdkworkIamOauthAdminWorkspaceProps) {
+  const messages = useSdkworkIamOauthAdminMessages();
   const [tab, setTab] = useState<SdkworkIamOauthAdminTab>("inbound");
-  const activeTab = TABS.find((entry) => entry.id === tab) ?? TABS[0];
+  const activeTabMessages = messages.tabs[tab];
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-full min-h-0 flex-col gap-6">
       <div className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          {TABS.map((entry) => (
-            <Button
-              key={entry.id}
-              onClick={() => setTab(entry.id)}
-              type="button"
-              variant={tab === entry.id ? "primary" : "secondary"}
-            >
-              {entry.label}
-            </Button>
-          ))}
-        </div>
-        <p className="text-sm text-[var(--sdk-color-text-muted)]">{activeTab.summary}</p>
+        <SegmentedControl
+          aria-label={activeTabMessages.label}
+          fullWidth={false}
+          onValueChange={(value) => setTab(value as SdkworkIamOauthAdminTab)}
+          options={TAB_IDS.map((tabId) => {
+            const Icon = TAB_ICONS[tabId];
+            return {
+              icon: <Icon aria-hidden="true" className="h-4 w-4" />,
+              label: messages.tabs[tabId].label,
+              value: tabId,
+            };
+          })}
+          value={tab}
+        />
+        <p className="text-sm text-[var(--sdk-color-text-muted)]">{activeTabMessages.summary}</p>
       </div>
-      <SdkworkIamOauthAdminSettings
-        controller={controller}
-        description={description}
-        tab={tab}
-        title={title}
-      />
+      <div className="min-h-0 flex-1">
+        <SdkworkIamOauthAdminSettings controller={controller} tab={tab} />
+      </div>
     </div>
   );
 }

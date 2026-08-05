@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
-import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
+import { CatalogPagination } from "@sdkwork/iam-pc-admin-core";
 import {
   Button,
   ConfirmDialog,
@@ -13,7 +13,11 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  SettingsSection,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   StatusBadge,
   StatusNotice,
 } from "@sdkwork/ui-pc-react";
@@ -34,8 +38,6 @@ const userAdminMessages = {
     createDescription: "Add a user to the IAM directory.",
     createSuccess: "User created",
     createTitle: "Create user",
-    defaultDescription: "Create, update, and manage IAM user directory records for backend-admin operators.",
-    defaultTitle: "User administration",
     delete: "Delete user",
     deleteDescription: "Delete {name}? This permanently removes the directory record and cannot be undone.",
     deleteSuccess: "User deleted",
@@ -50,10 +52,13 @@ const userAdminMessages = {
     emptyDescription: "Create a user to populate the IAM directory.",
     emptyTitle: "No users found",
     loadError: "Failed to load users",
-    loadedMore: "Loaded more users",
     noMatchDescription: "Try a different name, username, email, or phone number.",
     noMatchTitle: "No matching users",
     operationError: "Operation failed",
+    paginationNext: "Next",
+    paginationPageSize: "Per page",
+    paginationPrevious: "Previous",
+    paginationTotal: "{total} items in total",
     phone: "Phone",
     save: "Save changes",
     search: "Search",
@@ -61,10 +66,9 @@ const userAdminMessages = {
     searchLabel: "Search users",
     searchPlaceholder: "Search name, username, email, or phone",
     status: "Status",
+    statuses: { active: "Active", disabled: "Disabled", locked: "Locked", unknown: "Unknown" },
     user: "User",
     username: "Username",
-    users: "Users",
-    usersMatching: "Users matching \"{query}\"",
     view: "View user",
   },
   "zh-CN": {
@@ -74,8 +78,6 @@ const userAdminMessages = {
     createDescription: "向 IAM 用户目录添加新用户。",
     createSuccess: "用户已创建",
     createTitle: "创建用户",
-    defaultDescription: "管理 IAM 用户目录、身份资料与账号生命周期。",
-    defaultTitle: "用户管理",
     delete: "删除用户",
     deleteDescription: "确定删除 {name} 吗？该目录记录将被永久移除，且无法撤销。",
     deleteSuccess: "用户已删除",
@@ -90,10 +92,13 @@ const userAdminMessages = {
     emptyDescription: "创建用户后，账号将显示在 IAM 目录中。",
     emptyTitle: "暂无用户",
     loadError: "用户加载失败",
-    loadedMore: "已加载更多用户",
     noMatchDescription: "请尝试其他姓名、用户名、邮箱或手机号。",
     noMatchTitle: "未找到匹配用户",
     operationError: "操作失败",
+    paginationNext: "下一页",
+    paginationPageSize: "每页",
+    paginationPrevious: "上一页",
+    paginationTotal: "共 {total} 条",
     phone: "手机号",
     save: "保存更改",
     search: "搜索",
@@ -101,20 +106,17 @@ const userAdminMessages = {
     searchLabel: "搜索用户",
     searchPlaceholder: "搜索姓名、用户名、邮箱或手机号",
     status: "状态",
+    statuses: { active: "正常", disabled: "已禁用", locked: "已锁定", unknown: "未知" },
     user: "用户",
     username: "用户名",
-    users: "用户",
-    usersMatching: "与“{query}”匹配的用户",
     view: "查看用户",
   },
 } as const;
 
 export function SdkworkIamUserAdminWorkspace({
   controller,
-  description,
   locale,
   permissions = readOnlyPermissions,
-  title,
 }: SdkworkIamUserAdminWorkspaceProps) {
   const copy = locale?.toLowerCase().startsWith("zh") ? userAdminMessages["zh-CN"] : userAdminMessages["en-US"];
   const [users, setUsers] = useState(controller.getState().users);
@@ -125,13 +127,17 @@ export function SdkworkIamUserAdminWorkspace({
   const [deleteTarget, setDeleteTarget] = useState<SdkworkIamAdminUser>();
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
 
-  const refreshUsers = async (nextQuery = appliedQuery) => {
-    const items = await controller.listUsers(nextQuery ? { q: nextQuery } : undefined);
+  const refreshUsers = async (nextQuery = appliedQuery, nextPage = page, nextPageSize = pageSize) => {
+    const params: Record<string, unknown> = { page: nextPage, page_size: nextPageSize };
+    if (nextQuery) params.q = nextQuery;
+    const items = await controller.listUsers(params);
     setUsers(items);
     setListPageInfo(controller.getState().listPageInfo);
     return items;
@@ -180,10 +186,30 @@ export function SdkworkIamUserAdminWorkspace({
     event.preventDefault();
     const nextQuery = query.trim();
     setAppliedQuery(nextQuery);
+    setPage(1);
     setLoading(true);
     setError(undefined);
-    void refreshUsers(nextQuery)
+    void refreshUsers(nextQuery, 1, pageSize)
       .catch((loadError) => setError(toErrorMessage(loadError, copy.searchError)))
+      .finally(() => setLoading(false));
+  };
+
+  const changePage = (nextPage: number) => {
+    setPage(nextPage);
+    setLoading(true);
+    setError(undefined);
+    void refreshUsers(appliedQuery, nextPage)
+      .catch((loadError) => setError(toErrorMessage(loadError, copy.loadError)))
+      .finally(() => setLoading(false));
+  };
+
+  const changePageSize = (nextPageSize: number) => {
+    setPageSize(nextPageSize);
+    setPage(1);
+    setLoading(true);
+    setError(undefined);
+    void refreshUsers(appliedQuery, 1, nextPageSize)
+      .catch((loadError) => setError(toErrorMessage(loadError, copy.loadError)))
       .finally(() => setLoading(false));
   };
 
@@ -192,15 +218,16 @@ export function SdkworkIamUserAdminWorkspace({
     { id: "username", header: copy.username, cell: (user) => user.username || "-" },
     { id: "email", header: copy.email, cell: (user) => user.email || "-" },
     { id: "phone", header: copy.phone, cell: (user) => user.phone || "-" },
-    { id: "status", header: copy.status, cell: (user) => user.status ? <StatusBadge label={user.status} showIcon status={user.status} /> : "-" },
+    { id: "status", header: copy.status, cell: (user) => user.status ? <StatusBadge label={statusLabel(copy.statuses, user.status)} showIcon status={user.status} /> : "-" },
   ], [copy]);
 
   return (
-    <div className="space-y-6">
-      <SettingsSection description={description ?? copy.defaultDescription} title={title ?? copy.defaultTitle}>
+    <div className="flex h-full min-h-0 flex-col gap-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
         {error ? <StatusNotice tone="danger">{error}</StatusNotice> : null}
         {notice ? <StatusNotice tone="success">{notice}</StatusNotice> : null}
         <DataTable
+          className="min-h-0 flex-1"
           columns={columns}
           emptyDescription={appliedQuery ? copy.noMatchDescription : copy.emptyDescription}
           emptyTitle={appliedQuery ? copy.noMatchTitle : copy.emptyTitle}
@@ -224,8 +251,13 @@ export function SdkworkIamUserAdminWorkspace({
               ) : null}
             </div>
           )}
+          slotProps={{
+            surface: { className: "flex min-h-0 flex-1 flex-col" },
+            viewport: { className: "min-h-0 flex-1" },
+            footer: { className: "shrink-0" },
+          }}
+          stickyHeader
           rows={[...users]}
-          title={appliedQuery ? formatMessage(copy.usersMatching, { query: appliedQuery }) : copy.users}
           toolbar={(
             <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
               <form className="flex min-w-[16rem] flex-1 items-center gap-2" onSubmit={submitSearch} role="search">
@@ -252,17 +284,21 @@ export function SdkworkIamUserAdminWorkspace({
             </div>
           )}
           footer={(
-            <SdkworkIamListPaginationControls
+            <CatalogPagination
               busy={busy}
-              onLoadMore={() => void runAction(async () => {
-                setUsers(await controller.loadMoreUsers());
-                setListPageInfo(controller.getState().listPageInfo);
-              }, copy.loadedMore)}
+              copy={{
+                next: copy.paginationNext,
+                pageSize: copy.paginationPageSize,
+                previous: copy.paginationPrevious,
+                total: copy.paginationTotal,
+              }}
+              onPageChange={changePage}
+              onPageSizeChange={changePageSize}
               pageInfo={listPageInfo}
             />
           )}
         />
-      </SettingsSection>
+      </div>
 
       <UserDrawer
         busy={busy}
@@ -345,7 +381,11 @@ function UserDrawer({
           <Field disabled={viewing} label={copy.email} onChange={(email) => onDraftChange({ ...draft, email })} type="email" value={draft.email ?? ""} />
           <Field disabled={viewing} label={copy.displayName} onChange={(displayName) => onDraftChange({ ...draft, displayName })} value={draft.displayName ?? ""} />
           <Field disabled={viewing} label={copy.phone} onChange={(phone) => onDraftChange({ ...draft, phone })} type="tel" value={draft.phone ?? ""} />
-          {mode !== "create" ? <Field disabled={viewing} label={copy.status} onChange={(status) => onDraftChange({ ...draft, status })} value={draft.status ?? ""} /> : null}
+          {mode !== "create" ? (
+            viewing
+              ? <StatusReadonlyField label={copy.status} statuses={copy.statuses} value={draft.status ?? ""} />
+              : <StatusSelectField copy={copy} onChange={(status) => onDraftChange({ ...draft, status })} value={draft.status ?? ""} />
+          ) : null}
         </DrawerBody>
         <DrawerFooter>
           <Button disabled={busy} onClick={() => onOpenChange(false)} type="button" variant="secondary">{viewing ? copy.close : copy.cancel}</Button>
@@ -394,4 +434,42 @@ function Field({ disabled, label, onChange, type = "text", value }: { disabled?:
       <input className="w-full border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 disabled:cursor-not-allowed disabled:bg-[var(--sdk-color-surface-subtle)]" disabled={disabled} onChange={(event) => onChange(event.target.value)} type={type} value={value} />
     </label>
   );
+}
+
+function StatusReadonlyField({ label, statuses, value }: { label: string; statuses: { active: string; disabled: string; locked: string; unknown: string }; value: string }) {
+  return (
+    <label className="block space-y-2 text-sm">
+      <span>{label}</span>
+      <div className="border border-[var(--sdk-color-border-default)] bg-[var(--sdk-color-surface-subtle)] px-3 py-2">
+        {statusLabel(statuses, value)}
+      </div>
+    </label>
+  );
+}
+
+function StatusSelectField({ copy, onChange, value }: { copy: typeof userAdminMessages["en-US"] | typeof userAdminMessages["zh-CN"]; onChange: (value: string) => void; value: string }) {
+  const normalized = value.trim().toLowerCase();
+  const options = [
+    ["active", copy.statuses.active],
+    ["disabled", copy.statuses.disabled],
+    ["locked", copy.statuses.locked],
+  ] as const;
+  const currentUnknown = options.some(([optionValue]) => optionValue === normalized) ? undefined : value;
+  return (
+    <label className="block space-y-2 text-sm">
+      <span>{copy.status}</span>
+      <Select onValueChange={onChange} value={value}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {options.map(([optionValue, optionLabel]) => <SelectItem key={optionValue} value={optionValue}>{optionLabel}</SelectItem>)}
+          {currentUnknown ? <SelectItem key={currentUnknown} value={currentUnknown}>{statusLabel(copy.statuses, currentUnknown)}</SelectItem> : null}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
+
+function statusLabel(statuses: { active: string; disabled: string; locked: string; unknown: string }, value: string) {
+  const normalized = value.trim().toLowerCase();
+  return statuses[normalized as keyof typeof statuses] ?? statuses.unknown;
 }

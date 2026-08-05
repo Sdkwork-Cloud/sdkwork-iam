@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
+import { CatalogPagination } from "@sdkwork/iam-pc-admin-core";
 import {
   Button,
   DataTable,
@@ -10,21 +10,22 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-  SettingsSection,
   StatusNotice,
 } from "@sdkwork/ui-pc-react";
 
+import { useSdkworkIamAuditAdminMessages } from "../i18n";
 import type { SdkworkIamAuditAdminWorkspaceProps } from "../types/audit-admin-types";
 
 type AuditTab = "audit" | "security";
 
 export function SdkworkIamAuditAdminWorkspace({
   controller,
-  description = "Review backend mutation audit trails and security events with server-backed pagination.",
-  title = "Audit and security",
 }: SdkworkIamAuditAdminWorkspaceProps) {
+  const messages = useSdkworkIamAuditAdminMessages();
   const [tab, setTab] = useState<AuditTab>("audit");
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState<Record<AuditTab, number>>({ audit: 1, security: 1 });
+  const [pageSize, setPageSize] = useState<Record<AuditTab, number>>({ audit: 20, security: 20 });
   const [auditEvents, setAuditEvents] = useState(controller.getState().auditEvents);
   const [securityEvents, setSecurityEvents] = useState(controller.getState().securityEvents);
   const [listPageInfo, setListPageInfo] = useState(controller.getState().listPageInfo);
@@ -35,15 +36,15 @@ export function SdkworkIamAuditAdminWorkspace({
   const eventColumns = useMemo<DataTableColumn<EventListItem>[]>(() => [
     {
       cell: (item) => item.primary,
-      header: "Event",
+      header: messages.common.event,
       id: "event",
     },
     {
       cell: (item) => item.secondary || "—",
-      header: "Context",
+      header: messages.common.context,
       id: "context",
     },
-  ], []);
+  ], [messages]);
 
   const syncFromController = () => {
     const next = controller.getState();
@@ -54,9 +55,10 @@ export function SdkworkIamAuditAdminWorkspace({
     setError(next.lastError);
   };
 
-  const refreshAuditEvents = async (query?: string) => {
+  const refreshAuditEvents = async (query = searchQuery, nextPage = page.audit, nextPageSize = pageSize.audit) => {
     const items = await controller.listAuditEvents({
-      page_size: 20,
+      page: nextPage,
+      page_size: nextPageSize,
       ...(query?.trim() ? { q: query.trim() } : {}),
     });
     setAuditEvents(items);
@@ -64,9 +66,10 @@ export function SdkworkIamAuditAdminWorkspace({
     return items;
   };
 
-  const refreshSecurityEvents = async (query?: string) => {
+  const refreshSecurityEvents = async (query = searchQuery, nextPage = page.security, nextPageSize = pageSize.security) => {
     const items = await controller.listSecurityEvents({
-      page_size: 20,
+      page: nextPage,
+      page_size: nextPageSize,
       ...(query?.trim() ? { q: query.trim() } : {}),
     });
     setSecurityEvents(items);
@@ -79,35 +82,49 @@ export function SdkworkIamAuditAdminWorkspace({
     setEventDetail(undefined);
     const timeout = window.setTimeout(() => {
       const loader = tab === "audit"
-        ? () => refreshAuditEvents(searchQuery)
-        : () => refreshSecurityEvents(searchQuery);
+        ? () => refreshAuditEvents(searchQuery, page.audit, pageSize.audit)
+        : () => refreshSecurityEvents(searchQuery, page.security, pageSize.security);
       void loader().catch((loadError) => {
-        setError(loadError instanceof Error ? loadError.message : "Failed to load events");
+        setError(toErrorMessage(loadError, messages.errors.loadEventsError));
         setStatus(controller.getState().status);
       });
     }, 300);
     return () => window.clearTimeout(timeout);
-  }, [controller, tab, searchQuery]);
+  }, [controller, tab, searchQuery, page.audit, page.security, pageSize.audit, pageSize.security]);
+
+  const changePage = (nextPage: number) => {
+    setPage((current) => ({ ...current, [tab]: nextPage }));
+  };
+
+  const changePageSize = (nextPageSize: number) => {
+    setPageSize((current) => ({ ...current, [tab]: nextPageSize }));
+    setPage((current) => ({ ...current, [tab]: 1 }));
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setPage((current) => ({ ...current, [tab]: 1 }));
+  };
 
   const busy = status === "loading";
 
   return (
-    <div className="space-y-6">
-      <SettingsSection description={description} title={title}>
+    <div className="flex h-full min-h-0 flex-col gap-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
         {error ? <StatusNotice tone="danger">{error}</StatusNotice> : null}
 
         <div className="flex gap-2">
-          <TabButton active={tab === "audit"} disabled={busy} label="Audit events" onSelect={() => setTab("audit")} />
-          <TabButton active={tab === "security"} disabled={busy} label="Security events" onSelect={() => setTab("security")} />
+          <TabButton active={tab === "audit"} disabled={busy} label={messages.events.auditTab} onSelect={() => setTab("audit")} />
+          <TabButton active={tab === "security"} disabled={busy} label={messages.events.securityTab} onSelect={() => setTab("security")} />
         </div>
 
         <label className="block max-w-md space-y-2 text-sm">
-          <span>Search</span>
+          <span>{messages.search.label}</span>
           <input
             className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2"
             disabled={busy}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder={tab === "audit" ? "Filter by action or resource type" : "Filter by event type or severity"}
+            onChange={(event) => handleSearchChange(event.target.value)}
+            placeholder={tab === "audit" ? messages.events.searchPlaceholderAudit : messages.events.searchPlaceholderSecurity}
             type="search"
             value={searchQuery}
           />
@@ -117,64 +134,53 @@ export function SdkworkIamAuditAdminWorkspace({
           <EventList
             busy={busy}
             columns={eventColumns}
-            emptyLabel="No audit events found."
+            emptyLabel={messages.events.noAuditEvents}
+            emptyTitle={messages.events.noEvents}
             items={auditEvents.map((event) => ({
               id: event.id,
-              primary: `${event.action} · ${event.resourceType ?? "resource"}`,
+              primary: `${event.action} · ${event.resourceType ?? messages.events.fallbackResource}`,
               secondary: [event.tenantId, event.actorUserId, event.environment, event.createdAt].filter(Boolean).join(" · "),
             }))}
-            onLoadMore={() => controller.loadMoreAuditEvents()
-              .then((items) => {
-                setAuditEvents(items);
-                syncFromController();
-              })
-              .catch((loadError) => {
-                setError(loadError instanceof Error ? loadError.message : "Failed to load more audit events");
-                setStatus(controller.getState().status);
-              })}
+            onPageChange={changePage}
+            onPageSizeChange={changePageSize}
             onSelectItem={(id) => void controller.retrieveAuditEvent(id)
               .then((event) => setEventDetail(event.detailJson ?? JSON.stringify(event, null, 2)))
               .catch((loadError) => {
-                setError(loadError instanceof Error ? loadError.message : "Failed to load audit event detail");
+                setError(toErrorMessage(loadError, messages.errors.loadAuditDetailError));
                 setStatus(controller.getState().status);
               })}
             pageInfo={listPageInfo?.auditEvents}
+            viewDetailLabel={messages.viewDetail}
           />
         ) : (
           <EventList
             busy={busy}
             columns={eventColumns}
-            emptyLabel="No security events found."
+            emptyLabel={messages.events.noSecurityEvents}
+            emptyTitle={messages.events.noEvents}
             items={securityEvents.map((event) => ({
               id: event.id,
-              primary: `${event.category} · ${event.severity ?? "info"}`,
+              primary: `${event.category} · ${severityLabel(messages.events.severities, event.severity, messages.events.fallbackInfo)}`,
               secondary: [event.tenantId, event.userId, event.createdAt].filter(Boolean).join(" · "),
             }))}
-            onLoadMore={() => controller.loadMoreSecurityEvents()
-              .then((items) => {
-                setSecurityEvents(items);
-                syncFromController();
-              })
-              .catch((loadError) => {
-                setError(loadError instanceof Error ? loadError.message : "Failed to load more security events");
-                setStatus(controller.getState().status);
-              })}
+            onPageChange={changePage}
+            onPageSizeChange={changePageSize}
             onSelectItem={(id) => void controller.retrieveSecurityEvent(id)
               .then((event) => setEventDetail(event.detailJson ?? JSON.stringify(event, null, 2)))
               .catch((loadError) => {
-                setError(loadError instanceof Error ? loadError.message : "Failed to load security event detail");
+                setError(toErrorMessage(loadError, messages.errors.loadSecurityDetailError));
                 setStatus(controller.getState().status);
               })}
             pageInfo={listPageInfo?.securityEvents}
+            viewDetailLabel={messages.viewDetail}
           />
         )}
-
-      </SettingsSection>
+      </div>
       <Drawer open={Boolean(eventDetail)} onOpenChange={(open) => { if (!open) setEventDetail(undefined); }}>
         <DrawerContent size="lg">
           <DrawerHeader>
-            <DrawerTitle>Event detail</DrawerTitle>
-            <DrawerDescription>Read-only IAM audit and security event payload.</DrawerDescription>
+            <DrawerTitle>{messages.drawer.detailTitle}</DrawerTitle>
+            <DrawerDescription>{messages.drawer.detailDescription}</DrawerDescription>
           </DrawerHeader>
           <DrawerBody>
             <pre className="overflow-auto rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-[var(--sdk-color-surface-muted)] p-3 text-xs">
@@ -214,32 +220,69 @@ function EventList({
   busy,
   columns,
   emptyLabel,
+  emptyTitle,
   items,
-  onLoadMore,
+  onPageChange,
+  onPageSizeChange,
   onSelectItem,
   pageInfo,
+  viewDetailLabel,
 }: {
   busy?: boolean;
   columns: DataTableColumn<EventListItem>[];
   emptyLabel: string;
+  emptyTitle: string;
   items: EventListItem[];
-  onLoadMore: () => void | Promise<void>;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
   onSelectItem?: (id: string) => void;
   pageInfo?: import("@sdkwork/iam-contracts").SdkWorkPageInfo;
+  viewDetailLabel: string;
 }) {
+  const messages = useSdkworkIamAuditAdminMessages();
   return (
     <DataTable
+      className="min-h-0 flex-1"
       columns={columns}
       emptyDescription={emptyLabel}
-      emptyTitle="No events found"
-      footer={<SdkworkIamListPaginationControls busy={busy} onLoadMore={onLoadMore} pageInfo={pageInfo} />}
+      emptyTitle={emptyTitle}
+      footer={(
+        <CatalogPagination
+          busy={Boolean(busy)}
+          copy={{
+            next: messages.pagination.next,
+            pageSize: messages.pagination.pageSize,
+            previous: messages.pagination.previous,
+            total: messages.pagination.total,
+          }}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          pageInfo={pageInfo}
+        />
+      )}
       getRowId={(item) => item.id}
       loading={busy}
       onRowClick={(item) => onSelectItem?.(item.id)}
-      rowActions={(item) => <Button disabled={busy} onClick={() => onSelectItem?.(item.id)} size="sm" type="button" variant="outline">View detail</Button>}
+      rowActions={(item) => <Button disabled={busy} onClick={() => onSelectItem?.(item.id)} size="sm" type="button" variant="outline">{viewDetailLabel}</Button>}
       rows={items}
+      slotProps={{
+        surface: { className: "flex min-h-0 flex-col" },
+        viewport: { className: "min-h-0 flex-1" },
+        footer: { className: "shrink-0" },
+      }}
+      stickyHeader
     />
   );
+}
+
+function severityLabel(severities: { critical: string; error: string; info: string; unknown: string; warning: string }, value: string | undefined, fallback: string) {
+  if (!value) return fallback;
+  const normalized = value.trim().toLowerCase();
+  return severities[normalized as keyof typeof severities] ?? value;
+}
+
+function toErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 type EventListItem = {

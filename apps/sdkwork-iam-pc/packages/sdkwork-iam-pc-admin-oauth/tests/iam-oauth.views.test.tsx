@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { SdkworkI18nProvider } from "@sdkwork/i18n-pc-react";
 import { describe, expect, it } from "vitest";
 
 import { SdkworkIamOauthAdminSettings } from "../src/pages/OauthAdminSettings";
@@ -37,59 +38,58 @@ const controller = {
 
 function renderView(view: SdkworkIamOauthAdminView): string {
   return renderToStaticMarkup(
-    <SdkworkIamOauthAdminSettings
-      controller={controller}
-      description="Focused OAuth administration"
-      title="Focused view"
-      view={view}
-    />,
+    <SdkworkI18nProvider locale="zh-CN">
+      <SdkworkIamOauthAdminSettings
+        controller={controller}
+        view={view}
+      />
+    </SdkworkI18nProvider>,
   );
 }
 
 describe("SDKWork IAM OAuth focused admin views", () => {
   it("separates provider, application, and login configuration workflows", () => {
     const providers = renderView("providers");
-    expect(providers).toContain("Focused view");
-    expect(providers).toContain("Provider catalog");
-    expect(providers).toContain("Add provider connection");
-    expect(providers).not.toContain("OAuth clients");
+    expect(providers).toContain("提供方目录");
+    expect(providers).toContain("添加提供方连接");
+    expect(providers).not.toContain("OAuth 客户端");
 
     const applications = renderView("applications");
-    expect(applications).toContain("SDKWork OAuth relying party");
-    expect(applications).toContain("OAuth clients");
-    expect(applications).toContain("OAuth secrets");
-    expect(applications).toContain("write-only input");
-    expect(applications).not.toContain("Provider catalog");
+    expect(applications).toContain("SDKWork OAuth 依赖方");
+    expect(applications).toContain("OAuth 客户端");
+    expect(applications).toContain("OAuth 密钥");
+    expect(applications).toContain("只写输入");
+    expect(applications).not.toContain("提供方目录");
 
     const loginConfiguration = renderView("login-configuration");
-    for (const title of ["Scope profiles", "Claim mappings", "Flow configs", "OAuth surfaces"]) {
+    for (const title of ["作用域配置", "声明映射", "流程配置", "OAuth 载体"]) {
       expect(loginConfiguration).toContain(title);
     }
-    expect(loginConfiguration).not.toContain("OAuth secrets");
-    expect(loginConfiguration).not.toContain("Webhook configs");
+    expect(loginConfiguration).not.toContain("OAuth 密钥");
+    expect(loginConfiguration).not.toContain("Webhook 配置");
   });
 
   it("separates governance, authorization, resources, and operations", () => {
     const governance = renderView("governance");
-    expect(governance).toContain("OAuth policies");
-    expect(governance).toContain("Tenant bindings");
-    expect(governance).not.toContain("Operator platforms");
+    expect(governance).toContain("OAuth 策略");
+    expect(governance).toContain("租户绑定");
+    expect(governance).not.toContain("运营平台");
 
     const authorizations = renderView("authorizations");
-    expect(authorizations).toContain("OAuth account links");
-    expect(authorizations).toContain("OAuth grants");
-    expect(authorizations).not.toContain("Tenant bindings");
+    expect(authorizations).toContain("OAuth 账号关联");
+    expect(authorizations).toContain("OAuth 授权");
+    expect(authorizations).not.toContain("租户绑定");
 
     const resources = renderView("resources");
-    expect(resources).toContain("Operator platforms");
-    expect(resources).toContain("OAuth resource accounts");
-    expect(resources).toContain("OAuth operational resources");
-    expect(resources).not.toContain("OAuth policies");
+    expect(resources).toContain("运营平台");
+    expect(resources).toContain("OAuth 资源账号");
+    expect(resources).toContain("OAuth 运营资源");
+    expect(resources).not.toContain("OAuth 策略");
 
     const activity = renderView("activity");
-    expect(activity).toContain("Webhook configs");
-    expect(activity).toContain("Diagnostic runs");
-    expect(activity).toContain("OAuth callback events");
-    expect(activity).not.toContain("OAuth grants");
+    expect(activity).toContain("Webhook 配置");
+    expect(activity).toContain("诊断任务");
+    expect(activity).toContain("OAuth 回调事件");
+    expect(activity).not.toContain("OAuth 授权");
   });
 });

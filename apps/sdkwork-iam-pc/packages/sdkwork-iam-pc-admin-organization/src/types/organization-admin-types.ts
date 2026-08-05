@@ -172,7 +172,6 @@ export interface SdkworkIamOrganizationController {
 
 export interface SdkworkIamOrganizationAdminWorkspaceProps {
   controller: SdkworkIamOrganizationController;
-  description?: string;
   permissions?: {
     departments: {
       create: boolean;
@@ -198,7 +197,6 @@ export interface SdkworkIamOrganizationAdminWorkspaceProps {
     };
   };
   onOpenStructure?: (organization: SdkworkIamOrganization) => void;
-  title?: string;
 }
 
 export interface SdkworkIamOrganizationStructureWorkspaceProps {

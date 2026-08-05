@@ -206,6 +206,16 @@ impl WebRequestContextResolver for IamDatabaseWebRequestContextResolver {
         Err(iam_database_unavailable_error())
     }
 
+    /// Auth-token channel for [`RouteAuth::OpenApiBearerFlexible`]: a single
+    /// bearer credential that is not an API key is resolved to the IAM user
+    /// identity through the same IAM bearer lookup used for OAuth tokens.
+    async fn resolve_bearer_auth_token(
+        &self,
+        raw_bearer_token: &str,
+    ) -> Result<WebRequestPrincipal, WebFrameworkError> {
+        self.resolve_oauth_bearer(raw_bearer_token).await
+    }
+
     async fn resolve_dual_token(
         &self,
         raw_auth_token: &str,

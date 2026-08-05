@@ -7,6 +7,7 @@ import {
   Switch,
 } from "@sdkwork/ui-pc-react";
 
+import { useSdkworkIamAccountBindingAdminMessages } from "../i18n";
 import type {
   SdkworkIamAccountBindingSettingsProps,
   SdkworkIamContactBindingPolicy,
@@ -16,9 +17,8 @@ import type {
 
 export function SdkworkIamAccountBindingSettings({
   controller,
-  description = "Configure whether end users can bind or unbind email, phone, and OAuth identities.",
-  title = "Account binding policy",
 }: SdkworkIamAccountBindingSettingsProps) {
+  const messages = useSdkworkIamAccountBindingAdminMessages();
   const [draft, setDraft] = useState(controller.getState().policy);
   const [status, setStatus] = useState(controller.getState().status);
   const [error, setError] = useState<string | undefined>(controller.getState().lastError);
@@ -28,9 +28,9 @@ export function SdkworkIamAccountBindingSettings({
       setDraft(policy);
       setStatus(controller.getState().status);
       setError(controller.getState().lastError);
-    }).catch(() => {
+    }).catch((loadError) => {
       setStatus(controller.getState().status);
-      setError(controller.getState().lastError);
+      setError(toErrorMessage(loadError, messages.common.loadError));
     });
   }, [controller]);
 
@@ -66,77 +66,80 @@ export function SdkworkIamAccountBindingSettings({
 
   return (
     <div className="space-y-6">
-      <SettingsSection description={description} title={title}>
+      <SettingsSection
+        description={messages.contactBinding.description}
+        title={messages.contactBinding.title}
+      >
         {error ? <StatusNotice tone="danger">{error}</StatusNotice> : null}
         <div className="space-y-4">
           <PolicyToggle
             checked={draft.contactBinding.enabled}
-            label="Enable contact binding"
+            label={messages.contactBinding.enableContactBinding}
             onCheckedChange={(enabled) => updateContact({ enabled })}
           />
           <PolicyToggle
             checked={draft.contactBinding.emailEnabled}
             disabled={!draft.contactBinding.enabled}
-            label="Allow email binding"
+            label={messages.contactBinding.allowEmailBinding}
             onCheckedChange={(emailEnabled) => updateContact({ emailEnabled })}
           />
           <PolicyToggle
             checked={draft.contactBinding.phoneEnabled}
             disabled={!draft.contactBinding.enabled}
-            label="Allow phone binding"
+            label={messages.contactBinding.allowPhoneBinding}
             onCheckedChange={(phoneEnabled) => updateContact({ phoneEnabled })}
           />
           <PolicyToggle
             checked={draft.contactBinding.emailChangeEnabled}
             disabled={!draft.contactBinding.enabled || !draft.contactBinding.emailEnabled}
-            label="Allow email change"
+            label={messages.contactBinding.allowEmailChange}
             onCheckedChange={(emailChangeEnabled) => updateContact({ emailChangeEnabled })}
           />
           <PolicyToggle
             checked={draft.contactBinding.phoneChangeEnabled}
             disabled={!draft.contactBinding.enabled || !draft.contactBinding.phoneEnabled}
-            label="Allow phone change"
+            label={messages.contactBinding.allowPhoneChange}
             onCheckedChange={(phoneChangeEnabled) => updateContact({ phoneChangeEnabled })}
           />
           <PolicyToggle
             checked={draft.contactBinding.emailUnbindEnabled}
             disabled={!draft.contactBinding.enabled || !draft.contactBinding.emailEnabled}
-            label="Allow email unbind"
+            label={messages.contactBinding.allowEmailUnbind}
             onCheckedChange={(emailUnbindEnabled) => updateContact({ emailUnbindEnabled })}
           />
           <PolicyToggle
             checked={draft.contactBinding.phoneUnbindEnabled}
             disabled={!draft.contactBinding.enabled || !draft.contactBinding.phoneEnabled}
-            label="Allow phone unbind"
+            label={messages.contactBinding.allowPhoneUnbind}
             onCheckedChange={(phoneUnbindEnabled) => updateContact({ phoneUnbindEnabled })}
           />
           <PolicyToggle
             checked={draft.contactBinding.requireVerification}
             disabled={!draft.contactBinding.enabled}
-            label="Require verification code for bind/change"
+            label={messages.contactBinding.requireVerification}
             onCheckedChange={(requireVerification) => updateContact({ requireVerification })}
           />
         </div>
       </SettingsSection>
 
       <SettingsSection
-        description="OAuth login exposes third-party sign-in buttons on the auth page. Providers must also be configured in IAM OAuth integrations or local OAuth env."
-        title="OAuth login"
+        description={messages.oauthLogin.description}
+        title={messages.oauthLogin.title}
       >
         <div className="space-y-4">
           <PolicyToggle
             checked={draft.oauthLogin.enabled}
-            label="Enable OAuth login"
+            label={messages.oauthLogin.enableOauthLogin}
             onCheckedChange={(enabled) => updateOauthLogin({ enabled })}
           />
           <PolicyToggle
             checked={draft.oauthLogin.autoRegistrationEnabled}
             disabled={!draft.oauthLogin.enabled}
-            label="Allow auto registration for new OAuth users"
+            label={messages.oauthLogin.allowAutoRegistration}
             onCheckedChange={(autoRegistrationEnabled) => updateOauthLogin({ autoRegistrationEnabled })}
           />
           <div className="space-y-2">
-            <Label htmlFor="oauth-login-providers">Allowed login provider codes</Label>
+            <Label htmlFor="oauth-login-providers">{messages.oauthLogin.allowedProvidersLabel}</Label>
             <input
               className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
               disabled={!draft.oauthLogin.enabled}
@@ -147,7 +150,7 @@ export function SdkworkIamAccountBindingSettings({
                   .map((value) => value.trim())
                   .filter(Boolean),
               })}
-              placeholder="wechat, google, twitter (empty = all configured providers)"
+              placeholder={messages.oauthLogin.allowedProvidersPlaceholder}
               value={draft.oauthLogin.allowedProviders.join(", ")}
             />
           </div>
@@ -155,29 +158,29 @@ export function SdkworkIamAccountBindingSettings({
       </SettingsSection>
 
       <SettingsSection
-        description="OAuth linking uses provider authorization flows. Users can list linked accounts when OAuth binding is enabled."
-        title="OAuth binding"
+        description={messages.oauthBinding.description}
+        title={messages.oauthBinding.title}
       >
         <div className="space-y-4">
           <PolicyToggle
             checked={draft.oauthBinding.enabled}
-            label="Enable OAuth account binding"
+            label={messages.oauthBinding.enableOauthBinding}
             onCheckedChange={(enabled) => updateOauth({ enabled })}
           />
           <PolicyToggle
             checked={draft.oauthBinding.selfServiceLinkEnabled}
             disabled={!draft.oauthBinding.enabled}
-            label="Allow self-service OAuth link"
+            label={messages.oauthBinding.allowSelfServiceLink}
             onCheckedChange={(selfServiceLinkEnabled) => updateOauth({ selfServiceLinkEnabled })}
           />
           <PolicyToggle
             checked={draft.oauthBinding.selfServiceUnlinkEnabled}
             disabled={!draft.oauthBinding.enabled}
-            label="Allow self-service OAuth unlink"
+            label={messages.oauthBinding.allowSelfServiceUnlink}
             onCheckedChange={(selfServiceUnlinkEnabled) => updateOauth({ selfServiceUnlinkEnabled })}
           />
           <div className="space-y-2">
-            <Label htmlFor="allowed-providers">Allowed provider codes</Label>
+            <Label htmlFor="allowed-providers">{messages.oauthBinding.allowedProvidersLabel}</Label>
             <input
               className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
               disabled={!draft.oauthBinding.enabled}
@@ -188,7 +191,7 @@ export function SdkworkIamAccountBindingSettings({
                   .map((value) => value.trim())
                   .filter(Boolean),
               })}
-              placeholder="github, wechat, google"
+              placeholder={messages.oauthBinding.allowedProvidersPlaceholder}
               value={draft.oauthBinding.allowedProviders.join(", ")}
             />
           </div>
@@ -203,14 +206,14 @@ export function SdkworkIamAccountBindingSettings({
             setDraft(saved);
             setStatus(controller.getState().status);
             setError(controller.getState().lastError);
-          }).catch(() => {
+          }).catch((saveError) => {
             setStatus(controller.getState().status);
-            setError(controller.getState().lastError);
+            setError(toErrorMessage(saveError, messages.common.saveError));
           });
         }}
         type="button"
       >
-        Save policy
+        {messages.common.savePolicy}
       </Button>
     </div>
   );
@@ -233,4 +236,8 @@ function PolicyToggle({
       <Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />
     </div>
   );
+}
+
+function toErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }

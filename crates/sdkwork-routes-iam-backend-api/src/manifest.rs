@@ -976,6 +976,24 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
         "iam.oauth",
         "iam.oauth.diagnosticRuns.retrieve",
     ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/iam/oauth/scan_login_settings",
+        "iam.oauth",
+        "iam.oauth.scanLoginSettings.retrieve",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Patch,
+        "/backend/v3/api/iam/oauth/scan_login_settings",
+        "iam.oauth",
+        "iam.oauth.scanLoginSettings.update",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/iam/oauth/scan_login_previews",
+        "iam.oauth",
+        "iam.oauth.scanLoginPreviews.create",
+    ),
 ];
 
 fn enrich_backend_route(route: HttpRoute) -> HttpRoute {

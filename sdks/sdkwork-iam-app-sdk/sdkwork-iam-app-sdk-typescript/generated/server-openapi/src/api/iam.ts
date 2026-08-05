@@ -98,6 +98,11 @@ export interface IamRoleBindingsListParams {
   cursor?: string;
   sort?: string;
   q?: string;
+  roleId?: string;
+  principalKind?: string;
+  principalId?: string;
+  scopeKind?: string;
+  scopeId?: string;
 }
 
 export class IamRoleBindingsApi {
@@ -116,6 +121,11 @@ export class IamRoleBindingsApi {
       { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },
       { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
+      { name: 'roleId', value: params?.roleId, style: 'form', explode: true, allowReserved: false },
+      { name: 'principalKind', value: params?.principalKind, style: 'form', explode: true, allowReserved: false },
+      { name: 'principalId', value: params?.principalId, style: 'form', explode: true, allowReserved: false },
+      { name: 'scopeKind', value: params?.scopeKind, style: 'form', explode: true, allowReserved: false },
+      { name: 'scopeId', value: params?.scopeId, style: 'form', explode: true, allowReserved: false },
     ]);
     return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/iam/role_bindings`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }

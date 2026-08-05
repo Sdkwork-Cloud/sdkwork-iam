@@ -15,7 +15,15 @@ import type {
   SdkworkIamH5LoginResult,
   SdkworkIamH5OAuthLoginInput,
   SdkworkIamH5MiniProgramLoginInput,
+  SdkworkIamH5OAuthProvider,
+  SdkworkIamH5ScanLoginContext,
 } from "../types/auth-h5-types";
+
+/** Storage key for the scan-login context kept across the WeChat authorization redirect. */
+const SCAN_LOGIN_STORAGE_KEY = "sdkwork.iam.h5.scanLogin";
+
+/** OAuth `state` prefix used to carry the QR session key through WeChat authorization. */
+const SCAN_LOGIN_STATE_PREFIX = "scan:";
 
 export function createSdkworkIamH5AuthController(
   input: SdkworkIamService | CreateSdkworkIamH5AuthControllerInput,
@@ -94,8 +102,25 @@ export function createSdkworkIamH5AuthController(
         throw error;
       }
     },
-    createOAuthAuthorizationUrl: async ({ provider, redirectUri }) => {
-      const response = await service.oauth.authorizationUrls.create({ provider, redirectUri });
+    listOAuthProviders: async () => {
+      const response = await service.oauth.providers.list();
+      const records = readProviderRecords(response);
+      return records
+        .map((record) => ({
+          displayName: optionalString(record.displayName) || optionalString(record.display_name),
+          providerCode: optionalString(record.providerCode)
+            || optionalString(record.provider_code)
+            || "",
+          supportsLogin: readBoolean(record.supportsLogin, record.supports_login),
+        }))
+        .filter((provider) => !isBlank(provider.providerCode));
+    },
+    createOAuthAuthorizationUrl: async ({ provider, redirectUri, state: oauthState }) => {
+      const response = await service.oauth.authorizationUrls.create({
+        provider,
+        redirectUri,
+        ...(isBlank(oauthState) ? {} : { state: oauthState }),
+      });
       const record = response && typeof response === "object" ? response as Record<string, unknown> : {};
       const authUrl = optionalString(record.authUrl) || optionalString(record.url);
       if (!authUrl) {
@@ -103,6 +128,21 @@ export function createSdkworkIamH5AuthController(
       }
       return authUrl;
     },
+    completeScanLogin: async ({ pollSecret, sessionKey }) => {
+      setState({ lastError: undefined, status: "loading" });
+      try {
+        await service.oauth.deviceAuthorizations.sessionCompletions.create(sessionKey, {
+          pollSecret,
+        });
+        clearStoredScanLoginContext();
+        setState({ status: "ready" });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Scan login completion failed";
+        setState({ lastError: message, status: "error" });
+        throw error;
+      }
+    },
+    resolveScanLoginContext: () => resolveScanLoginContext(),
     logout: async () => {
       setState({ status: "loading" });
       try {
@@ -144,6 +184,106 @@ export function createSdkworkIamH5AuthController(
       }
     },
   };
+}
+
+/**
+ * Resolves the scan-login context from the current H5 URL
+ * (`session_key` in the query, `poll_secret` in the fragment) and stores it
+ * in `sessionStorage` so the WeChat authorization redirect (which drops the
+ * fragment) can still complete the QR session on the callback screen.
+ */
+export function resolveScanLoginContext(): SdkworkIamH5ScanLoginContext | undefined {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+  const search = new URLSearchParams(window.location.search);
+  const sessionKey = trim(search.get("session_key") || search.get("sessionKey") || "");
+  if (isBlank(sessionKey)) {
+    return readStoredScanLoginContext();
+  }
+  const fragment = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
+  const pollSecret = trim(fragment.get("poll_secret") || fragment.get("pollSecret") || "");
+  const context: SdkworkIamH5ScanLoginContext = {
+    pollSecret: isBlank(pollSecret) ? undefined : pollSecret,
+    purpose: trim(search.get("purpose") || "") || undefined,
+    sessionKey,
+  };
+  storeScanLoginContext(context);
+  return context;
+}
+
+/** Builds the OAuth `state` value that carries the QR session key. */
+export function buildScanLoginOAuthState(sessionKey: string): string {
+  return `${SCAN_LOGIN_STATE_PREFIX}${sessionKey}`;
+}
+
+/** Extracts the QR session key from an OAuth `state` value, if present. */
+export function readScanLoginSessionKeyFromOAuthState(state: string | undefined): string | undefined {
+  if (!state || !state.startsWith(SCAN_LOGIN_STATE_PREFIX)) {
+    return undefined;
+  }
+  const sessionKey = state.slice(SCAN_LOGIN_STATE_PREFIX.length).trim();
+  return isBlank(sessionKey) ? undefined : sessionKey;
+}
+
+function storeScanLoginContext(context: SdkworkIamH5ScanLoginContext): void {
+  try {
+    window.sessionStorage.setItem(SCAN_LOGIN_STORAGE_KEY, JSON.stringify(context));
+  } catch {
+    // Storage may be unavailable (private mode); the URL context still works.
+  }
+}
+
+function readStoredScanLoginContext(): SdkworkIamH5ScanLoginContext | undefined {
+  try {
+    const raw = window.sessionStorage.getItem(SCAN_LOGIN_STORAGE_KEY);
+    if (!raw) {
+      return undefined;
+    }
+    const record = JSON.parse(raw) as Record<string, unknown>;
+    const sessionKey = optionalString(record.sessionKey);
+    if (!sessionKey) {
+      return undefined;
+    }
+    return {
+      pollSecret: optionalString(record.pollSecret),
+      purpose: optionalString(record.purpose),
+      sessionKey,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function clearStoredScanLoginContext(): void {
+  try {
+    window.sessionStorage.removeItem(SCAN_LOGIN_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures on logout/completion.
+  }
+}
+
+function readProviderRecords(value: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(value)) {
+    return value.filter((item) => item && typeof item === "object") as Array<Record<string, unknown>>;
+  }
+  const record = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const candidates = [record.data, record.items, record.records, record.providers];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate.filter((item) => item && typeof item === "object") as Array<Record<string, unknown>>;
+    }
+  }
+  return [];
+}
+
+function readBoolean(...values: unknown[]): boolean | undefined {
+  for (const value of values) {
+    if (typeof value === "boolean") {
+      return value;
+    }
+  }
+  return undefined;
 }
 
 function toSession(value: unknown): SdkworkIamH5AuthSession {

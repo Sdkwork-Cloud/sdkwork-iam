@@ -13,7 +13,7 @@ export interface SdkworkIamOrganizationAdminMessages {
     deleteTitle: string;
     emptyDescription: string;
     emptyTitle: string;
-    loadedMore: string;
+    statuses: { active: string; disabled: string; unknown: string };
     table: { code: string; department: string; parent: string; status: string };
     titleTemplate: string;
   };
@@ -53,7 +53,8 @@ export interface SdkworkIamOrganizationAdminMessages {
     add: string;
     emptyDescription: string;
     emptyTitle: string;
-    loadedMore: string;
+    membershipKinds: { employee: string; member: string; owner: string; unknown: string };
+    statuses: { active: string; disabled: string; unknown: string };
     table: { kind: string; member: string; role: string; status: string };
     titleTemplate: string;
   };
@@ -78,38 +79,45 @@ export interface SdkworkIamOrganizationAdminMessages {
     delete: string;
     deleteDescriptionTemplate: string;
     deleteTitle: string;
-    description: string;
     edit: string;
     emptyDescription: string;
     emptyTitle: string;
-    loadedMore: string;
     manage: string;
     searchAction: string;
     searchLabel: string;
     searchPlaceholder: string;
     selectedDescriptionTemplate: string;
     selectedTitleTemplate: string;
+    statuses: { active: string; disabled: string; unknown: string };
     structure: string;
     table: { code: string; organization: string; parent: string; status: string };
-    title: string;
+  };
+  pagination: {
+    next: string;
+    pageSize: string;
+    previous: string;
+    total: string;
   };
   positions: {
     emptyDescription: string;
     emptyTitle: string;
-    loadedMore: string;
+    statuses: { active: string; disabled: string; unknown: string };
     table: { department: string; position: string; status: string };
     titleTemplate: string;
   };
   roleBindings: {
     emptyDescription: string;
     emptyTitle: string;
-    loadedMore: string;
+    principalFallback: string;
+    principalKinds: { group: string; organizationMembership: string; serviceAccount: string; user: string };
+    scopeFallback: string;
+    scopeKinds: { organization: string; tenant: string };
+    statuses: { active: string; disabled: string; unknown: string };
     table: { principal: string; role: string; scope: string; status: string };
     titleTemplate: string;
   };
   structure: {
     back: string;
-    descriptionTemplate: string;
     departmentDrawer: {
       code: string;
       createDescription: string;
@@ -128,7 +136,6 @@ export interface SdkworkIamOrganizationAdminMessages {
       emptyDescription: string;
       emptyTitle: string;
       isPrimary: string;
-      loadedMore: string;
       member: string;
       noAvailableMembers: string;
       organizationMember: string;
@@ -139,6 +146,7 @@ export interface SdkworkIamOrganizationAdminMessages {
       searchPlaceholder: string;
       setPrimary: string;
       status: string;
+      statuses: { active: string; disabled: string; unknown: string };
       userId: string;
     };
     notices: {
@@ -150,7 +158,6 @@ export interface SdkworkIamOrganizationAdminMessages {
       loadError: string;
       operationError: string;
     };
-    titleTemplate: string;
     tree: {
       addChild: string;
       createRoot: string;

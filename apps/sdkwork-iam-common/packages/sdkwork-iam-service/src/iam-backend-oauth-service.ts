@@ -98,6 +98,13 @@ export type IamBackendOauthService = {
       list(params?: Record<string, unknown>): Promise<unknown>;
       update(...args: unknown[]): Promise<unknown>;
     };
+    scanLoginPreviews: {
+      create(...args: unknown[]): Promise<unknown>;
+    };
+    scanLoginSettings: {
+      retrieve(...args: unknown[]): Promise<unknown>;
+      update(...args: unknown[]): Promise<unknown>;
+    };
     secrets: {
       create(...args: unknown[]): Promise<unknown>;
       delete(...args: unknown[]): Promise<unknown>;
@@ -219,6 +226,13 @@ export function createIamBackendOauthService(
         create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.scopeProfiles, "create", "iam.oauth.scopeProfiles.create", ...args),
         list: (params?: Record<string, unknown>) => callBackendOauth(backendOauth, (oauth) => oauth?.scopeProfiles, "list", "iam.oauth.scopeProfiles.list", iamOauthListQuery(params)),
         update: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.scopeProfiles, "update", "iam.oauth.scopeProfiles.update", ...args),
+      },
+      scanLoginPreviews: {
+        create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.scanLoginPreviews, "create", "iam.oauth.scanLoginPreviews.create", ...args),
+      },
+      scanLoginSettings: {
+        retrieve: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.scanLoginSettings, "retrieve", "iam.oauth.scanLoginSettings.retrieve", ...args),
+        update: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.scanLoginSettings, "update", "iam.oauth.scanLoginSettings.update", ...args),
       },
       secrets: {
         create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.secrets, "create", "iam.oauth.secrets.create", ...args),

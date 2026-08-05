@@ -144,8 +144,86 @@ export interface SdkworkIamPermissionController {
   updateRole(roleId: string, body: Partial<SdkworkIamRoleDraft>): Promise<SdkworkIamRole>;
 }
 
+/** Capability gates for the roles administration workspace. */
+export interface SdkworkIamRoleAdminPermissions {
+  roleBindings: {
+    create: boolean;
+    delete: boolean;
+  };
+  rolePermissions: {
+    create: boolean;
+    delete: boolean;
+  };
+  roles: {
+    create: boolean;
+    delete: boolean;
+    update: boolean;
+  };
+}
+
+/** Capability gates for the permissions administration workspace. */
+export interface SdkworkIamPermissionAdminPermissions {
+  permissions: {
+    create: boolean;
+    delete: boolean;
+    update: boolean;
+  };
+}
+
+/** Capability gates for the policies administration workspace. */
+export interface SdkworkIamPolicyAdminPermissions {
+  policies: {
+    create: boolean;
+    delete: boolean;
+    update: boolean;
+  };
+}
+
+/** Capability gates for the authorization administration workspace. */
+export interface SdkworkIamAuthorizationAdminPermissions {
+  roleBindings: {
+    create: boolean;
+    delete: boolean;
+  };
+}
+
+/** Shared copy surface for the role binding creation drawer. */
+export interface SdkworkIamRoleBindingDrawerCopy {
+  cancel: string;
+  createDescription: string;
+  createTitle: string;
+  effect: string;
+  effects: { allow: string; deny: string };
+  principalId: string;
+  principalKind: string;
+  principalKinds: { group: string; organizationMembership: string; serviceAccount: string; user: string };
+  role: string;
+  save: string;
+  scopeId: string;
+  scopeKind: string;
+  scopeKinds: { organization: string; tenant: string };
+}
+
+export interface SdkworkIamRoleAdminWorkspaceProps {
+  controller: SdkworkIamPermissionController;
+  locale?: string;
+  permissions?: SdkworkIamRoleAdminPermissions;
+}
+
 export interface SdkworkIamPermissionAdminWorkspaceProps {
   controller: SdkworkIamPermissionController;
-  description?: string;
-  title?: string;
+  locale?: string;
+  permissions?: SdkworkIamPermissionAdminPermissions;
+}
+
+export interface SdkworkIamPolicyAdminWorkspaceProps {
+  controller: SdkworkIamPermissionController;
+  locale?: string;
+  permissions?: SdkworkIamPolicyAdminPermissions;
+}
+
+export interface SdkworkIamAuthorizationAdminWorkspaceProps {
+  controller: SdkworkIamPermissionController;
+  locale?: string;
+  permissions?: SdkworkIamAuthorizationAdminPermissions;
 }

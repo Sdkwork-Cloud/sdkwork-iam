@@ -4,14 +4,22 @@ IAM backend OAuth administration UI for PC React workspaces.
 
 ## Scope
 
-Backend OAuth management per `IAM_OAUTH_SPEC.md`. Use `SdkworkIamOauthAdminWorkspace` as the primary entry (tabbed admin console). `SdkworkIamOauthAdminSettings` accepts an optional `tab` prop for embedding a single section group.
+Backend OAuth management per `IAM_OAUTH_SPEC.md`. The primary entries are the
+three quick-setup pages:
 
-| Tab | Resources | Lifecycle / ops |
-|-----|-----------|-----------------|
-| Inbound IdP | integrations, provider catalog, clients, secrets, scope profiles, claim mappings, webhooks, flow configs, surfaces | enable/disable, delete; catalog register/activate; webhook verify |
-| Authorization server | relying party (runtimeConfig), account links (inline status), grants | tenantApplications.retrieve/update; link status; grant revoke |
-| Extended platform | policies, tenant bindings, operator platforms, resource accounts, resource authorizations, operational resources | status toggles; pre-auth; verify/refresh; publish |
-| Diagnostics & audit | diagnostic runs, callback events | queue run; retrieve detail (read-only events) |
+| Entry | Route | Resources |
+|-------|-------|-----------|
+| `SdkworkIamOauthProviderConnectionsPage` | `/admin/iam/oauth/providers` | platform catalog cards; configure + enable/disable `iam_oauth_integration` |
+| `SdkworkIamOauthMiniProgramAccountsPage` | `/admin/iam/oauth/mini-programs` | `resource_account` rows with kind `mini_program`; one-click `wechat_mini_program` integration |
+| `SdkworkIamOauthOfficialAccountsPage` | `/admin/iam/oauth/official-accounts` | `resource_account` rows with kind `official_account`; one-click `wechat` web-authorization integration |
+
+Enabling an integration (or a mini program / official account, which syncs its
+integration) makes `oauth.providers.list` return the provider code, so the
+login page renders the matching OAuth entry immediately.
+
+`SdkworkIamOauthAdminWorkspace` (tabbed console) and `SdkworkIamOauthAdminSettings`
+(`view`/`tab` sections) remain exported for advanced/embedded usage but are no
+longer mounted in the admin menu.
 
 | Section | Backend operations |
 |---------|-------------------|
@@ -40,12 +48,20 @@ Consumes `@sdkwork/iam-service` (`service.iam.oauth.*`, `service.iam.tenantAppli
 
 ## Module layout
 
-- `oauth-admin-workspace.tsx` — tabbed workspace shell
-- `oauth-admin-controller.ts` — stateful admin controller
-- `oauth-admin-settings.tsx` — settings UI sections (tab-filtered)
-- `oauth-admin-resource-list.tsx` — managed resource lists and operational actions
-- `oauth-admin-managed-list.tsx` — generic lifecycle list component
-- `oauth-admin-types.ts` / `oauth-admin-utils.ts` — contracts and helpers
+- `pages/OauthAdminWorkspace.tsx` — tabbed workspace shell (SegmentedControl navigation)
+- `pages/OauthAdminSettings.tsx` — settings dispatcher (`view`/`tab` → page)
+- `pages/oauth-inbound-pages.tsx` — inbound tab and provider/application/login-configuration views
+- `pages/oauth-provider-pages.tsx` — authorization-server tab and authorizations view
+- `pages/oauth-extended-pages.tsx` — extended tab and governance/resources views
+- `pages/oauth-audit-pages.tsx` — audit tab and activity view
+- `components/oauth-*-sections.tsx` — per-resource settings sections
+- `components/OauthAdminResourceList.tsx` — managed resource lists and operational actions
+- `components/OauthAdminManagedList.tsx` — generic lifecycle list component
+- `components/oauth-admin-ui.tsx` — shared field/drawer/detail UI primitives
+- `hooks/use-oauth-admin-page-state.ts` — page-level list/status state
+- `services/oauth-admin-controller.ts` — stateful admin controller
+- `types/oauth-admin-types.ts` / `types/oauth-admin-messages.ts` / `utils/oauth-admin-utils.ts` — contracts and helpers
+- `i18n/` — en-US/zh-CN message catalog (`iam.oauth.admin` namespace)
 
 ## Security
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Button,
   DataTable,
@@ -9,8 +10,10 @@ import type {
   SdkworkIamOauthAdminController,
   SdkworkIamOauthAdminResourceSnapshot,
 } from "../types/oauth-admin-types";
+import type { SdkworkIamOauthAdminMessages } from "../types/oauth-admin-messages";
 import { ManagedOAuthResourceList } from "./OauthAdminManagedList";
-import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
+import { CatalogPagination } from "@sdkwork/iam-pc-admin-core";
+import { useSdkworkIamOauthAdminMessages } from "../i18n";
 import {
   formatResourceLabel,
   readAccountLinkId,
@@ -47,7 +50,10 @@ function managedListPagination(
   resourceKey: keyof SdkworkIamOauthAdminResourceSnapshot,
 ) {
   return {
-    onLoadMore: () => props.controller.loadMoreResource(resourceKey).then(() => props.onChanged()),
+    onPageChange: (page: number, pageSize: number) =>
+      props.controller.listPageResource(resourceKey, { page, page_size: pageSize }).then(() => props.onChanged()),
+    onPageSizeChange: (pageSize: number) =>
+      props.controller.listPageResource(resourceKey, { page: 1, page_size: pageSize }).then(() => props.onChanged()),
     pageInfo: props.listPageInfo?.[resourceKey],
   };
 }
@@ -56,32 +62,74 @@ export function ResourceList({
   emptyLabel,
   items,
   listPageInfo,
-  onLoadMore,
+  onPageChange,
+  onPageSizeChange,
 }: {
   emptyLabel: string;
   items: unknown[];
   listPageInfo?: SdkWorkPageInfo;
-  onLoadMore?: () => void | Promise<void>;
+  onPageChange?: (page: number, pageSize: number) => void | Promise<void>;
+  onPageSizeChange?: (pageSize: number) => void | Promise<void>;
 }) {
+  const messages = useSdkworkIamOauthAdminMessages();
+  const columns = buildColumns(messages);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   return (
     <DataTable
-      columns={RESOURCE_COLUMNS}
+      columns={columns}
       emptyDescription={emptyLabel}
-      emptyTitle="No resources found"
-      footer={<SdkworkIamListPaginationControls onLoadMore={onLoadMore} pageInfo={listPageInfo} />}
+      emptyTitle={messages.common.noResourcesFound}
+      footer={(
+        <CatalogPagination
+          busy={false}
+          copy={{
+            next: messages.pagination.next,
+            pageSize: messages.pagination.pageSize,
+            previous: messages.pagination.previous,
+            total: messages.pagination.total,
+          }}
+          onPageChange={(nextPage) => {
+            setPage(nextPage);
+            void onPageChange?.(nextPage, pageSize);
+          }}
+          onPageSizeChange={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+            void onPageSizeChange?.(nextPageSize);
+          }}
+          pageInfo={listPageInfo}
+        />
+      )}
       getRowId={(item, index) => readResourceKey(item, index)}
       rows={items}
+      slotProps={{
+        surface: { className: "flex min-h-0 flex-1 flex-col" },
+        viewport: { className: "min-h-0 flex-1 max-h-[24rem]" },
+        footer: { className: "shrink-0" },
+      }}
+      stickyHeader
     />
   );
 }
 
-const RESOURCE_COLUMNS: DataTableColumn<unknown>[] = [
-  {
-    cell: (item) => formatResourceLabel(item),
-    header: "Resource",
-    id: "resource",
-  },
-];
+function buildColumns(
+  messages: SdkworkIamOauthAdminMessages,
+): DataTableColumn<unknown>[] {
+  const labelCopy = {
+    disabled: messages.common.disabled,
+    enabled: messages.common.enabled,
+    resource: messages.common.resource,
+    statuses: messages.common.statuses,
+  };
+  return [
+    {
+      cell: (item) => formatResourceLabel(item, labelCopy),
+      header: messages.common.resource,
+      id: "resource",
+    },
+  ];
+}
 
 export function IntegrationResourceList({ controller,
   disabled,
@@ -90,10 +138,11 @@ export function IntegrationResourceList({ controller,
   onChanged,
   listPageInfo,
 }: ListProps & { integrations: unknown[] }) {
+  const messages = useSdkworkIamOauthAdminMessages();
   return (
     <ManagedOAuthResourceList
-      actions={[{ label: "Retrieve", onAction: (id) => controller.retrieveIntegration(id) }]}
-      confirmDeleteMessage="Delete this OAuth integration? Inbound login for the provider will stop for this tenant."
+      actions={[{ label: messages.integrations.retrieve, onAction: (id) => controller.retrieveIntegration(id) }]}
+      confirmDeleteMessage={messages.integrations.deleteConfirm}
       disabled={disabled}
       emptyLabel={emptyLabel}
       items={integrations}
@@ -113,10 +162,11 @@ export function ClientResourceList({ clients,
   onChanged,
   listPageInfo,
 }: ListProps & { clients: unknown[] }) {
+  const messages = useSdkworkIamOauthAdminMessages();
   return (
     <ManagedOAuthResourceList
-      actions={[{ label: "Retrieve", onAction: (id) => controller.retrieveClient(id) }]}
-      confirmDeleteMessage="Delete this OAuth client registration?"
+      actions={[{ label: messages.clients.retrieve, onAction: (id) => controller.retrieveClient(id) }]}
+      confirmDeleteMessage={messages.clients.deleteConfirm}
       disabled={disabled}
       emptyLabel={emptyLabel}
       items={clients}
@@ -136,9 +186,10 @@ export function SecretResourceList({ controller,
   secrets,
   listPageInfo,
 }: ListProps & { secrets: unknown[] }) {
+  const messages = useSdkworkIamOauthAdminMessages();
   return (
     <ManagedOAuthResourceList
-      confirmDeleteMessage="Delete this secret reference? Provider authentication may fail until a new secret is registered."
+      confirmDeleteMessage={messages.secrets.deleteConfirm}
       disabled={disabled}
       emptyLabel={emptyLabel}
       items={secrets}
@@ -238,9 +289,10 @@ export function WebhookConfigResourceList({ controller,
   webhookConfigs,
   listPageInfo,
 }: ListProps & { webhookConfigs: unknown[] }) {
+  const messages = useSdkworkIamOauthAdminMessages();
   return (
     <ManagedOAuthResourceList
-      actions={[{ label: "Verify", onAction: (id) => controller.runWebhookVerification(id) }]}
+      actions={[{ label: messages.webhookConfigs.verify, onAction: (id) => controller.runWebhookVerification(id) }]}
       disabled={disabled}
       emptyLabel={emptyLabel}
       items={webhookConfigs}
@@ -299,9 +351,10 @@ export function OperatorPlatformResourceList({ controller,
   operatorPlatforms,
   listPageInfo,
 }: ListProps & { operatorPlatforms: unknown[] }) {
+  const messages = useSdkworkIamOauthAdminMessages();
   return (
     <ManagedOAuthResourceList
-      actions={[{ label: "Pre-auth", onAction: (id) => controller.runOperatorPlatformPreAuthorization(id) }]}
+      actions={[{ label: messages.operatorPlatforms.preAuthorize, onAction: (id) => controller.runOperatorPlatformPreAuthorization(id) }]}
       disabled={disabled}
       emptyLabel={emptyLabel}
       items={operatorPlatforms}
@@ -320,12 +373,13 @@ export function ResourceAccountResourceList({ controller,
   resourceAccounts,
   listPageInfo,
 }: ListProps & { resourceAccounts: unknown[] }) {
+  const messages = useSdkworkIamOauthAdminMessages();
   return (
     <ManagedOAuthResourceList
       actions={[
-        { label: "Verify", onAction: (id) => controller.runResourceAccountVerification(id) },
-        { label: "Refresh auth", onAction: (id) => controller.runResourceAccountAuthorizationRefresh(id) },
-        { label: "Mini login check", onAction: (id) => controller.runResourceAccountMiniProgramLoginCheck(id) },
+        { label: messages.resourceAccounts.verify, onAction: (id) => controller.runResourceAccountVerification(id) },
+        { label: messages.resourceAccounts.refreshAuth, onAction: (id) => controller.runResourceAccountAuthorizationRefresh(id) },
+        { label: messages.resourceAccounts.miniLoginCheck, onAction: (id) => controller.runResourceAccountMiniProgramLoginCheck(id) },
       ]}
       disabled={disabled}
       emptyLabel={emptyLabel}
@@ -365,9 +419,11 @@ export function OperationalResourceList({ controller,
   operationalResources,
   listPageInfo,
 }: ListProps & { operationalResources: unknown[] }) {
+  const messages = useSdkworkIamOauthAdminMessages();
   return (
     <ManagedOAuthResourceList
-      actions={[{ label: "Publish", onAction: (id) => controller.publishOperationalResource(id) }]}
+      actions={[{ label: messages.operationalResources.publish, onAction: (id) => controller.publishOperationalResource(id) }]}
+      confirmDeleteMessage={messages.operationalResources.deleteConfirm}
       disabled={disabled}
       emptyLabel={emptyLabel}
       items={operationalResources}
@@ -388,14 +444,30 @@ export function DiagnosticRunResourceList({
   listPageInfo,
   onChanged,
 }: ListProps & { diagnosticRuns: unknown[] }) {
+  const messages = useSdkworkIamOauthAdminMessages();
+  const columns = buildColumns(messages);
+  const [pageSize, setPageSize] = useState(20);
+  const pagination = managedListPagination({ controller, disabled, emptyLabel, listPageInfo, onChanged }, "diagnosticRuns");
   return (
     <DataTable
-      columns={RESOURCE_COLUMNS}
+      columns={columns}
       emptyDescription={emptyLabel}
-      emptyTitle="No diagnostic runs"
+      emptyTitle={messages.diagnosticRuns.emptyTitle}
       footer={(
-        <SdkworkIamListPaginationControls
-          {...managedListPagination({ controller, disabled, emptyLabel, listPageInfo, onChanged }, "diagnosticRuns")}
+        <CatalogPagination
+          busy={disabled}
+          copy={{
+            next: messages.pagination.next,
+            pageSize: messages.pagination.pageSize,
+            previous: messages.pagination.previous,
+            total: messages.pagination.total,
+          }}
+          onPageChange={(page) => pagination.onPageChange(page, pageSize)}
+          onPageSizeChange={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            pagination.onPageSizeChange(nextPageSize);
+          }}
+          pageInfo={pagination.pageInfo}
         />
       )}
       getRowId={(item, index) => readDiagnosticRunId(item) || readResourceKey(item, index)}
@@ -414,11 +486,17 @@ export function DiagnosticRunResourceList({
             type="button"
             variant="outline"
           >
-            Retrieve
+            {messages.diagnosticRuns.retrieve}
           </Button>
         );
       }}
       rows={diagnosticRuns}
+      slotProps={{
+        surface: { className: "flex min-h-0 flex-1 flex-col" },
+        viewport: { className: "min-h-0 flex-1" },
+        footer: { className: "shrink-0" },
+      }}
+      stickyHeader
     />
   );
 }
@@ -431,11 +509,12 @@ export function GrantResourceList({
   listPageInfo,
   onRevoked,
 }: Omit<ListProps, "onChanged"> & { grants: unknown[]; onRevoked: () => void }) {
+  const messages = useSdkworkIamOauthAdminMessages();
   return (
     <ManagedOAuthResourceList
       actions={[{
-        confirmMessage: "Revoke this OAuth grant? Token lookup will fail immediately per IAM_OAUTH_SPEC §7.",
-        label: "Revoke",
+        confirmMessage: messages.grants.revokeConfirm,
+        label: messages.grants.revoke,
         onAction: (id) => controller.revokeGrant(id),
       }]}
       disabled={disabled}
@@ -455,14 +534,15 @@ export function AccountLinkResourceList({ accountLinks,
   onChanged,
   listPageInfo,
 }: ListProps & { accountLinks: unknown[] }) {
+  const messages = useSdkworkIamOauthAdminMessages();
   return (
     <ManagedOAuthResourceList
       actions={[
-        { label: "Activate", onAction: (id) => controller.updateAccountLink({ accountLinkId: id, status: "active" }) },
-        { label: "Suspend", onAction: (id) => controller.updateAccountLink({ accountLinkId: id, status: "suspended" }) },
+        { label: messages.accountLinks.activate, onAction: (id) => controller.updateAccountLink({ accountLinkId: id, status: "active" }) },
+        { label: messages.accountLinks.suspend, onAction: (id) => controller.updateAccountLink({ accountLinkId: id, status: "suspended" }) },
         {
-          confirmMessage: "Revoke this account link? The external subject will no longer bind to the IAM user.",
-          label: "Revoke",
+          confirmMessage: messages.accountLinks.revokeConfirm,
+          label: messages.accountLinks.revoke,
           onAction: (id) => controller.updateAccountLink({ accountLinkId: id, status: "revoked" }),
         },
       ]}
@@ -483,9 +563,10 @@ export function ProviderCatalogResourceList({ controller,
   providerCatalog,
   listPageInfo,
 }: ListProps & { providerCatalog: unknown[] }) {
+  const messages = useSdkworkIamOauthAdminMessages();
   return (
     <ManagedOAuthResourceList
-      actions={[{ label: "Retrieve", onAction: (id) => controller.retrieveProviderCatalogEntry(id) }]}
+      actions={[{ label: messages.providerCatalog.retrieve, onAction: (id) => controller.retrieveProviderCatalogEntry(id) }]}
       disabled={disabled}
       emptyLabel={emptyLabel}
       items={providerCatalog}

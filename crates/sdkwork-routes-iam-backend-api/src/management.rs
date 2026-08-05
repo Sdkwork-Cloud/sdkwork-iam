@@ -23,7 +23,8 @@ use crate::backend_audit::{
 use crate::backend_sql::{
     cursor_page_json, encode_timeline_keyset_cursor, internal_handler_error,
     list_page_params_or_error, list_search_pattern, list_tenant_rows, page_json_from_rows,
-    patch_tenant_row_tx, read_i32_field, read_string_field, retrieve_tenant_row,
+    patch_tenant_row_tx, read_i32_field, read_string_field,
+    role_binding_list_filter_sql, role_binding_list_filter_values, retrieve_tenant_row,
     timeline_cursor_page_from_rows, timeline_list_params_or_error, tree_resource_json,
     TimelineListParams, LIST_TOTAL_COLUMN,
 };
@@ -481,8 +482,10 @@ async fn list_role_bindings(
             .expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
+    let filter_sql = role_binding_list_filter_sql(&query, 6);
+    let filter_values = role_binding_list_filter_values(&query);
     let rows = if let Some(organization_id) = organization_id.as_deref() {
-        sqlx::query(sqlx::AssertSqlSafe(format!(
+        let mut statement = sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT b.id, b.tenant_id, b.organization_id, b.role_id, r.code AS role_code, \
                     b.principal_kind, b.principal_id, b.scope_kind, b.scope_id, b.effect, b.status, \
                     COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
@@ -491,18 +494,21 @@ async fn list_role_bindings(
              WHERE b.tenant_id = $1 AND b.status = 'active' \
                AND (b.scope_kind = 'tenant' OR (b.scope_kind = 'organization' AND b.scope_id = $2)) \
                AND ($5::text IS NULL OR LOWER(r.code) LIKE $5 OR LOWER(b.principal_id) LIKE $5) \
+               {filter_sql} \
              ORDER BY r.code, b.id \
              LIMIT $3 OFFSET $4"
- )       ))
+        )))
         .bind(&tenant_id)
         .bind(organization_id)
         .bind(params.page_size)
         .bind(params.offset)
-        .bind(&search_pattern)
-        .fetch_all(pg)
-        .await
+        .bind(&search_pattern);
+        for value in &filter_values {
+            statement = statement.bind(value);
+        }
+        statement.fetch_all(pg).await
     } else {
-        sqlx::query(sqlx::AssertSqlSafe(format!(
+        let mut statement = sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT b.id, b.tenant_id, b.organization_id, b.role_id, r.code AS role_code, \
                     b.principal_kind, b.principal_id, b.scope_kind, b.scope_id, b.effect, b.status, \
                     COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
@@ -510,15 +516,18 @@ async fn list_role_bindings(
              JOIN iam_role r ON r.id = b.role_id AND r.tenant_id = b.tenant_id \
              WHERE b.tenant_id = $1 AND b.status = 'active' \
                AND ($4::text IS NULL OR LOWER(r.code) LIKE $4 OR LOWER(b.principal_id) LIKE $4) \
+               {filter_sql} \
              ORDER BY r.code, b.id \
              LIMIT $2 OFFSET $3"
- )       ))
+        )))
         .bind(&tenant_id)
         .bind(params.page_size)
         .bind(params.offset)
-        .bind(&search_pattern)
-        .fetch_all(pg)
-        .await
+        .bind(&search_pattern);
+        for value in &filter_values {
+            statement = statement.bind(value);
+        }
+        statement.fetch_all(pg).await
     };
 
     match rows {

@@ -524,6 +524,16 @@ function buildOperation(surface, route) {
     );
   }
 
+  if (route.operationId === 'roleBindings.list') {
+    operation.parameters.push(
+      queryParameter('roleId', { type: 'string', description: 'Exact role id filter.' }),
+      queryParameter('principalKind', { type: 'string', description: 'Exact principal kind filter.' }),
+      queryParameter('principalId', { type: 'string', description: 'Exact principal id filter.' }),
+      queryParameter('scopeKind', { type: 'string', description: 'Exact scope kind filter.' }),
+      queryParameter('scopeId', { type: 'string', description: 'Exact scope id filter.' }),
+    );
+  }
+
   const externalProtocolId =
     openApiExternalWireOperations[route.operationId]
     ?? openApiAuthorityExternalWireOperations[route.operationId];

@@ -1,8 +1,11 @@
 import { createSdkWorkPagedListSession, type SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
+import { isBlank, trim } from "@sdkwork/utils";
 
 import type {
   CreateSdkworkIamOauthAdminControllerInput,
+  SdkworkIamOauthAccountKind,
+  SdkworkIamOauthAccountSetupDraft,
   SdkworkIamOauthAdminController,
   SdkworkIamOauthAdminResourceSnapshot,
   SdkworkIamOauthAdminState,
@@ -24,8 +27,30 @@ import type {
   SdkworkIamOauthWebhookConfigDraft,
   SdkworkIamOauthAccountLinkUpdateDraft,
   SdkworkIamOauthOperationalResourceDraft,
+  SdkworkIamOauthScanLoginPreview,
+  SdkworkIamOauthScanLoginSettings,
+  SdkworkIamOauthScanLoginWebhookInfo,
 } from "../types/oauth-admin-types";
-import { splitMultilineList, parseRelyingPartyDraftFromTenantApplication } from "../utils/oauth-admin-utils";
+import {
+  buildStandardCallbackUri,
+  normalizeList,
+  readAccountIntegrationId,
+  readIntegrationId,
+  readProviderClientId,
+  readProviderCode,
+  readResourceAccountId,
+  splitMultilineList,
+  parseRelyingPartyDraftFromTenantApplication,
+} from "../utils/oauth-admin-utils";
+
+function accountSetupProvider(kind: SdkworkIamOauthAccountKind): {
+  providerCode: string;
+  surfaceKind: string;
+} {
+  return kind === "mini_program"
+    ? { providerCode: "wechat_mini_program", surfaceKind: "mini_program" }
+    : { providerCode: "wechat", surfaceKind: "web" };
+}
 
 function lifecycleStatus(active: boolean): { status: string } {
   return { status: active ? "active" : "inactive" };
@@ -95,6 +120,12 @@ function createOauthResourceSessions(service: SdkworkIamService) {
 }
 
 const OAUTH_RESOURCE_KEYS = Object.keys(EMPTY_SNAPSHOT) as OauthResourceKey[];
+
+/**
+ * Resource keys the quick-setup pages depend on; mutation helpers reload only
+ * these instead of the full 19-resource snapshot.
+ */
+const QUICK_SETUP_RESOURCE_KEYS: OauthResourceKey[] = ["resourceAccounts", "integrations"];
 
 function snapshotFromSessions(
   sessions: ReturnType<typeof createOauthResourceSessions>,
@@ -229,6 +260,132 @@ export function createSdkworkIamOauthAdminController(
         listPageInfo: cloneListPageInfo(state.listPageInfo),
       };
     },
+    async createAccountSetup(kind, body) {
+      setState({ status: "saving", lastError: undefined });
+      try {
+        const { providerCode, surfaceKind } = accountSetupProvider(kind);
+        const appId = body.appId.trim();
+        const appSecret = body.appSecret.trim();
+        const displayName = body.displayName.trim();
+        const enabled = body.enabled;
+        const config = body.config && typeof body.config === "object"
+          ? { ...body.config }
+          : undefined;
+        // The callback URL follows the SDKWork IAM standard
+        // `https://{webDomain}/auth/oauth/callback` shape whenever the primary
+        // domain is configured; a manually provided redirect URI wins. The
+        // resolved URL is also mirrored back into the stored account config so
+        // the developer configuration drawer shows the effective callback.
+        const autoRedirectUri = config?.webDomain
+          ? buildStandardCallbackUri(config.webDomain)
+          : "";
+        const redirectUri = (body.redirectUri.trim() || autoRedirectUri).trim();
+        if (config && redirectUri) {
+          config.redirectUri = redirectUri;
+        }
+
+        // Reuse an existing integration for the same provider + app id when
+        // present; otherwise create the login integration in one step.
+        const existingRows = normalizeList(
+          await service.iam.oauth.integrations.list({ page_size: 200, q: providerCode }),
+        );
+        const existing = existingRows.find((row) =>
+          readProviderCode(row) === providerCode && readProviderClientId(row) === appId);
+        const integrationId = existing ? readIntegrationId(existing) : "";
+
+        const resolvedIntegrationId = integrationId || readIntegrationId(await service.iam.oauth.integrations.create({
+          integrationCode: `${kind === "mini_program" ? "mini-program" : "official-account"}-${appId}`,
+          displayName,
+          providerCode,
+          providerClientId: appId,
+          providerClientSecret: appSecret,
+          redirectUri,
+          surfaceKind,
+          enabled,
+        }));
+
+        if (integrationId) {
+          const integrationPatch: Record<string, unknown> = {};
+          if (enabled !== undefined) {
+            integrationPatch.enabled = enabled;
+          }
+          if (redirectUri) {
+            integrationPatch.redirectUri = redirectUri;
+          }
+          if (Object.keys(integrationPatch).length > 0) {
+            await service.iam.oauth.integrations.update(integrationId, integrationPatch);
+          }
+        }
+
+        const account = await service.iam.oauth.resourceAccounts.create({
+          integrationId: resolvedIntegrationId,
+          providerCode,
+          resourceAccountCode: `${kind === "mini_program" ? "mini" : "oa"}-${appId}`,
+          resourceAccountKind: kind,
+          displayName,
+          providerAccountId: appId,
+          accessMode: "operator_managed",
+          config,
+        });
+
+        await controller.load(QUICK_SETUP_RESOURCE_KEYS);
+        return account;
+      } catch (error) {
+        setState({
+          status: "error",
+          lastError: error instanceof Error
+            ? error.message
+            : `Failed to create ${kind} account setup`,
+        });
+        throw error;
+      }
+    },
+    async setResourceAccountEnabled(resourceAccountId, integrationId, enabled) {
+      setState({ status: "saving", lastError: undefined });
+      try {
+        await service.iam.oauth.resourceAccounts.update(resourceAccountId.trim(), { enabled });
+        if (integrationId.trim()) {
+          await service.iam.oauth.integrations.update(integrationId.trim(), { enabled });
+        }
+        await controller.load(QUICK_SETUP_RESOURCE_KEYS);
+        return { resourceAccountId: resourceAccountId.trim(), enabled };
+      } catch (error) {
+        setState({
+          status: "error",
+          lastError: error instanceof Error
+            ? error.message
+            : "Failed to update resource account status",
+        });
+        throw error;
+      }
+    },
+    async updateAccountConfig(resourceAccountId, config) {
+      setState({ status: "saving", lastError: undefined });
+      try {
+        const normalizedId = resourceAccountId.trim();
+        const account = state.resourceAccounts.find(
+          (item) => readResourceAccountId(item) === normalizedId,
+        );
+        const integrationId = account ? readAccountIntegrationId(account) : "";
+        const redirectUri = config.redirectUri?.trim() ?? "";
+        await service.iam.oauth.resourceAccounts.update(normalizedId, { config });
+        // Keep the login integration's callback in sync so the standardized
+        // callback URL actually takes effect for provider redirects.
+        if (integrationId && redirectUri) {
+          await service.iam.oauth.integrations.update(integrationId, { redirectUri });
+        }
+        await controller.load(QUICK_SETUP_RESOURCE_KEYS);
+        return { resourceAccountId: normalizedId, config };
+      } catch (error) {
+        setState({
+          status: "error",
+          lastError: error instanceof Error
+            ? error.message
+            : "Failed to update account developer configuration",
+        });
+        throw error;
+      }
+    },
     async load(resourceKeys = OAUTH_RESOURCE_KEYS) {
       setState({ status: "loading", lastError: undefined });
       try {
@@ -260,6 +417,25 @@ export function createSdkworkIamOauthAdminController(
         setState({
           status: "error",
           lastError: error instanceof Error ? error.message : `Failed to load more ${resourceKey}`,
+        });
+        throw error;
+      }
+    },
+    async listPageResource(resourceKey, params) {
+      setState({ status: "loading", lastError: undefined });
+      try {
+        await resourceSessions[resourceKey].list(params);
+        const items = [...resourceSessions[resourceKey].getItems()];
+        const listPageInfo = {
+          ...state.listPageInfo,
+          [resourceKey]: resourceSessions[resourceKey].getPageInfo(),
+        };
+        setState({ [resourceKey]: items, listPageInfo, status: "ready" });
+        return items;
+      } catch (error) {
+        setState({
+          status: "error",
+          lastError: error instanceof Error ? error.message : `Failed to load ${resourceKey}`,
         });
         throw error;
       }
@@ -758,7 +934,110 @@ export function createSdkworkIamOauthAdminController(
         false,
       );
     },
+    loadScanLoginSettings() {
+      setState({ status: "saving", lastError: undefined });
+      return service.iam.oauth.scanLoginSettings.retrieve()
+        .then((detail) => {
+          setState({ status: "ready" });
+          return normalizeScanLoginSettings(detail);
+        })
+        .catch((error) => {
+          setState({
+            status: "error",
+            lastError: error instanceof Error ? error.message : "Failed to load scan login settings",
+          });
+          throw error;
+        });
+    },
+    updateScanLoginSettings(body) {
+      return wrapCreate(
+        () => service.iam.oauth.scanLoginSettings.update(body),
+        "Failed to update scan login settings",
+        false,
+      ).then((updated) => normalizeScanLoginSettings(updated));
+    },
+    generateScanLoginPreview(qrMode, accountId) {
+      setState({ status: "saving", lastError: undefined });
+      const previewBody: Record<string, unknown> = { qrMode };
+      if (accountId && accountId.trim()) {
+        previewBody.accountId = accountId.trim();
+      }
+      return service.iam.oauth.scanLoginPreviews.create(previewBody)
+        .then((detail) => {
+          setState({ status: "ready" });
+          return normalizeScanLoginPreview(detail);
+        })
+        .catch((error) => {
+          setState({
+            status: "error",
+            lastError: error instanceof Error ? error.message : "Failed to generate scan login preview",
+          });
+          throw error;
+        });
+    },
+    setResourceAccountQrLogin(resourceAccountId, enabled) {
+      return wrapCreate(
+        () => service.iam.oauth.resourceAccounts.update(resourceAccountId.trim(), {
+          enabled: true,
+          qrDefaultEnabled: enabled,
+        }),
+        "Failed to update official account scan login",
+        true,
+      );
+    },
   };
 
   return controller;
+}
+
+function normalizeScanLoginSettings(value: unknown): SdkworkIamOauthScanLoginSettings {
+  const record = toRecord(value);
+  const urlLogin = toRecord(record.urlLogin);
+  const accounts = Array.isArray(record.officialAccounts)
+    ? record.officialAccounts.map((item) => {
+      const account = toRecord(item);
+      return {
+        accountId: optionalString(account.accountId) || "",
+        appId: optionalString(account.appId),
+        displayName: optionalString(account.displayName) || optionalString(account.accountId) || "",
+        enabled: Boolean(account.enabled),
+        integrationId: optionalString(account.integrationId) || "",
+        qrLoginEnabled: Boolean(account.qrLoginEnabled),
+        verificationStatus: optionalString(account.verificationStatus),
+        webhook: toRecord(account.webhook) as SdkworkIamOauthScanLoginWebhookInfo,
+      };
+    })
+    : [];
+  const mode = optionalString(record.defaultQrMode) || "auto";
+  return {
+    defaultQrMode: mode === "official_account" || mode === "url" ? mode : "auto",
+    officialAccounts: accounts,
+    urlLogin: {
+      enabled: typeof urlLogin.enabled === "boolean" ? urlLogin.enabled : true,
+      h5LoginOrigin: optionalString(urlLogin.h5LoginOrigin) || "",
+    },
+  };
+}
+
+function normalizeScanLoginPreview(value: unknown): SdkworkIamOauthScanLoginPreview {
+  const record = toRecord(value);
+  const mode = optionalString(record.qrMode) === "official_account" ? "official_account" : "url";
+  return {
+    expireSeconds: typeof record.expireSeconds === "number" ? record.expireSeconds : undefined,
+    qrCode: optionalString(record.qrCode),
+    qrContent: optionalString(record.qrContent) || "",
+    qrMode: mode,
+  };
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? value as Record<string, unknown> : {};
+}
+
+function optionalString(value: unknown): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const normalized = trim(String(value));
+  return isBlank(normalized) ? undefined : normalized;
 }

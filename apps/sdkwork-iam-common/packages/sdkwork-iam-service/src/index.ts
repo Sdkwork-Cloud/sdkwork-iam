@@ -128,6 +128,9 @@ export interface SdkworkIamService {
       passwordCompletions: {
         create(deviceAuthorizationId: string, body: Record<string, unknown>): Promise<unknown>;
       };
+      sessionCompletions: {
+        create(deviceAuthorizationId: string, body: Record<string, unknown>): Promise<unknown>;
+      };
       sessionExchanges: {
         create(deviceAuthorizationId: string, body: Record<string, unknown>): Promise<unknown>;
       };
@@ -487,6 +490,15 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
             appOauth?.deviceAuthorizations?.sessionExchanges,
             "create",
             "appbaseAppClient.oauth.deviceAuthorizations.sessionExchanges.create",
+            deviceAuthorizationId,
+            body,
+          ),
+        },
+        sessionCompletions: {
+          create: (deviceAuthorizationId, body) => callRaw(
+            appOauth?.deviceAuthorizations?.sessionCompletions,
+            "create",
+            "appbaseAppClient.oauth.deviceAuthorizations.sessionCompletions.create",
             deviceAuthorizationId,
             body,
           ),

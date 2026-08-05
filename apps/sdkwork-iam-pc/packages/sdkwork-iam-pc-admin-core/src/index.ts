@@ -82,5 +82,11 @@ export function createSdkworkIamPcAdminModuleRegistry(): readonly IamPcAdminModu
 
 export {
   SdkworkIamListPaginationControls,
+  type SdkworkIamListPaginationControlsCopy,
   type SdkworkIamListPaginationControlsProps,
 } from "./components/SdkworkIamListPaginationControls.js";
+export {
+  CatalogPagination,
+  CATALOG_PAGE_SIZE_OPTIONS,
+  type CatalogPaginationCopy,
+} from "./components/CatalogPagination.js";

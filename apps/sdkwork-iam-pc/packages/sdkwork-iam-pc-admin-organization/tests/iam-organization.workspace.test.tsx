@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SdkworkIamOrganizationAdminWorkspace } from "../src";
+import { SdkworkI18nProvider } from "@sdkwork/i18n-pc-react";
 
 function createController() {
   const organization = { id: "org-1", name: "Platform", organizationId: "org-1" };
@@ -21,16 +22,18 @@ describe("organization administration workspace", () => {
   it("searches the server and does not expose or load unauthorized administration domains", async () => {
     const controller = createController();
     render(
-      <SdkworkIamOrganizationAdminWorkspace
-        controller={controller as never}
-        permissions={{
-          departments: { create: false, delete: false, read: false, update: false },
-          memberships: { create: false, read: false, update: false },
-          organizations: { create: false, delete: false, update: false },
-          positions: { read: false },
-          roleBindings: { read: false },
-        }}
-      />,
+      <SdkworkI18nProvider locale="zh-CN">
+        <SdkworkIamOrganizationAdminWorkspace
+          controller={controller as never}
+          permissions={{
+            departments: { create: false, delete: false, read: false, update: false },
+            memberships: { create: false, read: false, update: false },
+            organizations: { create: false, delete: false, update: false },
+            positions: { read: false },
+            roleBindings: { read: false },
+          }}
+        />
+      </SdkworkI18nProvider>,
     );
 
     await screen.findByText("Platform");
@@ -40,7 +43,7 @@ describe("organization administration workspace", () => {
 
     fireEvent.change(screen.getByRole("textbox", { name: "搜索组织" }), { target: { value: "Platform" } });
     fireEvent.click(screen.getByRole("button", { name: "搜索" }));
-    await waitFor(() => expect(controller.listOrganizations).toHaveBeenLastCalledWith({ q: "Platform" }));
+    await waitFor(() => expect(controller.listOrganizations).toHaveBeenLastCalledWith({ q: "Platform", page: 1, page_size: 20 }));
 
     fireEvent.click(screen.getByRole("button", { name: "查看详情" }));
     await screen.findByText("正在管理 Platform");

@@ -9,10 +9,11 @@
     "protocol": "http",
     "packageName": "@sdkwork/iam-app-sdk"
   },
-  "changeFingerprint": "36f4b01237bc3b48c29732b5156850b495737f369d38351c88374a2703204cf8",
+  "changeFingerprint": "a2cb915eaa4d97dee5f63ecda457b40ff0e4919de9f0cbea726a8408a4a85648",
   "changes": {
     "createdGeneratedFiles": [],
     "updatedGeneratedFiles": [
+      "src/api/iam.ts",
       "src/api/oauth.ts"
     ],
     "unchangedGeneratedFiles": [
@@ -28,7 +29,6 @@
       "sdkwork-sdk.json",
       "src/api/auth.ts",
       "src/api/base.ts",
-      "src/api/iam.ts",
       "src/api/index.ts",
       "src/api/paths.ts",
       "src/api/system.ts",
@@ -72,6 +72,7 @@
       {
         "area": "api-surface",
         "paths": [
+          "src/api/iam.ts",
           "src/api/oauth.ts"
         ]
       }

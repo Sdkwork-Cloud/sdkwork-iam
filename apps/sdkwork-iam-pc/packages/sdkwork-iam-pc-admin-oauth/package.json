@@ -21,13 +21,17 @@
   "devDependencies": {
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "@types/qrcode": "catalog:"
   },
   "dependencies": {
+    "@sdkwork/i18n-pc-react": "workspace:*",
     "@sdkwork/iam-contracts": "workspace:*",
     "@sdkwork/iam-pc-admin-core": "workspace:*",
     "@sdkwork/iam-service": "workspace:*",
-    "@sdkwork/ui-pc-react": "workspace:*"
+    "@sdkwork/ui-pc-react": "workspace:*",
+    "lucide-react": "^1.7.0",
+    "qrcode": "catalog:"
   },
   "peerDependencies": {
     "react": ">=18.2.0 <20.0.0",

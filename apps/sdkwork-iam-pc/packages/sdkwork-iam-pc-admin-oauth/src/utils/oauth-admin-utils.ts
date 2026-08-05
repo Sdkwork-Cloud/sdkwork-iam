@@ -1,5 +1,6 @@
 import { extractSdkWorkListItems } from "@sdkwork/iam-contracts";
 import type {
+  SdkworkIamOauthAccountConfig,
   SdkworkIamOauthAccountLinkUpdateDraft,
   SdkworkIamOauthClaimMappingDraft,
   SdkworkIamOauthClientDraft,
@@ -19,6 +20,109 @@ import type {
   SdkworkIamOauthTenantBindingDraft,
   SdkworkIamOauthWebhookConfigDraft,
 } from "../types/oauth-admin-types";
+
+export interface SdkworkIamOauthProviderConnectionRow {
+  integrationId: string;
+  enabled?: boolean;
+  providerCode: string;
+}
+
+export interface SdkworkIamOauthProviderPlatform {
+  displayName: string;
+  integrations: SdkworkIamOauthProviderConnectionRow[];
+  providerCode: string;
+}
+
+/**
+ * Builds the provider platform grid from the platform catalog and configured
+ * integrations. Catalog entries are deduplicated by provider code (tenant
+ * entry wins over the global entry); configured providers missing from the
+ * catalog stay visible with the featured display name.
+ */
+export function buildProviderPlatforms(
+  catalog: unknown[],
+  integrations: unknown[],
+  locale: string,
+): SdkworkIamOauthProviderPlatform[] {
+  const integrationsByProvider = new Map<string, SdkworkIamOauthProviderConnectionRow[]>();
+  for (const integration of integrations) {
+    const providerCode = readProviderCode(integration);
+    if (!providerCode) {
+      continue;
+    }
+    const rows = integrationsByProvider.get(providerCode) ?? [];
+    rows.push({
+      integrationId: readIntegrationId(integration),
+      enabled: readEnabled(integration),
+      providerCode,
+    });
+    integrationsByProvider.set(providerCode, rows);
+  }
+
+  const resolveCatalogName = (entry: unknown): string => {
+    const displayName = readProviderDisplayName(entry);
+    const name = readProviderName(entry);
+    return locale.startsWith("zh") ? displayName || name : name || displayName;
+  };
+
+  // The catalog may contain both a global (owner "0") and a tenant-owned entry
+  // for the same provider; keep the tenant entry and dedupe by code.
+  const catalogByProvider = new Map<string, unknown>();
+  for (const entry of catalog) {
+    const providerCode = readProviderCode(entry);
+    if (!providerCode) {
+      continue;
+    }
+    const existing = catalogByProvider.get(providerCode);
+    if (!existing || readCatalogOwnerTenant(entry) !== "0") {
+      catalogByProvider.set(providerCode, entry);
+    }
+  }
+
+  const platforms = [...catalogByProvider.values()].map((entry) => ({
+    providerCode: readProviderCode(entry),
+    displayName: resolveCatalogName(entry),
+    integrations: integrationsByProvider.get(readProviderCode(entry)) ?? [],
+  })).filter((platform) => platform.providerCode);
+
+  // Keep configured providers that are not (yet) in the catalog visible.
+  for (const [providerCode, rows] of integrationsByProvider) {
+    if (!platforms.some((platform) => platform.providerCode === providerCode)) {
+      platforms.push({
+        providerCode,
+        displayName: providerDisplayName(providerCode),
+        integrations: rows,
+      });
+    }
+  }
+  return platforms;
+}
+
+export function templateMessage(value: string, replacements: Record<string, string>): string {
+  return Object.entries(replacements).reduce(
+    (result, [key, replacement]) => result.replace(`{${key}}`, replacement),
+    value,
+  );
+}
+
+/**
+ * Display names for well-known providers when the platform catalog entry is
+ * not available. Brand names are intentionally not localized.
+ */
+export const FEATURED_PROVIDER_NAMES: Readonly<Record<string, string>> = {
+  google: "Google",
+  github: "GitHub",
+  wechat: "WeChat",
+  twitter: "X (Twitter)",
+  facebook: "Facebook",
+  qq: "QQ",
+  tiktok: "TikTok",
+  douyin: "Douyin",
+};
+
+export function providerDisplayName(providerCode: string): string {
+  return FEATURED_PROVIDER_NAMES[providerCode] ?? providerCode;
+}
 
 export function normalizeList(value: unknown): unknown[] {
   return [...extractSdkWorkListItems(value)];
@@ -272,6 +376,51 @@ export function readIntegrationId(item: unknown): string {
   return readString(record.id ?? record.integrationId ?? record.integration_id);
 }
 
+export function readProviderCode(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.providerCode ?? record.provider_code);
+}
+
+export function readProviderClientId(item: unknown): string {
+  const record = toRecord(item);
+  return readString(
+    record.providerClientId
+      ?? record.provider_client_id
+      ?? record.providerAccountId
+      ?? record.provider_account_id,
+  );
+}
+
+export function readAccountIntegrationId(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.integrationId ?? record.integration_id);
+}
+
+export function readResourceAccountKind(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.resourceAccountKind ?? record.resource_account_kind);
+}
+
+export function readDisplayName(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.displayName ?? record.display_name);
+}
+
+export function readProviderName(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.providerName ?? record.provider_name);
+}
+
+export function readProviderDisplayName(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.providerDisplayName ?? record.provider_display_name);
+}
+
+export function readCatalogOwnerTenant(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.ownerTenantId ?? record.owner_tenant_id) || "0";
+}
+
 export function readOAuthClientId(item: unknown): string {
   const record = toRecord(item);
   return readString(record.id ?? record.oauthClientId ?? record.oauth_client_id);
@@ -332,6 +481,48 @@ export function readResourceAccountId(item: unknown): string {
   return readString(record.id ?? record.resourceAccountId ?? record.resource_account_id);
 }
 
+/**
+ * Standardized OAuth callback path of the SDKWork IAM auth surface. The
+ * callback URL for an account is derived as
+ * `https://{webDomain}/auth/oauth/callback` whenever the operator configures
+ * the primary domain.
+ */
+export const STANDARD_OAUTH_CALLBACK_PATH = "/auth/oauth/callback";
+
+export function buildStandardCallbackUri(webDomain: string): string {
+  const domain = webDomain.trim().replace(/^https?:\/\//u, "").replace(/\/+$/u, "");
+  if (!domain) {
+    return "";
+  }
+  return `https://${domain}${STANDARD_OAUTH_CALLBACK_PATH}`;
+}
+
+export function readAccountConfig(item: unknown): SdkworkIamOauthAccountConfig | undefined {
+  const record = toRecord(item);
+  const raw = record.providerConfigJson ?? record.provider_config_json;
+  if (typeof raw !== "string" || !raw.trim()) {
+    return undefined;
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as SdkworkIamOauthAccountConfig
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function readDomainVerifyStatus(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.domainVerifyStatus ?? record.domain_verify_status);
+}
+
+export function readWebhookVerifyStatus(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.webhookVerifyStatus ?? record.webhook_verify_status);
+}
+
 export function readResourceAuthorizationId(item: unknown): string {
   const record = toRecord(item);
   return readString(record.id ?? record.authorizationId ?? record.authorization_id);
@@ -358,7 +549,22 @@ export function readEnabled(item: unknown): boolean | undefined {
   return undefined;
 }
 
-export function formatResourceLabel(item: unknown): string {
+export interface SdkworkIamOauthResourceLabelCopy {
+  disabled: string;
+  enabled: string;
+  resource: string;
+  statuses?: Record<string, string>;
+}
+
+export function formatResourceLabel(
+  item: unknown,
+  copy: SdkworkIamOauthResourceLabelCopy = {
+    disabled: "disabled",
+    enabled: "enabled",
+    resource: "Resource",
+    statuses: {},
+  },
+): string {
   const record = toRecord(item);
   const displayName = readString(record.displayName ?? record.display_name);
   const code = readString(
@@ -403,7 +609,7 @@ export function formatResourceLabel(item: unknown): string {
   );
   const provider = readString(record.providerCode ?? record.provider_code);
   const enabledLabel = typeof record.enabled === "boolean"
-    ? (record.enabled ? "enabled" : "disabled")
+    ? (record.enabled ? copy.enabled : copy.disabled)
     : "";
   const statusLabel = readString(
     record.status
@@ -416,7 +622,10 @@ export function formatResourceLabel(item: unknown): string {
       ?? record.authorizationStatus
       ?? record.authorization_status,
   ) || enabledLabel;
-  return [displayName || code || "Resource", provider ? `(${provider})` : "", statusLabel ? `[${statusLabel}]` : ""]
+  const localizedStatus = statusLabel
+    ? (copy.statuses?.[statusLabel.trim().toLowerCase()] ?? statusLabel)
+    : "";
+  return [displayName || code || copy.resource, provider ? `(${provider})` : "", localizedStatus ? `[${localizedStatus}]` : ""]
     .filter(Boolean)
     .join(" ");
 }

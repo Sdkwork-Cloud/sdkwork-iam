@@ -86,6 +86,51 @@ pub async fn load_oauth_integration_exchange_context_for_app(
         return Ok(None);
     };
 
+    finish_exchange_context(pg, tenant_id, &normalized, row).await
+}
+
+/// Loads the exchange context for one specific integration row.
+///
+/// Used by WeChat official-account scan login where the account (and therefore
+/// its appId/appSecret) is chosen explicitly instead of the first active
+/// integration for the provider.
+pub async fn load_oauth_integration_exchange_context_for_integration(
+    pg: &PgPool,
+    tenant_id: &str,
+    integration_id: &str,
+) -> Result<Option<OAuthIntegrationExchangeContext>, String> {
+    let row = sqlx::query(
+        "SELECT i.id, c.id, c.provider_client_id, c.provider_tenant_id, c.client_auth_method, \
+                COALESCE(c.token_endpoint_override, cat.token_endpoint) AS token_endpoint, \
+                COALESCE(c.userinfo_endpoint_override, cat.userinfo_endpoint) AS userinfo_endpoint, \
+                COALESCE(i.protocol_family, cat.protocol_family) AS protocol_family, \
+                COALESCE(cat.supports_userinfo, 0) AS supports_userinfo \
+         FROM iam_oauth_integration i \
+         JOIN iam_oauth_client c ON c.integration_id = i.id AND c.enabled = 1 AND c.status = 'active' \
+         LEFT JOIN iam_oauth_provider_catalog cat \
+           ON cat.provider_code = i.provider_code AND cat.status = 'active' \
+         WHERE i.tenant_id = $1 AND i.id = $2 AND i.enabled = 1 AND i.status = 'active' \
+         LIMIT 1",
+    )
+    .bind(tenant_id)
+    .bind(integration_id)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("load oauth integration exchange context failed: {error}"))?;
+
+    let Some(row) = row else {
+        return Ok(None);
+    };
+
+    finish_exchange_context(pg, tenant_id, integration_id, row).await
+}
+
+async fn finish_exchange_context(
+    pg: &PgPool,
+    tenant_id: &str,
+    normalized: &str,
+    row: sqlx::postgres::PgRow,
+) -> Result<Option<OAuthIntegrationExchangeContext>, String> {
     let integration_id: String = row.get(0);
     let oauth_client_row_id: String = row.get(1);
     let provider_client_id: String = row.get(2);
@@ -119,7 +164,7 @@ pub async fn load_oauth_integration_exchange_context_for_app(
     Ok(Some(OAuthIntegrationExchangeContext {
         integration_id,
         oauth_client_row_id,
-        provider_code: normalized,
+        provider_code: normalized.to_string(),
         provider_client_id,
         provider_union_scope_id,
         client_auth_method,
@@ -273,7 +318,7 @@ fn parse_wechat_mini_program_response(
     })
 }
 
-async fn resolve_oauth_client_secret(
+pub(crate) async fn resolve_oauth_client_secret(
     pg: &PgPool,
     tenant_id: &str,
     oauth_client_row_id: &str,

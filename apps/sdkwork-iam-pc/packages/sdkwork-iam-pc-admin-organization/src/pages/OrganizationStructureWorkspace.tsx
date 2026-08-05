@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ArrowLeft, GitBranch, Pencil, Plus, Search, Star, Trash2, UserPlus } from "lucide-react";
-import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
+import { CatalogPagination } from "@sdkwork/iam-pc-admin-core";
 import {
   Button,
   Checkbox,
@@ -21,7 +21,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SettingsSection,
   StatusBadge,
   StatusNotice,
   Tree,
@@ -67,6 +66,9 @@ export function SdkworkIamOrganizationStructureWorkspace({
   const [assignmentIsPrimary, setAssignmentIsPrimary] = useState(false);
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [organizationMemberSearchQuery, setOrganizationMemberSearchQuery] = useState("");
+  const [assignmentPage, setAssignmentPage] = useState(1);
+  const [assignmentPageSize, setAssignmentPageSize] = useState(20);
+  const [assignmentPageInfo, setAssignmentPageInfo] = useState(controller.getState().departmentAssignmentListPageInfo);
   const [loading, setLoading] = useState(true);
   const [memberLoading, setMemberLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -106,9 +108,12 @@ export function SdkworkIamOrganizationStructureWorkspace({
     return items;
   };
 
-  const refreshAssignments = async (departmentId: string, query = memberSearchQuery.trim()) => {
-    const items = await controller.listDepartmentAssignments(departmentId, query ? { q: query } : undefined);
+  const refreshAssignments = async (departmentId: string, query = memberSearchQuery.trim(), nextPage = assignmentPage, nextPageSize = assignmentPageSize) => {
+    const params: Record<string, unknown> = { page: nextPage, page_size: nextPageSize };
+    if (query) params.q = query;
+    const items = await controller.listDepartmentAssignments(departmentId, params);
     setAssignments(items);
+    setAssignmentPageInfo(controller.getState().departmentAssignmentListPageInfo);
     return items;
   };
 
@@ -160,11 +165,12 @@ export function SdkworkIamOrganizationStructureWorkspace({
   const selectDepartment = (departmentId: string) => {
     setSelectedDepartmentId(departmentId);
     setMemberSearchQuery("");
+    setAssignmentPage(1);
     setAssignments([]);
     if (!permissions.assignments.read) return;
     setMemberLoading(true);
     setError(undefined);
-    void refreshAssignments(departmentId, "")
+    void refreshAssignments(departmentId, "", 1, assignmentPageSize)
       .catch((loadError) => setError(toErrorMessage(loadError, messages.structure.notices.loadError)))
       .finally(() => setMemberLoading(false));
   };
@@ -190,9 +196,31 @@ export function SdkworkIamOrganizationStructureWorkspace({
   const submitMemberSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedDepartmentId) return;
+    setAssignmentPage(1);
     setMemberLoading(true);
     setError(undefined);
-    void refreshAssignments(selectedDepartmentId)
+    void refreshAssignments(selectedDepartmentId, undefined, 1, assignmentPageSize)
+      .catch((loadError) => setError(toErrorMessage(loadError, messages.structure.notices.loadError)))
+      .finally(() => setMemberLoading(false));
+  };
+
+  const changeAssignmentPage = (nextPage: number) => {
+    if (!selectedDepartmentId) return;
+    setAssignmentPage(nextPage);
+    setMemberLoading(true);
+    setError(undefined);
+    void refreshAssignments(selectedDepartmentId, undefined, nextPage)
+      .catch((loadError) => setError(toErrorMessage(loadError, messages.structure.notices.loadError)))
+      .finally(() => setMemberLoading(false));
+  };
+
+  const changeAssignmentPageSize = (nextPageSize: number) => {
+    if (!selectedDepartmentId) return;
+    setAssignmentPageSize(nextPageSize);
+    setAssignmentPage(1);
+    setMemberLoading(true);
+    setError(undefined);
+    void refreshAssignments(selectedDepartmentId, undefined, 1, nextPageSize)
       .catch((loadError) => setError(toErrorMessage(loadError, messages.structure.notices.loadError)))
       .finally(() => setMemberLoading(false));
   };
@@ -223,11 +251,11 @@ export function SdkworkIamOrganizationStructureWorkspace({
     { id: "userId", header: messages.structure.members.userId, headerProps: { className: "hidden sm:table-cell" }, cell: (assignment) => <code className="whitespace-nowrap text-xs">{assignment.userId}</code>, cellProps: { className: "hidden whitespace-nowrap sm:table-cell" } },
     { id: "position", header: messages.structure.members.position, headerProps: { className: "hidden md:table-cell" }, cell: (assignment) => assignment.positionName || "-", cellProps: { className: "hidden whitespace-nowrap md:table-cell" } },
     { id: "primary", header: messages.structure.members.primary, cell: (assignment) => assignment.isPrimary ? <Star className="h-4 w-4 fill-current text-[var(--sdk-color-state-warning)]" /> : "-", cellProps: { className: "whitespace-nowrap" } },
-    { id: "status", header: messages.structure.members.status, headerProps: { className: "hidden sm:table-cell" }, cell: (assignment) => assignment.status ? <StatusBadge label={assignment.status} status={assignment.status} /> : "-", cellProps: { className: "hidden whitespace-nowrap sm:table-cell" } },
+    { id: "status", header: messages.structure.members.status, headerProps: { className: "hidden sm:table-cell" }, cell: (assignment) => assignment.status ? <StatusBadge label={statusLabel(messages.structure.members.statuses, assignment.status)} status={assignment.status} /> : "-", cellProps: { className: "hidden whitespace-nowrap sm:table-cell" } },
   ], [messages, organizationMembers]);
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       {onBack ? (
         <Button onClick={onBack} type="button" variant="ghost">
           <ArrowLeft className="h-4 w-4" />
@@ -235,15 +263,12 @@ export function SdkworkIamOrganizationStructureWorkspace({
         </Button>
       ) : null}
 
-      <SettingsSection
-        description={template(messages.structure.descriptionTemplate, { name: organization?.name ?? organizationId })}
-        title={template(messages.structure.titleTemplate, { name: organization?.name ?? organizationId })}
-      >
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
         {error ? <StatusNotice tone="danger">{error}</StatusNotice> : null}
         {notice ? <StatusNotice tone="success">{notice}</StatusNotice> : null}
 
-        <div className="grid min-h-[32rem] overflow-hidden border-y border-[var(--sdk-color-border-subtle)] lg:grid-cols-[20rem_minmax(0,1fr)]">
-          <aside className="border-b border-[var(--sdk-color-border-subtle)] py-4 lg:border-b-0 lg:border-r lg:pr-4">
+        <div className="grid min-h-0 flex-1 overflow-hidden border-y border-[var(--sdk-color-border-subtle)] lg:grid-cols-[20rem_minmax(0,1fr)]">
+          <aside className="min-h-0 overflow-y-auto border-b border-[var(--sdk-color-border-subtle)] py-4 lg:border-b-0 lg:border-r lg:pr-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
                 <GitBranch className="h-4 w-4 shrink-0 text-[var(--sdk-color-text-secondary)]" />
@@ -277,15 +302,14 @@ export function SdkworkIamOrganizationStructureWorkspace({
             />
           </aside>
 
-          <main className="min-w-0 py-4 lg:pl-5">
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col py-4 lg:pl-5">
             {selectedDepartment ? (
               <DataTable
+                className="min-h-0 flex-1"
                 columns={memberColumns}
                 emptyDescription={messages.structure.members.emptyDescription}
                 emptyTitle={messages.structure.members.emptyTitle}
-                footer={<SdkworkIamListPaginationControls busy={busy} onLoadMore={() => void runAction(async () => {
-                  setAssignments(await controller.loadMoreDepartmentAssignments(selectedDepartment.departmentId));
-                }, messages.structure.members.loadedMore)} pageInfo={controller.getState().departmentAssignmentListPageInfo} />}
+                footer={<CatalogPagination busy={busy} copy={{ next: messages.pagination.next, pageSize: messages.pagination.pageSize, previous: messages.pagination.previous, total: messages.pagination.total }} onPageChange={changeAssignmentPage} onPageSizeChange={changeAssignmentPageSize} pageInfo={assignmentPageInfo} />}
                 getRowId={(assignment) => assignment.assignmentId}
                 loading={loading || memberLoading}
                 rowActionsLabel={messages.structure.members.actions}
@@ -299,6 +323,12 @@ export function SdkworkIamOrganizationStructureWorkspace({
                   </Button>
                 ) : undefined}
                 rows={[...assignments]}
+                slotProps={{
+                  surface: { className: "flex min-h-0 flex-1 flex-col" },
+                  viewport: { className: "min-h-0 flex-1" },
+                  footer: { className: "shrink-0" },
+                }}
+                stickyHeader
                 title={selectedDepartment.name}
                 toolbar={(
                   <div className="flex w-full flex-wrap items-center gap-2">
@@ -322,7 +352,7 @@ export function SdkworkIamOrganizationStructureWorkspace({
             )}
           </main>
         </div>
-      </SettingsSection>
+      </div>
 
       <DepartmentDrawer
         busy={busy}
@@ -423,7 +453,7 @@ function DepartmentDrawer({ busy, draft, mode, onDraftChange, onOpenChange, onSu
           <Field label={messages.structure.departmentDrawer.name} onChange={(name) => onDraftChange({ ...draft, name })} value={draft.name} />
           <Field label={messages.structure.departmentDrawer.code} onChange={(code) => onDraftChange({ ...draft, code })} value={draft.code ?? ""} />
           <Field label={messages.structure.departmentDrawer.parent} onChange={(parentDepartmentId) => onDraftChange({ ...draft, parentDepartmentId })} value={draft.parentDepartmentId ?? ""} />
-          {editing ? <Field label={messages.structure.departmentDrawer.status} onChange={(status) => onDraftChange({ ...draft, status })} value={draft.status ?? ""} /> : null}
+          {editing ? <StatusSelectField label={messages.structure.departmentDrawer.status} onChange={(status) => onDraftChange({ ...draft, status })} statuses={messages.departments.statuses} value={draft.status ?? ""} /> : null}
         </DrawerBody>
         <DrawerFooter>
           <Button disabled={busy} onClick={() => onOpenChange(false)} type="button" variant="secondary">{messages.common.cancel}</Button>
@@ -436,6 +466,32 @@ function DepartmentDrawer({ busy, draft, mode, onDraftChange, onOpenChange, onSu
 
 function Field({ label, onChange, value }: { label: string; onChange: (value: string) => void; value: string }) {
   return <label className="block space-y-1.5 text-sm"><span className="font-medium text-[var(--sdk-color-text-primary)]">{label}</span><Input onChange={(event) => onChange(event.target.value)} value={value} /></label>;
+}
+
+function StatusSelectField({ label, onChange, statuses, value }: { label: string; onChange: (value: string) => void; statuses: { active: string; disabled: string; unknown: string }; value: string }) {
+  const normalized = value.trim().toLowerCase();
+  const options = [
+    ["active", statuses.active],
+    ["disabled", statuses.disabled],
+  ] as const;
+  const currentUnknown = options.some(([optionValue]) => optionValue === normalized) ? undefined : value;
+  return (
+    <label className="block space-y-1.5 text-sm">
+      <span className="font-medium text-[var(--sdk-color-text-primary)]">{label}</span>
+      <Select onValueChange={onChange} value={value}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {options.map(([optionValue, optionLabel]) => <SelectItem key={optionValue} value={optionValue}>{optionLabel}</SelectItem>)}
+          {currentUnknown ? <SelectItem key={currentUnknown} value={currentUnknown}>{statusLabel(statuses, currentUnknown)}</SelectItem> : null}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
+
+function statusLabel(statuses: { active: string; disabled: string; unknown: string }, value: string) {
+  const normalized = value.trim().toLowerCase();
+  return statuses[normalized as keyof typeof statuses] ?? statuses.unknown;
 }
 
 function emptyDepartmentDraft(organizationId: string): SdkworkIamDepartmentDraft {

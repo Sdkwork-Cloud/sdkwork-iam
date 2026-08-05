@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { SdkworkI18nProvider } from "@sdkwork/i18n-pc-react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -49,7 +50,7 @@ describe("tenant application workspace", () => {
       service: service as never,
     });
 
-    render(<SdkworkIamTenantAdminWorkspace controller={controller} />);
+    render(<SdkworkI18nProvider locale="zh-CN"><SdkworkIamTenantAdminWorkspace controller={controller} /></SdkworkI18nProvider>);
 
     await screen.findByText("Acme");
     fireEvent.click(screen.getByRole("button", { name: "管理" }));
@@ -58,7 +59,7 @@ describe("tenant application workspace", () => {
     expect(screen.getByText("租户应用")).toBeTruthy();
     expect(screen.getByText("crm.example.com")).toBeTruthy();
     expect(screen.getByText("应用总数")).toBeTruthy();
-    expect(service.iam.tenantApplications.list).toHaveBeenCalledWith("tenant-1", { page_size: 20 });
+    expect(service.iam.tenantApplications.list).toHaveBeenCalledWith("tenant-1", { page: 1, page_size: 20 });
 
     fireEvent.click(screen.getByRole("button", { name: "注册应用" }));
     expect(screen.getByText("注册租户应用")).toBeTruthy();

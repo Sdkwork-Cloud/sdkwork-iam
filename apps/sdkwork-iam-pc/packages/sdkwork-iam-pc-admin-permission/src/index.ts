@@ -9,7 +9,10 @@ export {
 } from "@sdkwork/iam-contracts";
 export * from "./types/permission-admin-types";
 export { createSdkworkIamPermissionController } from "./services/permission-admin-controller";
+export { SdkworkIamAuthorizationAdminWorkspace } from "./pages/AuthorizationAdminWorkspace";
 export { SdkworkIamPermissionAdminWorkspace } from "./pages/PermissionAdminWorkspace";
+export { SdkworkIamPolicyAdminWorkspace } from "./pages/PolicyAdminWorkspace";
+export { SdkworkIamRoleAdminWorkspace } from "./pages/RoleAdminWorkspace";
 export { IAM_PC_ADMIN_PERMISSION_ROUTES } from "./routes/permission-admin-routes";
 export {
   RequireBackendAccess,

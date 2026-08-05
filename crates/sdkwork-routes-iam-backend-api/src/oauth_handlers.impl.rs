@@ -295,6 +295,7 @@ fn collect_resource_patch_assignments(body: &Value, table: &str) -> Vec<(String,
             ("app_id", &["appId", "app_id"]),
             ("environment", &["environment"]),
             ("deployment_mode", &["deploymentMode", "deployment_mode"]),
+            ("redirect_uri", &["redirectUri", "redirect_uri"]),
         ],
         "iam_oauth_client" => &[
             ("provider_client_id", &["providerClientId", "provider_client_id"]),
@@ -316,6 +317,14 @@ fn collect_resource_patch_assignments(body: &Value, table: &str) -> Vec<(String,
     for (column, keys) in fields {
         if let Some(value) = read_string_field(body, keys) {
             assignments.push(((*column).to_owned(), value));
+        }
+    }
+    // The operator-facing account config (custom domains, domain verification
+    // file, and message notification settings) is stored as one JSON document
+    // in provider_config_json; unknown fields in `config` stay forward-compatible.
+    if table == "iam_oauth_resource_account" {
+        if let Some(config) = body.get("config").filter(|value| value.is_object()) {
+            assignments.push(("provider_config_json".to_owned(), config.to_string()));
         }
     }
     assignments
@@ -2101,6 +2110,7 @@ async fn create_resource_account(
     let provider_account_id =
         read_string_field(&body, &["providerAccountId", "provider_account_id"]);
     let access_mode = read_string_field(&body, &["accessMode", "access_mode"]);
+    let config = body.get("config").filter(|value| value.is_object());
     if integration_id.as_deref().unwrap_or("").is_empty()
         || provider_code.as_deref().unwrap_or("").is_empty()
         || resource_account_code.as_deref().unwrap_or("").is_empty()
@@ -2127,6 +2137,7 @@ async fn create_resource_account(
     let access_mode_value = access_mode.as_ref().expect("validated").clone();
     let display_name_value = display_name.as_ref().expect("validated").clone();
     let provider_account_id_value = provider_account_id.as_ref().expect("validated").clone();
+    let config_value = config.map(|value| value.to_string()).unwrap_or_else(|| "{}".to_owned());
     let tenant_id_insert = tenant_id.clone();
 
     oauth_commit_create(
@@ -2146,14 +2157,15 @@ async fn create_resource_account(
             let access_mode_value = access_mode_value.clone();
             let display_name_value = display_name_value.clone();
             let provider_account_id_value = provider_account_id_value.clone();
+            let config_value = config_value.clone();
             let now = now.clone();
             
                 sqlx::query(
                     "INSERT INTO iam_oauth_resource_account \
                         (id, uuid, tenant_id, organization_id, integration_id, provider_code, resource_account_code, resource_account_kind, \
                          access_mode, display_name, provider_account_id, verification_status, authorization_status, self_managed_config_status, \
-                         operator_authorization_status, webhook_verify_status, domain_verify_status, status, created_at, updated_at) \
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 'pending', 'missing', 'pending', 'pending', 'pending', 'active', $12, $12)",
+                         operator_authorization_status, webhook_verify_status, domain_verify_status, provider_config_json, status, created_at, updated_at) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 'pending', 'missing', 'pending', 'pending', 'pending', $12, 'active', $13, $13)",
                 )
                 .bind(&insert_id)
                 .bind(Uuid::new_v4().to_string())
@@ -2166,6 +2178,7 @@ async fn create_resource_account(
                 .bind(&access_mode_value)
                 .bind(&display_name_value)
                 .bind(&provider_account_id_value)
+                .bind(&config_value)
                 .bind(&now)
                 .execute(&mut **tx)
                 .await
@@ -2505,4 +2518,337 @@ where
         })
     })
     .await
+}
+
+// ── Scan login settings & previews ─────────────────────────────────
+
+/// Loads the scan-login configuration JSON for a tenant:
+/// - `urlLogin`: H5 mobile login URL mode settings
+/// - `defaultQrMode`: login page QR mode (`auto` = official account when an
+///   enabled account exists, otherwise URL)
+/// - `officialAccounts`: wechat official accounts with QR login state and
+///   message-callback (webhook) status for follow-to-login
+async fn scan_login_settings_json(pg: &PgPool, tenant_id: &str) -> Result<Value, String> {
+    let config_row = sqlx::query(
+        "SELECT h5_login_origin, url_login_enabled, default_qr_mode \
+         FROM iam_oauth_scan_login_config WHERE tenant_id = $1",
+    )
+    .bind(tenant_id)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("load scan login config failed: {error}"))?;
+    let (h5_login_origin, url_login_enabled, default_qr_mode) = match config_row {
+        Some(row) => {
+            let origin: String = row.get(0);
+            let enabled: i32 = row.get(1);
+            let mode: String = row.get(2);
+            (origin, enabled != 0, mode)
+        }
+        None => (String::new(), true, "auto".to_string()),
+    };
+
+    let accounts = sqlx::query(
+        "SELECT ra.id, ra.display_name, ra.enabled, ra.qr_default_enabled, ra.verification_status, \
+                ra.integration_id, \
+                c.provider_client_id, \
+                w.callback_url, w.verification_token_status, w.encoding_aes_key_status, \
+                w.enabled AS webhook_enabled, w.callback_public_id \
+         FROM iam_oauth_resource_account ra \
+         LEFT JOIN iam_oauth_client c \
+           ON c.integration_id = ra.integration_id AND c.enabled = 1 AND c.status = 'active' \
+         LEFT JOIN iam_oauth_webhook_config w \
+           ON w.resource_account_id = ra.id AND w.status = 'active' \
+         WHERE ra.tenant_id = $1 AND ra.provider_code = 'wechat' \
+           AND ra.resource_account_kind = 'official_account' \
+         ORDER BY ra.display_name, ra.id",
+    )
+    .bind(tenant_id)
+    .fetch_all(pg)
+    .await
+    .map_err(|error| format!("list official accounts for scan login failed: {error}"))?;
+
+    let official_accounts: Vec<Value> = accounts
+        .iter()
+        .map(|row| {
+            let id: String = row.get(0);
+            let display_name: String = row.get(1);
+            let enabled: i32 = row.get(2);
+            let qr_login_enabled: i32 = row.get(3);
+            let verification_status: String = row.get(4);
+            let integration_id: String = row.get(5);
+            let app_id: Option<String> = row.get(6);
+            let callback_url: Option<String> = row.get(7);
+            let verification_token_status: Option<String> = row.get(8);
+            let encoding_aes_key_status: Option<String> = row.get(9);
+            let webhook_enabled: Option<i32> = row.get(10);
+            let callback_public_id: Option<String> = row.get(11);
+            json!({
+                "accountId": id,
+                "appId": app_id,
+                "displayName": display_name,
+                "enabled": enabled != 0,
+                "integrationId": integration_id,
+                "qrLoginEnabled": qr_login_enabled != 0,
+                "verificationStatus": verification_status,
+                "webhook": {
+                    "callbackPublicId": callback_public_id,
+                    "callbackUrl": callback_url,
+                    "enabled": webhook_enabled.map(|value| value != 0).unwrap_or(false),
+                    "encodingAesKeyStatus": encoding_aes_key_status,
+                    "verificationTokenStatus": verification_token_status,
+                },
+            })
+        })
+        .collect();
+
+    Ok(json!({
+        "defaultQrMode": default_qr_mode,
+        "officialAccounts": official_accounts,
+        "urlLogin": {
+            "enabled": url_login_enabled,
+            "h5LoginOrigin": h5_login_origin,
+        },
+    }))
+}
+
+async fn retrieve_scan_login_settings(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
+        return tenant_id_from_context(&ctx).err().expect("error response");
+    };
+    match scan_login_settings_json(pg, &tenant_id).await {
+        Ok(settings) => appbase_ok(settings),
+        Err(error) => internal_handler_error("iam_oauth_scan_login_settings_retrieve_failed", error),
+    }
+}
+
+async fn update_scan_login_settings(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Json(body): Json<Value>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
+        return tenant_id_from_context(&ctx).err().expect("error response");
+    };
+
+    let existing = match sqlx::query(
+        "SELECT h5_login_origin, url_login_enabled, default_qr_mode \
+         FROM iam_oauth_scan_login_config WHERE tenant_id = $1",
+    )
+    .bind(&tenant_id)
+    .fetch_optional(pg)
+    .await
+    {
+        Ok(value) => value,
+        Err(error) => {
+            return internal_handler_error("iam_oauth_scan_login_settings_update_failed", error);
+        }
+    };
+    let (mut h5_login_origin, mut url_login_enabled, mut default_qr_mode) = match existing {
+        Some(row) => {
+            let origin: String = row.get(0);
+            let enabled: i32 = row.get(1);
+            let mode: String = row.get(2);
+            (origin, enabled != 0, mode)
+        }
+        None => (String::new(), true, "auto".to_string()),
+    };
+
+    if let Some(url_login) = body.get("urlLogin") {
+        if let Some(value) = read_string_field(url_login, &["h5LoginOrigin", "h5_login_origin"]) {
+            h5_login_origin = value.trim().to_string();
+        }
+        if let Some(value) = read_i32_field(url_login, &["enabled"]) {
+            url_login_enabled = value != 0;
+        }
+    }
+    if let Some(mode) = read_string_field(&body, &["defaultQrMode", "default_qr_mode"]) {
+        match mode.as_str() {
+            "official_account" | "url" => default_qr_mode = mode,
+            _ => default_qr_mode = "auto".to_string(),
+        }
+    }
+
+    let now = Utc::now().to_rfc3339();
+    match sqlx::query(
+        "INSERT INTO iam_oauth_scan_login_config \
+         (tenant_id, h5_login_origin, url_login_enabled, default_qr_mode, updated_at) \
+         VALUES ($1, $2, $3, $4, $5) \
+         ON CONFLICT (tenant_id) DO UPDATE SET \
+           h5_login_origin = EXCLUDED.h5_login_origin, \
+           url_login_enabled = EXCLUDED.url_login_enabled, \
+           default_qr_mode = EXCLUDED.default_qr_mode, \
+           updated_at = EXCLUDED.updated_at",
+    )
+    .bind(&tenant_id)
+    .bind(&h5_login_origin)
+    .bind(if url_login_enabled { 1 } else { 0 })
+    .bind(&default_qr_mode)
+    .bind(&now)
+    .execute(pg)
+    .await
+    {
+        Ok(_) => {}
+        Err(error) => {
+            return internal_handler_error("iam_oauth_scan_login_settings_update_failed", error);
+        }
+    };
+
+    match scan_login_settings_json(pg, &tenant_id).await {
+        Ok(settings) => appbase_ok(settings),
+        Err(error) => internal_handler_error("iam_oauth_scan_login_settings_update_failed", error),
+    }
+}
+
+/// Generates an admin preview QR for a scan-login mode without creating a
+/// pollable login session:
+/// - `official_account`: WeChat parameterized temp QR of the chosen account
+/// - `url`: QR content is the H5 mobile login page URL
+async fn create_scan_login_preview(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Json(body): Json<Value>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
+        return tenant_id_from_context(&ctx).err().expect("error response");
+    };
+
+    let qr_mode = match read_string_field(&body, &["qrMode", "qr_mode"]) {
+        Some(mode) if mode == "official_account" => "official_account".to_string(),
+        Some(_) => "url".to_string(),
+        None => "url".to_string(),
+    };
+
+    if qr_mode == "official_account" {
+        let account_id = read_string_field(&body, &["accountId", "account_id"]);
+        let row = match sqlx::query(
+            "SELECT ra.integration_id \
+             FROM iam_oauth_resource_account ra \
+             WHERE ra.tenant_id = $1 AND ra.provider_code = 'wechat' \
+               AND ra.resource_account_kind = 'official_account' \
+               AND ra.enabled = 1 AND ra.status = 'active' \
+               AND ($2::text IS NULL OR ra.id = $2) \
+               AND ($2::text IS NOT NULL OR ra.qr_default_enabled = 1) \
+             ORDER BY ra.updated_at DESC LIMIT 1",
+        )
+        .bind(&tenant_id)
+        .bind(account_id)
+        .fetch_optional(pg)
+        .await
+        {
+            Ok(value) => value,
+            Err(error) => {
+                return internal_handler_error("iam_oauth_scan_login_preview_failed", error);
+            }
+        };
+        let Some(row) = row else {
+            return appbase_error(
+                StatusCode::CONFLICT,
+                "iam_oauth_official_account_qr_unavailable",
+                "official account scan login is not configured; enable an official account first",
+            );
+        };
+        let integration_id: String = row.get(0);
+        let exchange = match sdkwork_iam_web_adapter::load_oauth_integration_exchange_context_for_integration(
+            pg,
+            &tenant_id,
+            &integration_id,
+        )
+        .await
+        {
+            Ok(Some(exchange)) => exchange,
+            Ok(None) => {
+                return appbase_error(
+                    StatusCode::CONFLICT,
+                    "iam_oauth_official_account_qr_unavailable",
+                    "official account integration is not configured",
+                );
+            }
+            Err(error) => {
+                return internal_handler_error("iam_oauth_scan_login_preview_failed", error);
+            }
+        };
+        let scene = sdkwork_iam_web_adapter::generate_wechat_mp_scene("qrpreview");
+        let qr = match sdkwork_iam_web_adapter::create_wechat_mp_temp_qr_code(
+            pg,
+            &exchange.provider_client_id,
+            &exchange.client_secret,
+            &scene,
+            300,
+        )
+        .await
+        {
+            Ok(value) => value,
+            Err(error) => {
+                return internal_handler_error("iam_oauth_scan_login_preview_failed", error);
+            }
+        };
+        return appbase_ok(json!({
+            "expireSeconds": qr.expire_seconds,
+            "qrCode": qr.image_url,
+            "qrContent": qr.image_url,
+            "qrMode": "official_account",
+        }));
+    }
+
+    // URL mode: H5 login page origin from settings, env override, or error.
+    let config_row = match sqlx::query(
+        "SELECT h5_login_origin FROM iam_oauth_scan_login_config WHERE tenant_id = $1",
+    )
+    .bind(&tenant_id)
+    .fetch_optional(pg)
+    .await
+    {
+        Ok(value) => value,
+        Err(error) => {
+            return internal_handler_error("iam_oauth_scan_login_preview_failed", error);
+        }
+    };
+    let mut h5_login_origin = config_row
+        .as_ref()
+        .map(|row| row.get::<String, _>(0))
+        .unwrap_or_default();
+    if h5_login_origin.trim().is_empty() {
+        h5_login_origin = std::env::var("SDKWORK_IAM_H5_LOGIN_ORIGIN")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .unwrap_or_default();
+    }
+    let h5_login_origin = h5_login_origin.trim().trim_end_matches('/').to_string();
+    if h5_login_origin.is_empty() {
+        return appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_h5_login_origin_missing",
+            "H5 login page origin is not configured; set the H5 login URL first",
+        );
+    }
+    let scene = sdkwork_iam_web_adapter::generate_wechat_mp_scene("qrpreview");
+    let qr_content = format!(
+        "{h5_login_origin}/auth/login?session_key={}&purpose=login&scan_source=qr",
+        scene
+    );
+    appbase_ok(json!({
+        "expireSeconds": 300,
+        "qrCode": Value::Null,
+        "qrContent": qr_content,
+        "qrMode": "url",
+    }))
 }

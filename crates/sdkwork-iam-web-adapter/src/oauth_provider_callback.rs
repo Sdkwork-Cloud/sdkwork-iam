@@ -22,6 +22,8 @@ pub struct OAuthWebhookConfig {
     pub provider_code: String,
     pub message_handling_mode: String,
     pub provider_app_id: Option<String>,
+    /// Runtime app id of the owning integration (`iam_oauth_integration.app_id`).
+    pub integration_app_id: Option<String>,
     #[allow(dead_code)]
     pub webhook_kind: String,
 }
@@ -187,6 +189,33 @@ pub async fn handle_provider_callback_post(
 
     update_webhook_event(pg, &config.id, provider_event_id.as_deref()).await?;
 
+    // QR scan-login dispatch: `subscribe` / `SCAN` events carrying a
+    // parameterized QR scene confirm the scan of an official-account login
+    // QR. The confirmation is written into the QR session artifact so the
+    // app-api polling side can complete the login lazily. Failures must not
+    // break the webhook acknowledgement to WeChat.
+    if let Err(dispatch_error) = crate::wechat_mp::record_oauth_follow_login_confirmation(
+        pg,
+        &config.tenant_id,
+        &config.integration_id,
+        config.integration_app_id.as_deref(),
+        &payload,
+    )
+    .await
+    {
+        tracing::warn!(error = %dispatch_error, webhook_config_id = %config.id, "oauth follow login dispatch failed");
+        record_callback_event(
+            pg,
+            &config,
+            "follow_login_event",
+            "rejected",
+            Some("iam_oauth_follow_login_dispatch_failed"),
+            json!({ "reason": dispatch_error }),
+            meta,
+        )
+        .await?;
+    }
+
     let body = match config.message_handling_mode.as_str() {
         "wechat_ack" | "provider_ack" => "success".to_string(),
         _ => json!({ "accepted": true }).to_string(),
@@ -215,9 +244,10 @@ async fn load_active_webhook_config(
 
     let row = sqlx::query(
         "SELECT w.id, w.tenant_id, w.organization_id, w.integration_id, w.provider_code, w.webhook_kind, \
-                w.message_handling_mode, r.provider_account_id \
+                w.message_handling_mode, r.provider_account_id, i.app_id \
          FROM iam_oauth_webhook_config w \
          LEFT JOIN iam_oauth_resource_account r ON r.id = w.resource_account_id \
+         LEFT JOIN iam_oauth_integration i ON i.id = w.integration_id \
          WHERE w.callback_public_id = $1 AND w.enabled = 1 AND w.status = 'active' \
          LIMIT 1",
     )
@@ -236,6 +266,7 @@ async fn load_active_webhook_config(
         webhook_kind: row.get(5),
         message_handling_mode: row.get(6),
         provider_app_id: row.get(7),
+        integration_app_id: row.get(8),
     })
 }
 

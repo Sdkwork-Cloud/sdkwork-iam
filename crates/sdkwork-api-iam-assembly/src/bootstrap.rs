@@ -159,6 +159,39 @@ async fn assemble_app_api_contribution_with_host(
     )
 }
 
+/// Builds the IAM Backend API contribution after initializing IAM persistence
+/// and tenant-application state from the process environment.
+pub async fn assemble_backend_api_contribution() -> Result<ApiAssemblyContribution, String> {
+    assemble_backend_api_contribution_with_host(bootstrap_iam_application_state().await?).await
+}
+
+/// Builds the IAM Backend API contribution from the final host's
+/// process-shared database pool.
+pub async fn assemble_backend_api_contribution_with_pool(
+    pool: DatabasePool,
+) -> Result<ApiAssemblyContribution, String> {
+    assemble_backend_api_contribution_with_host(bootstrap_iam_application_state_with_pool(pool).await?)
+        .await
+}
+
+async fn assemble_backend_api_contribution_with_host(
+    host: IamDatabaseHost,
+) -> Result<ApiAssemblyContribution, String> {
+    let route_manifest = sdkwork_routes_iam_backend_api::iam_backend_api_route_manifest();
+    let router =
+        sdkwork_routes_iam_backend_api::build_sdkwork_iam_backend_api_business_router_with_pool(
+            host.pool().clone(),
+        )?;
+    ApiAssemblyContribution::from_manifest(
+        "sdkwork-iam",
+        "SDKWork IAM Backend API",
+        router,
+        route_manifest,
+        vec![Arc::new(IamAppContextInjector)],
+        Arc::new(IamDatabaseReadinessCheck::new(host)),
+    )
+}
+
 /// Initializes IAM persistence and tenant-application state, then assembles all
 /// IAM-owned HTTP surfaces for the IAM standalone binary.
 pub async fn bootstrap_iam_for_application() -> Result<(ApiAssembly, IamDatabaseHost), String> {

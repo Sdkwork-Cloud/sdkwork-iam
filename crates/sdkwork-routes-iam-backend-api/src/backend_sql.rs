@@ -203,6 +203,53 @@ pub(crate) fn list_search_pattern(query: &HashMap<String, String>) -> Option<Str
         .map(|value| format!("%{}%", value.trim().to_ascii_lowercase()))
 }
 
+/// Optional exact-match query value, or `None` when missing or blank.
+pub(crate) fn optional_query_value(query: &HashMap<String, String>, key: &str) -> Option<String> {
+    query
+        .get(key)
+        .map(String::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+}
+
+/// Role binding list filter columns in bind order; column SQL and values must
+/// stay aligned through the shared constant.
+const ROLE_BINDING_LIST_FILTER_COLUMNS: [(&str, &str); 5] = [
+    ("b.role_id", "roleId"),
+    ("b.principal_kind", "principalKind"),
+    ("b.principal_id", "principalId"),
+    ("b.scope_kind", "scopeKind"),
+    ("b.scope_id", "scopeId"),
+];
+
+/// Exact-match `AND` clauses for role binding list filters, numbered from
+/// `start_index` so callers can chain them after their fixed binds.
+pub(crate) fn role_binding_list_filter_sql(
+    query: &HashMap<String, String>,
+    start_index: usize,
+) -> String {
+    let mut sql = String::new();
+    let mut index = start_index;
+    for (column, key) in ROLE_BINDING_LIST_FILTER_COLUMNS {
+        if optional_query_value(query, key).is_some() {
+            sql.push_str(&format!(" AND {column} = ${index}"));
+            index += 1;
+        }
+    }
+    sql
+}
+
+/// Bind values for the role binding list filters in `ROLE_BINDING_LIST_FILTER_COLUMNS` order.
+pub(crate) fn role_binding_list_filter_values(
+    query: &HashMap<String, String>,
+) -> Vec<String> {
+    ROLE_BINDING_LIST_FILTER_COLUMNS
+        .iter()
+        .filter_map(|(_, key)| optional_query_value(query, key))
+        .collect()
+}
+
 /// SQL fragment: `AND ($N::text IS NULL OR LOWER(col) LIKE $N OR ...)`.
 pub(crate) fn list_search_sql_clause(columns: &[&str], bind: &str) -> String {
     if columns.is_empty() {
@@ -411,6 +458,29 @@ mod tests {
         let mut query = HashMap::new();
         query.insert("page_size".to_owned(), "201".to_owned());
         assert!(list_page_params_or_error(&query).is_err());
+    }
+
+    #[test]
+    fn role_binding_list_filters_are_skipped_when_blank() {
+        let query = HashMap::new();
+        assert_eq!("", role_binding_list_filter_sql(&query, 6));
+        assert!(role_binding_list_filter_values(&query).is_empty());
+    }
+
+    #[test]
+    fn role_binding_list_filters_number_from_start_index() {
+        let mut query = HashMap::new();
+        query.insert("roleId".to_owned(), "role-1".to_owned());
+        query.insert("scopeId".to_owned(), "scope-9".to_owned());
+        query.insert("scopeKind".to_owned(), "  ".to_owned());
+        assert_eq!(
+            " AND b.role_id = $6 AND b.scope_id = $7",
+            role_binding_list_filter_sql(&query, 6),
+        );
+        assert_eq!(
+            vec!["role-1".to_owned(), "scope-9".to_owned()],
+            role_binding_list_filter_values(&query),
+        );
     }
 
     #[test]

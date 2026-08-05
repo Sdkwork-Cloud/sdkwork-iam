@@ -5,7 +5,7 @@ import { sdkworkIamTenantAdminMessages as zhMessages } from "./zh-CN/iam/tenant/
 import type { SdkworkIamTenantAdminMessages } from "../types/tenant-admin-messages";
 
 export const SDKWORK_IAM_TENANT_ADMIN_I18N_CATALOG = createSdkworkMessageCatalog<SdkworkIamTenantAdminMessages>({
-  defaultLocale: "zh-CN",
+  defaultLocale: "en-US",
   locales: {
     "en-US": enMessages,
     "zh-CN": zhMessages,

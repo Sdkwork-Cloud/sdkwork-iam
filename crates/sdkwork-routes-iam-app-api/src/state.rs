@@ -188,11 +188,17 @@ pub(crate) struct LocalQrSession {
     pub(crate) completed_session: Option<LocalSession>,
     pub(crate) expire_time: u128,
     pub(crate) fallback_url: String,
+    /// Follow/SCAN confirmation captured by the WeChat account webhook
+    /// (`status` flips to `follow_confirmed`). Resolved lazily by the
+    /// polling handler into `completed_session`.
+    pub(crate) follow_login: Option<Value>,
     pub(crate) organization_selection: Option<Value>,
     pub(crate) poll_secret: String,
     pub(crate) purpose: String,
     pub(crate) qr_content: String,
     pub(crate) qr_content_mode: String,
+    /// Server-rendered QR image URL (WeChat official-account temp QR).
+    pub(crate) qr_image_url: Option<String>,
     pub(crate) session_exchanged: bool,
     pub(crate) session_key: String,
     pub(crate) status: String,

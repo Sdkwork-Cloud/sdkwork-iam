@@ -148,6 +148,60 @@ export interface SdkworkIamOauthRelyingPartyDraft {
   tenantId: string;
 }
 
+/**
+ * Full developer configuration of a mini program or official account,
+ * mirroring the WeChat development console: custom (legal) domains, the
+ * domain verification file issued by WeChat, and message notification
+ * push settings. Stored as one JSON document in the backend
+ * `provider_config_json` column.
+ */
+export interface SdkworkIamOauthAccountDomainsConfig {
+  business?: string[];
+  downloadFile?: string[];
+  request?: string[];
+  socket?: string[];
+  uploadFile?: string[];
+}
+
+export interface SdkworkIamOauthAccountNotifyConfig {
+  dataFormat?: "json" | "xml";
+  encodingAesKey?: string;
+  encryptMode?: "compatible" | "plain" | "safe";
+  token?: string;
+  url?: string;
+}
+
+export interface SdkworkIamOauthAccountVerifyFileConfig {
+  content?: string;
+  fileName?: string;
+}
+
+export interface SdkworkIamOauthAccountConfig {
+  domains?: SdkworkIamOauthAccountDomainsConfig;
+  notify?: SdkworkIamOauthAccountNotifyConfig;
+  redirectUri?: string;
+  verifyFile?: SdkworkIamOauthAccountVerifyFileConfig;
+  webDomain?: string;
+}
+
+/**
+ * Quick-setup draft for a mini program or official account. Saving creates
+ * (or reuses) the matching WeChat integration and a resource account, so the
+ * account is usable immediately. `redirectUri` is optional: when `config`
+ * carries a `webDomain`, the standardized callback URL is derived as
+ * `https://{webDomain}/auth/oauth/callback`.
+ */
+export interface SdkworkIamOauthAccountSetupDraft {
+  appId: string;
+  appSecret: string;
+  config?: SdkworkIamOauthAccountConfig;
+  displayName: string;
+  enabled: boolean;
+  redirectUri: string;
+}
+
+export type SdkworkIamOauthAccountKind = "mini_program" | "official_account";
+
 export interface SdkworkIamOauthAdminResourceSnapshot {
   accountLinks: unknown[];
   callbackEvents: unknown[];
@@ -196,12 +250,70 @@ export type SdkworkIamOauthAdminView =
   | "resources"
   | "activity";
 
+export type SdkworkIamOauthScanLoginQrMode = "official_account" | "url";
+
+export interface SdkworkIamOauthScanLoginWebhookInfo {
+  callbackPublicId?: string;
+  callbackUrl?: string;
+  enabled?: boolean;
+  encodingAesKeyStatus?: string;
+  verificationTokenStatus?: string;
+}
+
+export interface SdkworkIamOauthScanLoginOfficialAccount {
+  accountId: string;
+  appId?: string;
+  displayName: string;
+  enabled: boolean;
+  integrationId: string;
+  qrLoginEnabled: boolean;
+  verificationStatus?: string;
+  webhook?: SdkworkIamOauthScanLoginWebhookInfo;
+}
+
+export interface SdkworkIamOauthScanLoginSettings {
+  defaultQrMode: "auto" | SdkworkIamOauthScanLoginQrMode;
+  officialAccounts: SdkworkIamOauthScanLoginOfficialAccount[];
+  urlLogin: {
+    enabled: boolean;
+    h5LoginOrigin: string;
+  };
+}
+
+export interface SdkworkIamOauthScanLoginSettingsDraft {
+  defaultQrMode?: "auto" | SdkworkIamOauthScanLoginQrMode;
+  urlLogin?: {
+    enabled?: boolean;
+    h5LoginOrigin?: string;
+  };
+}
+
+export interface SdkworkIamOauthScanLoginPreview {
+  expireSeconds?: number;
+  qrCode?: string;
+  qrContent: string;
+  qrMode: SdkworkIamOauthScanLoginQrMode;
+}
+
 export interface SdkworkIamOauthAdminController {
   getState(): SdkworkIamOauthAdminState;
   load(
     resourceKeys?: readonly (keyof SdkworkIamOauthAdminResourceSnapshot)[],
   ): Promise<SdkworkIamOauthAdminResourceSnapshot>;
   loadMoreResource(resourceKey: keyof SdkworkIamOauthAdminResourceSnapshot): Promise<unknown[]>;
+  listPageResource(
+    resourceKey: keyof SdkworkIamOauthAdminResourceSnapshot,
+    params: Record<string, unknown>,
+  ): Promise<unknown[]>;
+  createAccountSetup(
+    kind: SdkworkIamOauthAccountKind,
+    body: SdkworkIamOauthAccountSetupDraft,
+  ): Promise<unknown>;
+  setResourceAccountEnabled(
+    resourceAccountId: string,
+    integrationId: string,
+    enabled: boolean,
+  ): Promise<unknown>;
   createIntegration(body: SdkworkIamOauthIntegrationDraft): Promise<unknown>;
   createClient(body: SdkworkIamOauthClientDraft): Promise<unknown>;
   createSecret(body: SdkworkIamOauthSecretDraft): Promise<unknown>;
@@ -231,6 +343,10 @@ export interface SdkworkIamOauthAdminController {
   updateWebhookConfig(webhookConfigId: string, enabled: boolean): Promise<unknown>;
   updateOperatorPlatform(operatorPlatformId: string, enabled: boolean): Promise<unknown>;
   updateResourceAccount(resourceAccountId: string, enabled: boolean): Promise<unknown>;
+  updateAccountConfig(
+    resourceAccountId: string,
+    config: SdkworkIamOauthAccountConfig,
+  ): Promise<unknown>;
   updateOperationalResource(resourceId: string, enabled: boolean): Promise<unknown>;
   updateScopeProfileStatus(scopeProfileId: string, active: boolean): Promise<unknown>;
   updateClaimMappingStatus(mappingId: string, active: boolean): Promise<unknown>;
@@ -251,18 +367,42 @@ export interface SdkworkIamOauthAdminController {
   deleteOperationalResource(resourceId: string): Promise<unknown>;
   loadRelyingPartyConfig(tenantId: string, tenantApplicationId: string): Promise<SdkworkIamOauthRelyingPartyDraft>;
   updateRelyingParty(body: SdkworkIamOauthRelyingPartyDraft): Promise<unknown>;
+  loadScanLoginSettings(): Promise<SdkworkIamOauthScanLoginSettings>;
+  updateScanLoginSettings(body: SdkworkIamOauthScanLoginSettingsDraft): Promise<SdkworkIamOauthScanLoginSettings>;
+  generateScanLoginPreview(
+    qrMode: SdkworkIamOauthScanLoginQrMode,
+    accountId?: string,
+  ): Promise<SdkworkIamOauthScanLoginPreview>;
+  setResourceAccountQrLogin(resourceAccountId: string, enabled: boolean): Promise<unknown>;
 }
 
 export interface SdkworkIamOauthAdminSettingsProps {
   controller: SdkworkIamOauthAdminController;
-  description?: string;
   tab?: SdkworkIamOauthAdminTab;
-  title?: string;
   view?: SdkworkIamOauthAdminView;
 }
 
 export interface SdkworkIamOauthAdminWorkspaceProps {
   controller: SdkworkIamOauthAdminController;
-  description?: string;
-  title?: string;
+}
+
+/**
+ * Shared props contract for composed admin pages (view/tab/all surfaces).
+ */
+export type SdkworkIamOauthAdminPageProps = Pick<
+  SdkworkIamOauthAdminSettingsProps,
+  "controller"
+>;
+
+/**
+ * Shared props contract for the per-resource settings sections. Sections
+ * receive list data, controller, busy state, and the page-level refresh hook
+ * from their composing page; they never create HTTP clients.
+ */
+export interface SdkworkIamOauthAdminSectionProps {
+  controller: SdkworkIamOauthAdminController;
+  disabled: boolean;
+  listPageInfo?: Partial<Record<keyof SdkworkIamOauthAdminResourceSnapshot, SdkWorkPageInfo>>;
+  onChanged: () => void;
+  status?: SdkworkIamOauthAdminState["status"];
 }

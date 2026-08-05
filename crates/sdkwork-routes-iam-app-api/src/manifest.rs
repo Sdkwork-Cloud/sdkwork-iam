@@ -105,6 +105,12 @@ const IAM_APP_API_ROUTES: &[HttpRoute] = &[
         "deviceAuthorizations.sessionExchanges.create",
     ),
     HttpRoute::credential_entry_bootstrap(
+        HttpMethod::Post,
+        "/app/v3/api/oauth/device_authorizations/{deviceAuthorizationId}/session_completions",
+        "oauth",
+        "deviceAuthorizations.sessionCompletions.create",
+    ),
+    HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/oauth/callbacks/{providerCode}",
         "oauth",

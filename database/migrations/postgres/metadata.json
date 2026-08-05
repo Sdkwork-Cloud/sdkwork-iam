@@ -48,6 +48,15 @@
       "lock": "access-exclusive",
       "lock_timeout": "2s",
       "statement_timeout": "30s"
+    },
+    "0014_iam_scan_login_config.up.sql": {
+      "engine": "postgres",
+      "reversible": "true",
+      "rollback": "down-migration",
+      "transactional": "true",
+      "lock": "access-exclusive",
+      "lock_timeout": "2s",
+      "statement_timeout": "30s"
     }
   }
 }

@@ -125,7 +125,6 @@ export interface SdkworkIamTenantController {
 
 export interface SdkworkIamTenantAdminWorkspaceProps {
   controller: SdkworkIamTenantController;
-  description?: string;
   permissions?: {
     members: {
       create: boolean;
@@ -139,5 +138,4 @@ export interface SdkworkIamTenantAdminWorkspaceProps {
       update: boolean;
     };
   };
-  title?: string;
 }

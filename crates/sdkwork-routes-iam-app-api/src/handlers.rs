@@ -115,6 +115,10 @@ pub fn oauth_device_authorization_routes() -> Router<LocalIamState> {
             "/app/v3/api/oauth/device_authorizations/{device_authorization_id}/session_exchanges",
             post(create_oauth_device_authorization_session_exchange),
         )
+        .route(
+            "/app/v3/api/oauth/device_authorizations/{device_authorization_id}/session_completions",
+            post(create_oauth_device_authorization_session_completion),
+        )
 }
 
 fn build_sdkwork_iam_app_api_router_with_state(state: LocalIamState) -> Router {
@@ -2862,19 +2866,49 @@ async fn create_oauth_device_authorization(
         );
     }
 
+    let qr_mode = resolve_oauth_device_authorization_qr_mode(&body);
     let session_key = generate_opaque_token("qr");
     let poll_secret = generate_opaque_token("qrpoll");
-    let qr_content =
+    let fallback_url =
         build_oauth_device_authorization_entry_url(&headers, &session_key, &purpose, &poll_secret);
+    let (qr_content, qr_content_mode, qr_image_url) = if qr_mode == "official_account" {
+        match create_official_account_qr_login(&state, &body, &session_key).await {
+            Ok(image_url) => (
+                image_url.clone(),
+                "official_account_image".to_string(),
+                Some(image_url),
+            ),
+            Err(error) => {
+                return appbase_error(
+                    StatusCode::CONFLICT,
+                    "iam_oauth_official_account_qr_unavailable",
+                    &error,
+                );
+            }
+        }
+    } else {
+        (
+            build_oauth_device_authorization_h5_entry_url(
+                &headers,
+                &session_key,
+                &purpose,
+                &poll_secret,
+            ),
+            "url".to_string(),
+            None,
+        )
+    };
     let qr_session = LocalQrSession {
         completed_session: None,
         expire_time: current_millis() + 300_000,
-        fallback_url: qr_content.clone(),
+        fallback_url,
+        follow_login: None,
         organization_selection: None,
         poll_secret,
         purpose,
         qr_content,
-        qr_content_mode: "fallback_url".to_string(),
+        qr_content_mode,
+        qr_image_url,
         session_exchanged: false,
         session_key,
         status: "pending".to_string(),
@@ -2892,6 +2926,84 @@ async fn create_oauth_device_authorization(
     appbase_ok(qr_session_create_json(&qr_session))
 }
 
+/// Resolves the requested QR login mode.
+///
+/// `qrMode` may be `url` (H5 mobile login URL) or `official_account` (WeChat
+/// parameterized temp QR of the default official account). When omitted the
+/// `SDKWORK_IAM_DEFAULT_QR_LOGIN_MODE` env override decides; the default is
+/// `url` so existing login pages keep working without configuration.
+fn resolve_oauth_device_authorization_qr_mode(body: &Value) -> String {
+    let requested = optional_string(body.get("qrMode"))
+        .or_else(|| optional_string(body.get("qr_mode")))
+        .unwrap_or_else(|| {
+            std::env::var("SDKWORK_IAM_DEFAULT_QR_LOGIN_MODE")
+                .ok()
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| "url".to_string())
+        });
+    match requested.as_str() {
+        "official_account" => "official_account".to_string(),
+        _ => "url".to_string(),
+    }
+}
+
+/// Creates the WeChat parameterized temp QR for the default (or requested)
+/// official account and returns its image URL.
+async fn create_official_account_qr_login(
+    state: &LocalIamState,
+    body: &Value,
+    session_key: &str,
+) -> Result<String, String> {
+    let pg = postgres_pool_or_error(state)
+        .map_err(|_| "postgres pool is unavailable".to_string())?;
+    let account_id = optional_string(body.get("accountId"));
+    let tenant_filter = optional_string(body.get("tenantId")).or_else(|| {
+        std::env::var("SDKWORK_IAM_DEFAULT_TENANT")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+    });
+    let row = sqlx::query(
+        "SELECT ra.integration_id, ra.tenant_id \
+         FROM iam_oauth_resource_account ra \
+         WHERE ra.provider_code = 'wechat' \
+           AND ra.resource_account_kind = 'official_account' \
+           AND ra.enabled = 1 AND ra.status = 'active' \
+           AND ra.qr_default_enabled = 1 \
+           AND ($1::text IS NULL OR ra.id = $1) \
+           AND ($2::text IS NULL OR ra.tenant_id = $2) \
+         ORDER BY ra.updated_at DESC \
+         LIMIT 1",
+    )
+    .bind(account_id)
+    .bind(tenant_filter)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("find official account QR login account failed: {error}"))?;
+    let Some(row) = row else {
+        return Err(
+            "official account scan login is not configured; enable an official account in admin first"
+                .to_string(),
+        );
+    };
+    let integration_id: String = row.get(0);
+    let tenant_id: String = row.get(1);
+    let Some(ctx) = sdkwork_iam_web_adapter::load_oauth_integration_exchange_context_for_integration(
+        pg,
+        &tenant_id,
+        &integration_id,
+    )
+    .await?
+    else {
+        return Err("official account integration is not configured".to_string());
+    };
+    let qr =
+        sdkwork_iam_web_adapter::create_wechat_mp_temp_qr_code(pg, &ctx.provider_client_id, &ctx.client_secret, session_key, 300)
+            .await?;
+    Ok(qr.image_url)
+}
+
 async fn retrieve_oauth_device_authorization(
     State(state): State<LocalIamState>,
     Path(device_authorization_id): Path<String>,
@@ -2904,7 +3016,15 @@ async fn retrieve_oauth_device_authorization(
     )
     .await
     {
-        Ok(Some(session)) => appbase_ok(qr_session_poll_json(&session)),
+        Ok(Some(session)) => {
+            if session.status == "follow_confirmed"
+                && session.completed_session.is_none()
+                && !session.session_exchanged
+            {
+                return complete_follow_login_scan(&state, &device_authorization_id, &session).await;
+            }
+            appbase_ok(qr_session_poll_json(&session))
+        }
         Ok(None) => appbase_error(
             StatusCode::NOT_FOUND,
             "iam_oauth_device_authorization_not_found",
@@ -2916,6 +3036,234 @@ async fn retrieve_oauth_device_authorization(
             &error,
         ),
     }
+}
+
+/// Lazily completes a QR session confirmed by the WeChat official-account
+/// webhook (`follow_confirmed`). The first polling request flips the status
+/// to `resolving` inside the artifact transaction, resolves/creates the IAM
+/// user for the openid (subject identity matches web-authorization login),
+/// and stores the authenticated session (or the login-context challenge).
+/// On resolution failure the session flips back so the next poll retries.
+async fn complete_follow_login_scan(
+    state: &LocalIamState,
+    device_authorization_id: &str,
+    _current: &LocalQrSession,
+) -> Response {
+    let claimed = match crate::ephemeral_pool::mutate_qr_session(
+        &state.pool,
+        LOCAL_EPHEMERAL_SCOPE,
+        device_authorization_id,
+        |session| {
+            if session.status == "follow_confirmed" {
+                session.status = "resolving".to_string();
+            }
+        },
+    )
+    .await
+    {
+        Ok(session) => session,
+        Err(error) => {
+            return appbase_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "iam_ephemeral_unavailable",
+                &error,
+            );
+        }
+    };
+    let Some(claimed) = claimed else {
+        return appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_oauth_device_authorization_not_found",
+            "invalid or expired OAuth device authorization",
+        );
+    };
+    // Another poll won the race (already resolving/completed) or a completion
+    // raced ahead; surface the current poll payload as-is.
+    if claimed.status != "resolving" {
+        return appbase_ok(qr_session_poll_json(&claimed));
+    }
+
+    let follow = claimed.follow_login.clone().unwrap_or_default();
+    let openid = optional_string(follow.get("openid"));
+    let tenant_id = optional_string(follow.get("tenantId"));
+    let integration_id = optional_string(follow.get("integrationId"));
+    let app_id = optional_string(follow.get("appId")).unwrap_or_else(|| "0".to_string());
+    let Some(openid) = openid else {
+        return reset_follow_login_and_error(
+            &state,
+            device_authorization_id,
+            "iam_oauth_follow_login_incomplete",
+            "follow login event did not carry a user openid",
+        )
+        .await;
+    };
+    let Some(tenant_id) = tenant_id else {
+        return reset_follow_login_and_error(
+            &state,
+            device_authorization_id,
+            "iam_oauth_follow_login_incomplete",
+            "follow login event did not carry a tenant",
+        )
+        .await;
+    };
+    let Some(integration_id) = integration_id else {
+        return reset_follow_login_and_error(
+            &state,
+            device_authorization_id,
+            "iam_oauth_follow_login_incomplete",
+            "follow login event did not carry an integration",
+        )
+        .await;
+    };
+
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let policy = effective_account_binding_policy(state, pg, Some(&tenant_id)).await;
+    let profile = sdkwork_iam_web_adapter::LocalOAuthProviderProfile {
+        avatar: None,
+        email: None,
+        name: None,
+        open_id: Some(openid.clone()),
+        phone: None,
+        provider: "wechat".to_string(),
+        subject: openid,
+        union_id: None,
+        union_scope_id: None,
+    };
+    let user = match crate::oauth_login::resolve_or_create_oauth_user(
+        pg,
+        &policy,
+        &tenant_id,
+        &profile,
+        &integration_id,
+    )
+    .await
+    {
+        Ok(user) => user,
+        Err(error) => {
+            return reset_follow_login_and_error(
+                &state,
+                device_authorization_id,
+                "iam_oauth_follow_login_failed",
+                &error,
+            )
+            .await;
+        }
+    };
+    crate::security_events::record_login_success(
+        pg,
+        &user.tenant_id,
+        &user.id,
+        "oauth:wechat:follow",
+        "oauth",
+    )
+    .await;
+    crate::audit_events::record_login_success(
+        pg,
+        &state.config,
+        &user.id,
+        "oauth:wechat:follow",
+        "oauth",
+        &user.tenant_id,
+    )
+    .await;
+
+    match create_authenticated_session_or_challenge(
+        state,
+        &user,
+        Some(device_authorization_id.to_string()),
+        &app_id,
+    )
+    .await
+    {
+        AuthenticatedSessionOutcome::Session(session) => {
+            let session_for_qr = session.clone();
+            match crate::ephemeral_pool::mutate_qr_session(
+                &state.pool,
+                LOCAL_EPHEMERAL_SCOPE,
+                device_authorization_id,
+                |qr_session| {
+                    qr_session.completed_session = Some(session_for_qr);
+                    qr_session.organization_selection = None;
+                    qr_session.status = "completed".to_string();
+                },
+            )
+            .await
+            {
+                Ok(Some(qr_session)) => appbase_ok(qr_session_poll_json(&qr_session)),
+                Ok(None) => appbase_error(
+                    StatusCode::NOT_FOUND,
+                    "iam_oauth_device_authorization_not_found",
+                    "invalid or expired OAuth device authorization",
+                ),
+                Err(error) => appbase_error(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "iam_ephemeral_unavailable",
+                    &error,
+                ),
+            }
+        }
+        AuthenticatedSessionOutcome::Challenge(challenge) => {
+            let challenge_for_qr = challenge.clone();
+            match crate::ephemeral_pool::mutate_qr_session(
+                &state.pool,
+                LOCAL_EPHEMERAL_SCOPE,
+                device_authorization_id,
+                |qr_session| {
+                    qr_session.completed_session = None;
+                    qr_session.organization_selection = Some(challenge_for_qr);
+                    qr_session.status = "login_context_selection_required".to_string();
+                },
+            )
+            .await
+            {
+                Ok(Some(qr_session)) => appbase_ok(qr_session_poll_json(&qr_session)),
+                Ok(None) => appbase_error(
+                    StatusCode::NOT_FOUND,
+                    "iam_oauth_device_authorization_not_found",
+                    "invalid or expired OAuth device authorization",
+                ),
+                Err(error) => appbase_error(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "iam_ephemeral_unavailable",
+                    &error,
+                ),
+            }
+        }
+        AuthenticatedSessionOutcome::Error(response) => {
+            let _ = crate::ephemeral_pool::mutate_qr_session(
+                &state.pool,
+                LOCAL_EPHEMERAL_SCOPE,
+                device_authorization_id,
+                |qr_session| {
+                    qr_session.status = "follow_confirmed".to_string();
+                },
+            )
+            .await;
+            response
+        }
+    }
+}
+
+async fn reset_follow_login_and_error(
+    state: &LocalIamState,
+    device_authorization_id: &str,
+    error_code: &str,
+    message: &str,
+) -> Response {
+    let _ = crate::ephemeral_pool::mutate_qr_session(
+        &state.pool,
+        LOCAL_EPHEMERAL_SCOPE,
+        device_authorization_id,
+        |qr_session| {
+            qr_session.status = "follow_confirmed".to_string();
+        },
+    )
+    .await;
+    appbase_error(StatusCode::BAD_REQUEST, error_code, message)
 }
 
 async fn create_oauth_device_authorization_scan(
@@ -3071,6 +3419,144 @@ async fn create_oauth_device_authorization_session_exchange(
             "iam_ephemeral_unavailable",
             &error,
         ),
+    }
+}
+
+/// Authenticated completion for URL scan login: the mobile H5 page logs in
+/// (password or WeChat authorization), then completes the QR session with
+/// its session token and the session `pollSecret`. The QR polling side sees
+/// `sessionReady` and exchanges the session.
+async fn create_oauth_device_authorization_session_completion(
+    State(state): State<LocalIamState>,
+    Path(device_authorization_id): Path<String>,
+    ctx: WebRequestContext,
+    Json(body): Json<Value>,
+) -> Response {
+    let Some(poll_secret) = optional_string(body.get("pollSecret"))
+        .or_else(|| optional_string(body.get("poll_secret")))
+    else {
+        return appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_poll_secret_required",
+            "poll secret is required",
+        );
+    };
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Some(session) = resolve_session_from_context(pg, &ctx).await else {
+        return iam_session_required_error();
+    };
+    let runtime_app_id =
+        match resolve_credential_entry_runtime_app(pg, &ctx, &session.user.tenant_id).await {
+            Ok(app_id) => app_id,
+            Err(response) => return response,
+        };
+
+    let _ = crate::ephemeral_pool::cleanup_expired_artifacts(&state.pool).await;
+    let qr_session = match crate::ephemeral_pool::get_qr_session(
+        &state.pool,
+        LOCAL_EPHEMERAL_SCOPE,
+        &device_authorization_id,
+    )
+    .await
+    {
+        Ok(Some(session)) => session,
+        Ok(None) => {
+            return appbase_error(
+                StatusCode::NOT_FOUND,
+                "iam_oauth_device_authorization_not_found",
+                "invalid or expired OAuth device authorization",
+            );
+        }
+        Err(error) => {
+            return appbase_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "iam_ephemeral_unavailable",
+                &error,
+            );
+        }
+    };
+    if !secure_compare_secrets(&qr_session.poll_secret, &poll_secret) {
+        return appbase_error(
+            StatusCode::UNAUTHORIZED,
+            "iam_poll_secret_invalid",
+            "invalid poll secret",
+        );
+    }
+    if qr_session.session_exchanged {
+        return appbase_error(
+            StatusCode::UNAUTHORIZED,
+            "iam_poll_secret_consumed",
+            "session exchange already completed",
+        );
+    }
+
+    match create_authenticated_session_or_challenge(
+        &state,
+        &session.user,
+        Some(device_authorization_id.clone()),
+        &runtime_app_id,
+    )
+    .await
+    {
+        AuthenticatedSessionOutcome::Session(completed) => {
+            let session_for_qr = completed.clone();
+            match crate::ephemeral_pool::mutate_qr_session(
+                &state.pool,
+                LOCAL_EPHEMERAL_SCOPE,
+                &device_authorization_id,
+                |qr_session| {
+                    qr_session.completed_session = Some(session_for_qr);
+                    qr_session.organization_selection = None;
+                    qr_session.status = "completed".to_string();
+                },
+            )
+            .await
+            {
+                Ok(Some(qr_session)) => appbase_ok(qr_session_completion_json(&qr_session)),
+                Ok(None) => appbase_error(
+                    StatusCode::NOT_FOUND,
+                    "iam_oauth_device_authorization_not_found",
+                    "invalid or expired OAuth device authorization",
+                ),
+                Err(error) => appbase_error(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "iam_ephemeral_unavailable",
+                    &error,
+                ),
+            }
+        }
+        AuthenticatedSessionOutcome::Challenge(challenge) => {
+            let challenge_for_qr = challenge.clone();
+            match crate::ephemeral_pool::mutate_qr_session(
+                &state.pool,
+                LOCAL_EPHEMERAL_SCOPE,
+                &device_authorization_id,
+                |qr_session| {
+                    qr_session.completed_session = None;
+                    qr_session.organization_selection = Some(challenge_for_qr);
+                    qr_session.status = "login_context_selection_required".to_string();
+                },
+            )
+            .await
+            {
+                Ok(Some(qr_session)) => appbase_ok(qr_session_poll_json(&qr_session)),
+                Ok(None) => appbase_error(
+                    StatusCode::NOT_FOUND,
+                    "iam_oauth_device_authorization_not_found",
+                    "invalid or expired OAuth device authorization",
+                ),
+                Err(error) => appbase_error(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "iam_ephemeral_unavailable",
+                    &error,
+                ),
+            }
+        }
+        AuthenticatedSessionOutcome::Error(response) => response,
     }
 }
 

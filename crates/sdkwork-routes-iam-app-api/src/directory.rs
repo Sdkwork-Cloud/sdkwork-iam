@@ -954,6 +954,7 @@ fn qr_session_base_json(s: &LocalQrSession) -> Value {
         "expiresAt": s.expire_time.to_string(),
         "fallbackUrl": s.fallback_url,
         "purpose": s.purpose,
+        "qrCode": s.qr_image_url,
         "qrContent": {"content": s.qr_content, "mode": s.qr_content_mode},
         "sessionKey": s.session_key,
         "status": s.status,
@@ -1044,6 +1045,42 @@ pub(crate) fn build_oauth_device_authorization_entry_url(
         "{base}#poll_secret={}",
         percent_encode_query_component(poll_secret),
     )
+}
+
+/// Builds the H5 mobile login entry URL used as the QR content for the
+/// `url` scan-login mode. The H5 page completes the QR session with an
+/// authenticated completion call after a successful password or WeChat
+/// authorization login.
+pub(crate) fn build_oauth_device_authorization_h5_entry_url(
+    headers: &HeaderMap,
+    session_key: &str,
+    purpose: &str,
+    poll_secret: &str,
+) -> String {
+    let origin = resolve_oauth_h5_login_entry_origin(headers);
+    let base = format!(
+        "{origin}/auth/login?session_key={}&purpose={}&scan_source=qr",
+        percent_encode_query_component(session_key),
+        percent_encode_query_component(purpose),
+    );
+    if poll_secret.trim().is_empty() {
+        return base;
+    }
+    format!(
+        "{base}#poll_secret={}",
+        percent_encode_query_component(poll_secret),
+    )
+}
+
+/// Resolves the H5 mobile login page origin for URL scan login.
+///
+/// Priority: `SDKWORK_IAM_H5_LOGIN_ORIGIN` env override, then the shared QR
+/// entry origin (which honors `SDKWORK_IAM_QR_ENTRY_ORIGIN` and friends).
+pub(crate) fn resolve_oauth_h5_login_entry_origin(headers: &HeaderMap) -> String {
+    if let Some(o) = first_env_value(&["SDKWORK_IAM_H5_LOGIN_ORIGIN"]) {
+        return trim_trailing_slash(&o);
+    }
+    resolve_oauth_device_authorization_entry_origin(headers)
 }
 
 pub(crate) fn resolve_oauth_device_authorization_entry_origin(headers: &HeaderMap) -> String {

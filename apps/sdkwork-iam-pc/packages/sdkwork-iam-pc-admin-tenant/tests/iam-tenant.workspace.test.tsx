@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SdkworkIamTenantAdminWorkspace } from "../src";
+import { SdkworkI18nProvider } from "@sdkwork/i18n-pc-react";
 
 function createController() {
   return {
@@ -19,13 +20,15 @@ describe("tenant administration workspace", () => {
   it("uses server-side tenant search and keeps read-only operators out of mutation flows", async () => {
     const controller = createController();
     render(
-      <SdkworkIamTenantAdminWorkspace
-        controller={controller as never}
-        permissions={{
-          members: { create: false, delete: false, read: false, update: false },
-          tenants: { create: false, delete: false, update: false },
-        }}
-      />,
+      <SdkworkI18nProvider locale="zh-CN">
+        <SdkworkIamTenantAdminWorkspace
+          controller={controller as never}
+          permissions={{
+            members: { create: false, delete: false, read: false, update: false },
+            tenants: { create: false, delete: false, update: false },
+          }}
+        />
+      </SdkworkI18nProvider>,
     );
 
     await screen.findByText("Acme");
@@ -35,7 +38,7 @@ describe("tenant administration workspace", () => {
 
     fireEvent.change(screen.getByRole("textbox", { name: "搜索租户" }), { target: { value: "Acme" } });
     fireEvent.click(screen.getByRole("button", { name: "搜索" }));
-    await waitFor(() => expect(controller.listTenants).toHaveBeenLastCalledWith({ q: "Acme" }));
+    await waitFor(() => expect(controller.listTenants).toHaveBeenLastCalledWith({ q: "Acme", page: 1, page_size: 20 }));
 
     fireEvent.click(screen.getByRole("button", { name: "管理" }));
     await screen.findByText("租户应用");

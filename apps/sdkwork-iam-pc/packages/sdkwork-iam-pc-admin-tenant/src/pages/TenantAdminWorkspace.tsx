@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AppWindow, Building2, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
-import { SdkworkIamListPaginationControls } from "@sdkwork/iam-pc-admin-core";
+import { CatalogPagination } from "@sdkwork/iam-pc-admin-core";
 import {
   Button,
   ConfirmDialog,
@@ -16,7 +16,11 @@ import {
   IconButton,
   Input,
   SegmentedControl,
-  SettingsSection,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   StatusBadge,
   StatusNotice,
 } from "@sdkwork/ui-pc-react";
@@ -38,12 +42,10 @@ const emptyMemberDraft = (): SdkworkIamTenantMemberDraft => ({ roleCode: "", use
 
 export function SdkworkIamTenantAdminWorkspace({
   controller,
-  description,
   permissions = {
     members: { create: true, delete: true, read: true, update: true },
     tenants: { create: true, delete: true, update: true },
   },
-  title,
 }: SdkworkIamTenantAdminWorkspaceProps) {
   const messages = useSdkworkIamTenantAdminMessages();
   const initialState = controller.getState();
@@ -65,18 +67,25 @@ export function SdkworkIamTenantAdminWorkspace({
   const [notice, setNotice] = useState<string>();
   const [searchQuery, setSearchQuery] = useState("");
   const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
+  const [tenantPage, setTenantPage] = useState(1);
+  const [tenantPageSize, setTenantPageSize] = useState(20);
+  const [memberPage, setMemberPage] = useState(1);
+  const [memberPageSize, setMemberPageSize] = useState(20);
 
   const syncState = () => setListPageInfo(controller.getState().listPageInfo);
 
-  const refreshTenants = async (query = appliedSearchQuery) => {
-    const items = await controller.listTenants(query ? { q: query } : undefined);
+  const refreshTenants = async (query = appliedSearchQuery, nextPage = tenantPage, nextPageSize = tenantPageSize) => {
+    const params: Record<string, unknown> = { page: nextPage, page_size: nextPageSize };
+    if (query) params.q = query;
+    const items = await controller.listTenants(params);
     setTenants(items);
     syncState();
     return items;
   };
 
-  const refreshMembers = async (tenantId: string) => {
-    const items = await controller.listTenantMembers(tenantId);
+  const refreshMembers = async (tenantId: string, nextPage = memberPage, nextPageSize = memberPageSize) => {
+    const params: Record<string, unknown> = { page: nextPage, page_size: nextPageSize };
+    const items = await controller.listTenantMembers(tenantId, params);
     setMembers(items);
     syncState();
     return items;
@@ -93,10 +102,51 @@ export function SdkworkIamTenantAdminWorkspace({
     event.preventDefault();
     const query = searchQuery.trim();
     setAppliedSearchQuery(query);
+    setTenantPage(1);
     setLoading(true);
     setError(undefined);
-    void refreshTenants(query)
+    void refreshTenants(query, 1, tenantPageSize)
       .catch((loadError) => setError(toErrorMessage(loadError, messages.tenants.notices.loadError)))
+      .finally(() => setLoading(false));
+  };
+
+  const changeTenantPage = (nextPage: number) => {
+    setTenantPage(nextPage);
+    setLoading(true);
+    setError(undefined);
+    void refreshTenants(appliedSearchQuery, nextPage)
+      .catch((loadError) => setError(toErrorMessage(loadError, messages.tenants.notices.loadError)))
+      .finally(() => setLoading(false));
+  };
+
+  const changeTenantPageSize = (nextPageSize: number) => {
+    setTenantPageSize(nextPageSize);
+    setTenantPage(1);
+    setLoading(true);
+    setError(undefined);
+    void refreshTenants(appliedSearchQuery, 1, nextPageSize)
+      .catch((loadError) => setError(toErrorMessage(loadError, messages.tenants.notices.loadError)))
+      .finally(() => setLoading(false));
+  };
+
+  const changeMemberPage = (nextPage: number) => {
+    if (!selectedTenant) return;
+    setMemberPage(nextPage);
+    setLoading(true);
+    setError(undefined);
+    void refreshMembers(selectedTenant.tenantId, nextPage)
+      .catch((loadError) => setError(toErrorMessage(loadError, messages.members.notices.loadError)))
+      .finally(() => setLoading(false));
+  };
+
+  const changeMemberPageSize = (nextPageSize: number) => {
+    if (!selectedTenant) return;
+    setMemberPageSize(nextPageSize);
+    setMemberPage(1);
+    setLoading(true);
+    setError(undefined);
+    void refreshMembers(selectedTenant.tenantId, 1, nextPageSize)
+      .catch((loadError) => setError(toErrorMessage(loadError, messages.members.notices.loadError)))
       .finally(() => setLoading(false));
   };
 
@@ -137,8 +187,9 @@ export function SdkworkIamTenantAdminWorkspace({
     if (!selectedTenant || (value !== "applications" && value !== "members")) return;
     setActiveTab(value);
     if (value === "members") {
+      setMemberPage(1);
       setLoading(true);
-      void refreshMembers(selectedTenant.tenantId)
+      void refreshMembers(selectedTenant.tenantId, 1, memberPageSize)
         .catch((loadError) => setError(toErrorMessage(loadError, messages.members.notices.loadError)))
         .finally(() => setLoading(false));
     }
@@ -152,7 +203,7 @@ export function SdkworkIamTenantAdminWorkspace({
       id: "status",
       header: messages.tenants.table.status,
       cell: (tenant) => tenant.status
-        ? <StatusBadge label={tenant.status} status={tenant.status} />
+        ? <StatusBadge label={formatEnumLabel(messages.tenants.statuses, tenant.status)} status={tenant.status} />
         : "-",
     },
   ], [messages]);
@@ -165,28 +216,33 @@ export function SdkworkIamTenantAdminWorkspace({
       id: "status",
       header: messages.members.table.status,
       cell: (member) => member.status
-        ? <StatusBadge label={member.status} status={member.status} />
+        ? <StatusBadge label={formatEnumLabel(messages.members.statuses, member.status)} status={member.status} />
         : "-",
     },
   ], [messages]);
 
   return (
-    <div className="space-y-6">
-      <SettingsSection description={description ?? messages.tenants.description} title={title ?? messages.tenants.title}>
+    <div className="flex h-full min-h-0 flex-col gap-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
         {error ? <StatusNotice tone="danger">{error}</StatusNotice> : null}
         {notice ? <StatusNotice tone="success">{notice}</StatusNotice> : null}
 
         <DataTable
+          className={selectedTenant ? "max-h-[40vh]" : "min-h-0 flex-1"}
           columns={tenantColumns}
           emptyDescription={messages.tenants.emptyDescription}
           emptyTitle={messages.tenants.emptyTitle}
           footer={(
-            <SdkworkIamListPaginationControls
+            <CatalogPagination
               busy={busy}
-              onLoadMore={() => void runAction(async () => {
-                setTenants(await controller.loadMoreTenants());
-                syncState();
-              }, messages.tenants.loadedMore, messages.tenants.notices.loadError)}
+              copy={{
+                next: messages.pagination.next,
+                pageSize: messages.pagination.pageSize,
+                previous: messages.pagination.previous,
+                total: messages.pagination.total,
+              }}
+              onPageChange={changeTenantPage}
+              onPageSizeChange={changeTenantPageSize}
               pageInfo={listPageInfo?.tenants}
             />
           )}
@@ -211,7 +267,12 @@ export function SdkworkIamTenantAdminWorkspace({
             </div>
           )}
           rows={[...tenants]}
-          title={messages.tenants.title}
+          slotProps={{
+            surface: { className: "flex min-h-0 flex-1 flex-col" },
+            viewport: { className: "min-h-0 flex-1" },
+            footer: { className: "shrink-0" },
+          }}
+          stickyHeader
           toolbar={(
             <div className="flex w-full flex-wrap items-center gap-2">
               <form className="flex min-w-[16rem] flex-1 items-center gap-2" onSubmit={submitSearch} role="search">
@@ -245,7 +306,7 @@ export function SdkworkIamTenantAdminWorkspace({
         />
 
         {selectedTenant ? (
-          <section className="mt-6 border-t border-[var(--sdk-color-border-subtle)] pt-5">
+          <section className="flex min-h-0 flex-1 flex-col border-t border-[var(--sdk-color-border-subtle)] pt-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--sdk-radius-control)] bg-[var(--sdk-color-surface-panel-muted)] text-[var(--sdk-color-text-secondary)]">
@@ -275,21 +336,26 @@ export function SdkworkIamTenantAdminWorkspace({
               />
             </div>
 
-            <div className="mt-5">
+            <div className="mt-5 flex min-h-0 flex-1 flex-col">
               {activeTab === "applications"
                 ? <TenantApplicationsPanel controller={controller} tenant={selectedTenant} />
                 : (
                   <DataTable
+                    className="min-h-0 flex-1"
                     columns={memberColumns}
                     emptyDescription={messages.members.emptyDescription}
                     emptyTitle={messages.members.emptyTitle}
                     footer={(
-                      <SdkworkIamListPaginationControls
+                      <CatalogPagination
                         busy={busy}
-                        onLoadMore={() => void runAction(async () => {
-                          setMembers(await controller.loadMoreTenantMembers(selectedTenant.tenantId));
-                          syncState();
-                        }, messages.members.loadedMore, messages.members.notices.loadError)}
+                        copy={{
+                          next: messages.pagination.next,
+                          pageSize: messages.pagination.pageSize,
+                          previous: messages.pagination.previous,
+                          total: messages.pagination.total,
+                        }}
+                        onPageChange={changeMemberPage}
+                        onPageSizeChange={changeMemberPageSize}
                         pageInfo={listPageInfo?.members}
                       />
                     )}
@@ -324,6 +390,12 @@ export function SdkworkIamTenantAdminWorkspace({
                       </div>
                     ) : undefined}
                     rows={[...members]}
+                    slotProps={{
+                      surface: { className: "flex min-h-0 flex-1 flex-col" },
+                      viewport: { className: "min-h-0 flex-1" },
+                      footer: { className: "shrink-0" },
+                    }}
+                    stickyHeader
                     title={template(messages.members.titleTemplate, { name: selectedTenant.name })}
                     toolbar={permissions.members.create ? (
                       <Button onClick={() => {
@@ -340,7 +412,7 @@ export function SdkworkIamTenantAdminWorkspace({
             </div>
           </section>
         ) : null}
-      </SettingsSection>
+      </div>
 
       <TenantDrawer
         busy={busy}
@@ -442,7 +514,7 @@ function TenantDrawer({ busy, draft, mode, onDraftChange, onOpenChange, onSubmit
         <DrawerBody className="space-y-4">
           <Field label={messages.tenants.drawer.name} onChange={(name) => onDraftChange({ ...draft, name })} value={draft.name} />
           <Field label={messages.tenants.drawer.code} onChange={(code) => onDraftChange({ ...draft, code })} value={draft.code ?? ""} />
-          {editing ? <Field label={messages.tenants.drawer.status} onChange={(status) => onDraftChange({ ...draft, status })} value={draft.status ?? ""} /> : null}
+          {editing ? <TenantStatusField label={messages.tenants.drawer.status} onChange={(status) => onDraftChange({ ...draft, status })} statuses={messages.tenants.statuses} value={draft.status ?? ""} /> : null}
         </DrawerBody>
         <DrawerFooter>
           <Button disabled={busy} onClick={() => onOpenChange(false)} type="button" variant="secondary">{messages.common.cancel}</Button>
@@ -483,6 +555,32 @@ function Field({ disabled, label, onChange, value }: { disabled?: boolean; label
       <Input disabled={disabled} onChange={(event) => onChange(event.target.value)} value={value} />
     </label>
   );
+}
+
+function TenantStatusField({ label, onChange, statuses, value }: { label: string; onChange: (value: string) => void; statuses: { active: string; disabled: string; unknown: string }; value: string }) {
+  const normalized = value.trim().toLowerCase();
+  const options = [
+    ["active", statuses.active],
+    ["disabled", statuses.disabled],
+  ] as const;
+  const currentUnknown = options.some(([optionValue]) => optionValue === normalized) ? undefined : value;
+  return (
+    <label className="block space-y-1.5 text-sm">
+      <span className="font-medium text-[var(--sdk-color-text-primary)]">{label}</span>
+      <Select onValueChange={onChange} value={value}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {options.map(([optionValue, optionLabel]) => <SelectItem key={optionValue} value={optionValue}>{optionLabel}</SelectItem>)}
+          {currentUnknown ? <SelectItem key={currentUnknown} value={currentUnknown}>{formatEnumLabel(statuses, currentUnknown)}</SelectItem> : null}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
+
+function formatEnumLabel(statuses: { active: string; disabled: string; unknown: string }, value: string) {
+  const normalized = value.trim().toLowerCase();
+  return statuses[normalized as keyof typeof statuses] ?? statuses.unknown;
 }
 
 function template(value: string, replacements: Record<string, string>) {

@@ -46,14 +46,12 @@ export interface SdkworkIamUserAdminController {
 
 export interface SdkworkIamUserAdminWorkspaceProps {
   controller: SdkworkIamUserAdminController;
-  description?: string;
   locale?: string | null;
   permissions?: {
     create: boolean;
     delete: boolean;
     update: boolean;
   };
-  title?: string;
 }
 
 export const IAM_PC_ADMIN_USER_ROUTES = {

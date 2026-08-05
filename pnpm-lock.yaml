@@ -30,18 +30,6 @@ catalogs:
     qrcode:
       specifier: ^1.5.4
       version: 1.5.4
-    react:
-      specifier: ^19.2.4
-      version: 19.2.4
-    react-dom:
-      specifier: ^19.2.4
-      version: 19.2.4
-    typescript:
-      specifier: ~6.0.2
-      version: 6.0.3
-    vite-plugin-dts:
-      specifier: ^4.5.4
-      version: 4.5.4
     vitest:
       specifier: ^4.1.8
       version: 4.1.9
@@ -1011,6 +999,9 @@ importers:
 
   apps/sdkwork-iam-pc/packages/sdkwork-iam-pc-admin-oauth:
     dependencies:
+      '@sdkwork/i18n-pc-react':
+        specifier: workspace:*
+        version: link:../../../../../sdkwork-appbase/packages/pc-react/foundation/sdkwork-i18n-pc-react
       '@sdkwork/iam-contracts':
         specifier: workspace:*
         version: link:../../../sdkwork-iam-common/packages/sdkwork-iam-contracts
@@ -1023,6 +1014,9 @@ importers:
       '@sdkwork/ui-pc-react':
         specifier: workspace:*
         version: link:../../../../../sdkwork-ui/sdkwork-ui-pc-react
+      lucide-react:
+        specifier: ^1.7.0
+        version: 1.7.0(react@19.2.4)
       react:
         specifier: '>=18.2.0 <20.0.0'
         version: 19.2.4

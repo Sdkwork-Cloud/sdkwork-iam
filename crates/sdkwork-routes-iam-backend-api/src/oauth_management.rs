@@ -266,7 +266,7 @@ const OPERATOR_PLATFORMS: TenantResourceSpec = TenantResourceSpec {
 
 const RESOURCE_ACCOUNTS: TenantResourceSpec = TenantResourceSpec {
     table: "iam_oauth_resource_account",
-    list_select: "id, tenant_id, integration_id, provider_code, resource_account_code, resource_account_kind, display_name, verification_status, authorization_status, status, enabled, created_at, updated_at",
+    list_select: "id, tenant_id, integration_id, provider_code, resource_account_code, resource_account_kind, display_name, verification_status, authorization_status, domain_verify_status, webhook_verify_status, last_verified_at, provider_config_json, qr_default_enabled, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_resource_accounts_list_failed",
     retrieve_error: "iam_oauth_resource_accounts_retrieve_failed",
@@ -278,8 +278,16 @@ const RESOURCE_ACCOUNTS: TenantResourceSpec = TenantResourceSpec {
         "resource_account_code",
         "resource_account_kind",
         "display_name",
+        "provider_account_id",
+        "provider_account_original_id",
+        "provider_union_scope_id",
         "verification_status",
         "authorization_status",
+        "domain_verify_status",
+        "webhook_verify_status",
+        "last_verified_at",
+        "qr_default_enabled",
+        "provider_config_json",
         "status",
         "enabled",
         "created_at",
@@ -608,6 +616,14 @@ pub fn apply_oauth_routes(router: Router<BackendIamState>) -> Router<BackendIamS
         .route(
             "/backend/v3/api/iam/oauth/diagnostic_runs/{diagnosticRunId}",
             get(retrieve_diagnostic_run),
+        )
+        .route(
+            "/backend/v3/api/iam/oauth/scan_login_settings",
+            get(retrieve_scan_login_settings).patch(update_scan_login_settings),
+        )
+        .route(
+            "/backend/v3/api/iam/oauth/scan_login_previews",
+            post(create_scan_login_preview),
         )
 }
 

@@ -1,53 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createSdkworkIamOauthAdminController } from "../src/services/oauth-admin-controller";
+import { createOauthServiceMock } from "./fixtures/oauth-service-mock";
 
-function createOauthServiceMock() {
-  return {
-    iam: {
-      oauth: {
-        integrations: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn(), delete: vi.fn(), retrieve: vi.fn().mockResolvedValue({ id: "iamoi-1" }) },
-        providerCatalog: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn(), retrieve: vi.fn().mockResolvedValue({ id: "iamopc-1", providerCode: "sdkwork" }) },
-        clients: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn(), delete: vi.fn(), retrieve: vi.fn().mockResolvedValue({ id: "iamoc-1" }) },
-        secrets: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), delete: vi.fn() },
-        scopeProfiles: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn() },
-        claimMappings: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn() },
-        webhookConfigs: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn(), verifications: { create: vi.fn() } },
-        flowConfigs: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn() },
-        surfaces: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-        policies: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn() },
-        tenantBindings: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn() },
-        operatorPlatforms: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn(), preAuthorizations: { create: vi.fn() } },
-        diagnosticRuns: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), retrieve: vi.fn().mockResolvedValue({ id: "iamodr-1", resultCode: "ok" }) },
-        resourceAccounts: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn(), verifications: { create: vi.fn() }, authorizationRefreshes: { create: vi.fn() }, miniProgramLoginChecks: { create: vi.fn() } },
-        resourceAuthorizations: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn() },
-        operationalResources: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn(), delete: vi.fn(), publishes: { create: vi.fn() } },
-        accountLinks: { list: vi.fn().mockResolvedValue({ items: [] }), update: vi.fn() },
-        grants: { list: vi.fn().mockResolvedValue({ items: [] }), delete: vi.fn() },
-        callbackEvents: { list: vi.fn().mockResolvedValue({ items: [] }) },
-      },
-      tenantApplications: {
-        retrieve: vi.fn().mockResolvedValue({
-          tenantApplicationId: "iamta-1",
-          tenantId: "iamt-1",
-          appId: "iam-app-1",
-          runtimeConfig: {
-            oauth: {
-              relyingParty: {
-                enabled: true,
-                redirectUris: ["https://forum.example.com/callback"],
-                allowedScopes: ["openid", "profile"],
-                confidential: true,
-                clientSecretHash: "[redacted]",
-              },
-            },
-          },
-        }),
-        update: vi.fn().mockResolvedValue({}),
-      },
-    },
-  };
-}
+
 
 describe("SDKWork IAM OAuth PC admin controller", () => {
   it("loads all iam.oauth admin resource lists", async () => {
@@ -330,5 +286,85 @@ describe("SDKWork IAM OAuth PC admin controller", () => {
     expect(draft.redirectUrisText).toBe("https://forum.example.com/callback");
     expect(draft.allowedScopesText).toBe("openid\nprofile");
     expect(draft.clientSecretHash).toBe("");
+  });
+
+  it("derives the standardized callback URL from the primary domain on account setup", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    await controller.createAccountSetup("mini_program", {
+      appId: "wx-mini-1",
+      appSecret: "secret-1",
+      displayName: "Mini program",
+      enabled: true,
+      redirectUri: "",
+      config: {
+        webDomain: "app.example.com",
+        domains: { request: ["https://api.example.com"] },
+      },
+    });
+
+    const createCall = (service.iam.oauth.integrations.create as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(createCall.redirectUri).toBe("https://app.example.com/auth/oauth/callback");
+
+    const accountCall = (service.iam.oauth.resourceAccounts.create as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(accountCall.config).toEqual({
+      webDomain: "app.example.com",
+      domains: { request: ["https://api.example.com"] },
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+    });
+  });
+
+  it("saves the full account developer configuration and queues domain verification", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    const config = {
+      webDomain: "app.example.com",
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+      domains: {
+        business: ["https://open.example.com"],
+        downloadFile: ["https://dl.example.com"],
+        request: ["https://api.example.com"],
+        socket: ["wss://ws.example.com"],
+        uploadFile: ["https://up.example.com"],
+      },
+      notify: {
+        dataFormat: "json",
+        encodingAesKey: "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG",
+        encryptMode: "safe",
+        token: "wechat-token",
+        url: "https://app.example.com/wechat/notify",
+      },
+      verifyFile: {
+        content: "wx-verification-content",
+        fileName: "MP_verify_abc123.txt",
+      },
+    } as const;
+
+    // State must expose the account so its login integration can be kept in sync.
+    const serviceWithAccount = createOauthServiceMock();
+    serviceWithAccount.iam.oauth.resourceAccounts.list = (async () => ({
+      items: [{
+        id: "iamora-1",
+        integrationId: "iamoi-1",
+        providerCode: "wechat",
+        resourceAccountCode: "mini-wx",
+        resourceAccountKind: "mini_program",
+        displayName: "Mini",
+        providerAccountId: "wx-1",
+      }],
+    })) as never;
+    const syncingController = createSdkworkIamOauthAdminController({ service: serviceWithAccount as never });
+    await syncingController.load(["resourceAccounts"]);
+
+    await syncingController.updateAccountConfig("iamora-1", config);
+    expect(serviceWithAccount.iam.oauth.resourceAccounts.update).toHaveBeenCalledWith("iamora-1", { config });
+    expect(serviceWithAccount.iam.oauth.integrations.update).toHaveBeenCalledWith("iamoi-1", {
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+    });
+
+    await syncingController.runResourceAccountVerification("iamora-1");
+    expect(serviceWithAccount.iam.oauth.resourceAccounts.verifications.create).toHaveBeenCalled();
   });
 });

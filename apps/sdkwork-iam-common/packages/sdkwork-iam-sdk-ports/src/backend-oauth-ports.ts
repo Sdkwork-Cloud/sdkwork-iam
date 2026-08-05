@@ -93,6 +93,13 @@ export interface IamBackendOAuthResourceClient {
     list?: IamSdkMethod;
     update?: IamSdkMethod;
   };
+  scanLoginPreviews?: {
+    create?: IamSdkMethod;
+  };
+  scanLoginSettings?: {
+    retrieve?: IamSdkMethod;
+    update?: IamSdkMethod;
+  };
   secrets?: {
     create?: IamSdkMethod;
     delete?: IamSdkMethod;

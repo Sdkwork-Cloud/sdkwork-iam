@@ -1,0 +1,611 @@
+/**
+ * Typed message tree for the IAM OAuth admin workspace.
+ *
+ * Each resource group mirrors one settings section; en/zh key parity is
+ * enforced by `assertSdkworkCatalogLocaleParity` in the module tests.
+ */
+export interface SdkworkIamOauthAdminMessages {
+  accountLinks: {
+    activate: string;
+    description: string;
+    emptyLabel: string;
+    listLabelTemplate: string;
+    notice: string;
+    revoke: string;
+    revokeConfirm: string;
+    suspend: string;
+    title: string;
+  };
+  callbackEvents: {
+    description: string;
+    emptyLabel: string;
+    listLabelTemplate: string;
+    title: string;
+  };
+  claimMappings: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      externalClaim: string;
+      externalClaimPlaceholder: string;
+      integrationId: string;
+      integrationIdPlaceholder: string;
+      providerCode: string;
+      providerCodePlaceholder: string;
+      targetField: string;
+      targetFieldPlaceholder: string;
+      targetKind: string;
+      targetKindPlaceholder: string;
+    };
+    listLabelTemplate: string;
+    title: string;
+  };
+  clients: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    deleteConfirm: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      clientCode: string;
+      clientCodePlaceholder: string;
+      displayName: string;
+      displayNamePlaceholder: string;
+      integrationId: string;
+      integrationIdPlaceholder: string;
+      providerClientId: string;
+      providerClientIdPlaceholder: string;
+      providerCode: string;
+      providerCodePlaceholder: string;
+      providerTenantId: string;
+      providerTenantIdPlaceholder: string;
+    };
+    listLabelTemplate: string;
+    retrieve: string;
+    title: string;
+  };
+  common: {
+    activate: string;
+    booleanFalse: string;
+    booleanTrue: string;
+    cancel: string;
+    confirm: string;
+    deactivate: string;
+    delete: string;
+    disable: string;
+    disabled: string;
+    enable: string;
+    enabled: string;
+    noResourcesFound: string;
+    resource: string;
+    status: string;
+    statuses: {
+      active: string;
+      archived: string;
+      disabled: string;
+      enabled: string;
+      error: string;
+      pending: string;
+      revoked: string;
+      suspended: string;
+      unknown: string;
+    };
+    unconfiguredStatus: string;
+  };
+  diagnosticRuns: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    description: string;
+    emptyLabel: string;
+    emptyTitle: string;
+    fields: {
+      integrationId: string;
+      providerCode: string;
+      runKind: string;
+    };
+    latestDetailLabel: string;
+    listLabelTemplate: string;
+    retrieve: string;
+    title: string;
+  };
+  flowConfigs: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      flowKind: string;
+      flowKindPlaceholder: string;
+      flowPurpose: string;
+      flowPurposePlaceholder: string;
+      integrationId: string;
+      integrationIdPlaceholder: string;
+      oauthClientId: string;
+      oauthClientIdPlaceholder: string;
+    };
+    listLabelTemplate: string;
+    title: string;
+  };
+  grants: {
+    description: string;
+    emptyLabel: string;
+    listLabelTemplate: string;
+    revoke: string;
+    revokeConfirm: string;
+    title: string;
+  };
+  integrations: {
+    addDescription: string;
+    addTrigger: string;
+    appIdLabel: string;
+    appIdPlaceholder: string;
+    autoDisplayNameTemplate: string;
+    autoIntegrationCodeTemplate: string;
+    clientIdLabel: string;
+    clientKeyLabel: string;
+    clientSecretLabel: string;
+    deleteConfirm: string;
+    description: string;
+    displayNameLabel: string;
+    displayNamePlaceholder: string;
+    emptyLabel: string;
+    enabledLabel: string;
+    integrationCodeLabel: string;
+    integrationCodePlaceholder: string;
+    listLabelTemplate: string;
+    providerCodeLabel: string;
+    providerCodePlaceholder: string;
+    providerSelectPlaceholder: string;
+    providerTenantIdLabel: string;
+    redirectUriLabel: string;
+    redirectUriPlaceholder: string;
+    webDomainLabel: string;
+    webDomainPlaceholder: string;
+    retrieve: string;
+    saveButton: string;
+    secretNotice: string;
+    surfaceLabel: string;
+    surfaceOptions: {
+      android: string;
+      desktop: string;
+      h5: string;
+      ios: string;
+      web: string;
+    };
+    title: string;
+  };
+  managedList: {
+    dialogTitleTemplate: string;
+  };
+  operatorPlatforms: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      displayName: string;
+      integrationId: string;
+      operatorMode: string;
+      platformCode: string;
+      providerCode: string;
+      providerPlatformId: string;
+    };
+    listLabelTemplate: string;
+    preAuthorize: string;
+    title: string;
+  };
+  operationalResources: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    deleteConfirm: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      displayName: string;
+      integrationId: string;
+      providerCode: string;
+      resourceAccountId: string;
+      resourceCode: string;
+      resourceKind: string;
+    };
+    listLabelTemplate: string;
+    publish: string;
+    title: string;
+  };
+  policies: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      displayName: string;
+      displayNamePlaceholder: string;
+      integrationId: string;
+      integrationIdPlaceholder: string;
+      policyCode: string;
+      policyCodePlaceholder: string;
+    };
+    listLabelTemplate: string;
+    title: string;
+  };
+  pagination: {
+    next: string;
+    pageSize: string;
+    previous: string;
+    total: string;
+  };
+  scanLogin: {
+    accounts: {
+      emptyLabel: string;
+      enableHint: string;
+      generateLabel: string;
+      listTitle: string;
+      noAccountHint: string;
+      title: string;
+      webhookCallbackHint: string;
+      webhookMissing: string;
+      webhookReady: string;
+    };
+    common: {
+      error: string;
+      loading: string;
+      refresh: string;
+      save: string;
+      saveSuccess: string;
+    };
+    preview: {
+      copy: string;
+      copied: string;
+      expireTemplate: string;
+      officialAccountHint: string;
+      title: string;
+      urlHint: string;
+    };
+    title: string;
+    url: {
+      enabledLabel: string;
+      generateLabel: string;
+      h5LoginOrigin: string;
+      h5LoginOriginHint: string;
+      h5LoginOriginPlaceholder: string;
+      save: string;
+      title: string;
+      titleHint: string;
+    };
+  };
+  quickSetup: {
+    accountConfig: {
+      basic: {
+        appId: string;
+        appSecret: string;
+        callbackUrl: string;
+        callbackUrlHint: string;
+        displayName: string;
+        webDomain: string;
+        webDomainPlaceholder: string;
+      };
+      domains: {
+        business: string;
+        businessHint: string;
+        description: string;
+        downloadFile: string;
+        request: string;
+        requestHint: string;
+        socket: string;
+        title: string;
+        uploadFile: string;
+      };
+      editDescription: string;
+      editTitle: string;
+      notify: {
+        dataFormat: string;
+        dataFormatJson: string;
+        dataFormatXml: string;
+        description: string;
+        encodingAesKey: string;
+        encodingAesKeyPlaceholder: string;
+        encryptMode: string;
+        encryptModeCompatible: string;
+        encryptModePlain: string;
+        encryptModeSafe: string;
+        syncHint: string;
+        title: string;
+        token: string;
+        tokenPlaceholder: string;
+        url: string;
+        urlPlaceholder: string;
+      };
+      notices: {
+        copied: string;
+        saveError: string;
+        saveSuccess: string;
+        verifyQueued: string;
+      };
+      save: string;
+      verifyFile: {
+        content: string;
+        contentPlaceholder: string;
+        copyContent: string;
+        deployHint: string;
+        description: string;
+        download: string;
+        fileName: string;
+        fileNamePlaceholder: string;
+        status: string;
+        statusFailed: string;
+        statusPending: string;
+        statusUnknown: string;
+        statusVerified: string;
+        title: string;
+        verify: string;
+        verifyHint: string;
+      };
+    };
+    accountSwitch: {
+      enable: string;
+      enableHint: string;
+      enabled: string;
+      notEnabled: string;
+    };
+    miniProgramAccounts: {
+      actions: string;
+      addButton: string;
+      addDescription: string;
+      addTrigger: string;
+      description: string;
+      emptyLabel: string;
+      fields: {
+        appId: string;
+        appIdPlaceholder: string;
+        appSecret: string;
+        appSecretPlaceholder: string;
+        displayName: string;
+        displayNamePlaceholder: string;
+        redirectUri: string;
+        redirectUriPlaceholder: string;
+      };
+      listLabelTemplate: string;
+      title: string;
+    };
+    officialAccounts: {
+      actions: string;
+      addButton: string;
+      addDescription: string;
+      addTrigger: string;
+      description: string;
+      emptyLabel: string;
+      fields: {
+        appId: string;
+        appIdPlaceholder: string;
+        appSecret: string;
+        appSecretPlaceholder: string;
+        displayName: string;
+        displayNamePlaceholder: string;
+        redirectUri: string;
+        redirectUriPlaceholder: string;
+      };
+      listLabelTemplate: string;
+      title: string;
+    };
+    providerConnections: {
+      actions: string;
+      addDescription: string;
+      addPlatform: string;
+      allPlatformsAdded: string;
+      configuredListTitle: string;
+      deleteConfirm: string;
+      disable: string;
+      disabled: string;
+      emptyDescription: string;
+      emptyTitle: string;
+      enable: string;
+      enabled: string;
+      platformLabel: string;
+      platformPlaceholder: string;
+      saveAndEnable: string;
+    };
+  };
+  providerCatalog: {
+    addButton: string;
+    description: string;
+    displayNameLabel: string;
+    displayNamePlaceholder: string;
+    emptyLabel: string;
+    listLabelTemplate: string;
+    providerCodeLabel: string;
+    providerCodePlaceholder: string;
+    providerNameLabel: string;
+    providerNamePlaceholder: string;
+    retrieve: string;
+    title: string;
+  };
+  relyingParty: {
+    clientIdNoticeTemplate: string;
+    confidentialLabel: string;
+    description: string;
+    enabledLabel: string;
+    fields: {
+      allowedScopes: string;
+      allowedScopesPlaceholder: string;
+      clientSecretHash: string;
+      redirectUris: string;
+      redirectUrisPlaceholder: string;
+      tenantApplicationId: string;
+      tenantApplicationIdPlaceholder: string;
+      tenantId: string;
+      tenantIdPlaceholder: string;
+    };
+    loadButton: string;
+    notice: string;
+    preserveHashNotice: string;
+    preserveHashPlaceholder: string;
+    saveButton: string;
+    title: string;
+  };
+  resourceAccounts: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      accessMode: string;
+      displayName: string;
+      integrationId: string;
+      providerAccountId: string;
+      providerCode: string;
+      resourceAccountCode: string;
+      resourceAccountKind: string;
+    };
+    listLabelTemplate: string;
+    miniLoginCheck: string;
+    refreshAuth: string;
+    title: string;
+    verify: string;
+  };
+  resourceAuthorizations: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      authorizationMode: string;
+      integrationId: string;
+      providerCode: string;
+      resourceAccountId: string;
+    };
+    listLabelTemplate: string;
+    title: string;
+  };
+  scopeProfiles: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      displayName: string;
+      displayNamePlaceholder: string;
+      integrationId: string;
+      integrationIdPlaceholder: string;
+      providerCode: string;
+      providerCodePlaceholder: string;
+      purpose: string;
+      purposePlaceholder: string;
+      scopeProfileCode: string;
+      scopeProfileCodePlaceholder: string;
+    };
+    listLabelTemplate: string;
+    title: string;
+  };
+  secrets: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    deleteConfirm: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      secretKind: string;
+      secretKindPlaceholder: string;
+      secretOwnerId: string;
+      secretOwnerIdPlaceholder: string;
+      secretOwnerKind: string;
+      secretOwnerKindPlaceholder: string;
+      secretValue: string;
+    };
+    listLabelTemplate: string;
+    notice: string;
+    registerButton: string;
+    title: string;
+  };
+  settings: {
+    detailLabelTemplate: string;
+  };
+  surfaces: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      displayName: string;
+      displayNamePlaceholder: string;
+      integrationId: string;
+      integrationIdPlaceholder: string;
+      oauthClientId: string;
+      oauthClientIdPlaceholder: string;
+      redirectUri: string;
+      surfaceCode: string;
+      surfaceCodePlaceholder: string;
+      surfaceKind: string;
+      surfaceKindPlaceholder: string;
+    };
+    listLabelTemplate: string;
+    title: string;
+  };
+  tabs: {
+    audit: {
+      label: string;
+      summary: string;
+    };
+    extended: {
+      label: string;
+      summary: string;
+    };
+    inbound: {
+      label: string;
+      summary: string;
+    };
+    provider: {
+      label: string;
+      summary: string;
+    };
+  };
+  tenantBindings: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    bindingKindLabel: string;
+    description: string;
+    emptyLabel: string;
+    integrationIdLabel: string;
+    listLabelTemplate: string;
+    providerCodeLabel: string;
+    title: string;
+  };
+  webhookConfigs: {
+    addButton: string;
+    addDescription: string;
+    addTrigger: string;
+    description: string;
+    emptyLabel: string;
+    fields: {
+      callbackUrl: string;
+      callbackUrlPlaceholder: string;
+      displayName: string;
+      displayNamePlaceholder: string;
+      integrationId: string;
+      integrationIdPlaceholder: string;
+      providerCode: string;
+      providerCodePlaceholder: string;
+      webhookCode: string;
+      webhookCodePlaceholder: string;
+      webhookKind: string;
+      webhookKindPlaceholder: string;
+    };
+    listLabelTemplate: string;
+    title: string;
+    verify: string;
+  };
+}

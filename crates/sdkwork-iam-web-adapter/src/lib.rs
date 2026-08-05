@@ -27,6 +27,7 @@ mod service_account_credentials;
 mod signing_secrets;
 mod super_admin_auth;
 mod tenant_signing_key_store;
+mod wechat_mp;
 
 pub(crate) use sdkwork_utils_rust::is_blank;
 
@@ -127,13 +128,21 @@ pub use oauth_integration_exchange::{
     builtin_authorization_endpoint, builtin_default_scopes, builtin_token_endpoint,
     builtin_userinfo_endpoint, exchange_oauth_authorization_code,
     exchange_wechat_mini_program_code, load_oauth_integration_exchange_context,
-    load_oauth_integration_exchange_context_for_app, probe_wechat_mini_program_configuration,
+    load_oauth_integration_exchange_context_for_app,
+    load_oauth_integration_exchange_context_for_integration, probe_wechat_mini_program_configuration,
     seed_builtin_oauth_provider_catalog, OAuthIntegrationExchangeContext,
 };
 pub use oauth_login_local::{LocalOAuthAuthority, LocalOAuthProviderProfile};
 pub use oauth_provider_callback::{
     handle_provider_callback_get, handle_provider_callback_post, ProviderCallbackHttpResponse,
     ProviderCallbackRequestMeta,
+};
+pub use wechat_mp::{
+    create_wechat_mp_temp_qr_code, fetch_wechat_mp_access_token, generate_wechat_mp_scene,
+    parse_oauth_follow_login_scene, record_oauth_follow_login_confirmation,
+    wechat_mp_api_base, OAuthFollowLoginConfirmation, WechatMpTempQrCode,
+    OAUTH_QR_FOLLOW_CONFIRMED_STATUS, OAUTH_QR_FOLLOW_LOGIN_FIELD,
+    OAUTH_QR_SCENE_EVENT_KEY_PREFIX, OAUTH_QR_SESSION_KIND, OAUTH_QR_SESSION_SCOPE,
 };
 pub use oauth_provider_catalog::{
     builtin_oauth_provider_catalog, catalog_entry_for_provider, normalize_oauth_provider_code,

@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SdkworkIamOrganizationStructureWorkspace } from "../src";
+import { SdkworkI18nProvider } from "@sdkwork/i18n-pc-react";
 
 describe("organization structure workspace", () => {
   it("renders a department tree beside the selected department member directory", async () => {
@@ -39,13 +40,13 @@ describe("organization structure workspace", () => {
       selectOrganization: vi.fn().mockResolvedValue({ id: "org-1", name: "SDKWork", organizationId: "org-1" }),
     };
 
-    render(<SdkworkIamOrganizationStructureWorkspace controller={controller as never} organizationId="org-1" />);
+    render(<SdkworkI18nProvider locale="zh-CN"><SdkworkIamOrganizationStructureWorkspace controller={controller as never} organizationId="org-1" /></SdkworkI18nProvider>);
 
     await screen.findByText("部门结构");
     expect(screen.getAllByText("产品研发").length).toBeGreaterThan(0);
     await screen.findByText("Alice");
     expect(screen.getAllByText("user-1").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: /移出/ })).toBeNull();
-    await waitFor(() => expect(controller.listDepartmentAssignments).toHaveBeenCalledWith("dept-product", undefined));
+    await waitFor(() => expect(controller.listDepartmentAssignments).toHaveBeenCalledWith("dept-product", { page: 1, page_size: 20 }));
   });
 });

@@ -52,6 +52,4 @@ export type CreateSdkworkIamAuditControllerInput = {
 
 export interface SdkworkIamAuditAdminWorkspaceProps {
   controller: SdkworkIamAuditController;
-  description?: string;
-  title?: string;
 }

@@ -68,6 +68,11 @@ fn auth_manifest_profiles_cover_path_templates() {
             RouteAuth::Public,
         ),
         (
+            "POST",
+            "/app/v3/api/oauth/device_authorizations/qr_session_key/session_completions",
+            RouteAuth::CredentialEntryBootstrap,
+        ),
+        (
             "GET",
             "/app/v3/api/oauth/callbacks/github",
             RouteAuth::CredentialEntryBootstrap,
@@ -577,6 +582,12 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
             "deviceAuthorizations.sessionExchanges.create",
         ),
         HttpRoute::credential_entry_bootstrap(
+            HttpMethod::Post,
+            "/app/v3/api/oauth/device_authorizations/{deviceAuthorizationId}/session_completions",
+            "oauth",
+            "deviceAuthorizations.sessionCompletions.create",
+        ),
+        HttpRoute::credential_entry_bootstrap(
             HttpMethod::Get,
             "/app/v3/api/oauth/callbacks/{providerCode}",
             "oauth",
@@ -663,6 +674,7 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
         "deviceAuthorizations.passwordCompletions.create",
         "deviceAuthorizations.retrieve",
         "deviceAuthorizations.scans.create",
+        "deviceAuthorizations.sessionCompletions.create",
         "deviceAuthorizations.sessionExchanges.create",
         "grants.delete",
         "grants.list",

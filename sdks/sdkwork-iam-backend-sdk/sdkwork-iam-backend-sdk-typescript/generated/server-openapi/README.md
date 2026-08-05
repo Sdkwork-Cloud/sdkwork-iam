@@ -93,15 +93,8 @@ const result = await client.iam.accessCredentials.create(body);
 ### iam_oauth
 
 ```typescript
-// Iam oauth account Links list.
-const params = {
-  page: 1,
-  page_size: 2,
-  cursor: 'cursor',
-  sort: 'sort',
-  q: 'q',
-};
-const result = await client.iamOauth.iam.oauth.accountLinks.list(params);
+// Iam oauth scan Login Settings retrieve.
+const result = await client.iamOauth.iam.oauth.scanLoginSettings.retrieve();
 ```
 
 ## Error Handling

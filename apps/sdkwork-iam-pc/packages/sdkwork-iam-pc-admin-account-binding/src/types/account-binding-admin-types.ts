@@ -48,8 +48,6 @@ export interface SdkworkIamAccountBindingController {
 
 export interface SdkworkIamAccountBindingSettingsProps {
   controller: SdkworkIamAccountBindingController;
-  description?: string;
-  title?: string;
 }
 
 export const DEFAULT_ACCOUNT_BINDING_POLICY: SdkworkIamAccountBindingPolicy = {

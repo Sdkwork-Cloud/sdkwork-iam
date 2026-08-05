@@ -9,6 +9,7 @@ export interface SdkworkIamTenantAdminMessages {
     drawer: {
       accessPermissions: string;
       accessPermissionsHint: string;
+      accessPermissionsPlaceholder: string;
       appKey: string;
       appKeyHint: string;
       displayName: string;
@@ -19,8 +20,15 @@ export interface SdkworkIamTenantAdminMessages {
       instanceKeyHint: string;
       organizationId: string;
       primaryDomain: string;
+      primaryDomainPlaceholder: string;
       registerDescription: string;
       registerTitle: string;
+    };
+    environments: {
+      development: string;
+      production: string;
+      staging: string;
+      unknown: string;
     };
     emptyDescription: string;
     emptyTitle: string;
@@ -37,7 +45,6 @@ export interface SdkworkIamTenantAdminMessages {
       copyFailed: string;
       copied: string;
       loadError: string;
-      loadMoreSuccess: string;
       provisionError: string;
       provisionSuccess: string;
       statusError: string;
@@ -93,7 +100,6 @@ export interface SdkworkIamTenantAdminMessages {
     };
     emptyDescription: string;
     emptyTitle: string;
-    loadedMore: string;
     notices: {
       addSuccess: string;
       loadError: string;
@@ -103,6 +109,11 @@ export interface SdkworkIamTenantAdminMessages {
     remove: string;
     removeDescriptionTemplate: string;
     removeTitle: string;
+    statuses: {
+      active: string;
+      disabled: string;
+      unknown: string;
+    };
     table: {
       member: string;
       role: string;
@@ -111,13 +122,18 @@ export interface SdkworkIamTenantAdminMessages {
     };
     titleTemplate: string;
   };
+  pagination: {
+    next: string;
+    pageSize: string;
+    previous: string;
+    total: string;
+  };
   tenants: {
     applySearch: string;
     create: string;
     delete: string;
     deleteDescriptionTemplate: string;
     deleteTitle: string;
-    description: string;
     edit: string;
     drawer: {
       code: string;
@@ -130,7 +146,6 @@ export interface SdkworkIamTenantAdminMessages {
     };
     emptyDescription: string;
     emptyTitle: string;
-    loadedMore: string;
     manage: string;
     searchLabel: string;
     searchPlaceholder: string;
@@ -142,13 +157,17 @@ export interface SdkworkIamTenantAdminMessages {
     };
     selectedDescriptionTemplate: string;
     selectedTitleTemplate: string;
+    statuses: {
+      active: string;
+      disabled: string;
+      unknown: string;
+    };
     table: {
       code: string;
       name: string;
       status: string;
       tenantId: string;
     };
-    title: string;
   };
   tabs: {
     applications: string;

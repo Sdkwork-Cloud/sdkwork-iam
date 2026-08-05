@@ -246,7 +246,7 @@ pub(crate) async fn resolve_wechat_mini_program_login_user(
     resolve_or_create_oauth_user(pg, policy, tenant_id, &profile, &integration_id).await
 }
 
-async fn resolve_or_create_oauth_user(
+pub(crate) async fn resolve_or_create_oauth_user(
     pg: &PgPool,
     policy: &AccountBindingPolicyDocument,
     tenant_id: &str,

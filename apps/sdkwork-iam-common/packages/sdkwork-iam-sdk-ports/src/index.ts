@@ -128,6 +128,9 @@ export interface IamAppOAuthResourceClient {
     passwordCompletions?: {
       create?: IamSdkMethod;
     };
+    sessionCompletions?: {
+      create?: IamSdkMethod;
+    };
     sessionExchanges?: {
       create?: IamSdkMethod;
     };

@@ -9,6 +9,7 @@ mod generated;
 pub use bootstrap::{
     assemble_api_router, assemble_app_api_contribution,
     assemble_app_api_contribution_with_module_manifests, assemble_app_api_contribution_with_pool,
+    assemble_backend_api_contribution, assemble_backend_api_contribution_with_pool,
     assemble_owner_api_surfaces, assemble_owner_api_surfaces_with_pool,
     bootstrap_iam_app_for_application, bootstrap_iam_for_application, ApiAssembly,
     ApiAssemblyContribution,
