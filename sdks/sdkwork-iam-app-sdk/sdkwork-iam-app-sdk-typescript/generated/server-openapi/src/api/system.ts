@@ -13,7 +13,7 @@ export class SystemIamVerificationPolicyApi {
 
 /** Iam verification Policy retrieve. */
   async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/verification_policy`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, accessTokenOnly: true });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/verification_policy`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, accessTokenOnly: true, sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -27,7 +27,7 @@ export class SystemIamRuntimeApi {
 
 /** Iam runtime retrieve. */
   async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/runtime`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, accessTokenOnly: true });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/runtime`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, accessTokenOnly: true, sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -41,7 +41,7 @@ export class SystemIamAccountBindingPolicyApi {
 
 /** Iam account Binding Policy retrieve. */
   async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/account_binding_policy`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, accessTokenOnly: true });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/account_binding_policy`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, accessTokenOnly: true, sdkworkUnwrapKind: 'item' });
   }
 }
 

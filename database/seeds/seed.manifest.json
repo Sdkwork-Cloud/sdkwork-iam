@@ -25,6 +25,12 @@
       "files": [
         "locales/zh-CN/001_iam_locale_display.sql"
       ]
+    },
+    "en-US": {
+      "version": "1.0.0",
+      "required": false,
+      "checksum": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": []
     }
   },
   "profiles": {

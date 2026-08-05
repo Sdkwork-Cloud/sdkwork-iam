@@ -103,8 +103,6 @@ pub(crate) fn resolve_timeline_list_params(
 ) -> Result<TimelineListParams, SdkWorkResultCode> {
     let has_page = query
         .get("page")
-        .or_else(|| query.get("pageNo"))
-        .or_else(|| query.get("page_no"))
         .map(|value| !value.trim().is_empty())
         .unwrap_or(false);
     let has_cursor = query
@@ -117,7 +115,6 @@ pub(crate) fn resolve_timeline_list_params(
 
     let page_size_i32 = query
         .get("page_size")
-        .or_else(|| query.get("pageSize"))
         .and_then(|value| value.parse::<i32>().ok());
 
     if has_cursor {

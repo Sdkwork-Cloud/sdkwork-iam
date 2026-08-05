@@ -20,7 +20,10 @@ use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 
 use crate::{
-    contacts::*, directory::*, password_session_bridge::PasswordSessionBridgeResult, passwords::*,
+    contacts::*, directory::*, oauth_wechat_payment::{
+        handle_wechat_payment_oauth_callback, start_wechat_payment_oauth,
+    },
+    password_session_bridge::PasswordSessionBridgeResult, passwords::*,
     responses::*, state::*, tokens::*, utils::*, web_bootstrap::*,
 };
 
@@ -166,6 +169,14 @@ fn build_sdkwork_iam_app_api_core_router(state: LocalIamState) -> Router {
             get(handle_oauth_callback_get).post(handle_oauth_callback_post),
         )
         .route(
+            "/app/v3/api/oauth/wechat/payment/start",
+            get(start_wechat_payment_oauth),
+        )
+        .route(
+            "/app/v3/api/oauth/wechat/payment/callback",
+            get(handle_wechat_payment_oauth_callback),
+        )
+        .route(
             "/app/v3/api/oauth/mini_program_sessions",
             post(create_oauth_mini_program_session),
         )
@@ -239,7 +250,7 @@ fn build_sdkwork_iam_app_api_core_router(state: LocalIamState) -> Router {
         .with_state(state)
 }
 
-fn postgres_pool_or_error(state: &LocalIamState) -> Result<&PgPool, Response> {
+pub(crate) fn postgres_pool_or_error(state: &LocalIamState) -> Result<&PgPool, Response> {
     state.pool.as_postgres().ok_or_else(|| {
         appbase_error(
             StatusCode::SERVICE_UNAVAILABLE,
