@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.deployment-index",
+  "application": "sdkwork-iam",
+  "defaultProfile": "standalone.development",
+  "environments": {
+    "development": {
+      "applicationOrigin": "http://iam-dev.sdkwork.com:3901/",
+      "cloudApiBaseUrl": "https://api-dev.sdkwork.com/"
+    },
+    "production": {
+      "applicationOrigin": "https://iam.sdkwork.com/",
+      "cloudApiBaseUrl": "https://api.sdkwork.com/"
+    }
+  },
+  "profiles": {
+    "standalone.development": { "config": "configs/topology/standalone.development.env" },
+    "standalone.production": { "config": "configs/topology/standalone.production.env" },
+    "cloud.development": { "config": "configs/topology/cloud.development.env" },
+    "cloud.production": { "config": "configs/topology/cloud.production.env" }
+  }
+}
