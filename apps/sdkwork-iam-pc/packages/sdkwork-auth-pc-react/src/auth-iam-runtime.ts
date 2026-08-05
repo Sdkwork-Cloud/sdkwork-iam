@@ -104,88 +104,88 @@ export interface SdkworkIamRuntimeAuthRuntimeLike {
   service: {
     auth: {
       passwordResetRequests: {
-        create: (body: Record<string, unknown>) => Promise<unknown>;
+        create(body: Record<string, unknown>): Promise<unknown>;
       };
       passwordResets: {
-        create: (body: Record<string, unknown>) => Promise<unknown>;
+        create(body: Record<string, unknown>): Promise<unknown>;
       };
       registrations: {
-        create: (body: Record<string, unknown>) => Promise<SdkworkIamRuntimeAuthSessionLike>;
+        create(body: Record<string, unknown>): Promise<SdkworkIamRuntimeAuthSessionLike>;
       };
       sessions: {
-        create: (body: Record<string, unknown>) => Promise<SdkworkIamRuntimeAuthSessionLike>;
+        create(body: Record<string, unknown>): Promise<SdkworkIamRuntimeAuthSessionLike>;
         current: {
-          delete: () => Promise<void>;
-          retrieve: () => Promise<SdkworkIamRuntimeAuthSessionLike>;
-          update?: (body?: Record<string, unknown>) => Promise<SdkworkIamRuntimeAuthSessionLike>;
+          delete(): Promise<void>;
+          retrieve(): Promise<SdkworkIamRuntimeAuthSessionLike>;
+          update?(body?: Record<string, unknown>): Promise<SdkworkIamRuntimeAuthSessionLike>;
         };
         loginContextSelection?: {
-          create?: (body: Record<string, unknown>) => Promise<SdkworkIamRuntimeAuthSessionLike>;
+          create?(body: Record<string, unknown>): Promise<SdkworkIamRuntimeAuthSessionLike>;
         };
         organizationSelection?: {
-          create?: (body: Record<string, unknown>) => Promise<SdkworkIamRuntimeAuthSessionLike>;
+          create?(body: Record<string, unknown>): Promise<SdkworkIamRuntimeAuthSessionLike>;
         };
-        refresh?: (body: Record<string, unknown>) => Promise<SdkworkIamRuntimeAuthSessionLike>;
+        refresh?(body: Record<string, unknown>): Promise<SdkworkIamRuntimeAuthSessionLike>;
       };
     };
     oauth?: {
       providers?: {
-        list?: () => Promise<unknown>;
+        list?(): Promise<unknown>;
       };
       authorizationUrls?: {
-        create?: (params?: Record<string, unknown>) => Promise<unknown>;
+        create?(params?: Record<string, unknown>): Promise<unknown>;
       };
       sessions?: {
-        create?: (body: Record<string, unknown>) => Promise<SdkworkIamRuntimeAuthSessionLike>;
+        create?(body: Record<string, unknown>): Promise<SdkworkIamRuntimeAuthSessionLike>;
       };
       deviceAuthorizations?: {
-        create?: (payload?: Record<string, unknown>) => Promise<SdkworkIamRuntimeQrAuthSessionLike | unknown>;
-        retrieve?: (deviceAuthorizationId: string) => Promise<SdkworkIamRuntimeQrAuthSessionLike | unknown>;
+        create?(payload?: Record<string, unknown>): Promise<SdkworkIamRuntimeQrAuthSessionLike | unknown>;
+        retrieve?(deviceAuthorizationId: string): Promise<SdkworkIamRuntimeQrAuthSessionLike | unknown>;
         passwordCompletions?: {
-          create?: (
+          create?(
             deviceAuthorizationId: string,
             payload: Record<string, unknown>,
-          ) => Promise<SdkworkIamRuntimeQrAuthSessionLike | unknown>;
+          ): Promise<SdkworkIamRuntimeQrAuthSessionLike | unknown>;
         };
         scans?: {
-          create?: (
+          create?(
             deviceAuthorizationId: string,
             payload?: Record<string, unknown>,
-          ) => Promise<SdkworkIamRuntimeQrAuthSessionLike | unknown>;
+          ): Promise<SdkworkIamRuntimeQrAuthSessionLike | unknown>;
         };
         sessionExchanges?: {
-          create?: (
+          create?(
             deviceAuthorizationId: string,
             payload: Record<string, unknown>,
-          ) => Promise<unknown>;
+          ): Promise<unknown>;
         };
       };
       authorizations?: {
         completions?: {
-          create?: (
+          create?(
             authorizationStateId: string,
             payload?: Record<string, unknown>,
-          ) => Promise<unknown>;
+          ): Promise<unknown>;
         };
       };
     };
     messaging?: {
       verificationCodes?: {
-        create?: (body: Record<string, unknown>) => Promise<unknown>;
-        verify?: (body: Record<string, unknown>) => Promise<unknown>;
+        create?(body: Record<string, unknown>): Promise<unknown>;
+        verify?(body: Record<string, unknown>): Promise<unknown>;
       };
     };
     system?: {
       iam?: {
         verificationPolicy?: {
-          retrieve?: () => Promise<unknown>;
+          retrieve?(): Promise<unknown>;
         };
       };
     };
     iam: {
       users: {
         current: {
-          retrieve: () => Promise<SdkworkIamRuntimeAuthUserLike>;
+          retrieve(): Promise<SdkworkIamRuntimeAuthUserLike>;
         };
       };
     };
