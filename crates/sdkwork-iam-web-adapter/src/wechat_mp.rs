@@ -342,12 +342,15 @@ pub fn parse_oauth_follow_login_scene(payload: &Value) -> Option<String> {
 /// The session artifact is keyed `{scope}:qr_session:{scene}`; only the
 /// `status` and `followLogin` payload fields are updated so the app-api
 /// polling side can lazily resolve the user and complete the session.
+/// `provider_code` comes from the webhook configuration so non-WeChat
+/// message callbacks (e.g. enterprise WeChat) bind with their own provider.
 /// Returns `Ok(Some(scene))` when a live session was updated, `Ok(None)`
 /// when the event is not a QR-login event or the session is gone/expired.
 pub async fn record_oauth_follow_login_confirmation(
     pg: &PgPool,
     tenant_id: &str,
     integration_id: &str,
+    provider_code: &str,
     app_id: Option<&str>,
     payload: &Value,
 ) -> Result<Option<OAuthFollowLoginConfirmation>, String> {
@@ -365,6 +368,12 @@ pub async fn record_oauth_follow_login_confirmation(
         .and_then(Value::as_str)
         .map(str::trim)
         .unwrap_or("");
+    let provider = provider_code.trim();
+    let provider = if provider.is_empty() {
+        "wechat"
+    } else {
+        provider
+    };
 
     let artifact_key = ephemeral_artifact_key(OAUTH_QR_SESSION_KIND, &scene);
     let mut tx = pg
@@ -388,10 +397,29 @@ pub async fn record_oauth_follow_login_confirmation(
         return Ok(None);
     };
     let mut session_payload: Value = row.get::<Json<Value>, _>(0).0;
+    // The session may already be terminal (completed + exchanged, or the
+    // polling side finished it): do not resurrect it with a new scan event —
+    // re-completing would revoke the session the desktop already exchanged.
+    // A `resolving` session is mid-flight on the polling side; ignoring a
+    // repeat scan keeps the in-progress resolution from being overwritten.
+    let terminal = session_payload
+        .get("sessionExchanged")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+        || session_payload
+            .get("status")
+            .and_then(Value::as_str)
+            .is_some_and(|status| matches!(status, "completed" | "resolving"));
+    if terminal {
+        tx.rollback()
+            .await
+            .map_err(|error| format!("rollback terminal follow login failed: {error}"))?;
+        return Ok(None);
+    }
     session_payload["status"] = json!(OAUTH_QR_FOLLOW_CONFIRMED_STATUS);
     session_payload[OAUTH_QR_FOLLOW_LOGIN_FIELD] = json!({
         "openid": openid,
-        "provider": "wechat",
+        "provider": provider,
         "tenantId": tenant_id,
         "integrationId": integration_id,
         "appId": app_id.unwrap_or(""),
@@ -419,7 +447,7 @@ pub async fn record_oauth_follow_login_confirmation(
         event_key: event_key.to_string(),
         integration_id: integration_id.to_string(),
         openid: openid.to_string(),
-        provider_code: "wechat".to_string(),
+        provider_code: provider.to_string(),
         scene,
         tenant_id: tenant_id.to_string(),
     }))
@@ -460,33 +488,48 @@ mod tests {
 
     #[test]
     fn ignores_non_follow_events() {
-        assert_eq!(parse_oauth_follow_login_scene(&json!({
-            "MsgType": "event",
-            "Event": "unsubscribe",
-            "EventKey": "qrscene_sdkwork-qr-abc123",
-        })), None);
-        assert_eq!(parse_oauth_follow_login_scene(&json!({
-            "MsgType": "event",
-            "Event": "CLICK",
-            "EventKey": "MENU_KEY",
-        })), None);
-        assert_eq!(parse_oauth_follow_login_scene(&json!({
-            "MsgType": "text",
-            "Content": "hello",
-        })), None);
+        assert_eq!(
+            parse_oauth_follow_login_scene(&json!({
+                "MsgType": "event",
+                "Event": "unsubscribe",
+                "EventKey": "qrscene_sdkwork-qr-abc123",
+            })),
+            None
+        );
+        assert_eq!(
+            parse_oauth_follow_login_scene(&json!({
+                "MsgType": "event",
+                "Event": "CLICK",
+                "EventKey": "MENU_KEY",
+            })),
+            None
+        );
+        assert_eq!(
+            parse_oauth_follow_login_scene(&json!({
+                "MsgType": "text",
+                "Content": "hello",
+            })),
+            None
+        );
     }
 
     #[test]
     fn ignores_missing_or_empty_scene() {
-        assert_eq!(parse_oauth_follow_login_scene(&json!({
-            "MsgType": "event",
-            "Event": "subscribe",
-            "EventKey": "",
-        })), None);
-        assert_eq!(parse_oauth_follow_login_scene(&json!({
-            "MsgType": "event",
-            "Event": "subscribe",
-        })), None);
+        assert_eq!(
+            parse_oauth_follow_login_scene(&json!({
+                "MsgType": "event",
+                "Event": "subscribe",
+                "EventKey": "",
+            })),
+            None
+        );
+        assert_eq!(
+            parse_oauth_follow_login_scene(&json!({
+                "MsgType": "event",
+                "Event": "subscribe",
+            })),
+            None
+        );
     }
 
     #[test]

@@ -12,6 +12,7 @@ import {
   type SdkworkAuthEmailLoginInput,
   type SdkworkAuthLoginInput,
   type SdkworkAuthLoginQrCode,
+  type SdkworkAuthScanLoginMode,
   type SdkworkAuthLoginQrCodeCallbackInput,
   type SdkworkAuthLoginQrCodeConfirmInput,
   type SdkworkAuthLoginQrCodeCheckOptions,
@@ -63,6 +64,7 @@ export interface SdkworkAuthController {
   getOAuthAuthorizationUrl(input: SdkworkAuthOAuthAuthorizationInput): Promise<string>;
   getVerificationPolicy(): Promise<SdkworkAuthResolvedVerificationPolicy>;
   listOAuthProviders(): Promise<string[]>;
+  listScanLoginModes(): Promise<SdkworkAuthScanLoginMode[]>;
   getState(): SdkworkAuthControllerState;
   register(input: SdkworkAuthRegisterInput): Promise<SdkworkAuthSession>;
   requestPasswordReset(input: SdkworkAuthPasswordResetRequestInput): Promise<void>;
@@ -242,6 +244,9 @@ export function createSdkworkAuthController(
     },
     async generateLoginQrCode(input) {
       return runAction(() => service.generateLoginQrCode(input));
+    },
+    async listScanLoginModes() {
+      return runAction(() => service.listScanLoginModes());
     },
     async getOAuthAuthorizationUrl(input) {
       return runAction(() => service.getOAuthAuthorizationUrl(input));

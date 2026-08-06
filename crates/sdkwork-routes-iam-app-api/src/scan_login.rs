@@ -16,6 +16,8 @@
 use serde_json::{json, Value};
 use sqlx::{PgPool, Row};
 
+use crate::utils::LOCAL_EPHEMERAL_SCOPE;
+
 pub(crate) const SCAN_LOGIN_MODE_OFFICIAL_ACCOUNT: &str = "official_account";
 pub(crate) const SCAN_LOGIN_MODE_URL: &str = "url";
 pub(crate) const SCAN_LOGIN_MODE_PROVIDER: &str = "provider";
@@ -63,41 +65,150 @@ pub(crate) fn parse_scan_login_qr_mode(value: &str) -> (String, Option<String>) 
         }
     }
     match value {
-        SCAN_LOGIN_MODE_OFFICIAL_ACCOUNT => {
-            (SCAN_LOGIN_MODE_OFFICIAL_ACCOUNT.to_string(), None)
-        }
+        SCAN_LOGIN_MODE_OFFICIAL_ACCOUNT => (SCAN_LOGIN_MODE_OFFICIAL_ACCOUNT.to_string(), None),
         _ => (SCAN_LOGIN_MODE_URL.to_string(), None),
     }
 }
 
 /// Loads the configured scan-login modes for a tenant.
 ///
-/// `tenant_id` may be empty for global deployments. Falls back to the
-/// default mode list when the registry is empty or missing.
+/// `tenant_id` may be empty or `__local__` for global deployments, in which
+/// case the first registry row (ordered by tenant) is used — matching the
+/// single-tenant behavior of `list_login_enabled_providers`. Falls back to
+/// the default mode list when the registry is empty or missing.
 pub(crate) async fn load_scan_login_modes(
     pg: &PgPool,
     tenant_id: &str,
 ) -> Result<Vec<ScanLoginMode>, String> {
     let tenant_id = tenant_id.trim();
-    let row = sqlx::query(
-        "SELECT modes_json FROM iam_oauth_scan_login_config WHERE tenant_id = $1",
-    )
-    .bind(tenant_id)
-    .fetch_optional(pg)
-    .await
+    let global = tenant_id.is_empty() || tenant_id == LOCAL_EPHEMERAL_SCOPE;
+    let row = if global {
+        sqlx::query(
+            "SELECT modes_json FROM iam_oauth_scan_login_config \
+             ORDER BY tenant_id LIMIT 1",
+        )
+        .fetch_optional(pg)
+        .await
+    } else {
+        sqlx::query(
+            "SELECT modes_json FROM iam_oauth_scan_login_config \
+             WHERE tenant_id = $1",
+        )
+        .bind(tenant_id)
+        .fetch_optional(pg)
+        .await
+    }
     .map_err(|error| format!("load scan login modes failed: {error}"))?;
-    let Some(row) = row else {
-        return default_scan_login_modes(pg, tenant_id).await;
-    };
-    let modes_json: String = row.get(0);
-    let modes = match serde_json::from_str::<Value>(&modes_json) {
+    let modes_json = row
+        .map(|row| row.get::<String, _>(0))
+        .unwrap_or_else(|| "[]".to_string());
+    let mut modes = match serde_json::from_str::<Value>(&modes_json) {
         Ok(value) => normalize_scan_login_modes_json(&value),
         Err(_) => Vec::new(),
     };
     if modes.is_empty() {
-        return default_scan_login_modes(pg, tenant_id).await;
+        modes = default_scan_login_modes(pg, tenant_id).await?;
+    }
+    // The legacy `url_login_enabled` switch also gates the URL mode: when
+    // turned off, URL-mode entries are dropped so the login page can neither
+    // offer nor auto-select them.
+    if !load_scan_login_url_login_enabled(pg, tenant_id).await? {
+        modes.retain(|mode| mode.mode != SCAN_LOGIN_MODE_URL);
     }
     Ok(modes)
+}
+
+/// Whether URL scan login is enabled (`url_login_enabled`) for the tenant.
+/// Defaults to `true` when no config row exists (pre-registry behavior).
+pub(crate) async fn load_scan_login_url_login_enabled(
+    pg: &PgPool,
+    tenant_id: &str,
+) -> Result<bool, String> {
+    let tenant_id = tenant_id.trim();
+    let global = tenant_id.is_empty() || tenant_id == LOCAL_EPHEMERAL_SCOPE;
+    let row = if global {
+        sqlx::query(
+            "SELECT url_login_enabled FROM iam_oauth_scan_login_config \
+             ORDER BY tenant_id LIMIT 1",
+        )
+        .fetch_optional(pg)
+        .await
+    } else {
+        sqlx::query(
+            "SELECT url_login_enabled FROM iam_oauth_scan_login_config \
+             WHERE tenant_id = $1",
+        )
+        .bind(tenant_id)
+        .fetch_optional(pg)
+        .await
+    }
+    .map_err(|error| format!("load scan login url enabled failed: {error}"))?;
+    Ok(row.map(|row| row.get::<i32, _>(0) != 0).unwrap_or(true))
+}
+
+/// Loads the configured H5 login origin (`h5_login_origin`) for the tenant,
+/// if any. Falls back to the first registry row for global deployments.
+pub(crate) async fn load_scan_login_h5_origin(
+    pg: &PgPool,
+    tenant_id: &str,
+) -> Result<Option<String>, String> {
+    let tenant_id = tenant_id.trim();
+    let global = tenant_id.is_empty() || tenant_id == LOCAL_EPHEMERAL_SCOPE;
+    let row = if global {
+        sqlx::query(
+            "SELECT h5_login_origin FROM iam_oauth_scan_login_config \
+             ORDER BY tenant_id LIMIT 1",
+        )
+        .fetch_optional(pg)
+        .await
+    } else {
+        sqlx::query(
+            "SELECT h5_login_origin FROM iam_oauth_scan_login_config \
+             WHERE tenant_id = $1",
+        )
+        .bind(tenant_id)
+        .fetch_optional(pg)
+        .await
+    }
+    .map_err(|error| format!("load scan login h5 origin failed: {error}"))?;
+    Ok(row
+        .map(|row| row.get::<String, _>(0))
+        .map(|origin| origin.trim().to_string())
+        .filter(|origin| !origin.is_empty()))
+}
+
+/// Loads the configured default scan-login mode (`default_qr_mode`) for the
+/// tenant: `official_account` or `url` when pinned, `None` for `auto`.
+pub(crate) async fn load_scan_login_default_mode(
+    pg: &PgPool,
+    tenant_id: &str,
+) -> Result<Option<String>, String> {
+    let tenant_id = tenant_id.trim();
+    let global = tenant_id.is_empty() || tenant_id == LOCAL_EPHEMERAL_SCOPE;
+    let row = if global {
+        sqlx::query(
+            "SELECT default_qr_mode FROM iam_oauth_scan_login_config \
+             ORDER BY tenant_id LIMIT 1",
+        )
+        .fetch_optional(pg)
+        .await
+    } else {
+        sqlx::query(
+            "SELECT default_qr_mode FROM iam_oauth_scan_login_config \
+             WHERE tenant_id = $1",
+        )
+        .bind(tenant_id)
+        .fetch_optional(pg)
+        .await
+    }
+    .map_err(|error| format!("load scan login default mode failed: {error}"))?;
+    let value = row
+        .map(|row| row.get::<String, _>(0))
+        .unwrap_or_else(|| "auto".to_string());
+    match value.trim() {
+        "official_account" | "url" => Ok(Some(value.trim().to_string())),
+        _ => Ok(None),
+    }
 }
 
 /// Normalizes a raw `modes_json` document into valid mode entries.
@@ -112,9 +223,19 @@ pub(crate) fn normalize_scan_login_modes_json(value: &Value) -> Vec<ScanLoginMod
         .iter()
         .filter_map(|entry| {
             let entry = entry.as_object()?;
-            let mode = entry.get("mode").and_then(Value::as_str)?.trim().to_string();
-            let enabled = entry.get("enabled").and_then(Value::as_bool).unwrap_or(false);
-            let sort_order = entry.get("sortOrder").and_then(Value::as_i64).unwrap_or(999);
+            let mode = entry
+                .get("mode")
+                .and_then(Value::as_str)?
+                .trim()
+                .to_string();
+            let enabled = entry
+                .get("enabled")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let sort_order = entry
+                .get("sortOrder")
+                .and_then(Value::as_i64)
+                .unwrap_or(999);
             let display_name = entry
                 .get("displayName")
                 .and_then(Value::as_str)
@@ -181,7 +302,7 @@ pub(crate) async fn scan_login_official_account_available(
     tenant_id: &str,
 ) -> Result<bool, String> {
     let tenant_id = tenant_id.trim();
-    let exists = if tenant_id.is_empty() || tenant_id == "__local__" {
+    let exists = if tenant_id.is_empty() || tenant_id == LOCAL_EPHEMERAL_SCOPE {
         sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS( \
                SELECT 1 FROM iam_oauth_resource_account ra \
@@ -247,7 +368,10 @@ mod tests {
         );
         assert_eq!(
             parse_scan_login_qr_mode("provider:wechat_open"),
-            (SCAN_LOGIN_MODE_PROVIDER.to_string(), Some("wechat_open".to_string()))
+            (
+                SCAN_LOGIN_MODE_PROVIDER.to_string(),
+                Some("wechat_open".to_string())
+            )
         );
         assert_eq!(
             parse_scan_login_qr_mode("unknown"),

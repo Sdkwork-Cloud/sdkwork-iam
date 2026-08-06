@@ -23,6 +23,7 @@ import {
   type SdkworkAuthLoginQrCodeConfirmInput,
   type SdkworkAuthLoginQrCodeCreateInput,
   type SdkworkAuthLoginQrCodeStatusResult,
+  type SdkworkAuthScanLoginMode,
   type SdkworkAuthOAuthAuthorizationInput,
   type SdkworkAuthOAuthAuthorizationCompletion,
   type SdkworkAuthOAuthLoginInput,
@@ -130,6 +131,9 @@ export interface SdkworkIamRuntimeAuthRuntimeLike {
     };
     oauth?: {
       providers?: {
+        list?(): Promise<unknown>;
+      };
+      scanLoginModes?: {
         list?(): Promise<unknown>;
       };
       authorizationUrls?: {
@@ -631,10 +635,46 @@ export function createSdkworkIamRuntimeAuthService(
     if (!createSession) {
       throw new Error(methodUnavailableMessage);
     }
+    const qrMode = normalizeOptionalScalar(input.qrMode);
 
     return toPlatformLoginQrCode(await createSession({
       purpose: resolveQrAuthPurpose(input),
+      ...(qrMode ? { qrMode } : {}),
     }));
+  }
+
+  async function listScanLoginModes(): Promise<SdkworkAuthScanLoginMode[]> {
+    const runtime = await readRuntime();
+    const listModes = runtime.service.oauth?.scanLoginModes?.list;
+    if (!listModes) {
+      return [];
+    }
+    const payload = unwrapRuntimeResponse(await listModes());
+    const record = toRecord(payload);
+    const entries = Array.isArray(payload)
+      ? payload
+      : Array.isArray(record.modes)
+        ? record.modes
+        : [];
+    return entries
+      .map((entry): SdkworkAuthScanLoginMode | undefined => {
+        const mode = toRecord(entry);
+        const qrMode = normalizeOptionalScalar(mode.qrMode);
+        if (!qrMode) {
+          return undefined;
+        }
+        return {
+          displayName: normalizeOptionalScalar(mode.displayName),
+          enabled: typeof mode.enabled === "boolean" ? mode.enabled : true,
+          mode: normalizeOptionalScalar(mode.mode) || "url",
+          providerCode: normalizeOptionalScalar(mode.providerCode),
+          qrMode,
+          sortOrder: typeof mode.sortOrder === "number" ? mode.sortOrder : 999,
+        };
+      })
+      .filter((mode): mode is SdkworkAuthScanLoginMode => Boolean(mode))
+      .filter((mode) => mode.enabled)
+      .sort((left, right) => left.sortOrder - right.sortOrder);
   }
 
   async function checkLoginQrCodeStatus(
@@ -787,6 +827,7 @@ export function createSdkworkIamRuntimeAuthService(
     getCurrentUser,
     getVerificationPolicy,
     listOAuthProviders,
+    listScanLoginModes,
     getOAuthAuthorizationUrl,
     register,
     requestPasswordReset,

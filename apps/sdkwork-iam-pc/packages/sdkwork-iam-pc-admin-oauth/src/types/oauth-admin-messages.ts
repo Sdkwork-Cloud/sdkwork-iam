@@ -255,6 +255,23 @@ export interface SdkworkIamOauthAdminMessages {
       webhookMissing: string;
       webhookReady: string;
     };
+    modes: {
+      add: string;
+      addProvider: string;
+      addProviderPlaceholder: string;
+      addUrl: string;
+      addOfficialAccount: string;
+      defaultHint: string;
+      defaultTitle: string;
+      disable: string;
+      enable: string;
+      emptyHint: string;
+      moveDown: string;
+      moveUp: string;
+      providerModeLabel: string;
+      remove: string;
+      title: string;
+    };
     common: {
       error: string;
       loading: string;

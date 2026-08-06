@@ -111,4 +111,35 @@ describe("@sdkwork/iam-h5-auth", () => {
       surfaceCode: "consumer-mini",
     });
   });
+
+  it("parses provider scan-login OAuth states with and without poll secret", async () => {
+    const {
+      readScanLoginPollSecretFromOAuthState,
+      readScanLoginProviderFromOAuthState,
+      readScanLoginSessionKeyFromOAuthState,
+    } = await import("../src/index");
+
+    // New provider-mode format: p:<provider>:<sessionKey>:<pollSecret>
+    const providerState = "p:wechat_open:qr-session-1:qr-poll-secret-1";
+    expect(readScanLoginProviderFromOAuthState(providerState)).toBe("wechat_open");
+    expect(readScanLoginSessionKeyFromOAuthState(providerState)).toBe("qr-session-1");
+    expect(readScanLoginPollSecretFromOAuthState(providerState)).toBe("qr-poll-secret-1");
+
+    // Legacy provider-mode format (no poll secret) stays parseable.
+    const legacyProviderState = "p:dingtalk:qr-session-2";
+    expect(readScanLoginProviderFromOAuthState(legacyProviderState)).toBe("dingtalk");
+    expect(readScanLoginSessionKeyFromOAuthState(legacyProviderState)).toBe("qr-session-2");
+    expect(readScanLoginPollSecretFromOAuthState(legacyProviderState)).toBeUndefined();
+
+    // Legacy WeChat URL-mode format: scan:<sessionKey>
+    const wechatState = "scan:qr-session-3";
+    expect(readScanLoginProviderFromOAuthState(wechatState)).toBe("wechat");
+    expect(readScanLoginSessionKeyFromOAuthState(wechatState)).toBe("qr-session-3");
+    expect(readScanLoginPollSecretFromOAuthState(wechatState)).toBeUndefined();
+
+    // Server-generated opaque states carry no scan-login context.
+    expect(readScanLoginSessionKeyFromOAuthState("oauthstate_abc")).toBeUndefined();
+    expect(readScanLoginProviderFromOAuthState(undefined)).toBeUndefined();
+    expect(readScanLoginPollSecretFromOAuthState(undefined)).toBeUndefined();
+  });
 });

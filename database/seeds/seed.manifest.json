@@ -42,7 +42,8 @@
     },
     "standard": {
       "common": [
-        "002_default_iam_subject.sql"
+        "002_default_iam_subject.sql",
+        "001_bootstrap.sql"
       ],
       "locales": {
         "zh-CN": []

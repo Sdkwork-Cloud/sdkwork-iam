@@ -52,4 +52,58 @@ describe("organization administration workspace", () => {
     expect(controller.listPositions).not.toHaveBeenCalled();
     expect(controller.listRoleBindings).not.toHaveBeenCalled();
   });
+
+  it("navigates to the organization structure page when a row is clicked instead of expanding details inline", async () => {
+    const controller = createController();
+    const onOpenStructure = vi.fn();
+    render(
+      <SdkworkI18nProvider locale="zh-CN">
+        <SdkworkIamOrganizationAdminWorkspace
+          controller={controller as never}
+          onOpenStructure={onOpenStructure}
+          permissions={{
+            departments: { create: false, delete: false, read: true, update: false },
+            memberships: { create: false, read: true, update: false },
+            organizations: { create: false, delete: false, update: false },
+            positions: { read: true },
+            roleBindings: { read: true },
+          }}
+        />
+      </SdkworkI18nProvider>,
+    );
+
+    await screen.findByText("Platform");
+    fireEvent.click(screen.getByText("Platform"));
+
+    expect(onOpenStructure).toHaveBeenCalledWith(expect.objectContaining({ organizationId: "org-1" }));
+    expect(controller.selectOrganization).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "查看详情" })).toBeNull();
+    expect(screen.queryByText("正在管理 Platform")).toBeNull();
+  });
+
+  it("opens the structure page from the explicit structure action when navigation is wired", async () => {
+    const controller = createController();
+    const onOpenStructure = vi.fn();
+    render(
+      <SdkworkI18nProvider locale="zh-CN">
+        <SdkworkIamOrganizationAdminWorkspace
+          controller={controller as never}
+          onOpenStructure={onOpenStructure}
+          permissions={{
+            departments: { create: false, delete: false, read: true, update: false },
+            memberships: { create: false, read: false, update: false },
+            organizations: { create: false, delete: false, update: false },
+            positions: { read: false },
+            roleBindings: { read: false },
+          }}
+        />
+      </SdkworkI18nProvider>,
+    );
+
+    await screen.findByText("Platform");
+    fireEvent.click(screen.getByRole("button", { name: "组织结构" }));
+
+    expect(onOpenStructure).toHaveBeenCalledWith(expect.objectContaining({ organizationId: "org-1" }));
+    expect(screen.queryByText("正在管理 Platform")).toBeNull();
+  });
 });

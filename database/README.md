@@ -21,22 +21,23 @@ SQLite is not part of this authoritative database root. Any embedded SQLite adap
 
 Lifecycle orchestration is implemented by `crates/sdkwork-iam-database-host` through the `sdkwork-iam-db` CLI. Production startup does not auto-migrate; migrations are an explicit governed operation.
 
+## Initialization state
+
+This module is in **initialization state** for greenfield deployments:
+
+1. **Baseline** — `database/ddl/baseline/{engine}/0001_iam_baseline.sql` contains the full DDL snapshot.
+2. **Migrations** — `database/migrations/{engine}/` is reserved for post-GA incremental schema changes only. It is intentionally empty at initialization.
+3. **Drift** — run `pnpm db:drift:check` before release.
+
 ## Commands
 
 ```bash
-pnpm run check:database
 pnpm run db:validate
 pnpm run db:materialize:contract
 pnpm run db:plan
 pnpm run db:init
-pnpm run db:bootstrap
 pnpm run db:migrate
 pnpm run db:seed
 pnpm run db:status
 pnpm run db:drift:check
 ```
-
-- `db:init` applies the PostgreSQL baseline to an empty database.
-- `db:bootstrap` initializes, migrates, and applies the selected operational seed profile.
-- `db:migrate` applies pending versioned PostgreSQL migrations.
-- `db:drift:check` compares the deployed schema with the contract and never mutates it.

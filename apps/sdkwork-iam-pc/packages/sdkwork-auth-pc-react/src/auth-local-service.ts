@@ -32,6 +32,7 @@ import type {
   SdkworkAuthPhoneLoginInput,
   SdkworkAuthRefreshSessionInput,
   SdkworkAuthRegisterInput,
+  SdkworkAuthScanLoginMode,
   SdkworkAuthSendVerifyCodeInput,
   SdkworkAuthService,
   SdkworkAuthSession,
@@ -140,6 +141,7 @@ export interface CreateSdkworkLocalAuthServiceOptions<TAuthenticatedUser> {
     | Promise<SdkworkAuthResolvedVerificationPolicy>
     | SdkworkAuthResolvedVerificationPolicy;
   listOAuthProviders?: () => Promise<string[]> | string[];
+  listScanLoginModes?: () => Promise<SdkworkAuthScanLoginMode[]> | SdkworkAuthScanLoginMode[];
   getOAuthAuthorizationUrl?: (
     input: SdkworkAuthOAuthAuthorizationInput,
   ) => Promise<string>;
@@ -283,6 +285,13 @@ export function createSdkworkLocalAuthService<TAuthenticatedUser>(
       }
 
       return options.listOAuthProviders();
+    },
+    async listScanLoginModes() {
+      if (!options.listScanLoginModes) {
+        return [];
+      }
+
+      return options.listScanLoginModes();
     },
     async getOAuthAuthorizationUrl(input) {
       if (!options.getOAuthAuthorizationUrl) {

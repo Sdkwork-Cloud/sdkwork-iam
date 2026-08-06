@@ -241,9 +241,7 @@ pub(crate) fn role_binding_list_filter_sql(
 }
 
 /// Bind values for the role binding list filters in `ROLE_BINDING_LIST_FILTER_COLUMNS` order.
-pub(crate) fn role_binding_list_filter_values(
-    query: &HashMap<String, String>,
-) -> Vec<String> {
+pub(crate) fn role_binding_list_filter_values(query: &HashMap<String, String>) -> Vec<String> {
     ROLE_BINDING_LIST_FILTER_COLUMNS
         .iter()
         .filter_map(|(_, key)| optional_query_value(query, key))

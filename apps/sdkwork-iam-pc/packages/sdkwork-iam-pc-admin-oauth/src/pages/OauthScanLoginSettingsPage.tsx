@@ -9,6 +9,7 @@ import type { SdkworkIamOauthAdminPageProps } from "../types/oauth-admin-types";
 import { useSdkworkIamOauthAdminMessages } from "../i18n";
 import {
   OauthOfficialAccountScanLoginSection,
+  OauthScanLoginModesSection,
   OauthUrlScanLoginSection,
 } from "../components/oauth-scan-login-sections";
 
@@ -22,6 +23,10 @@ import {
  * 2. **url** — QR content is the H5 mobile login page URL; the user signs
  *    in on their phone (WeChat in-app browsers use official account
  *    authorization automatically).
+ *
+ * The configurable mode registry (`modes`) drives which QR modes the login
+ * page offers and in which order; third-party OAuth providers (`provider:
+ * <code>`) can be added without code changes.
  */
 export function SdkworkIamOauthScanLoginSettingsPage({
   controller,
@@ -29,14 +34,21 @@ export function SdkworkIamOauthScanLoginSettingsPage({
   const messages = useSdkworkIamOauthAdminMessages();
   const copy = messages.scanLogin;
   const [settings, setSettings] = useState<SdkworkIamOauthScanLoginSettings | undefined>();
+  const [providerCatalog, setProviderCatalog] = useState<unknown[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
   const load = useCallback(() => {
     setBusy(true);
     setError(undefined);
-    void controller.loadScanLoginSettings()
-      .then(setSettings)
+    void Promise.all([
+      controller.loadScanLoginSettings(),
+      controller.load(["providerCatalog"]).then((snapshot) => snapshot.providerCatalog).catch(() => []),
+    ])
+      .then(([nextSettings, providers]) => {
+        setSettings(nextSettings);
+        setProviderCatalog(providers);
+      })
       .catch((loadError) => {
         setError(loadError instanceof Error ? loadError.message : copy.common.error);
       })
@@ -62,6 +74,17 @@ export function SdkworkIamOauthScanLoginSettingsPage({
       ) : null}
       {settings ? (
         <>
+          <OauthScanLoginModesSection
+            busy={busy}
+            controller={controller}
+            modes={settings.modes}
+            onChanged={(updated) => {
+              setError(undefined);
+              setSettings(updated);
+            }}
+            onError={setError}
+            providerCatalog={providerCatalog}
+          />
           <OauthOfficialAccountScanLoginSection
             accounts={settings.officialAccounts}
             busy={busy}

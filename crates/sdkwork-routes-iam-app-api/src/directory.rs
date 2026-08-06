@@ -1051,13 +1051,21 @@ pub(crate) fn build_oauth_device_authorization_entry_url(
 /// `url` scan-login mode. The H5 page completes the QR session with an
 /// authenticated completion call after a successful password or WeChat
 /// authorization login.
+///
+/// `origin` is optional: when provided it wins over the env/request origin
+/// resolution (used by the scan-login registry config).
 pub(crate) fn build_oauth_device_authorization_h5_entry_url(
     headers: &HeaderMap,
     session_key: &str,
     purpose: &str,
     poll_secret: &str,
+    origin: &str,
 ) -> String {
-    let origin = resolve_oauth_h5_login_entry_origin(headers);
+    let origin = if origin.trim().is_empty() {
+        resolve_oauth_h5_login_entry_origin(headers)
+    } else {
+        trim_trailing_slash(origin)
+    };
     let base = format!(
         "{origin}/auth/login?session_key={}&purpose={}&scan_source=qr",
         percent_encode_query_component(session_key),

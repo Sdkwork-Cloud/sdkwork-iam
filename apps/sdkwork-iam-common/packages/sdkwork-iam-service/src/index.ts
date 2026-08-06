@@ -135,6 +135,9 @@ export interface SdkworkIamService {
         create(deviceAuthorizationId: string, body: Record<string, unknown>): Promise<unknown>;
       };
     };
+    scanLoginModes: {
+      list(params?: Record<string, unknown>): Promise<unknown>;
+    };
     callbacks: {
       create(body?: Record<string, unknown>): Promise<unknown>;
       retrieve(params?: Record<string, unknown>): Promise<unknown>;
@@ -485,15 +488,6 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
             body,
           ),
         },
-        sessionExchanges: {
-          create: (deviceAuthorizationId, body) => callRaw(
-            appOauth?.deviceAuthorizations?.sessionExchanges,
-            "create",
-            "appbaseAppClient.oauth.deviceAuthorizations.sessionExchanges.create",
-            deviceAuthorizationId,
-            body,
-          ),
-        },
         sessionCompletions: {
           create: (deviceAuthorizationId, body) => callRaw(
             appOauth?.deviceAuthorizations?.sessionCompletions,
@@ -503,6 +497,18 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
             body,
           ),
         },
+        sessionExchanges: {
+          create: (deviceAuthorizationId, body) => callRaw(
+            appOauth?.deviceAuthorizations?.sessionExchanges,
+            "create",
+            "appbaseAppClient.oauth.deviceAuthorizations.sessionExchanges.create",
+            deviceAuthorizationId,
+            body,
+          ),
+        },
+      },
+      scanLoginModes: {
+        list: (params) => callRaw(appOauth?.scanLoginModes, "list", "appbaseAppClient.oauth.scanLoginModes.list", iamListQuery(params)),
       },
       callbacks: {
         retrieve: (params) => callRaw(appOauth?.callbacks, "retrieve", "appbaseAppClient.oauth.callbacks.retrieve", params),

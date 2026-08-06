@@ -295,6 +295,24 @@ export interface SdkworkAuthOAuthAuthorizationCompletion {
 
 export interface SdkworkAuthLoginQrCodeCreateInput {
   purpose?: "login" | "register";
+  /**
+   * Scan-login mode: `official_account`, `url`, or `provider:<code>`.
+   * Omitted → the backend picks the registry default mode.
+   */
+  qrMode?: string;
+}
+
+/**
+ * A scan-login mode offered by the login page QR panel (from
+ * `oauth.scanLoginModes.list`).
+ */
+export interface SdkworkAuthScanLoginMode {
+  displayName?: string;
+  enabled: boolean;
+  mode: "official_account" | "provider" | "url" | string;
+  providerCode?: string;
+  qrMode: string;
+  sortOrder: number;
 }
 
 export interface SdkworkAuthLoginQrCodeConfirmInput {
@@ -390,6 +408,9 @@ export interface SdkworkAuthClient {
         create?: (deviceAuthorizationId: string, payload: Record<string, unknown>) => Promise<unknown>;
       };
     };
+    scanLoginModes?: {
+      list?: () => Promise<unknown>;
+    };
     providers?: {
       list?: () => Promise<unknown>;
     };
@@ -453,6 +474,7 @@ export interface SdkworkAuthService {
   getCurrentUser(): Promise<SdkworkAuthUser | null>;
   getVerificationPolicy(): Promise<SdkworkAuthResolvedVerificationPolicy>;
   listOAuthProviders(): Promise<string[]>;
+  listScanLoginModes(): Promise<SdkworkAuthScanLoginMode[]>;
   getOAuthAuthorizationUrl(input: SdkworkAuthOAuthAuthorizationInput): Promise<string>;
   register(input: SdkworkAuthRegisterInput): Promise<SdkworkAuthSession>;
   requestPasswordReset(input: SdkworkAuthPasswordResetRequestInput): Promise<void>;
@@ -1176,6 +1198,30 @@ function toPlatformLoginQrCode(
   };
 }
 
+function normalizeScanLoginModes(value: unknown): SdkworkAuthScanLoginMode[] {
+  const record = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const entries = Array.isArray(record.modes) ? record.modes : [];
+  return entries
+    .map((entry): SdkworkAuthScanLoginMode | undefined => {
+      const mode = entry && typeof entry === "object" ? entry as Record<string, unknown> : {};
+      const qrMode = normalizeOptionalString(mode.qrMode);
+      if (!qrMode) {
+        return undefined;
+      }
+      return {
+        displayName: normalizeOptionalString(mode.displayName),
+        enabled: typeof mode.enabled === "boolean" ? mode.enabled : true,
+        mode: normalizeOptionalString(mode.mode) || "url",
+        providerCode: normalizeOptionalString(mode.providerCode),
+        qrMode,
+        sortOrder: typeof mode.sortOrder === "number" ? mode.sortOrder : 999,
+      };
+    })
+    .filter((mode): mode is SdkworkAuthScanLoginMode => Boolean(mode))
+    .filter((mode) => mode.enabled)
+    .sort((left, right) => left.sortOrder - right.sortOrder);
+}
+
 function toPlatformLoginQrCodeStatus(
   session: SdkworkRemotePlatformQrAuthSession,
   fallbackStatus: SdkworkAuthLoginQrCodeStatus = "pending",
@@ -1833,10 +1879,24 @@ export function createSdkworkAuthService(
     const session = unwrapAppSdkResponse<SdkworkRemotePlatformQrAuthSession>(
       await createDeviceAuthorization({
         purpose,
+        ...(normalizeOptionalString(input.qrMode) ? { qrMode: normalizeOptionalString(input.qrMode) } : {}),
       }),
       copy.service.generateQrCodeFailed,
     );
     return toPlatformLoginQrCode(session);
+  }
+
+  async function listScanLoginModes(): Promise<SdkworkAuthScanLoginMode[]> {
+    const client = getClient();
+    const listScanLoginModesMethod = client.oauth?.scanLoginModes?.list;
+    if (!listScanLoginModesMethod) {
+      return [];
+    }
+    const response = unwrapAppSdkResponse<unknown>(
+      await listScanLoginModesMethod(),
+      copy.common.requestFailed,
+    );
+    return normalizeScanLoginModes(response);
   }
 
   async function checkLoginQrCodeStatus(
@@ -2053,6 +2113,7 @@ export function createSdkworkAuthService(
     getCurrentUser,
     getVerificationPolicy,
     listOAuthProviders,
+    listScanLoginModes,
     getOAuthAuthorizationUrl,
     register,
     requestPasswordReset,

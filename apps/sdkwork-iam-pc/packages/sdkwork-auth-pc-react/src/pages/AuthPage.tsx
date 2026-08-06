@@ -104,6 +104,7 @@ import {
   type SdkworkAuthLoginQrCodeConfirmInput,
   type SdkworkAuthLoginQrCodeStatusResult,
   type SdkworkAuthOrganizationSelectionChallenge,
+  type SdkworkAuthScanLoginMode,
 } from "../auth-service.ts";
 import {
   SdkworkAuthPageRouterContextBoundary,
@@ -151,8 +152,9 @@ const sdkworkAuthQrSessionCache = new WeakMap<
 function buildSdkworkAuthQrSessionCacheKey(
   purpose: SdkworkAuthQrCodePurpose,
   reloadNonce: number,
+  qrMode?: string,
 ): string {
-  return `${purpose}:${reloadNonce}`;
+  return `${purpose}:${reloadNonce}:${qrMode ?? ""}`;
 }
 
 function resolveSdkworkAuthQrSessionCacheExpiresAt(qrCode: SdkworkAuthLoginQrCode): number {
@@ -204,11 +206,12 @@ function requestSdkworkAuthQrSession(
   controller: SdkworkAuthController,
   purpose: SdkworkAuthQrCodePurpose,
   reloadNonce: number,
+  qrMode?: string,
 ): Promise<SdkworkAuthLoginQrCode> {
   const cacheMap = readSdkworkAuthQrSessionCacheMap(controller);
   pruneSdkworkAuthQrSessionCache(cacheMap);
 
-  const cacheKey = buildSdkworkAuthQrSessionCacheKey(purpose, reloadNonce);
+  const cacheKey = buildSdkworkAuthQrSessionCacheKey(purpose, reloadNonce, qrMode);
   const existingEntry = cacheMap.get(cacheKey);
   const now = Date.now();
   if (existingEntry && existingEntry.expiresAt > now) {
@@ -217,7 +220,7 @@ function requestSdkworkAuthQrSession(
 
   let cacheEntry: SdkworkAuthQrSessionCacheEntry;
   const promise = Promise.resolve()
-    .then(() => controller.generateLoginQrCode({ purpose }))
+    .then(() => controller.generateLoginQrCode({ purpose, ...(qrMode ? { qrMode } : {}) }))
     .then((qrCode) => {
       cacheEntry.expiresAt = resolveSdkworkAuthQrSessionCacheExpiresAt(qrCode);
       return qrCode;
@@ -691,6 +694,8 @@ function SdkworkAuthPageContent({
   const [qrEntryErrorMessage, setQrEntryErrorMessage] = useState("");
   const [qrEntryErrorIsBlocking, setQrEntryErrorIsBlocking] = useState(false);
   const [qrReloadNonce, setQrReloadNonce] = useState(0);
+  const [scanLoginModes, setScanLoginModes] = useState<SdkworkAuthScanLoginMode[]>([]);
+  const [activeScanModeIndex, setActiveScanModeIndex] = useState(0);
   const qrPollSecretRef = useRef("");
   const [organizationSelectionChallenge, setOrganizationSelectionChallenge] =
     useState<SdkworkAuthOrganizationSelectionChallenge | null>(null);
@@ -1166,10 +1171,12 @@ function SdkworkAuthPageContent({
 
       try {
         const nextQrPurpose: SdkworkAuthQrCodePurpose = mode === "register" ? "register" : "login";
+        const activeScanMode = scanLoginModes[activeScanModeIndex];
         const nextQrCode = await requestSdkworkAuthQrSession(
           controller,
           nextQrPurpose,
           qrReloadNonce,
+          activeScanMode?.qrMode,
         );
         if (disposed) {
           return;
@@ -1225,7 +1232,32 @@ function SdkworkAuthPageContent({
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       clearPollTimer();
     };
-  }, [controller, copy.qr.generateFailed, copy.qr.missingPayload, copy.qr.unavailable, mode, navigate, qrReloadNonce, redirectTarget, shouldRenderQrRail]);
+  }, [activeScanModeIndex, controller, copy.qr.generateFailed, copy.qr.missingPayload, copy.qr.unavailable, mode, navigate, qrReloadNonce, redirectTarget, scanLoginModes, shouldRenderQrRail]);
+
+  // Loads the configured scan-login modes for the QR panel. Failures are
+  // silent: the panel falls back to the backend's default mode (single QR).
+  useEffect(() => {
+    let disposed = false;
+    void controller.listScanLoginModes()
+      .then((modes) => {
+        if (!disposed) {
+          setScanLoginModes(modes);
+          setActiveScanModeIndex(0);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      disposed = true;
+    };
+  }, [controller]);
+
+  const rotateScanMode = () => {
+    if (scanLoginModes.length < 2) {
+      return;
+    }
+    setQrCode(null);
+    setActiveScanModeIndex((current) => (current + 1) % scanLoginModes.length);
+  };
 
   useEffect(() => {
     events?.onModeChange?.(mode, {
@@ -1439,16 +1471,27 @@ function SdkworkAuthPageContent({
       <SdkworkAuthPageShell
         appearance={resolvedAppearance}
         aside={shouldRenderQrRail ? (
-          <SdkworkQrLoginPanel
-            appearance={resolvedAppearance}
-            onRefresh={() => setQrReloadNonce((value) => value + 1)}
-            panelDescription={qrPanelDescription}
-            panelTitle={qrPanelTitle}
-            qrCode={qrCode}
-            qrErrorMessage={qrErrorMessage}
-            qrImageSrc={qrImageSrc}
-            qrState={qrState}
-          />
+          <div className="flex flex-col gap-3">
+            <SdkworkQrLoginPanel
+              appearance={resolvedAppearance}
+              onRefresh={() => setQrReloadNonce((value) => value + 1)}
+              panelDescription={qrPanelDescription}
+              panelTitle={qrPanelTitle}
+              qrCode={qrCode}
+              qrErrorMessage={qrErrorMessage}
+              qrImageSrc={qrImageSrc}
+              qrState={qrState}
+            />
+            {scanLoginModes.length > 1 ? (
+              <button
+                className="text-center text-xs text-[var(--sdk-color-text-muted)] underline-offset-2 hover:underline"
+                onClick={rotateScanMode}
+                type="button"
+              >
+                {copy.qr.switchMode}
+              </button>
+            ) : null}
+          </div>
         ) : (
           <SdkworkAuthAsideContent
             appearance={resolvedAppearance}

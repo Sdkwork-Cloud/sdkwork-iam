@@ -352,16 +352,17 @@ export function SdkworkIamOrganizationAdminWorkspace({
           footer={<CatalogPagination busy={busy} copy={paginationCopy} onPageChange={(page) => changePage("organizations", page)} onPageSizeChange={(pageSize) => changePageSize("organizations", pageSize)} pageInfo={pageInfo.organizationListPageInfo} />}
           getRowId={(item) => item.organizationId}
           loading={loading}
-          onRowClick={(item) => void selectOrganization(item)}
+          onRowClick={(item) => (onOpenStructure ? onOpenStructure(item) : void selectOrganization(item))}
           rowActions={(item) => (
             <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
-              <Button onClick={() => void selectOrganization(item)} size="sm" type="button" variant="outline">{messages.organizations.manage}</Button>
-              {onOpenStructure && permissions.departments.read ? (
+              {onOpenStructure ? (
                 <Button onClick={() => onOpenStructure(item)} size="sm" type="button" variant="outline">
                   <GitBranch className="h-3.5 w-3.5" />
                   {messages.organizations.structure}
                 </Button>
-              ) : null}
+              ) : (
+                <Button onClick={() => void selectOrganization(item)} size="sm" type="button" variant="outline">{messages.organizations.manage}</Button>
+              )}
               {permissions.organizations.update ? (
                 <IconButton aria-label={messages.organizations.edit} onClick={() => openOrganizationEditor(item)} title={messages.organizations.edit} variant="ghost">
                   <Pencil className="h-3.5 w-3.5" />
@@ -400,7 +401,7 @@ export function SdkworkIamOrganizationAdminWorkspace({
           )}
         />
 
-        {selectedOrganization ? (
+        {!onOpenStructure && selectedOrganization ? (
           <section className="flex min-h-0 flex-1 flex-col border-t border-[var(--sdk-color-border-subtle)] pt-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-3">
@@ -414,12 +415,6 @@ export function SdkworkIamOrganizationAdminWorkspace({
               </div>
               {detailTabs.length > 0 && activeTab ? (
                 <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-                  {onOpenStructure && permissions.departments.read ? (
-                    <Button onClick={() => onOpenStructure(selectedOrganization)} type="button" variant="outline">
-                      <GitBranch className="h-4 w-4" />
-                      {messages.organizations.structure}
-                    </Button>
-                  ) : null}
                   <SegmentedControl aria-label={messages.organizations.manage} className="w-full lg:w-auto" fullWidth={false} onValueChange={switchDetailTab} options={detailTabs} value={activeTab} />
                 </div>
               ) : null}
@@ -495,10 +490,14 @@ export function SdkworkIamOrganizationAdminWorkspace({
           if (selectedOrganization?.organizationId === updated.organizationId) setSelectedOrganization(updated);
         } else {
           const created = await controller.createOrganization(organizationDraft);
-          setSelectedOrganization(created);
-          const nextTab = detailTabs[0]?.value;
-          setActiveTab(nextTab);
-          if (nextTab) await loadDetailTab(nextTab, created.organizationId);
+          if (onOpenStructure) {
+            onOpenStructure(created);
+          } else {
+            setSelectedOrganization(created);
+            const nextTab = detailTabs[0]?.value;
+            setActiveTab(nextTab);
+            if (nextTab) await loadDetailTab(nextTab, created.organizationId);
+          }
         }
         await refreshOrganizations();
         setOrganizationDrawerMode(undefined);

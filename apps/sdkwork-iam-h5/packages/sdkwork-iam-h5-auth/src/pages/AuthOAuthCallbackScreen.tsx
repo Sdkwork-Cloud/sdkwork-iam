@@ -1,20 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { SdkworkIamH5AuthOAuthCallbackScreenProps } from "../types/auth-h5-types";
 import { IAM_H5_AUTH_ROUTES } from "../types/auth-h5-types";
 import {
+  clearScanLoginUrlContext,
+  readScanLoginPollSecretFromOAuthState,
+  readScanLoginProviderFromOAuthState,
   readScanLoginSessionKeyFromOAuthState,
 } from "../services/auth-h5-controller";
-
-const WECHAT_PROVIDER = "wechat";
 
 /**
  * WeChat web-authorization callback screen.
  *
- * Receives `code`/`state` from the WeChat authorization page, exchanges it
- * for a session, and — when the login originated from a URL scan-login QR —
+ * Receives `code`/`state` from the authorization page, exchanges it for a
+ * session, and — when the login originated from a URL scan-login QR —
  * completes the QR session (`session_completions`) so the desktop login page
- * can finish.
+ * can finish. The provider is carried in the `state` (`p:<provider>:<key>`
+ * for third-party providers, legacy `scan:<key>` defaults to `wechat`).
  */
 export function SdkworkIamH5AuthOAuthCallbackScreen({
   controller,
@@ -39,10 +41,17 @@ export function SdkworkIamH5AuthOAuthCallbackScreen({
     };
   }, []);
 
+  // Guards against double execution: React StrictMode mounts effects twice in
+  // development and an unstable parent callback would re-run the effect. The
+  // authorization code/state is single-use server-side, so a second exchange
+  // would fail and overwrite the first result.
+  const exchangeAttemptedRef = useRef(false);
+
   const exchangeAndFinish = useCallback(async () => {
-    if (typeof window === "undefined" || !oauthParams) {
+    if (typeof window === "undefined" || !oauthParams || exchangeAttemptedRef.current) {
       return;
     }
+    exchangeAttemptedRef.current = true;
     if (oauthParams.error) {
       setError(oauthParams.errorDescription || oauthParams.error);
       setStatus("error");
@@ -55,20 +64,28 @@ export function SdkworkIamH5AuthOAuthCallbackScreen({
     }
     const redirectUri = `${window.location.origin}${IAM_H5_AUTH_ROUTES.callbackPath}`;
     try {
+      const provider = readScanLoginProviderFromOAuthState(oauthParams.state) || "wechat";
       const session = await controller.loginWithOAuth({
         code: oauthParams.code,
-        provider: WECHAT_PROVIDER,
+        provider,
         redirectUri,
         state: oauthParams.state || "",
       });
-      const sessionKey = readScanLoginSessionKeyFromOAuthState(oauthParams.state);
+      // The scan-login session key and poll secret come from the provider
+      // mode `p:<provider>:<key>:<secret>` state, or from the H5 login page
+      // context (sessionStorage) for the URL-mode WeChat flow.
+      const scanContext = controller.resolveScanLoginContext();
+      const sessionKey =
+        readScanLoginSessionKeyFromOAuthState(oauthParams.state) || scanContext?.sessionKey;
       if (sessionKey) {
-        const scanContext = controller.resolveScanLoginContext();
-        if (scanContext?.pollSecret) {
+        const pollSecret =
+          readScanLoginPollSecretFromOAuthState(oauthParams.state) || scanContext?.pollSecret;
+        if (pollSecret) {
           await controller.completeScanLogin({
-            pollSecret: scanContext.pollSecret,
+            pollSecret,
             sessionKey,
           });
+          clearScanLoginUrlContext();
           setCompletedScan(true);
           onScanLoginCompleted?.();
           return;

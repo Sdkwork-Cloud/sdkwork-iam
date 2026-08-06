@@ -129,20 +129,14 @@ pub use oauth_integration_exchange::{
     builtin_userinfo_endpoint, exchange_oauth_authorization_code,
     exchange_wechat_mini_program_code, load_oauth_integration_exchange_context,
     load_oauth_integration_exchange_context_for_app,
-    load_oauth_integration_exchange_context_for_integration, probe_wechat_mini_program_configuration,
-    seed_builtin_oauth_provider_catalog, OAuthIntegrationExchangeContext,
+    load_oauth_integration_exchange_context_for_integration,
+    probe_wechat_mini_program_configuration, seed_builtin_oauth_provider_catalog,
+    OAuthIntegrationExchangeContext,
 };
 pub use oauth_login_local::{LocalOAuthAuthority, LocalOAuthProviderProfile};
 pub use oauth_provider_callback::{
     handle_provider_callback_get, handle_provider_callback_post, ProviderCallbackHttpResponse,
     ProviderCallbackRequestMeta,
-};
-pub use wechat_mp::{
-    create_wechat_mp_temp_qr_code, fetch_wechat_mp_access_token, generate_wechat_mp_scene,
-    parse_oauth_follow_login_scene, record_oauth_follow_login_confirmation,
-    wechat_mp_api_base, OAuthFollowLoginConfirmation, WechatMpTempQrCode,
-    OAUTH_QR_FOLLOW_CONFIRMED_STATUS, OAUTH_QR_FOLLOW_LOGIN_FIELD,
-    OAUTH_QR_SCENE_EVENT_KEY_PREFIX, OAUTH_QR_SESSION_KIND, OAUTH_QR_SESSION_SCOPE,
 };
 pub use oauth_provider_catalog::{
     builtin_oauth_provider_catalog, catalog_entry_for_provider, normalize_oauth_provider_code,
@@ -157,6 +151,13 @@ pub use oauth_token_lookup::IamOAuthTokenLookupService;
 pub use production_runtime::{
     allows_oauth_client_secret_env_override, assert_production_hardening,
     is_explicit_development_iam_deployment, is_production_iam_deployment,
+};
+pub use wechat_mp::{
+    create_wechat_mp_temp_qr_code, fetch_wechat_mp_access_token, generate_wechat_mp_scene,
+    parse_oauth_follow_login_scene, record_oauth_follow_login_confirmation, wechat_mp_api_base,
+    OAuthFollowLoginConfirmation, WechatMpTempQrCode, OAUTH_QR_FOLLOW_CONFIRMED_STATUS,
+    OAUTH_QR_FOLLOW_LOGIN_FIELD, OAUTH_QR_SCENE_EVENT_KEY_PREFIX, OAUTH_QR_SESSION_KIND,
+    OAUTH_QR_SESSION_SCOPE,
 };
 
 #[cfg(test)]

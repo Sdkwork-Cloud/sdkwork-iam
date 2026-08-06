@@ -22,8 +22,18 @@ import type {
 /** Storage key for the scan-login context kept across the WeChat authorization redirect. */
 const SCAN_LOGIN_STORAGE_KEY = "sdkwork.iam.h5.scanLogin";
 
-/** OAuth `state` prefix used to carry the QR session key through WeChat authorization. */
+/** OAuth `state` prefix used to carry the QR session key through authorization. */
 const SCAN_LOGIN_STATE_PREFIX = "scan:";
+
+/**
+ * OAuth `state` prefix for provider scan login:
+ * `p:<providerCode>:<sessionKey>[:<pollSecret>]` (the code is exchanged with
+ * the provider; the poll secret is embedded so the callback screen — which
+ * never visits the H5 login URL — can complete the QR session).
+ */
+const SCAN_LOGIN_PROVIDER_STATE_PREFIX = "p:";
+
+const WECHAT_PROVIDER = "wechat";
 
 export function createSdkworkIamH5AuthController(
   input: SdkworkIamService | CreateSdkworkIamH5AuthControllerInput,
@@ -213,17 +223,67 @@ export function resolveScanLoginContext(): SdkworkIamH5ScanLoginContext | undefi
 }
 
 /** Builds the OAuth `state` value that carries the QR session key. */
-export function buildScanLoginOAuthState(sessionKey: string): string {
+export function buildScanLoginOAuthState(
+  sessionKey: string,
+  providerCode?: string,
+): string {
+  const provider = providerCode?.trim();
+  if (provider && provider !== WECHAT_PROVIDER) {
+    return `${SCAN_LOGIN_PROVIDER_STATE_PREFIX}${provider}:${sessionKey}`;
+  }
   return `${SCAN_LOGIN_STATE_PREFIX}${sessionKey}`;
+}
+
+/**
+ * Extracts the provider code from an OAuth `state` value, if present.
+ * Legacy `scan:` states default to `wechat`.
+ */
+export function readScanLoginProviderFromOAuthState(
+  state: string | undefined,
+): string | undefined {
+  if (!state) {
+    return undefined;
+  }
+  if (state.startsWith(SCAN_LOGIN_PROVIDER_STATE_PREFIX)) {
+    const rest = state.slice(SCAN_LOGIN_PROVIDER_STATE_PREFIX.length);
+    const provider = rest.split(":").shift()?.trim();
+    return isBlank(provider) ? undefined : provider;
+  }
+  return state.startsWith(SCAN_LOGIN_STATE_PREFIX) ? WECHAT_PROVIDER : undefined;
 }
 
 /** Extracts the QR session key from an OAuth `state` value, if present. */
 export function readScanLoginSessionKeyFromOAuthState(state: string | undefined): string | undefined {
-  if (!state || !state.startsWith(SCAN_LOGIN_STATE_PREFIX)) {
+  if (!state) {
     return undefined;
   }
-  const sessionKey = state.slice(SCAN_LOGIN_STATE_PREFIX.length).trim();
+  let sessionKey: string | undefined;
+  if (state.startsWith(SCAN_LOGIN_PROVIDER_STATE_PREFIX)) {
+    sessionKey = state
+      .slice(SCAN_LOGIN_PROVIDER_STATE_PREFIX.length)
+      .split(":")
+      [1]?.trim();
+  } else if (state.startsWith(SCAN_LOGIN_STATE_PREFIX)) {
+    sessionKey = state.slice(SCAN_LOGIN_STATE_PREFIX.length).trim();
+  }
   return isBlank(sessionKey) ? undefined : sessionKey;
+}
+
+/**
+ * Extracts the QR poll secret from an OAuth `state` value, if present
+ * (provider scan login embeds it after the session key).
+ */
+export function readScanLoginPollSecretFromOAuthState(state: string | undefined): string | undefined {
+  if (!state || !state.startsWith(SCAN_LOGIN_PROVIDER_STATE_PREFIX)) {
+    return undefined;
+  }
+  const pollSecret = state
+    .slice(SCAN_LOGIN_PROVIDER_STATE_PREFIX.length)
+    .split(":")
+    .slice(2)
+    .join(":")
+    .trim();
+  return isBlank(pollSecret) ? undefined : pollSecret;
 }
 
 function storeScanLoginContext(context: SdkworkIamH5ScanLoginContext): void {
@@ -260,6 +320,29 @@ function clearStoredScanLoginContext(): void {
     window.sessionStorage.removeItem(SCAN_LOGIN_STORAGE_KEY);
   } catch {
     // Ignore storage failures on logout/completion.
+  }
+}
+
+/**
+ * Removes the scan-login parameters from the current H5 URL after the QR
+ * session was completed, so a reload or back-navigation cannot re-submit
+ * the completion (which would otherwise rotate the issued session).
+ */
+export function clearScanLoginUrlContext(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    const search = new URLSearchParams(window.location.search);
+    search.delete("session_key");
+    search.delete("sessionKey");
+    search.delete("scan_source");
+    search.delete("purpose");
+    const nextSearch = search.toString();
+    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+    window.history.replaceState(null, "", nextUrl);
+  } catch {
+    // Best-effort; the backend completion is idempotent as a fallback.
   }
 }
 

@@ -103,6 +103,7 @@ export interface SdkworkAuthMessages {
     openAppHint: string;
     refresh: string;
     scannedHint: string;
+    switchMode: string;
     status: {
       bindRequired: string;
       confirmed: string;
@@ -295,6 +296,7 @@ const EN_US_MESSAGES: SdkworkAuthMessages = {
     openAppHint: "",
     refresh: "Refresh QR code",
     scannedHint: "QR scanned. Complete login on your phone.",
+    switchMode: "Try another scan method",
     status: {
       bindRequired: "Account binding required",
       confirmed: "Login confirmed",
@@ -481,6 +483,7 @@ const ZH_CN_MESSAGES: SdkworkAuthMessages = {
     openAppHint: "",
     refresh: "\u5237\u65b0\u4e8c\u7ef4\u7801",
     scannedHint: "\u5df2\u626b\u7801\uff0c\u8bf7\u5728\u624b\u673a\u7aef\u5b8c\u6210\u767b\u5f55\u3002",
+    switchMode: "换一种扫码方式",
     status: {
       bindRequired: "\u9700\u8981\u7ed1\u5b9a\u8d26\u53f7",
       confirmed: "\u767b\u5f55\u5df2\u786e\u8ba4",

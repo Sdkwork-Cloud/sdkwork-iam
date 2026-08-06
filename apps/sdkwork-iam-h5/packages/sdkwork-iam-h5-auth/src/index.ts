@@ -4,7 +4,10 @@ export {
 export * from "./types/auth-h5-types";
 export {
   buildScanLoginOAuthState,
+  clearScanLoginUrlContext,
   createSdkworkIamH5AuthController,
+  readScanLoginPollSecretFromOAuthState,
+  readScanLoginProviderFromOAuthState,
   readScanLoginSessionKeyFromOAuthState,
   resolveScanLoginContext,
 } from "./services/auth-h5-controller";

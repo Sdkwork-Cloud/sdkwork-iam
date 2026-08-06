@@ -252,6 +252,15 @@ export type SdkworkIamOauthAdminView =
 
 export type SdkworkIamOauthScanLoginQrMode = "official_account" | "url";
 
+export interface SdkworkIamOauthScanLoginModeEntry {
+  displayName?: string;
+  enabled: boolean;
+  mode: "official_account" | "provider" | "url" | string;
+  providerCode?: string;
+  qrMode: string;
+  sortOrder: number;
+}
+
 export interface SdkworkIamOauthScanLoginWebhookInfo {
   callbackPublicId?: string;
   callbackUrl?: string;
@@ -273,6 +282,7 @@ export interface SdkworkIamOauthScanLoginOfficialAccount {
 
 export interface SdkworkIamOauthScanLoginSettings {
   defaultQrMode: "auto" | SdkworkIamOauthScanLoginQrMode;
+  modes: SdkworkIamOauthScanLoginModeEntry[];
   officialAccounts: SdkworkIamOauthScanLoginOfficialAccount[];
   urlLogin: {
     enabled: boolean;
@@ -282,6 +292,7 @@ export interface SdkworkIamOauthScanLoginSettings {
 
 export interface SdkworkIamOauthScanLoginSettingsDraft {
   defaultQrMode?: "auto" | SdkworkIamOauthScanLoginQrMode;
+  modes?: SdkworkIamOauthScanLoginModeEntry[];
   urlLogin?: {
     enabled?: boolean;
     h5LoginOrigin?: string;
@@ -292,7 +303,7 @@ export interface SdkworkIamOauthScanLoginPreview {
   expireSeconds?: number;
   qrCode?: string;
   qrContent: string;
-  qrMode: SdkworkIamOauthScanLoginQrMode;
+  qrMode: string;
 }
 
 export interface SdkworkIamOauthAdminController {
@@ -370,7 +381,7 @@ export interface SdkworkIamOauthAdminController {
   loadScanLoginSettings(): Promise<SdkworkIamOauthScanLoginSettings>;
   updateScanLoginSettings(body: SdkworkIamOauthScanLoginSettingsDraft): Promise<SdkworkIamOauthScanLoginSettings>;
   generateScanLoginPreview(
-    qrMode: SdkworkIamOauthScanLoginQrMode,
+    qrMode: string,
     accountId?: string,
   ): Promise<SdkworkIamOauthScanLoginPreview>;
   setResourceAccountQrLogin(resourceAccountId: string, enabled: boolean): Promise<unknown>;

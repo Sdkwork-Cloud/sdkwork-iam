@@ -170,8 +170,10 @@ pub async fn assemble_backend_api_contribution() -> Result<ApiAssemblyContributi
 pub async fn assemble_backend_api_contribution_with_pool(
     pool: DatabasePool,
 ) -> Result<ApiAssemblyContribution, String> {
-    assemble_backend_api_contribution_with_host(bootstrap_iam_application_state_with_pool(pool).await?)
-        .await
+    assemble_backend_api_contribution_with_host(
+        bootstrap_iam_application_state_with_pool(pool).await?,
+    )
+    .await
 }
 
 async fn assemble_backend_api_contribution_with_host(

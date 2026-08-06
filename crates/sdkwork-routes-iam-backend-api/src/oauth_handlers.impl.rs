@@ -2648,7 +2648,7 @@ async fn update_scan_login_settings(
     };
 
     let existing = match sqlx::query(
-        "SELECT h5_login_origin, url_login_enabled, default_qr_mode \
+        "SELECT h5_login_origin, url_login_enabled, default_qr_mode, modes_json \
          FROM iam_oauth_scan_login_config WHERE tenant_id = $1",
     )
     .bind(&tenant_id)
@@ -2660,15 +2660,17 @@ async fn update_scan_login_settings(
             return internal_handler_error("iam_oauth_scan_login_settings_update_failed", error);
         }
     };
-    let (mut h5_login_origin, mut url_login_enabled, mut default_qr_mode) = match existing {
-        Some(row) => {
-            let origin: String = row.get(0);
-            let enabled: i32 = row.get(1);
-            let mode: String = row.get(2);
-            (origin, enabled != 0, mode)
-        }
-        None => (String::new(), true, "auto".to_string()),
-    };
+    let (mut h5_login_origin, mut url_login_enabled, mut default_qr_mode, mut modes_json) =
+        match existing {
+            Some(row) => {
+                let origin: String = row.get(0);
+                let enabled: i32 = row.get(1);
+                let mode: String = row.get(2);
+                let modes: String = row.get(3);
+                (origin, enabled != 0, mode, modes)
+            }
+            None => (String::new(), true, "auto".to_string(), "[]".to_string()),
+        };
 
     if let Some(url_login) = body.get("urlLogin") {
         if let Some(value) = read_string_field(url_login, &["h5LoginOrigin", "h5_login_origin"]) {
@@ -2684,22 +2686,27 @@ async fn update_scan_login_settings(
             _ => default_qr_mode = "auto".to_string(),
         }
     }
+    if let Some(modes_value) = body.get("modes") {
+        modes_json = normalize_scan_login_modes_json(&modes_value.to_string());
+    }
 
     let now = Utc::now().to_rfc3339();
     match sqlx::query(
         "INSERT INTO iam_oauth_scan_login_config \
-         (tenant_id, h5_login_origin, url_login_enabled, default_qr_mode, updated_at) \
-         VALUES ($1, $2, $3, $4, $5) \
+         (tenant_id, h5_login_origin, url_login_enabled, default_qr_mode, modes_json, updated_at) \
+         VALUES ($1, $2, $3, $4, $5, $6) \
          ON CONFLICT (tenant_id) DO UPDATE SET \
            h5_login_origin = EXCLUDED.h5_login_origin, \
            url_login_enabled = EXCLUDED.url_login_enabled, \
            default_qr_mode = EXCLUDED.default_qr_mode, \
+           modes_json = EXCLUDED.modes_json, \
            updated_at = EXCLUDED.updated_at",
     )
     .bind(&tenant_id)
     .bind(&h5_login_origin)
     .bind(if url_login_enabled { 1 } else { 0 })
     .bind(&default_qr_mode)
+    .bind(&modes_json)
     .bind(&now)
     .execute(pg)
     .await
@@ -2719,6 +2726,7 @@ async fn update_scan_login_settings(
 /// Generates an admin preview QR for a scan-login mode without creating a
 /// pollable login session:
 /// - `official_account`: WeChat parameterized temp QR of the chosen account
+/// - `provider:<code>`: third-party OAuth authorization URL
 /// - `url`: QR content is the H5 mobile login page URL
 async fn create_scan_login_preview(
     State(state): State<BackendIamState>,
@@ -2735,8 +2743,7 @@ async fn create_scan_login_preview(
     };
 
     let qr_mode = match read_string_field(&body, &["qrMode", "qr_mode"]) {
-        Some(mode) if mode == "official_account" => "official_account".to_string(),
-        Some(_) => "url".to_string(),
+        Some(mode) => mode.trim().to_string(),
         None => "url".to_string(),
     };
 
@@ -2812,17 +2819,142 @@ async fn create_scan_login_preview(
         }));
     }
 
+    // Provider mode: the QR content is the provider's OAuth authorization
+    // URL; scanning opens it on the phone and the provider redirects to the
+    // H5 callback screen (parameter format mirrors app-api oauth_login).
+    if let Some(provider_code) = qr_mode.strip_prefix("provider:") {
+        let provider_code = provider_code.trim();
+        let Some(normalized) =
+            sdkwork_iam_web_adapter::normalize_oauth_provider_code(provider_code)
+        else {
+            return appbase_error(
+                StatusCode::BAD_REQUEST,
+                "iam_oauth_scan_login_provider_invalid",
+                "provider scan login requires a valid provider code",
+            );
+        };
+        let row = match sqlx::query(
+            "SELECT c.provider_client_id, \
+                    COALESCE(c.authorization_endpoint_override, cat.authorization_endpoint), \
+                    cat.default_scopes_json \
+             FROM iam_oauth_integration i \
+             JOIN iam_oauth_client c ON c.integration_id = i.id AND c.enabled = 1 AND c.status = 'active' \
+             LEFT JOIN iam_oauth_provider_catalog cat \
+               ON cat.provider_code = i.provider_code AND cat.status = 'active' \
+             WHERE i.tenant_id = $1 AND i.provider_code = $2 \
+               AND i.enabled = 1 AND i.status = 'active' \
+             LIMIT 1",
+        )
+        .bind(&tenant_id)
+        .bind(&normalized)
+        .fetch_optional(pg)
+        .await
+        {
+            Ok(value) => value,
+            Err(error) => {
+                return internal_handler_error("iam_oauth_scan_login_preview_failed", error);
+            }
+        };
+        let Some(row) = row else {
+            return appbase_error(
+                StatusCode::CONFLICT,
+                "iam_oauth_scan_login_provider_not_configured",
+                "provider scan login requires an enabled integration and client",
+            );
+        };
+        let client_id: String = row.get(0);
+        let authorization_endpoint: Option<String> = row.get(1);
+        let default_scopes_json: String = row.get(2);
+        let Some(authorization_endpoint) = authorization_endpoint
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .or_else(|| {
+                sdkwork_iam_web_adapter::builtin_authorization_endpoint(&normalized)
+                    .map(str::to_string)
+            })
+        else {
+            return appbase_error(
+                StatusCode::CONFLICT,
+                "iam_oauth_scan_login_provider_not_configured",
+                "OAuth provider is missing authorization endpoint",
+            );
+        };
+        let scope = serde_json::from_str::<Vec<String>>(&default_scopes_json)
+            .unwrap_or_else(|_| {
+                sdkwork_iam_web_adapter::builtin_default_scopes(&normalized)
+            })
+            .join(" ");
+
+        let h5_login_origin = match resolve_h5_login_origin(pg, &tenant_id).await {
+            Ok(origin) => origin,
+            Err(error) => return error,
+        };
+        let scene = sdkwork_iam_web_adapter::generate_wechat_mp_scene("qrpreview");
+        let redirect_uri = format!("{h5_login_origin}/auth/oauth/callback");
+        let oauth_state = format!("p:{normalized}:{scene}");
+        let client_id_parameter = match normalized.as_str() {
+            "wechat" | "wechat_open" => "appid",
+            "douyin" | "tiktok" => "client_key",
+            _ => "client_id",
+        };
+        let mut params = vec![
+            ("response_type".to_string(), "code".to_string()),
+            (client_id_parameter.to_string(), client_id),
+            ("redirect_uri".to_string(), redirect_uri),
+            ("state".to_string(), oauth_state),
+        ];
+        if !scope.is_empty() {
+            params.push(("scope".to_string(), scope));
+        }
+        let mut qr_content = append_query_parameters(&authorization_endpoint, &params);
+        if normalized == "wechat" {
+            qr_content.push_str("#wechat_redirect");
+        }
+        return appbase_ok(json!({
+            "expireSeconds": 300,
+            "qrCode": Value::Null,
+            "qrContent": qr_content,
+            "qrMode": "provider",
+        }));
+    }
+
     // URL mode: H5 login page origin from settings, env override, or error.
+    let h5_login_origin = match resolve_h5_login_origin(pg, &tenant_id).await {
+        Ok(origin) => origin,
+        Err(error) => return error,
+    };
+    let scene = sdkwork_iam_web_adapter::generate_wechat_mp_scene("qrpreview");
+    let qr_content = format!(
+        "{h5_login_origin}/auth/login?session_key={}&purpose=login&scan_source=qr",
+        scene
+    );
+    appbase_ok(json!({
+        "expireSeconds": 300,
+        "qrCode": Value::Null,
+        "qrContent": qr_content,
+        "qrMode": "url",
+    }))
+}
+
+/// Resolves the H5 login origin for scan-login previews: tenant config row,
+/// env override, or an error response when unconfigured.
+async fn resolve_h5_login_origin(
+    pg: &PgPool,
+    tenant_id: &str,
+) -> Result<String, Response> {
     let config_row = match sqlx::query(
         "SELECT h5_login_origin FROM iam_oauth_scan_login_config WHERE tenant_id = $1",
     )
-    .bind(&tenant_id)
+    .bind(tenant_id)
     .fetch_optional(pg)
     .await
     {
         Ok(value) => value,
         Err(error) => {
-            return internal_handler_error("iam_oauth_scan_login_preview_failed", error);
+            return Err(internal_handler_error(
+                "iam_oauth_scan_login_preview_failed",
+                error,
+            ));
         }
     };
     let mut h5_login_origin = config_row
@@ -2838,21 +2970,88 @@ async fn create_scan_login_preview(
     }
     let h5_login_origin = h5_login_origin.trim().trim_end_matches('/').to_string();
     if h5_login_origin.is_empty() {
-        return appbase_error(
+        return Err(appbase_error(
             StatusCode::CONFLICT,
             "iam_oauth_h5_login_origin_missing",
             "H5 login page origin is not configured; set the H5 login URL first",
-        );
+        ));
     }
-    let scene = sdkwork_iam_web_adapter::generate_wechat_mp_scene("qrpreview");
-    let qr_content = format!(
-        "{h5_login_origin}/auth/login?session_key={}&purpose=login&scan_source=qr",
-        scene
-    );
-    appbase_ok(json!({
-        "expireSeconds": 300,
-        "qrCode": Value::Null,
-        "qrContent": qr_content,
-        "qrMode": "url",
-    }))
+    Ok(h5_login_origin)
+}
+
+/// Appends query parameters to a URL with percent encoding (mirrors the
+/// app-api oauth_login builder so previews match the login page exactly).
+fn append_query_parameters(url: &str, params: &[(String, String)]) -> String {
+    let mut result = url.to_string();
+    let mut separator = if result.contains('?') { '&' } else { '?' };
+    for (key, value) in params {
+        result.push(separator);
+        result.push_str(&urlencoding::encode(key));
+        result.push('=');
+        result.push_str(&urlencoding::encode(value));
+        separator = '&';
+    }
+    result
+}
+
+/// Normalizes a `modes` JSON document into the stored registry string.
+/// Invalid entries (unknown kinds, provider modes without a provider code)
+/// are dropped; ordering is preserved.
+fn normalize_scan_login_modes_json(raw: &str) -> String {
+    let value = match serde_json::from_str::<Value>(raw) {
+        Ok(value) => value,
+        Err(_) => return "[]".to_string(),
+    };
+    let Some(entries) = value.as_array() else {
+        return "[]".to_string();
+    };
+    let normalized = entries
+        .iter()
+        .filter_map(|entry| {
+            let entry = entry.as_object()?;
+            let mode = entry.get("mode").and_then(Value::as_str)?.trim();
+            if mode != "official_account" && mode != "url" && mode != "provider" {
+                return None;
+            }
+            let provider_code = entry
+                .get("providerCode")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty());
+            if mode == "provider" && provider_code.is_none() {
+                return None;
+            }
+            let mut clean = serde_json::Map::new();
+            clean.insert("mode".to_string(), json!(mode));
+            if let Some(provider_code) = provider_code {
+                clean.insert("providerCode".to_string(), json!(provider_code));
+            }
+            // The QR-mode value the login page sends to
+            // `deviceAuthorizations.create`; mirrored from app-api
+            // `scan_login_mode_to_json`.
+            clean.insert(
+                "qrMode".to_string(),
+                json!(match (mode, provider_code) {
+                    ("provider", Some(code)) => format!("provider:{code}"),
+                    _ => mode.to_string(),
+                }),
+            );
+            if let Some(enabled) = entry.get("enabled").and_then(Value::as_bool) {
+                clean.insert("enabled".to_string(), json!(enabled));
+            }
+            if let Some(sort_order) = entry.get("sortOrder").and_then(Value::as_i64) {
+                clean.insert("sortOrder".to_string(), json!(sort_order));
+            }
+            if let Some(display_name) = entry
+                .get("displayName")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+            {
+                clean.insert("displayName".to_string(), json!(display_name));
+            }
+            Some(Value::Object(clean))
+        })
+        .collect::<Vec<_>>();
+    serde_json::to_string(&normalized).unwrap_or_else(|_| "[]".to_string())
 }

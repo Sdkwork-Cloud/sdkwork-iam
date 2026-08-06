@@ -690,6 +690,7 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
         "positions.list",
         "registrations.create",
         "roleBindings.list",
+        "scanLoginModes.list",
         "sessions.create",
         "sessions.current.delete",
         "sessions.current.retrieve",

@@ -19,13 +19,8 @@ use crate::upsert_sqlite_standard_roles;
 use crate::{
     ensure_role_assignment_allowed, standard_role_id, upsert_postgres_standard_roles,
     DEFAULT_BOOTSTRAP_ADMIN_DISPLAY_NAME, DEFAULT_BOOTSTRAP_ADMIN_EMAIL,
-    DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_CODE, DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID,
-    DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_MEMBERSHIP_ID, DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_NAME,
-    DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_PATH,
-    DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ROOT_CLOSURE_ID,
-    DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_SELF_CLOSURE_ID, DEFAULT_BOOTSTRAP_ADMIN_USERNAME,
-    DEFAULT_BOOTSTRAP_ADMIN_USER_ID, DEFAULT_BOOTSTRAP_MANAGER_DISPLAY_NAME,
-    DEFAULT_BOOTSTRAP_MANAGER_EMAIL, DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
+    DEFAULT_BOOTSTRAP_ADMIN_USERNAME, DEFAULT_BOOTSTRAP_ADMIN_USER_ID,
+    DEFAULT_BOOTSTRAP_MANAGER_DISPLAY_NAME, DEFAULT_BOOTSTRAP_MANAGER_EMAIL,
     DEFAULT_BOOTSTRAP_MANAGER_USERNAME, DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
     DEFAULT_IAM_ORGANIZATION_ID, DEFAULT_IAM_TENANT_ID,
 };
@@ -69,10 +64,8 @@ pub async fn ensure_postgres_bootstrap_admin_user(
 
     let now = Utc::now();
     let root_membership_id = bootstrap_owner_membership_id(DEFAULT_BOOTSTRAP_ADMIN_USER_ID);
-    let admin_membership_id = DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_MEMBERSHIP_ID;
 
     upsert_postgres_standard_roles(pool, DEFAULT_IAM_TENANT_ID).await?;
-    ensure_postgres_bootstrap_admin_organization(pool, &now).await?;
 
     sqlx::query(
         "INSERT INTO iam_user (id, tenant_id, username, display_name, email, phone, \
@@ -130,9 +123,9 @@ pub async fn ensure_postgres_bootstrap_admin_user(
     sqlx::query(
         "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, \
          membership_kind, is_primary, status, joined_at, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, 'owner', 0, 'active', $5, $5, $5) \
+         VALUES ($1, $2, $3, $4, 'owner', 1, 'active', $5, $5, $5) \
          ON CONFLICT (tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
-           status = 'active', is_primary = 0, updated_at = EXCLUDED.updated_at",
+           status = 'active', is_primary = 1, updated_at = EXCLUDED.updated_at",
     )
     .bind(&root_membership_id)
     .bind(DEFAULT_IAM_TENANT_ID)
@@ -142,19 +135,11 @@ pub async fn ensure_postgres_bootstrap_admin_user(
     .execute(pool)
     .await?;
 
-    ensure_postgres_bootstrap_admin_membership(
-        pool,
-        admin_membership_id,
-        DEFAULT_BOOTSTRAP_ADMIN_USER_ID,
-        &now,
-    )
-    .await?;
-
     ensure_postgres_bootstrap_role_bindings(
         pool,
         DEFAULT_IAM_TENANT_ID,
-        DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID,
-        admin_membership_id,
+        DEFAULT_IAM_ORGANIZATION_ID,
+        &root_membership_id,
         DEFAULT_BOOTSTRAP_ADMIN_USER_ID,
         &now,
     )
@@ -179,10 +164,8 @@ pub async fn ensure_sqlite_bootstrap_admin_user(
 
     let now = Utc::now().to_rfc3339();
     let root_membership_id = bootstrap_owner_membership_id(DEFAULT_BOOTSTRAP_ADMIN_USER_ID);
-    let admin_membership_id = DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_MEMBERSHIP_ID;
 
     upsert_sqlite_standard_roles(pool, DEFAULT_IAM_TENANT_ID).await?;
-    ensure_sqlite_bootstrap_admin_organization(pool, &now).await?;
 
     sqlx::query(
         "INSERT INTO iam_user (id, tenant_id, username, display_name, email, phone, \
@@ -244,9 +227,9 @@ pub async fn ensure_sqlite_bootstrap_admin_user(
     sqlx::query(
         "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, \
          membership_kind, is_primary, status, joined_at, created_at, updated_at) \
-         VALUES (?, ?, ?, ?, 'owner', 0, 'active', ?, ?, ?) \
+         VALUES (?, ?, ?, ?, 'owner', 1, 'active', ?, ?, ?) \
          ON CONFLICT(tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
-           status = 'active', is_primary = 0, updated_at = excluded.updated_at",
+           status = 'active', is_primary = 1, updated_at = excluded.updated_at",
     )
     .bind(&root_membership_id)
     .bind(DEFAULT_IAM_TENANT_ID)
@@ -258,19 +241,11 @@ pub async fn ensure_sqlite_bootstrap_admin_user(
     .execute(pool)
     .await?;
 
-    ensure_sqlite_bootstrap_admin_membership(
-        pool,
-        admin_membership_id,
-        DEFAULT_BOOTSTRAP_ADMIN_USER_ID,
-        &now,
-    )
-    .await?;
-
     ensure_sqlite_bootstrap_role_bindings(
         pool,
         DEFAULT_IAM_TENANT_ID,
-        DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID,
-        admin_membership_id,
+        DEFAULT_IAM_ORGANIZATION_ID,
+        &root_membership_id,
         DEFAULT_BOOTSTRAP_ADMIN_USER_ID,
         &now,
     )
@@ -297,7 +272,6 @@ pub async fn ensure_postgres_bootstrap_manager_user(
     let root_membership_id = bootstrap_member_membership_id(DEFAULT_BOOTSTRAP_MANAGER_USER_ID);
 
     upsert_postgres_standard_roles(pool, DEFAULT_IAM_TENANT_ID).await?;
-    ensure_postgres_bootstrap_admin_organization(pool, &now).await?;
 
     sqlx::query(
         "INSERT INTO iam_user (id, tenant_id, username, display_name, email, phone, \
@@ -352,9 +326,9 @@ pub async fn ensure_postgres_bootstrap_manager_user(
     sqlx::query(
         "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, \
          membership_kind, is_primary, status, joined_at, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, 'member', 0, 'active', $5, $5, $5) \
+         VALUES ($1, $2, $3, $4, 'member', 1, 'active', $5, $5, $5) \
          ON CONFLICT (tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
-           status = 'active', updated_at = EXCLUDED.updated_at",
+           status = 'active', is_primary = 1, updated_at = EXCLUDED.updated_at",
     )
     .bind(&root_membership_id)
     .bind(DEFAULT_IAM_TENANT_ID)
@@ -364,13 +338,6 @@ pub async fn ensure_postgres_bootstrap_manager_user(
     .execute(pool)
     .await?;
 
-    ensure_postgres_bootstrap_manager_membership(
-        pool,
-        DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
-        DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
-        &now,
-    )
-    .await?;
     retire_postgres_legacy_manager_tenant_org_admin_binding(
         pool,
         DEFAULT_IAM_TENANT_ID,
@@ -381,8 +348,8 @@ pub async fn ensure_postgres_bootstrap_manager_user(
     ensure_postgres_bootstrap_manager_role_bindings(
         pool,
         DEFAULT_IAM_TENANT_ID,
-        DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID,
-        DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
+        DEFAULT_IAM_ORGANIZATION_ID,
+        &root_membership_id,
         DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
         &now,
     )
@@ -410,7 +377,6 @@ pub async fn ensure_sqlite_bootstrap_manager_user(
     let root_membership_id = bootstrap_member_membership_id(DEFAULT_BOOTSTRAP_MANAGER_USER_ID);
 
     upsert_sqlite_standard_roles(pool, DEFAULT_IAM_TENANT_ID).await?;
-    ensure_sqlite_bootstrap_admin_organization(pool, &now).await?;
 
     sqlx::query(
         "INSERT INTO iam_user (id, tenant_id, username, display_name, email, phone, \
@@ -469,9 +435,9 @@ pub async fn ensure_sqlite_bootstrap_manager_user(
     sqlx::query(
         "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, \
          membership_kind, is_primary, status, joined_at, created_at, updated_at) \
-         VALUES (?, ?, ?, ?, 'member', 0, 'active', ?, ?, ?) \
+         VALUES (?, ?, ?, ?, 'member', 1, 'active', ?, ?, ?) \
          ON CONFLICT(tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
-           status = 'active', updated_at = excluded.updated_at",
+           status = 'active', is_primary = 1, updated_at = excluded.updated_at",
     )
     .bind(&root_membership_id)
     .bind(DEFAULT_IAM_TENANT_ID)
@@ -483,13 +449,6 @@ pub async fn ensure_sqlite_bootstrap_manager_user(
     .execute(pool)
     .await?;
 
-    ensure_sqlite_bootstrap_manager_membership(
-        pool,
-        DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
-        DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
-        &now,
-    )
-    .await?;
     retire_sqlite_legacy_manager_tenant_org_admin_binding(
         pool,
         DEFAULT_IAM_TENANT_ID,
@@ -500,8 +459,8 @@ pub async fn ensure_sqlite_bootstrap_manager_user(
     ensure_sqlite_bootstrap_manager_role_bindings(
         pool,
         DEFAULT_IAM_TENANT_ID,
-        DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID,
-        DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
+        DEFAULT_IAM_ORGANIZATION_ID,
+        &root_membership_id,
         DEFAULT_BOOTSTRAP_MANAGER_USER_ID,
         &now,
     )
@@ -544,226 +503,6 @@ async fn sqlite_tenant_has_bootstrap_manager(
     .fetch_one(pool)
     .await?;
     Ok(count > 0)
-}
-
-async fn ensure_postgres_bootstrap_admin_organization(
-    pool: &PgPool,
-    now: &chrono::DateTime<chrono::Utc>,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        "INSERT INTO iam_organization \
-         (id, tenant_id, parent_organization_id, code, name, path, status, organization_kind, \
-          tenant_boundary_kind, data_boundary_kind, app_boundary_enabled, verification_status, \
-          created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, 'active', 'team', 'exclusive', 'organization', 0, \
-          'verified', $7, $7) \
-         ON CONFLICT (id) DO UPDATE SET tenant_id = EXCLUDED.tenant_id, \
-          parent_organization_id = EXCLUDED.parent_organization_id, code = EXCLUDED.code, \
-          name = EXCLUDED.name, path = EXCLUDED.path, status = 'active', \
-          organization_kind = EXCLUDED.organization_kind, \
-          tenant_boundary_kind = EXCLUDED.tenant_boundary_kind, \
-          data_boundary_kind = EXCLUDED.data_boundary_kind, \
-          verification_status = EXCLUDED.verification_status, updated_at = EXCLUDED.updated_at",
-    )
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
-    .bind(DEFAULT_IAM_TENANT_ID)
-    .bind(DEFAULT_IAM_ORGANIZATION_ID)
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_CODE)
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_NAME)
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_PATH)
-    .bind(now)
-    .execute(pool)
-    .await?;
-
-    for (closure_id, ancestor_id, depth) in [
-        (
-            DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ROOT_CLOSURE_ID,
-            DEFAULT_IAM_ORGANIZATION_ID,
-            1_i32,
-        ),
-        (
-            DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_SELF_CLOSURE_ID,
-            DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID,
-            0_i32,
-        ),
-    ] {
-        sqlx::query(
-            "INSERT INTO iam_organization_closure \
-             (id, tenant_id, ancestor_organization_id, descendant_organization_id, depth, created_at) \
-             VALUES ($1, $2, $3, $4, $5, $6) \
-             ON CONFLICT (tenant_id, ancestor_organization_id, descendant_organization_id) \
-             DO UPDATE SET depth = EXCLUDED.depth",
-        )
-        .bind(closure_id)
-        .bind(DEFAULT_IAM_TENANT_ID)
-        .bind(ancestor_id)
-        .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
-        .bind(depth)
-        .bind(now)
-        .execute(pool)
-        .await?;
-    }
-    Ok(())
-}
-
-#[cfg(feature = "sqlite")]
-async fn ensure_sqlite_bootstrap_admin_organization(
-    pool: &SqlitePool,
-    now: &str,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        "INSERT INTO iam_organization \
-         (id, tenant_id, parent_organization_id, code, name, path, status, organization_kind, \
-          tenant_boundary_kind, data_boundary_kind, app_boundary_enabled, verification_status, \
-          created_at, updated_at) \
-         VALUES (?, ?, ?, ?, ?, ?, 'active', 'team', 'exclusive', 'organization', 0, \
-          'verified', ?, ?) \
-         ON CONFLICT(id) DO UPDATE SET tenant_id = excluded.tenant_id, \
-          parent_organization_id = excluded.parent_organization_id, code = excluded.code, \
-          name = excluded.name, path = excluded.path, status = 'active', \
-          organization_kind = excluded.organization_kind, \
-          tenant_boundary_kind = excluded.tenant_boundary_kind, \
-          data_boundary_kind = excluded.data_boundary_kind, \
-          verification_status = excluded.verification_status, updated_at = excluded.updated_at",
-    )
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
-    .bind(DEFAULT_IAM_TENANT_ID)
-    .bind(DEFAULT_IAM_ORGANIZATION_ID)
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_CODE)
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_NAME)
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_PATH)
-    .bind(now)
-    .bind(now)
-    .execute(pool)
-    .await?;
-
-    for (closure_id, ancestor_id, depth) in [
-        (
-            DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ROOT_CLOSURE_ID,
-            DEFAULT_IAM_ORGANIZATION_ID,
-            1_i32,
-        ),
-        (
-            DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_SELF_CLOSURE_ID,
-            DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID,
-            0_i32,
-        ),
-    ] {
-        sqlx::query(
-            "INSERT INTO iam_organization_closure \
-             (id, tenant_id, ancestor_organization_id, descendant_organization_id, depth, created_at) \
-             VALUES (?, ?, ?, ?, ?, ?) \
-             ON CONFLICT(tenant_id, ancestor_organization_id, descendant_organization_id) \
-             DO UPDATE SET depth = excluded.depth",
-        )
-        .bind(closure_id)
-        .bind(DEFAULT_IAM_TENANT_ID)
-        .bind(ancestor_id)
-        .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
-        .bind(depth)
-        .bind(now)
-        .execute(pool)
-        .await?;
-    }
-    Ok(())
-}
-
-async fn ensure_postgres_bootstrap_admin_membership(
-    pool: &PgPool,
-    membership_id: &str,
-    user_id: &str,
-    now: &chrono::DateTime<chrono::Utc>,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, \
-         membership_kind, is_primary, status, joined_at, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, 'owner', 1, 'active', $5, $5, $5) \
-         ON CONFLICT (tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
-         status = 'active', is_primary = 1, updated_at = EXCLUDED.updated_at",
-    )
-    .bind(membership_id)
-    .bind(DEFAULT_IAM_TENANT_ID)
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
-    .bind(user_id)
-    .bind(now)
-    .execute(pool)
-    .await?;
-    Ok(())
-}
-
-#[cfg(feature = "sqlite")]
-async fn ensure_sqlite_bootstrap_admin_membership(
-    pool: &SqlitePool,
-    membership_id: &str,
-    user_id: &str,
-    now: &str,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, \
-         membership_kind, is_primary, status, joined_at, created_at, updated_at) \
-         VALUES (?, ?, ?, ?, 'owner', 1, 'active', ?, ?, ?) \
-         ON CONFLICT(tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
-         status = 'active', is_primary = 1, updated_at = excluded.updated_at",
-    )
-    .bind(membership_id)
-    .bind(DEFAULT_IAM_TENANT_ID)
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
-    .bind(user_id)
-    .bind(now)
-    .bind(now)
-    .bind(now)
-    .execute(pool)
-    .await?;
-    Ok(())
-}
-
-async fn ensure_postgres_bootstrap_manager_membership(
-    pool: &PgPool,
-    membership_id: &str,
-    user_id: &str,
-    now: &chrono::DateTime<chrono::Utc>,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, \
-         membership_kind, is_primary, status, joined_at, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, 'admin', 1, 'active', $5, $5, $5) \
-         ON CONFLICT (tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
-         status = 'active', is_primary = 1, updated_at = EXCLUDED.updated_at",
-    )
-    .bind(membership_id)
-    .bind(DEFAULT_IAM_TENANT_ID)
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
-    .bind(user_id)
-    .bind(now)
-    .execute(pool)
-    .await?;
-    Ok(())
-}
-
-#[cfg(feature = "sqlite")]
-async fn ensure_sqlite_bootstrap_manager_membership(
-    pool: &SqlitePool,
-    membership_id: &str,
-    user_id: &str,
-    now: &str,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id, \
-         membership_kind, is_primary, status, joined_at, created_at, updated_at) \
-         VALUES (?, ?, ?, ?, 'admin', 1, 'active', ?, ?, ?) \
-         ON CONFLICT(tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET \
-         status = 'active', is_primary = 1, updated_at = excluded.updated_at",
-    )
-    .bind(membership_id)
-    .bind(DEFAULT_IAM_TENANT_ID)
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
-    .bind(user_id)
-    .bind(now)
-    .bind(now)
-    .bind(now)
-    .execute(pool)
-    .await?;
-    Ok(())
 }
 
 async fn retire_postgres_legacy_manager_tenant_org_admin_binding(
@@ -931,7 +670,7 @@ async fn postgres_bootstrap_admin_is_fully_provisioned(
     )
     .bind(tenant_id)
     .bind(DEFAULT_BOOTSTRAP_ADMIN_USER_ID)
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
+    .bind(DEFAULT_IAM_ORGANIZATION_ID)
     .bind(PLATFORM_SUPER_ADMIN_ROLE_CODE)
     .bind(DEFAULT_BOOTSTRAP_ADMIN_EMAIL)
     .bind(ORG_ADMIN_ROLE_CODE)
@@ -977,7 +716,7 @@ async fn sqlite_bootstrap_admin_is_fully_provisioned(
          WHERE u.tenant_id = ? AND u.id = ? AND lower(u.email) = lower(?) \
            AND u.status = 'active' AND u.is_deleted = 0",
     )
-    .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
+    .bind(DEFAULT_IAM_ORGANIZATION_ID)
     .bind(ORG_ADMIN_ROLE_CODE)
     .bind(PLATFORM_SUPER_ADMIN_ROLE_CODE)
     .bind(tenant_id)
@@ -1267,56 +1006,16 @@ mod tests {
     #[test]
     fn bootstrap_admin_ids_are_stable() {
         assert_eq!(bootstrap_owner_membership_id("1"), "iamom_owner_1");
-        assert_eq!(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID, "100002");
-        assert_eq!(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_MEMBERSHIP_ID, "100003");
-        assert_eq!(
-            DEFAULT_BOOTSTRAP_MANAGER_ORGANIZATION_MEMBERSHIP_ID,
-            "100006"
-        );
-        assert_eq!(
-            DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ROOT_CLOSURE_ID,
-            "100004"
-        );
-        assert_eq!(
-            DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_SELF_CLOSURE_ID,
-            "100005"
-        );
         assert_eq!(bootstrap_credential_id("1"), "iamc_bootstrap_1");
     }
 
     #[tokio::test]
-    async fn sqlite_bootstrap_admin_organization_is_login_eligible_and_idempotent() {
+    async fn sqlite_bootstrap_root_membership_is_primary_and_idempotent() {
         let pool = SqlitePool::connect("sqlite::memory:")
             .await
             .expect("connect in-memory sqlite");
         sqlx::query(
-            "CREATE TABLE iam_organization (\
-             id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, parent_organization_id TEXT, \
-             code TEXT NOT NULL, name TEXT NOT NULL, path TEXT NOT NULL, status TEXT NOT NULL, \
-             organization_kind TEXT NOT NULL, tenant_boundary_kind TEXT NOT NULL, \
-             data_boundary_kind TEXT NOT NULL, app_boundary_enabled INTEGER NOT NULL, \
-             verification_status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, \
-             UNIQUE (tenant_id, code))",
-        )
-        .execute(&pool)
-        .await
-        .expect("create organization table");
-        sqlx::query(
-            "CREATE TABLE iam_organization_closure (\
-             id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, ancestor_organization_id TEXT NOT NULL, \
-             descendant_organization_id TEXT NOT NULL, depth INTEGER NOT NULL, created_at TEXT NOT NULL, \
-             UNIQUE (tenant_id, ancestor_organization_id, descendant_organization_id))",
-        )
-        .execute(&pool)
-        .await
-        .expect("create organization closure table");
-        sqlx::query(
-            "CREATE TABLE iam_organization_membership (\
-             id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, organization_id TEXT NOT NULL, \
-             user_id TEXT NOT NULL, membership_kind TEXT NOT NULL, is_primary INTEGER NOT NULL, \
-             status TEXT NOT NULL, joined_at TEXT NOT NULL, created_at TEXT NOT NULL, \
-             updated_at TEXT NOT NULL, \
-             UNIQUE (tenant_id, organization_id, user_id, membership_kind))",
+            "CREATE TABLE iam_organization_membership (             id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, organization_id TEXT NOT NULL,              user_id TEXT NOT NULL, membership_kind TEXT NOT NULL, is_primary INTEGER NOT NULL,              status TEXT NOT NULL, joined_at TEXT NOT NULL, created_at TEXT NOT NULL,              updated_at TEXT NOT NULL,              UNIQUE (tenant_id, organization_id, user_id, membership_kind))",
         )
         .execute(&pool)
         .await
@@ -1324,50 +1023,32 @@ mod tests {
 
         let now = "2026-07-15T00:00:00Z";
         for _ in 0..2 {
-            ensure_sqlite_bootstrap_admin_organization(&pool, now)
-                .await
-                .expect("ensure bootstrap admin organization");
-            ensure_sqlite_bootstrap_admin_membership(
-                &pool,
-                DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_MEMBERSHIP_ID,
-                DEFAULT_BOOTSTRAP_ADMIN_USER_ID,
-                now,
+            sqlx::query(
+                "INSERT INTO iam_organization_membership (id, tenant_id, organization_id, user_id,                  membership_kind, is_primary, status, joined_at, created_at, updated_at)                  VALUES (?, ?, ?, ?, 'owner', 1, 'active', ?, ?, ?)                  ON CONFLICT(tenant_id, organization_id, user_id, membership_kind) DO UPDATE SET                    status = 'active', is_primary = 1, updated_at = excluded.updated_at",
             )
+            .bind(bootstrap_owner_membership_id(DEFAULT_BOOTSTRAP_ADMIN_USER_ID))
+            .bind(DEFAULT_IAM_TENANT_ID)
+            .bind(DEFAULT_IAM_ORGANIZATION_ID)
+            .bind(DEFAULT_BOOTSTRAP_ADMIN_USER_ID)
+            .bind(now)
+            .bind(now)
+            .bind(now)
+            .execute(&pool)
             .await
-            .expect("ensure bootstrap admin membership");
+            .expect("upsert bootstrap admin root membership");
         }
 
-        let organization: (String, String, String) = sqlx::query_as(
-            "SELECT id, parent_organization_id, code FROM iam_organization WHERE id = ?",
-        )
-        .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
-        .fetch_one(&pool)
-        .await
-        .expect("load bootstrap admin organization");
-        assert_eq!(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID, organization.0);
-        assert_eq!(DEFAULT_IAM_ORGANIZATION_ID, organization.1);
-        assert_eq!(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_CODE, organization.2);
-
         let membership: (String, i64, String) = sqlx::query_as(
-            "SELECT organization_id, is_primary, membership_kind \
-             FROM iam_organization_membership WHERE id = ?",
+            "SELECT organization_id, is_primary, membership_kind              FROM iam_organization_membership WHERE id = ?",
         )
-        .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_MEMBERSHIP_ID)
+        .bind(bootstrap_owner_membership_id(DEFAULT_BOOTSTRAP_ADMIN_USER_ID))
         .fetch_one(&pool)
         .await
-        .expect("load bootstrap admin membership");
-        assert_ne!(DEFAULT_IAM_ORGANIZATION_ID, membership.0);
+        .expect("load bootstrap admin root membership");
+        // The bootstrap admin belongs to the tenant-level root organization (org 0)
+        // as the primary owner membership.
+        assert_eq!(DEFAULT_IAM_ORGANIZATION_ID, membership.0);
         assert_eq!(1, membership.1);
         assert_eq!("owner", membership.2);
-
-        let closure_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM iam_organization_closure \
-             WHERE descendant_organization_id = ?",
-        )
-        .bind(DEFAULT_BOOTSTRAP_ADMIN_ORGANIZATION_ID)
-        .fetch_one(&pool)
-        .await
-        .expect("count bootstrap admin organization closure");
-        assert_eq!(2, closure_count);
     }
 }

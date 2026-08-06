@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import {
   Button,
   Label,
@@ -10,6 +11,7 @@ import {
 
 import type {
   SdkworkIamOauthAdminController,
+  SdkworkIamOauthScanLoginModeEntry,
   SdkworkIamOauthScanLoginOfficialAccount,
   SdkworkIamOauthScanLoginPreview,
   SdkworkIamOauthScanLoginQrMode,
@@ -340,4 +342,298 @@ function QrCodeCanvasSvg({ content }: { content: string }) {
     );
   }
   return <img alt="Scan login URL QR" className="h-52 w-52 rounded border object-contain" src={dataUrl} />;
+}
+
+/**
+ * Scan-login mode registry management: ordered, enable/disable, add and
+ * remove modes (official account follow login, H5 URL, third-party OAuth
+ * provider). The login page shows the first enabled mode by default and
+ * lets users rotate through the rest.
+ */
+export function OauthScanLoginModesSection({
+  busy,
+  controller,
+  modes,
+  onChanged,
+  onError,
+  providerCatalog,
+}: {
+  busy: boolean;
+  controller: SdkworkIamOauthAdminController;
+  modes: SdkworkIamOauthScanLoginModeEntry[];
+  onChanged: (settings: SdkworkIamOauthScanLoginSettings) => void;
+  onError: (message: string) => void;
+  providerCatalog: unknown[];
+}) {
+  const messages = useSdkworkIamOauthAdminMessages();
+  const copy = messages.scanLogin.modes;
+  const [providerCode, setProviderCode] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState<SdkworkIamOauthScanLoginPreview | undefined>();
+  const [previewQrMode, setPreviewQrMode] = useState<string | undefined>();
+  const [generating, setGenerating] = useState<string | undefined>();
+
+  const providerOptions = useMemo(() => providerCatalog
+    .map((item) => {
+      const record = toRecord(item);
+      return {
+        code: optionalString(record.providerCode) || "",
+        name: optionalString(record.displayName) || optionalString(record.providerCode) || "",
+      };
+    })
+    .filter((option) => Boolean(option.code))
+    .sort((left, right) => left.code.localeCompare(right.code)), [providerCatalog]);
+
+  const saveModes = (next: SdkworkIamOauthScanLoginModeEntry[]) => {
+    setSaving(true);
+    void controller.updateScanLoginSettings({ modes: next })
+      .then((updated) => {
+        onChanged(updated);
+        onError("");
+      })
+      .catch((error) => {
+        onError(error instanceof Error ? error.message : "Failed to update scan login modes");
+      })
+      .finally(() => setSaving(false));
+  };
+
+  const move = (index: number, delta: number) => {
+    const next = [...modes];
+    const target = index + delta;
+    if (target < 0 || target >= next.length) {
+      return;
+    }
+    const [entry] = next.splice(index, 1);
+    next.splice(target, 0, entry);
+    saveModes(next);
+  };
+
+  const toggleEnabled = (index: number) => {
+    const next = modes.map((mode, modeIndex) => (
+      modeIndex === index ? { ...mode, enabled: !mode.enabled } : mode
+    ));
+    saveModes(next);
+  };
+
+  const remove = (index: number) => {
+    const next = modes.filter((_, modeIndex) => modeIndex !== index);
+    saveModes(next);
+  };
+
+  const addMode = (mode: SdkworkIamOauthScanLoginModeEntry) => {
+    const nextSortOrder = modes.reduce((max, entry) => Math.max(max, entry.sortOrder), 0) + 10;
+    saveModes([...modes, { ...mode, sortOrder: nextSortOrder }]);
+  };
+
+  const addProviderMode = () => {
+    const code = providerCode.trim();
+    if (!code) {
+      return;
+    }
+    addMode({
+      displayName: undefined,
+      enabled: true,
+      mode: "provider",
+      providerCode: code,
+      qrMode: `provider:${code}`,
+      sortOrder: 999,
+    });
+    setProviderCode("");
+  };
+
+  const generatePreview = (qrMode: string) => {
+    setGenerating(qrMode);
+    setPreview(undefined);
+    setPreviewQrMode(qrMode);
+    void controller.generateScanLoginPreview(qrMode)
+      .then(setPreview)
+      .catch((error) => {
+        onError(error instanceof Error ? error.message : "Failed to generate QR code");
+      })
+      .finally(() => setGenerating(undefined));
+  };
+
+  const modeLabel = (entry: SdkworkIamOauthScanLoginModeEntry): string => {
+    if (entry.displayName) {
+      return entry.displayName;
+    }
+    if (entry.mode === "official_account") {
+      return messages.scanLogin.accounts.title;
+    }
+    if (entry.mode === "provider") {
+      return entry.providerCode ? `${copy.providerModeLabel} · ${entry.providerCode}` : copy.providerModeLabel;
+    }
+    return messages.scanLogin.url.title;
+  };
+
+  const previewHint = (qrMode: string): string => {
+    if (qrMode === "provider" || qrMode.startsWith("provider:")) {
+      return messages.scanLogin.preview.urlHint;
+    }
+    if (qrMode === "official_account") {
+      return messages.scanLogin.preview.officialAccountHint;
+    }
+    return messages.scanLogin.preview.urlHint;
+  };
+
+  return (
+    <SettingsSection description={copy.defaultHint} title={copy.title}>
+      <StatusNotice tone="default">{copy.defaultHint}</StatusNotice>
+      {modes.length === 0 ? (
+        <StatusNotice tone="default">{copy.emptyHint}</StatusNotice>
+      ) : (
+        <div className="space-y-2">
+          {modes.map((entry, index) => (
+            <div
+              className="flex flex-wrap items-center justify-between gap-2 rounded border p-2"
+              key={`${entry.qrMode}-${index}`}
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="text-xs text-[var(--sdk-color-text-muted)]">{index + 1}</span>
+                <span className="min-w-0 flex-1 truncate text-sm">{modeLabel(entry)}</span>
+                {entry.mode === "provider" && entry.providerCode ? (
+                  <code className="text-xs text-[var(--sdk-color-text-muted)]">{entry.providerCode}</code>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-1">
+                <Button
+                  disabled={busy || saving || index === 0}
+                  onClick={() => move(index, -1)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <ArrowUp aria-hidden="true" className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  disabled={busy || saving || index === modes.length - 1}
+                  onClick={() => move(index, 1)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <ArrowDown aria-hidden="true" className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  disabled={busy || saving}
+                  onClick={() => toggleEnabled(index)}
+                  size="sm"
+                  type="button"
+                  variant={entry.enabled ? "outline" : "primary"}
+                >
+                  {entry.enabled ? copy.disable : copy.enable}
+                </Button>
+                <Button
+                  disabled={busy || saving}
+                  loading={generating === entry.qrMode}
+                  onClick={() => generatePreview(entry.qrMode)}
+                  size="sm"
+                  type="button"
+                >
+                  {messages.scanLogin.accounts.generateLabel}
+                </Button>
+                <Button
+                  disabled={busy || saving}
+                  onClick={() => remove(index)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {copy.remove}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap items-end gap-2">
+        <Button
+          disabled={busy || saving}
+          onClick={() => addMode({
+            displayName: undefined,
+            enabled: true,
+            mode: "official_account",
+            providerCode: undefined,
+            qrMode: "official_account",
+            sortOrder: 999,
+          })}
+          size="sm"
+          type="button"
+        >
+          {copy.addOfficialAccount}
+        </Button>
+        <Button
+          disabled={busy || saving}
+          onClick={() => addMode({
+            displayName: undefined,
+            enabled: true,
+            mode: "url",
+            providerCode: undefined,
+            qrMode: "url",
+            sortOrder: 999,
+          })}
+          size="sm"
+          type="button"
+        >
+          {copy.addUrl}
+        </Button>
+        <OauthAdminField
+          label={copy.addProvider}
+          onChange={setProviderCode}
+          placeholder={copy.addProviderPlaceholder}
+          value={providerCode}
+        />
+        <Button
+          disabled={busy || saving || !providerCode.trim()}
+          onClick={addProviderMode}
+          size="sm"
+          type="button"
+        >
+          {copy.add}
+        </Button>
+      </div>
+      {providerOptions.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {providerOptions.map((option) => (
+            <Button
+              disabled={busy || saving || modes.some((mode) => mode.providerCode === option.code)}
+              key={option.code}
+              onClick={() => addMode({
+                displayName: option.name,
+                enabled: true,
+                mode: "provider",
+                providerCode: option.code,
+                qrMode: `provider:${option.code}`,
+                sortOrder: 999,
+              })}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              {option.name}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+      {preview && previewQrMode ? (
+        <OauthScanLoginPreview
+          busy={busy}
+          hint={previewHint(previewQrMode)}
+          preview={preview}
+        />
+      ) : null}
+    </SettingsSection>
+  );
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? value as Record<string, unknown> : {};
+}
+
+function optionalString(value: unknown): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const normalized = String(value).trim();
+  return normalized ? normalized : undefined;
 }

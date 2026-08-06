@@ -363,7 +363,10 @@ fn qr_session_from_payload(payload: &Value, session_key: &str) -> Option<LocalQr
         completed_session,
         expire_time: payload["expireTimeMs"].as_u64()? as u128,
         fallback_url: optional_string(payload.get("fallbackUrl"))?,
-        follow_login: payload.get("followLogin").cloned().filter(|value| !value.is_null()),
+        follow_login: payload
+            .get("followLogin")
+            .cloned()
+            .filter(|value| !value.is_null()),
         organization_selection: payload.get("organizationSelection").cloned(),
         poll_secret: optional_string(payload.get("pollSecret"))?,
         purpose: optional_string(payload.get("purpose"))?,
@@ -473,11 +476,15 @@ pub(crate) struct OAuthStateRecord {
     pub(crate) runtime_app_id: String,
 }
 
+/// Registers an OAuth state artifact. Returns `Ok(false)` when the state
+/// already exists but is bound to a different provider or redirect URI —
+/// re-registering it would let one request hijack another's pending
+/// authorization, so callers must reject that as a conflict.
 pub(crate) async fn upsert_oauth_state(
     pg: &PgPool,
     tenant_id: &str,
     record: &OAuthStateRecord,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let storage_key = artifact_key(tenant_id, KIND_OAUTH_STATE, &record.state);
     let payload = json!({
         "pkceVerifier": record.pkce_verifier,
@@ -489,14 +496,16 @@ pub(crate) async fn upsert_oauth_state(
     });
     let expires_at = millis_to_timestamp(current_millis() + OAUTH_STATE_TTL_MILLIS);
     let timestamp = current_timestamp_utc();
-    sqlx::query(
+    let result = sqlx::query(
         "INSERT INTO iam_ephemeral_artifact \
          (artifact_key, tenant_id, artifact_kind, payload_json, expires_at, created_at, updated_at) \
          VALUES ($1, $2, $3, $4, $5, $6, $7) \
          ON CONFLICT (artifact_key) DO UPDATE SET \
            payload_json = EXCLUDED.payload_json, \
            expires_at = EXCLUDED.expires_at, \
-           updated_at = EXCLUDED.updated_at",
+           updated_at = EXCLUDED.updated_at \
+         WHERE iam_ephemeral_artifact.payload_json->>'provider' = EXCLUDED.payload_json->>'provider' \
+           AND iam_ephemeral_artifact.payload_json->>'redirectUri' = EXCLUDED.payload_json->>'redirectUri'",
     )
     .bind(&storage_key)
     .bind(tenant_id)
@@ -508,7 +517,7 @@ pub(crate) async fn upsert_oauth_state(
     .execute(pg)
     .await
     .map_err(|error| format!("upsert oauth state artifact failed: {error}"))?;
-    Ok(())
+    Ok(result.rows_affected() > 0)
 }
 
 pub(crate) async fn take_oauth_state(

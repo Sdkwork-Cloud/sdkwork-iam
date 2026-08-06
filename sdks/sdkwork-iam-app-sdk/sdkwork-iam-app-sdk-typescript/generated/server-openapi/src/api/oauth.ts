@@ -18,6 +18,35 @@ export class OauthSessionsApi {
   }
 }
 
+export interface OauthScanLoginModesListParams {
+  page?: number;
+  pageSize?: number;
+  cursor?: string;
+  sort?: string;
+  q?: string;
+}
+
+export class OauthScanLoginModesApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Scan Login Modes list. */
+  async list(params?: OauthScanLoginModesListParams, requestOptions?: ApiRequestOptions): Promise<SdkWorkPageData> {
+    const query = buildQueryString([
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+      { name: 'cursor', value: params?.cursor, style: 'form', explode: true, allowReserved: false },
+      { name: 'sort', value: params?.sort, style: 'form', explode: true, allowReserved: false },
+      { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<SdkWorkPageData>(appendQueryString(appApiPath(`/oauth/scan_login_modes`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, accessTokenOnly: true, sdkworkUnwrapKind: 'page' });
+  }
+}
+
 export interface OauthProvidersListParams {
   page?: number;
   pageSize?: number;
@@ -280,6 +309,7 @@ export class OauthApi {
   public readonly grants: OauthGrantsApi;
   public readonly miniProgramSessions: OauthMiniProgramSessionsApi;
   public readonly providers: OauthProvidersApi;
+  public readonly scanLoginModes: OauthScanLoginModesApi;
   public readonly sessions: OauthSessionsApi;
 
   constructor(client: HttpClient) {
@@ -292,6 +322,7 @@ export class OauthApi {
     this.grants = new OauthGrantsApi(client);
     this.miniProgramSessions = new OauthMiniProgramSessionsApi(client);
     this.providers = new OauthProvidersApi(client);
+    this.scanLoginModes = new OauthScanLoginModesApi(client);
     this.sessions = new OauthSessionsApi(client);
   }
 

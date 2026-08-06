@@ -1008,9 +1008,26 @@ function normalizeScanLoginSettings(value: unknown): SdkworkIamOauthScanLoginSet
       };
     })
     : [];
-  const mode = optionalString(record.defaultQrMode) || "auto";
+  const modes = Array.isArray(record.modes)
+    ? record.modes.map((item) => {
+      const mode = toRecord(item);
+      const entryMode = optionalString(mode.mode) || "url";
+      const providerCode = optionalString(mode.providerCode);
+      return {
+        displayName: optionalString(mode.displayName),
+        enabled: Boolean(mode.enabled),
+        mode: entryMode,
+        providerCode,
+        qrMode: optionalString(mode.qrMode)
+          || (entryMode === "provider" && providerCode ? `provider:${providerCode}` : entryMode),
+        sortOrder: typeof mode.sortOrder === "number" ? mode.sortOrder : 999,
+      };
+    }).filter((mode) => Boolean(mode.qrMode))
+    : [];
+  const requestedMode = optionalString(record.defaultQrMode) || "auto";
   return {
-    defaultQrMode: mode === "official_account" || mode === "url" ? mode : "auto",
+    defaultQrMode: requestedMode === "official_account" || requestedMode === "url" ? requestedMode : "auto",
+    modes,
     officialAccounts: accounts,
     urlLogin: {
       enabled: typeof urlLogin.enabled === "boolean" ? urlLogin.enabled : true,
@@ -1021,12 +1038,11 @@ function normalizeScanLoginSettings(value: unknown): SdkworkIamOauthScanLoginSet
 
 function normalizeScanLoginPreview(value: unknown): SdkworkIamOauthScanLoginPreview {
   const record = toRecord(value);
-  const mode = optionalString(record.qrMode) === "official_account" ? "official_account" : "url";
   return {
     expireSeconds: typeof record.expireSeconds === "number" ? record.expireSeconds : undefined,
     qrCode: optionalString(record.qrCode),
     qrContent: optionalString(record.qrContent) || "",
-    qrMode: mode,
+    qrMode: optionalString(record.qrMode) || "url",
   };
 }
 

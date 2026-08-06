@@ -68,7 +68,7 @@ const IAM_APP_API_ROUTES: &[HttpRoute] = &[
         "oauth",
         "providers.list",
     ),
-    HttpRoute::public(
+    HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/oauth/scan_login_modes",
         "oauth",

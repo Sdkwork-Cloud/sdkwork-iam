@@ -107,11 +107,8 @@ pub(crate) async fn start_wechat_payment_oauth(
     };
     let state = generate_opaque_token("wpoauth");
     let callback_url = payment_oauth_callback_url(&headers);
-    let authorize_url = build_wechat_authorize_url(
-        &provider_ctx.provider_client_id,
-        &callback_url,
-        &state,
-    );
+    let authorize_url =
+        build_wechat_authorize_url(&provider_ctx.provider_client_id, &callback_url, &state);
 
     let mut response = appbase_ok(json!({
         "authorizeUrl": authorize_url,
@@ -187,36 +184,30 @@ pub(crate) async fn handle_wechat_payment_oauth_callback(
         _ => return payment_oauth_redirect_response(&redirect, "error", "context_missing"),
     };
     let callback_url = payment_oauth_callback_url(&headers);
-    let provider_ctx = match load_oauth_integration_exchange_context_for_app(
-        pg,
-        &tenant_id,
-        "wechat",
-        None,
-        None,
-    )
-    .await
-    {
-        Ok(Some(ctx)) => ctx,
-        Ok(None) => {
-            return payment_oauth_redirect_response(&redirect, "error", "not_configured");
-        }
-        Err(_) => return payment_oauth_redirect_response(&redirect, "error", "lookup_failed"),
-    };
-    let profile = match exchange_oauth_authorization_code(&provider_ctx, &code, &callback_url, None)
-        .await
-    {
-        Ok(profile) => profile,
-        Err(_) => {
-            return payment_oauth_redirect_response(&redirect, "error", "exchange_failed");
-        }
-    };
+    let provider_ctx =
+        match load_oauth_integration_exchange_context_for_app(pg, &tenant_id, "wechat", None, None)
+            .await
+        {
+            Ok(Some(ctx)) => ctx,
+            Ok(None) => {
+                return payment_oauth_redirect_response(&redirect, "error", "not_configured");
+            }
+            Err(_) => return payment_oauth_redirect_response(&redirect, "error", "lookup_failed"),
+        };
+    let profile =
+        match exchange_oauth_authorization_code(&provider_ctx, &code, &callback_url, None).await {
+            Ok(profile) => profile,
+            Err(_) => {
+                return payment_oauth_redirect_response(&redirect, "error", "exchange_failed");
+            }
+        };
     payment_oauth_redirect_response(&redirect, "openid", &profile.subject)
 }
 
 /// Builds the WeChat web authorization URL with silent `snsapi_base` scope.
 fn build_wechat_authorize_url(app_id: &str, redirect_uri: &str, state: &str) -> String {
-    let endpoint = builtin_authorization_endpoint("wechat")
-        .expect("builtin wechat authorization endpoint");
+    let endpoint =
+        builtin_authorization_endpoint("wechat").expect("builtin wechat authorization endpoint");
     format!(
         "{endpoint}?appid={}&redirect_uri={}&response_type=code&scope={}&state={}#wechat_redirect",
         percent_encode_component(app_id),
@@ -303,12 +294,7 @@ fn payment_oauth_cookie(name: &str, value: &str, max_age: i64) -> String {
     )
 }
 
-fn append_payment_oauth_cookie(
-    response: &mut Response,
-    name: &str,
-    value: &str,
-    max_age: i64,
-) {
+fn append_payment_oauth_cookie(response: &mut Response, name: &str, value: &str, max_age: i64) {
     response.headers_mut().append(
         header::SET_COOKIE,
         HeaderValue::from_str(&payment_oauth_cookie(name, value, max_age))
@@ -391,7 +377,10 @@ mod tests {
     #[test]
     fn percent_encoding_keeps_unreserved_characters() {
         assert_eq!(percent_encode_component("abc-._~123"), "abc-._~123");
-        assert_eq!(percent_encode_component("https://im.sdkwork.com/cb"), "https%3A%2F%2Fim.sdkwork.com%2Fcb");
+        assert_eq!(
+            percent_encode_component("https://im.sdkwork.com/cb"),
+            "https%3A%2F%2Fim.sdkwork.com%2Fcb"
+        );
         assert_eq!(percent_encode_component("o_中文"), "o_%E4%B8%AD%E6%96%87");
     }
 

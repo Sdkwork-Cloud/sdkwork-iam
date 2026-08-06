@@ -20,11 +20,16 @@ use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 
 use crate::{
-    contacts::*, directory::*, oauth_wechat_payment::{
-        handle_wechat_payment_oauth_callback, start_wechat_payment_oauth,
-    },
-    password_session_bridge::PasswordSessionBridgeResult, passwords::*,
-    responses::*, state::*, tokens::*, utils::*, web_bootstrap::*,
+    contacts::*,
+    directory::*,
+    oauth_wechat_payment::{handle_wechat_payment_oauth_callback, start_wechat_payment_oauth},
+    password_session_bridge::PasswordSessionBridgeResult,
+    passwords::*,
+    responses::*,
+    state::*,
+    tokens::*,
+    utils::*,
+    web_bootstrap::*,
 };
 
 /// Builds the executable local/private `sdkwork-iam-app-api` router.
@@ -1580,19 +1585,27 @@ async fn create_password_reset(
 
 /// Lists the scan-login modes available to the login page QR panel
 /// (from the tenant's scan-login mode registry; falls back to the default
-/// list). Public so login pages can render and rotate modes without a
-/// session.
-async fn list_scan_login_modes(State(state): State<LocalIamState>) -> Response {
+/// list). Mirrors `oauth/providers` auth so the tenant resolves from the
+/// credential-entry context.
+async fn list_scan_login_modes(
+    State(state): State<LocalIamState>,
+    ctx: WebRequestContext,
+) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else {
         return postgres_pool_or_error(&state)
             .err()
             .expect("error response");
     };
-    let tenant_id = crate::scan_login::resolve_scan_login_tenant_id(None);
+    let tenant_id = ctx
+        .tenant_id()
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| "__local__".to_string());
     match crate::scan_login::load_scan_login_modes(pg, &tenant_id).await {
         Ok(modes) => appbase_ok(json!({
             "modes": modes
                 .iter()
+                .filter(|mode| mode.enabled)
                 .map(crate::scan_login::scan_login_mode_to_json)
                 .collect::<Vec<_>>(),
         })),
@@ -1740,11 +1753,19 @@ async fn create_oauth_authorization_url(
         );
     }
 
-    let oauth_state = crate::tokens::generate_opaque_token("oauthstate");
+    // A client-supplied `state` (e.g. a scan-login QR session key that must
+    // survive the authorization round trip so the H5 callback screen can
+    // recover and complete the QR session) is used verbatim; otherwise a
+    // fresh opaque state is generated. The state is stored server-side
+    // either way, so `oauth.sessions.create` can validate the exchange.
+    let oauth_state = optional_string(body.get("state"))
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty() && value.len() <= 256)
+        .unwrap_or_else(|| crate::tokens::generate_opaque_token("oauthstate"));
     let (pkce_verifier, pkce_challenge) = crate::oauth_login::create_oauth_pkce(&provider)
         .map(|(verifier, challenge)| (Some(verifier), Some(challenge)))
         .unwrap_or((None, None));
-    if let Err(error) = crate::ephemeral::upsert_oauth_state(
+    match crate::ephemeral::upsert_oauth_state(
         pg,
         LOCAL_EPHEMERAL_SCOPE,
         &crate::ephemeral::OAuthStateRecord {
@@ -1758,11 +1779,21 @@ async fn create_oauth_authorization_url(
     )
     .await
     {
-        return appbase_error(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "iam_ephemeral_unavailable",
-            &error,
-        );
+        Ok(true) => {}
+        Ok(false) => {
+            return appbase_error(
+                StatusCode::CONFLICT,
+                "iam_oauth_state_conflict",
+                "OAuth state is already bound to a different authorization request",
+            );
+        }
+        Err(error) => {
+            return appbase_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "iam_ephemeral_unavailable",
+                &error,
+            );
+        }
     }
 
     match crate::oauth_login::create_oauth_authorization_url(
@@ -2907,6 +2938,38 @@ async fn create_oauth_device_authorization(
         }
     };
     let (qr_kind, provider_code) = crate::scan_login::parse_scan_login_qr_mode(&qr_mode);
+    // The legacy `url_login_enabled` switch also gates the URL mode: an admin
+    // that turned the switch off must not get URL-mode QR codes from the
+    // login page (the registry filtering in `load_scan_login_modes` handles
+    // auto-selected modes; this rejects an explicit `qrMode=url` request).
+    if qr_kind == crate::scan_login::SCAN_LOGIN_MODE_URL {
+        let Ok(pg) = postgres_pool_or_error(&state) else {
+            return appbase_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "iam_ephemeral_unavailable",
+                "database pool is unavailable",
+            );
+        };
+        let tenant_id =
+            crate::scan_login::resolve_scan_login_tenant_id(optional_string(body.get("tenantId")));
+        match crate::scan_login::load_scan_login_url_login_enabled(pg, &tenant_id).await {
+            Ok(true) => {}
+            Ok(false) => {
+                return appbase_error(
+                    StatusCode::CONFLICT,
+                    "iam_oauth_url_scan_login_disabled",
+                    "URL scan login is disabled; enable it in admin first",
+                );
+            }
+            Err(error) => {
+                return appbase_error(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "iam_oauth_scan_login_modes_failed",
+                    &error,
+                );
+            }
+        }
+    }
     let session_key = generate_opaque_token("qr");
     let poll_secret = generate_opaque_token("qrpoll");
     let fallback_url =
@@ -2929,15 +2992,19 @@ async fn create_oauth_device_authorization(
             }
         }
         "provider" => {
-            match create_provider_scan_login(&state, &headers, &body, provider_code.as_deref(), &session_key)
-                .await
+            match create_provider_scan_login(
+                &state,
+                &headers,
+                &body,
+                provider_code.as_deref(),
+                &session_key,
+                &poll_secret,
+            )
+            .await
             {
                 Ok(auth_url) => (
                     auth_url.clone(),
-                    format!(
-                        "provider:{}",
-                        provider_code.unwrap_or_default()
-                    ),
+                    format!("provider:{}", provider_code.unwrap_or_default()),
                     None,
                 ),
                 Err(error) => {
@@ -2955,6 +3022,7 @@ async fn create_oauth_device_authorization(
                 &session_key,
                 &purpose,
                 &poll_secret,
+                &resolve_scan_login_h5_origin(&state, &body, &headers).await,
             ),
             "url".to_string(),
             None,
@@ -2992,8 +3060,8 @@ async fn create_oauth_device_authorization(
 ///
 /// `qrMode` may be `url`, `official_account`, or `provider:<providerCode>`.
 /// Explicit request values (and the `SDKWORK_IAM_DEFAULT_QR_LOGIN_MODE` env
-/// override) win; otherwise the first enabled mode of the scan-login mode
-/// registry decides.
+/// override) win; otherwise the tenant's scan-login registry decides —
+/// honoring a pinned `default_qr_mode` first, then the first enabled mode.
 async fn resolve_oauth_device_authorization_qr_mode(
     state: &LocalIamState,
     body: &Value,
@@ -3012,13 +3080,39 @@ async fn resolve_oauth_device_authorization_qr_mode(
     let Ok(pg) = postgres_pool_or_error(state) else {
         return Ok("url".to_string());
     };
-    let tenant_id = crate::scan_login::resolve_scan_login_tenant_id(optional_string(
-        body.get("tenantId"),
-    ));
+    let tenant_id =
+        crate::scan_login::resolve_scan_login_tenant_id(optional_string(body.get("tenantId")));
     let modes = crate::scan_login::load_scan_login_modes(pg, &tenant_id).await?;
+    // A pinned default mode wins over the registry order.
+    if let Some(pinned) = crate::scan_login::load_scan_login_default_mode(pg, &tenant_id).await? {
+        if let Some(mode) = modes
+            .iter()
+            .find(|mode| mode.enabled && mode.qr_mode_value() == pinned)
+        {
+            return Ok(mode.qr_mode_value());
+        }
+    }
     Ok(crate::scan_login::first_enabled_scan_login_mode(&modes)
         .map(|mode| mode.qr_mode_value())
         .unwrap_or_else(|| "url".to_string()))
+}
+
+/// Resolves the H5 mobile login origin for scan-login QR content: tenant
+/// registry config first, then env override, then the request origin.
+async fn resolve_scan_login_h5_origin(
+    state: &LocalIamState,
+    body: &Value,
+    headers: &HeaderMap,
+) -> String {
+    if let Ok(pg) = postgres_pool_or_error(state) {
+        let tenant_id =
+            crate::scan_login::resolve_scan_login_tenant_id(optional_string(body.get("tenantId")));
+        if let Ok(Some(origin)) = crate::scan_login::load_scan_login_h5_origin(pg, &tenant_id).await
+        {
+            return origin;
+        }
+    }
+    crate::directory::resolve_oauth_h5_login_entry_origin(headers)
 }
 
 /// Builds the OAuth authorization URL for a `provider:<code>` scan-login
@@ -3032,12 +3126,13 @@ async fn create_provider_scan_login(
     body: &Value,
     provider_code: Option<&str>,
     session_key: &str,
+    poll_secret: &str,
 ) -> Result<String, String> {
     let Some(provider_code) = provider_code.filter(|value| !value.trim().is_empty()) else {
         return Err("provider scan login requires a provider code".to_string());
     };
-    let pg = postgres_pool_or_error(state)
-        .map_err(|_| "postgres pool is unavailable".to_string())?;
+    let pg =
+        postgres_pool_or_error(state).map_err(|_| "postgres pool is unavailable".to_string())?;
     let normalized = sdkwork_iam_web_adapter::normalize_oauth_provider_code(provider_code)
         .ok_or_else(|| "OAuth provider is invalid".to_string())?;
 
@@ -3065,9 +3160,40 @@ async fn create_provider_scan_login(
         return Err(format!("OAuth login is disabled for provider {normalized}"));
     }
 
-    let h5_origin = crate::directory::resolve_oauth_h5_login_entry_origin(headers);
+    let h5_origin = resolve_scan_login_h5_origin(state, body, headers).await;
     let redirect_uri = format!("{h5_origin}/auth/oauth/callback");
-    let oauth_state = format!("p:{normalized}:{session_key}");
+    // The state carries the QR session key AND the poll secret so the H5
+    // callback screen — which in provider mode never visits the H5 login URL
+    // — can complete the QR session after exchanging the authorization code.
+    let oauth_state = format!("p:{normalized}:{session_key}:{poll_secret}");
+    // Register the state server-side: the exchange endpoint validates the
+    // echoed state against this record (provider / redirect / tenant / app).
+    match crate::ephemeral::upsert_oauth_state(
+        pg,
+        LOCAL_EPHEMERAL_SCOPE,
+        &crate::ephemeral::OAuthStateRecord {
+            pkce_verifier: None,
+            provider: normalized.clone(),
+            redirect_uri: redirect_uri.clone(),
+            state: oauth_state.clone(),
+            tenant_id: integration_tenant.clone(),
+            runtime_app_id: sdkwork_iam_web_adapter::platform_runtime_app_id_for_tenant(
+                &integration_tenant,
+            ),
+        },
+    )
+    .await
+    {
+        Ok(true) => {}
+        Ok(false) => {
+            return Err(
+                "scan login oauth state is already bound to a different request".to_string(),
+            );
+        }
+        Err(error) => {
+            return Err(format!("store scan login oauth state failed: {error}"));
+        }
+    }
     let url = crate::oauth_login::create_oauth_authorization_url(
         Some(pg),
         &state.config,
@@ -3108,8 +3234,8 @@ async fn create_official_account_qr_login(
     body: &Value,
     session_key: &str,
 ) -> Result<String, String> {
-    let pg = postgres_pool_or_error(state)
-        .map_err(|_| "postgres pool is unavailable".to_string())?;
+    let pg =
+        postgres_pool_or_error(state).map_err(|_| "postgres pool is unavailable".to_string())?;
     let account_id = optional_string(body.get("accountId"));
     let tenant_filter = optional_string(body.get("tenantId")).or_else(|| {
         std::env::var("SDKWORK_IAM_DEFAULT_TENANT")
@@ -3142,18 +3268,24 @@ async fn create_official_account_qr_login(
     };
     let integration_id: String = row.get(0);
     let tenant_id: String = row.get(1);
-    let Some(ctx) = sdkwork_iam_web_adapter::load_oauth_integration_exchange_context_for_integration(
-        pg,
-        &tenant_id,
-        &integration_id,
-    )
-    .await?
+    let Some(ctx) =
+        sdkwork_iam_web_adapter::load_oauth_integration_exchange_context_for_integration(
+            pg,
+            &tenant_id,
+            &integration_id,
+        )
+        .await?
     else {
         return Err("official account integration is not configured".to_string());
     };
-    let qr =
-        sdkwork_iam_web_adapter::create_wechat_mp_temp_qr_code(pg, &ctx.provider_client_id, &ctx.client_secret, session_key, 300)
-            .await?;
+    let qr = sdkwork_iam_web_adapter::create_wechat_mp_temp_qr_code(
+        pg,
+        &ctx.provider_client_id,
+        &ctx.client_secret,
+        session_key,
+        300,
+    )
+    .await?;
     Ok(qr.image_url)
 }
 
@@ -3170,11 +3302,15 @@ async fn retrieve_oauth_device_authorization(
     .await
     {
         Ok(Some(session)) => {
-            if session.status == "follow_confirmed"
+            // `follow_confirmed` starts a lazy resolution; `resolving` lets
+            // the stale-reclaim logic inside `complete_follow_login_scan`
+            // take over when a previous resolver crashed or timed out.
+            if (session.status == "follow_confirmed" || session.status == "resolving")
                 && session.completed_session.is_none()
                 && !session.session_exchanged
             {
-                return complete_follow_login_scan(&state, &device_authorization_id, &session).await;
+                return complete_follow_login_scan(&state, &device_authorization_id, &session)
+                    .await;
             }
             appbase_ok(qr_session_poll_json(&session))
         }
@@ -3197,18 +3333,39 @@ async fn retrieve_oauth_device_authorization(
 /// user for the openid (subject identity matches web-authorization login),
 /// and stores the authenticated session (or the login-context challenge).
 /// On resolution failure the session flips back so the next poll retries.
+///
+/// A `resolving` session older than `FOLLOW_LOGIN_RESOLVING_STALE_MS` is
+/// reclaimed by the next poll (the resolver may have crashed or timed out),
+/// so the session can never get stuck mid-resolution.
+const FOLLOW_LOGIN_RESOLVING_STALE_MS: u128 = 30_000;
+
 async fn complete_follow_login_scan(
     state: &LocalIamState,
     device_authorization_id: &str,
     _current: &LocalQrSession,
 ) -> Response {
+    let now = current_millis();
     let claimed = match crate::ephemeral_pool::mutate_qr_session(
         &state.pool,
         LOCAL_EPHEMERAL_SCOPE,
         device_authorization_id,
         |session| {
-            if session.status == "follow_confirmed" {
+            let stale = session.status == "resolving"
+                && session
+                    .follow_login
+                    .as_ref()
+                    .and_then(|follow| follow.get("resolvingAt").and_then(Value::as_u64))
+                    .map(|started| {
+                        now.saturating_sub(started as u128) > FOLLOW_LOGIN_RESOLVING_STALE_MS
+                    })
+                    .unwrap_or(true);
+            if session.status == "follow_confirmed" || stale {
                 session.status = "resolving".to_string();
+                if let Some(follow) = session.follow_login.as_mut() {
+                    if let Some(record) = follow.as_object_mut() {
+                        record.insert("resolvingAt".to_string(), json!(now));
+                    }
+                }
             }
         },
     )
@@ -3240,7 +3397,8 @@ async fn complete_follow_login_scan(
     let openid = optional_string(follow.get("openid"));
     let tenant_id = optional_string(follow.get("tenantId"));
     let integration_id = optional_string(follow.get("integrationId"));
-    let app_id = optional_string(follow.get("appId")).unwrap_or_else(|| "0".to_string());
+    let provider = optional_string(follow.get("provider")).unwrap_or_else(|| "wechat".to_string());
+    let configured_app_id = optional_string(follow.get("appId"));
     let Some(openid) = openid else {
         return reset_follow_login_and_error(
             &state,
@@ -3274,6 +3432,30 @@ async fn complete_follow_login_scan(
             .err()
             .expect("error response");
     };
+    // The webhook has no request-side application context, so the session is
+    // issued for the tenant's platform application when the integration did
+    // not pin a specific runtime app id ("0" means any/default).
+    let app_id = match configured_app_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty() && *value != "0")
+    {
+        Some(value) => value.to_string(),
+        None => {
+            if let Err(error) =
+                sdkwork_iam_web_adapter::ensure_platform_tenant_application(pg, &tenant_id).await
+            {
+                return reset_follow_login_and_error(
+                    &state,
+                    device_authorization_id,
+                    "iam_oauth_follow_login_incomplete",
+                    &error,
+                )
+                .await;
+            }
+            sdkwork_iam_web_adapter::platform_runtime_app_id_for_tenant(&tenant_id)
+        }
+    };
     let policy = effective_account_binding_policy(state, pg, Some(&tenant_id)).await;
     let profile = sdkwork_iam_web_adapter::LocalOAuthProviderProfile {
         avatar: None,
@@ -3281,7 +3463,7 @@ async fn complete_follow_login_scan(
         name: None,
         open_id: Some(openid.clone()),
         phone: None,
-        provider: "wechat".to_string(),
+        provider,
         subject: openid,
         union_id: None,
         union_scope_id: None,
@@ -3538,6 +3720,12 @@ async fn create_oauth_device_authorization_session_exchange(
         );
     }
     if qr_session.session_exchanged {
+        // Idempotency: the first exchange may have succeeded while its
+        // response was lost (network); hand back the same completed session
+        // instead of failing the desktop retry with a consumed-secret error.
+        if let Some(session) = qr_session.completed_session.clone() {
+            return appbase_ok(session_to_json(&session));
+        }
         return appbase_error(
             StatusCode::UNAUTHORIZED,
             "iam_poll_secret_consumed",
@@ -3585,6 +3773,11 @@ async fn create_oauth_device_authorization_session_completion(
     ctx: WebRequestContext,
     Json(body): Json<Value>,
 ) -> Response {
+    if let Some(response) =
+        enforce_ephemeral_rate_limit(&state, "oauth:device_authorization:session_completion").await
+    {
+        return response;
+    }
     let Some(poll_secret) = optional_string(body.get("pollSecret"))
         .or_else(|| optional_string(body.get("poll_secret")))
     else {
@@ -3645,6 +3838,13 @@ async fn create_oauth_device_authorization_session_completion(
             "iam_poll_secret_consumed",
             "session exchange already completed",
         );
+    }
+    // Idempotency: a repeated completion (e.g. the H5 page is reloaded or the
+    // WeChat authorization redirect lands twice) must not re-issue the
+    // session — `create_session_record` revokes the previous session, which
+    // would kick the desktop side out after it already exchanged.
+    if qr_session.status == "completed" && qr_session.completed_session.is_some() {
+        return appbase_ok(qr_session_completion_json(&qr_session));
     }
 
     match create_authenticated_session_or_challenge(

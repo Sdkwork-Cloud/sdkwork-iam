@@ -1,5 +1,5 @@
 import { isBlank } from "@sdkwork/utils";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   SdkworkIamH5AuthLoginScreenProps,
@@ -8,6 +8,7 @@ import type {
 import { IAM_H5_AUTH_ROUTES } from "../types/auth-h5-types";
 import {
   buildScanLoginOAuthState,
+  clearScanLoginUrlContext,
 } from "../services/auth-h5-controller";
 import { SdkworkIamH5AuthLoginContextSelectionScreen } from "./AuthLoginContextSelectionScreen";
 
@@ -64,12 +65,20 @@ export function SdkworkIamH5AuthLoginScreen({
   }, [controller, scanContext]);
 
   // Auto-redirect when the page is opened inside the WeChat in-app browser
-  // and the WeChat provider is enabled for this tenant.
+  // and the WeChat provider is enabled for this tenant. The attempt is
+  // tracked in a ref so a failed redirect (provider disabled / network error)
+  // does not re-trigger the effect and cause an infinite redirect loop.
+  const autoRedirectAttemptedRef = useRef(false);
   useEffect(() => {
     let cancelled = false;
-    if (!isWechatBrowser() || wechatRedirecting) {
+    if (
+      !isWechatBrowser() ||
+      wechatRedirecting ||
+      autoRedirectAttemptedRef.current
+    ) {
       return undefined;
     }
+    autoRedirectAttemptedRef.current = true;
     void controller.listOAuthProviders()
       .then((providers) => {
         if (cancelled) {
@@ -96,6 +105,7 @@ export function SdkworkIamH5AuthLoginScreen({
     setError(undefined);
     try {
       await controller.completeScanLogin({ pollSecret, sessionKey });
+      clearScanLoginUrlContext();
       setCompleted(true);
       onScanLoginCompleted?.();
     } catch (completionError) {

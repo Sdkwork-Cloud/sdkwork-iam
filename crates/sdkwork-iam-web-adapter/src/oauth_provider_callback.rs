@@ -198,6 +198,7 @@ pub async fn handle_provider_callback_post(
         pg,
         &config.tenant_id,
         &config.integration_id,
+        &config.provider_code,
         config.integration_app_id.as_deref(),
         &payload,
     )
