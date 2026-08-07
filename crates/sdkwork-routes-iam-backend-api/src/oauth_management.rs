@@ -28,6 +28,7 @@ use crate::handlers::{
 
 struct TenantResourceSpec {
     columns: &'static [&'static str],
+    create_error: &'static str,
     id_aliases: &'static [(&'static str, &'static str)],
     list_error: &'static str,
     list_order: &'static str,
@@ -41,6 +42,7 @@ const INTEGRATIONS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, organization_id, app_id, environment, deployment_mode, provider_code, provider_catalog_id, integration_code, display_name, protocol_family, status, enabled, health_status, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_integrations_list_failed",
+    create_error: "iam_oauth_integrations_create_failed",
     retrieve_error: "iam_oauth_integration_retrieve_failed",
     columns: &[
         "id",
@@ -68,6 +70,7 @@ const CLIENTS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, integration_id, provider_code, client_code, display_name, provider_client_id, provider_app_id, provider_tenant_id, provider_account_id, secret_config_status, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_clients_list_failed",
+    create_error: "iam_oauth_clients_create_failed",
     retrieve_error: "iam_oauth_clients_retrieve_failed",
     columns: &[
         "id",
@@ -94,6 +97,7 @@ const SECRETS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, secret_owner_kind, secret_owner_id, oauth_client_id, secret_kind, status, active_from, active_until, created_at, updated_at",
     list_order: "created_at DESC, id",
     list_error: "iam_oauth_secrets_list_failed",
+    create_error: "iam_oauth_secrets_create_failed",
     retrieve_error: "iam_oauth_secrets_retrieve_failed",
     columns: &[
         "id",
@@ -116,6 +120,7 @@ const SURFACES: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, integration_id, oauth_client_id, surface_kind, surface_code, display_name, redirect_uri, callback_path, web_domain, mini_program_app_id, mini_program_original_id, mini_program_environment, mini_program_release_channel, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_surfaces_list_failed",
+    create_error: "iam_oauth_surfaces_create_failed",
     retrieve_error: "iam_oauth_surfaces_retrieve_failed",
     columns: &[
         "id",
@@ -145,6 +150,7 @@ const FLOW_CONFIGS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, integration_id, oauth_client_id, flow_kind, flow_purpose, status, enabled, created_at, updated_at",
     list_order: "flow_kind, id",
     list_error: "iam_oauth_flow_configs_list_failed",
+    create_error: "iam_oauth_flow_configs_create_failed",
     retrieve_error: "iam_oauth_flow_configs_retrieve_failed",
     columns: &[
         "id",
@@ -166,6 +172,7 @@ const SCOPE_PROFILES: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, integration_id, provider_code, scope_profile_code, display_name, status, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_scope_profiles_list_failed",
+    create_error: "iam_oauth_scope_profiles_create_failed",
     retrieve_error: "iam_oauth_scope_profiles_retrieve_failed",
     columns: &[
         "id",
@@ -186,6 +193,7 @@ const CLAIM_MAPPINGS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, integration_id, provider_code, external_claim, target_kind, target_field, status, created_at, updated_at",
     list_order: "external_claim, id",
     list_error: "iam_oauth_claim_mappings_list_failed",
+    create_error: "iam_oauth_claim_mappings_create_failed",
     retrieve_error: "iam_oauth_claim_mappings_retrieve_failed",
     columns: &[
         "id",
@@ -208,6 +216,7 @@ const OAUTH_POLICIES: TenantResourceSpec = TenantResourceSpec {
         "id, tenant_id, integration_id, policy_code, display_name, status, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_policies_list_failed",
+    create_error: "iam_oauth_policies_create_failed",
     retrieve_error: "iam_oauth_policies_retrieve_failed",
     columns: &[
         "id",
@@ -227,6 +236,7 @@ const TENANT_BINDINGS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, provider_code, integration_id, binding_kind, external_tenant_id, status, created_at, updated_at",
     list_order: "created_at DESC, id",
     list_error: "iam_oauth_tenant_bindings_list_failed",
+    create_error: "iam_oauth_tenant_bindings_create_failed",
     retrieve_error: "iam_oauth_tenant_bindings_retrieve_failed",
     columns: &[
         "id",
@@ -247,6 +257,7 @@ const OPERATOR_PLATFORMS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, integration_id, provider_code, platform_code, display_name, authorization_status, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_operator_platforms_list_failed",
+    create_error: "iam_oauth_operator_platforms_create_failed",
     retrieve_error: "iam_oauth_operator_platforms_retrieve_failed",
     columns: &[
         "id",
@@ -269,6 +280,7 @@ const RESOURCE_ACCOUNTS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, integration_id, provider_code, resource_account_code, resource_account_kind, display_name, verification_status, authorization_status, domain_verify_status, webhook_verify_status, last_verified_at, provider_config_json, qr_default_enabled, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_resource_accounts_list_failed",
+    create_error: "iam_oauth_resource_accounts_create_failed",
     retrieve_error: "iam_oauth_resource_accounts_retrieve_failed",
     columns: &[
         "id",
@@ -301,6 +313,7 @@ const RESOURCE_AUTHORIZATIONS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, integration_id, resource_account_id, provider_code, authorization_mode, status, created_at, updated_at",
     list_order: "created_at DESC, id",
     list_error: "iam_oauth_resource_authorizations_list_failed",
+    create_error: "iam_oauth_resource_authorizations_create_failed",
     retrieve_error: "iam_oauth_resource_authorizations_retrieve_failed",
     columns: &[
         "id",
@@ -321,6 +334,7 @@ const WEBHOOK_CONFIGS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, integration_id, provider_code, webhook_code, display_name, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_webhook_configs_list_failed",
+    create_error: "iam_oauth_webhook_configs_create_failed",
     retrieve_error: "iam_oauth_webhook_configs_retrieve_failed",
     columns: &[
         "id",
@@ -342,6 +356,7 @@ const CALLBACK_EVENTS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, provider_code, integration_id, flow_kind, outcome, created_at",
     list_order: "created_at DESC, id",
     list_error: "iam_oauth_callback_events_list_failed",
+    create_error: "iam_oauth_callback_events_create_failed",
     retrieve_error: "iam_oauth_callback_events_retrieve_failed",
     columns: &[
         "id",
@@ -360,6 +375,7 @@ const OPERATIONAL_RESOURCES: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, integration_id, provider_code, resource_code, resource_kind, display_name, publish_status, status, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_operational_resources_list_failed",
+    create_error: "iam_oauth_operational_resources_create_failed",
     retrieve_error: "iam_oauth_operational_resources_retrieve_failed",
     columns: &[
         "id",
@@ -382,6 +398,7 @@ const ACCOUNT_LINKS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, user_id, provider_code, integration_id, link_source, status, linked_at, created_at, updated_at",
     list_order: "linked_at DESC, id",
     list_error: "iam_oauth_account_links_list_failed",
+    create_error: "iam_oauth_account_links_create_failed",
     retrieve_error: "iam_oauth_account_links_retrieve_failed",
     columns: &[
         "id",
@@ -403,6 +420,7 @@ const GRANTS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, provider_code, integration_id, grant_owner_kind, flow_kind, status, issued_at, created_at, updated_at",
     list_order: "created_at DESC, id",
     list_error: "iam_oauth_grants_list_failed",
+    create_error: "iam_oauth_grants_create_failed",
     retrieve_error: "iam_oauth_grants_retrieve_failed",
     columns: &[
         "id",
@@ -424,6 +442,7 @@ const DIAGNOSTIC_RUNS: TenantResourceSpec = TenantResourceSpec {
     list_select: "id, tenant_id, provider_code, integration_id, run_kind, status, result_code, result_summary, created_at",
     list_order: "created_at DESC, id",
     list_error: "iam_oauth_diagnostic_runs_list_failed",
+    create_error: "iam_oauth_diagnostic_runs_create_failed",
     retrieve_error: "iam_oauth_diagnostic_runs_retrieve_failed",
     columns: &[
         "id",

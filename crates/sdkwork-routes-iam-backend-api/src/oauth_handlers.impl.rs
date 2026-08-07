@@ -2,12 +2,13 @@ fn oauth_list_search_columns(table: &str) -> &'static [&'static str] {
     match table {
         "iam_oauth_integration" => &["provider_code", "integration_code", "display_name"],
         "iam_oauth_client" => &["provider_code", "client_code", "display_name"],
-        "iam_oauth_secret" => &["secret_code", "display_name"],
+        "iam_oauth_secret" => &["secret_owner_id", "secret_kind"],
         "iam_oauth_surface" => &["surface_code", "display_name"],
         "iam_oauth_account_link" => &["provider_code", "integration_id"],
         "iam_oauth_grant" => &["provider_code", "integration_id"],
-        "iam_oauth_callback_event" => &["provider_code", "integration_id", "event_kind"],
+        "iam_oauth_callback_event" => &["provider_code", "integration_id", "flow_kind"],
         "iam_oauth_diagnostic_run" => &["provider_code", "integration_id", "run_kind"],
+        "iam_oauth_policy" => &["policy_code", "display_name"],
         _ if table.starts_with("iam_oauth_") => &["provider_code"],
         _ => &[],
     }
@@ -83,7 +84,7 @@ where
 {
     match directory_create_with_audit(pg, ctx, spec.table, id.to_string(), detail, insert).await {
         Ok(_) => oauth_create_response(state, ctx, id, spec).await,
-        Err(error) => internal_handler_error(spec.list_error, error),
+        Err(error) => internal_handler_error(spec.create_error, error),
     }
 }
 

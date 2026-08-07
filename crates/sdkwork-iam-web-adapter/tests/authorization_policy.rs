@@ -1,8 +1,7 @@
 use sdkwork_iam_web_adapter::IamAuthorizationPolicy;
 use sdkwork_web_core::{
     AuthorizationPolicy, HttpRouteManifest, ServerRequestId, WebApiSurface, WebAuthMode,
-    WebFrameworkErrorKind, WebLoginScope, WebRequestContext, WebRequestPrincipal,
-    WebTransportFacts,
+    WebLoginScope, WebRequestContext, WebRequestPrincipal, WebTransportFacts,
 };
 
 fn backend_context(login_scope: WebLoginScope, organization_id: Option<&str>) -> WebRequestContext {
@@ -70,33 +69,27 @@ fn app_context(login_scope: WebLoginScope, organization_id: Option<&str>) -> Web
 }
 
 #[test]
-fn backend_api_rejects_personal_tenant_login_scope() {
+fn backend_api_allows_personal_tenant_login_scope() {
     let policy = IamAuthorizationPolicy::new(HttpRouteManifest::new(&[]));
-    let error = policy
+    policy
         .authorize(
             &backend_context(WebLoginScope::Tenant, None),
             Some("iam.users.list"),
         )
-        .expect_err("tenant login scope must be rejected on backend api");
-
-    assert_eq!(WebFrameworkErrorKind::Forbidden, error.kind);
-    assert!(error.message.contains("organization login scope"));
+        .expect("tenant login scope must pass backend gate");
 }
 
 #[test]
-fn backend_api_rejects_organization_scope_without_active_organization_id() {
+fn backend_api_allows_organization_scope_without_active_organization_id() {
     let policy = IamAuthorizationPolicy::new(HttpRouteManifest::new(&[]));
 
     for organization_id in [None, Some(""), Some("0")] {
-        let error = policy
+        policy
             .authorize(
                 &backend_context(WebLoginScope::Organization, organization_id),
                 Some("iam.users.list"),
             )
-            .expect_err("organization scope without org id must be rejected");
-
-        assert_eq!(WebFrameworkErrorKind::Forbidden, error.kind);
-        assert!(error.message.contains("active organization login context"));
+            .expect("organization scope without org id must pass backend gate");
     }
 }
 

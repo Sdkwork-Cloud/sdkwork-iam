@@ -583,6 +583,7 @@ fn database_baseline_declares_standard_oauth_tables_without_plaintext_secrets() 
         "iam_oauth_webhook_config",
         "iam_oauth_operational_resource",
         "iam_oauth_authorization_state",
+        "iam_oauth_scan_login_config",
         "iam_oauth_account_link",
         "iam_oauth_grant",
         "iam_oauth_callback_event",
@@ -673,7 +674,7 @@ fn database_baseline_declares_oauth_secret_owner_scopes() {
         "idx_iam_oauth_secret_client_active",
         "idx_iam_oauth_secret_resource_authorization_active",
         "idx_iam_oauth_secret_webhook_active",
-        "uk_iam_oauth_secret_hash",
+        "idx_iam_oauth_secret_hash",
     ] {
         assert!(
             sql.contains(&format!("CREATE INDEX IF NOT EXISTS {index_name}"))
@@ -765,6 +766,7 @@ fn database_baseline_declares_oauth_provider_callback_and_operational_resources(
 
     for column in [
         "webhook_kind",
+        "display_name",
         "callback_public_id",
         "callback_path_token_hash",
         "verification_token_status",
@@ -790,6 +792,15 @@ fn database_baseline_declares_oauth_provider_callback_and_operational_resources(
         assert!(
             callback_event.contains(column),
             "iam_oauth_callback_event must declare {column}",
+        );
+    }
+
+    let scan_login = table_definition(sql, "iam_oauth_scan_login_config")
+        .expect("scan login config table");
+    for column in ["h5_login_origin", "url_login_enabled", "default_qr_mode", "modes_json"] {
+        assert!(
+            scan_login.contains(column),
+            "iam_oauth_scan_login_config must declare {column}",
         );
     }
 

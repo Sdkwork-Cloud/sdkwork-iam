@@ -817,6 +817,7 @@ CREATE TABLE IF NOT EXISTS iam_oauth_webhook_config (
   provider_code TEXT NOT NULL,
   webhook_code TEXT NOT NULL,
   webhook_kind TEXT NOT NULL,
+  display_name TEXT NOT NULL DEFAULT '',
   callback_url TEXT NOT NULL,
   callback_url_hash TEXT NOT NULL,
   callback_public_id TEXT NOT NULL,
@@ -1138,7 +1139,7 @@ CREATE INDEX IF NOT EXISTS idx_iam_oauth_secret_resource_authorization_active
 CREATE INDEX IF NOT EXISTS idx_iam_oauth_secret_webhook_active
   ON iam_oauth_secret (tenant_id, webhook_config_id, secret_kind, status, active_from, active_until);
 
-CREATE UNIQUE INDEX IF NOT EXISTS uk_iam_oauth_secret_hash
+CREATE INDEX IF NOT EXISTS idx_iam_oauth_secret_hash
   ON iam_oauth_secret (secret_hash);
 
 CREATE INDEX IF NOT EXISTS idx_iam_oauth_resource_account_operator
@@ -1387,66 +1388,126 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_iam_tenant_application_org_template
   ON iam_tenant_application (tenant_id, organization_id, template_id);
 
 -- Pre-launch integrity hardening: every directory relation is tenant-bound at the database layer.
-ALTER TABLE iam_tenant
-  ADD CONSTRAINT iam_tenant_id_tenant_unique UNIQUE (id);
-ALTER TABLE iam_user
-  ADD CONSTRAINT iam_user_tenant_id_unique UNIQUE (tenant_id, id),
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_tenant_id_tenant_unique') THEN
+        ALTER TABLE iam_tenant ADD CONSTRAINT iam_tenant_id_tenant_unique UNIQUE (id);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_user_tenant_id_unique') THEN
+        ALTER TABLE iam_user ADD CONSTRAINT iam_user_tenant_id_unique UNIQUE (tenant_id, id),
   ADD CONSTRAINT iam_user_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id);
-ALTER TABLE iam_tenant_member
-  ADD CONSTRAINT iam_tenant_member_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_tenant_member_tenant_fk') THEN
+        ALTER TABLE iam_tenant_member ADD CONSTRAINT iam_tenant_member_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_tenant_member_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
-ALTER TABLE iam_tenant_signing_key
-  ADD CONSTRAINT iam_tenant_signing_key_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id);
-ALTER TABLE iam_organization
-  ADD CONSTRAINT iam_organization_tenant_id_unique UNIQUE (tenant_id, id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_tenant_signing_key_tenant_fk') THEN
+        ALTER TABLE iam_tenant_signing_key ADD CONSTRAINT iam_tenant_signing_key_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_organization_tenant_id_unique') THEN
+        ALTER TABLE iam_organization ADD CONSTRAINT iam_organization_tenant_id_unique UNIQUE (tenant_id, id),
   ADD CONSTRAINT iam_organization_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_organization_parent_fk FOREIGN KEY (tenant_id, parent_organization_id) REFERENCES iam_organization(tenant_id, id);
-ALTER TABLE iam_organization_closure
-  ADD CONSTRAINT iam_org_closure_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_org_closure_tenant_fk') THEN
+        ALTER TABLE iam_organization_closure ADD CONSTRAINT iam_org_closure_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_org_closure_ancestor_fk FOREIGN KEY (tenant_id, ancestor_organization_id) REFERENCES iam_organization(tenant_id, id),
   ADD CONSTRAINT iam_org_closure_descendant_fk FOREIGN KEY (tenant_id, descendant_organization_id) REFERENCES iam_organization(tenant_id, id),
   ADD CONSTRAINT iam_org_closure_depth_check CHECK (depth >= 0);
-ALTER TABLE iam_organization_membership
-  ADD CONSTRAINT iam_org_membership_tenant_id_unique UNIQUE (tenant_id, id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_org_membership_tenant_id_unique') THEN
+        ALTER TABLE iam_organization_membership ADD CONSTRAINT iam_org_membership_tenant_id_unique UNIQUE (tenant_id, id),
   ADD CONSTRAINT iam_org_membership_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_org_membership_org_fk FOREIGN KEY (tenant_id, organization_id) REFERENCES iam_organization(tenant_id, id),
   ADD CONSTRAINT iam_org_membership_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
-ALTER TABLE iam_department
-  ADD CONSTRAINT iam_department_tenant_id_unique UNIQUE (tenant_id, id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_department_tenant_id_unique') THEN
+        ALTER TABLE iam_department ADD CONSTRAINT iam_department_tenant_id_unique UNIQUE (tenant_id, id),
   ADD CONSTRAINT iam_department_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_department_org_fk FOREIGN KEY (tenant_id, organization_id) REFERENCES iam_organization(tenant_id, id),
   ADD CONSTRAINT iam_department_parent_fk FOREIGN KEY (tenant_id, parent_department_id) REFERENCES iam_department(tenant_id, id);
-ALTER TABLE iam_department_closure
-  ADD CONSTRAINT iam_dept_closure_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_dept_closure_tenant_fk') THEN
+        ALTER TABLE iam_department_closure ADD CONSTRAINT iam_dept_closure_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_dept_closure_ancestor_fk FOREIGN KEY (tenant_id, ancestor_department_id) REFERENCES iam_department(tenant_id, id),
   ADD CONSTRAINT iam_dept_closure_descendant_fk FOREIGN KEY (tenant_id, descendant_department_id) REFERENCES iam_department(tenant_id, id),
   ADD CONSTRAINT iam_dept_closure_depth_check CHECK (depth >= 0);
-ALTER TABLE iam_department_assignment
-  ADD CONSTRAINT iam_dept_assignment_tenant_id_unique UNIQUE (tenant_id, id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_dept_assignment_tenant_id_unique') THEN
+        ALTER TABLE iam_department_assignment ADD CONSTRAINT iam_dept_assignment_tenant_id_unique UNIQUE (tenant_id, id),
   ADD CONSTRAINT iam_dept_assignment_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_dept_assignment_membership_fk FOREIGN KEY (tenant_id, organization_membership_id) REFERENCES iam_organization_membership(tenant_id, id),
   ADD CONSTRAINT iam_dept_assignment_department_fk FOREIGN KEY (tenant_id, department_id) REFERENCES iam_department(tenant_id, id),
   ADD CONSTRAINT iam_dept_assignment_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
-ALTER TABLE iam_position
-  ADD CONSTRAINT iam_position_tenant_id_unique UNIQUE (tenant_id, id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_position_tenant_id_unique') THEN
+        ALTER TABLE iam_position ADD CONSTRAINT iam_position_tenant_id_unique UNIQUE (tenant_id, id),
   ADD CONSTRAINT iam_position_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_position_org_fk FOREIGN KEY (tenant_id, organization_id) REFERENCES iam_organization(tenant_id, id),
   ADD CONSTRAINT iam_position_department_fk FOREIGN KEY (tenant_id, department_id) REFERENCES iam_department(tenant_id, id);
-ALTER TABLE iam_position_assignment
-  ADD CONSTRAINT iam_position_assignment_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_position_assignment_tenant_fk') THEN
+        ALTER TABLE iam_position_assignment ADD CONSTRAINT iam_position_assignment_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_position_assignment_dept_fk FOREIGN KEY (tenant_id, department_assignment_id) REFERENCES iam_department_assignment(tenant_id, id),
   ADD CONSTRAINT iam_position_assignment_position_fk FOREIGN KEY (tenant_id, position_id) REFERENCES iam_position(tenant_id, id),
   ADD CONSTRAINT iam_position_assignment_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
-ALTER TABLE iam_user_identity
-  ADD CONSTRAINT iam_user_identity_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_user_identity_tenant_fk') THEN
+        ALTER TABLE iam_user_identity ADD CONSTRAINT iam_user_identity_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_user_identity_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
-ALTER TABLE iam_credential
-  ADD CONSTRAINT iam_credential_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_credential_tenant_fk') THEN
+        ALTER TABLE iam_credential ADD CONSTRAINT iam_credential_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_credential_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id);
-ALTER TABLE iam_session
-  ADD CONSTRAINT iam_session_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_session_tenant_fk') THEN
+        ALTER TABLE iam_session ADD CONSTRAINT iam_session_tenant_fk FOREIGN KEY (tenant_id) REFERENCES iam_tenant(id),
   ADD CONSTRAINT iam_session_user_fk FOREIGN KEY (tenant_id, user_id) REFERENCES iam_user(tenant_id, id),
   ADD CONSTRAINT iam_session_org_fk FOREIGN KEY (tenant_id, organization_id) REFERENCES iam_organization(tenant_id, id);
+    END IF;
+END $$;
 
 -- source: database/migrations/postgres/0008_iam_rbac_federation.up.sql
 -- IAM RBAC federation metadata: permission/role governance columns, directory trace columns, registry tables.
@@ -1600,29 +1661,7 @@ CREATE INDEX IF NOT EXISTS idx_iam_role_exclusion_tenant_role
 DROP TABLE IF EXISTS iam_application_package CASCADE;
 DROP TABLE IF EXISTS iam_application CASCADE;
 
-CREATE TABLE IF NOT EXISTS iam_application_template (
-  id TEXT PRIMARY KEY,
-  owner_tenant_id TEXT NOT NULL DEFAULT '0',
-  app_key TEXT NOT NULL,
-  name TEXT NOT NULL,
-  display_name TEXT NOT NULL,
-  app_type TEXT NOT NULL,
-  package_name TEXT,
-  bundle_id TEXT,
-  desktop_app_id TEXT,
-  version TEXT NOT NULL,
-  channel TEXT NOT NULL DEFAULT 'stable',
-  status TEXT NOT NULL DEFAULT 'active',
-  runtime_config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-  artifacts_config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-  default_access_permissions_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-  manifest_hash TEXT,
-  last_synced_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL,
-  UNIQUE (app_key),
-  UNIQUE (name)
-);
+
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_iam_application_template_package_name
   ON iam_application_template (package_name)
@@ -1631,50 +1670,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_iam_application_template_package_name
 CREATE INDEX IF NOT EXISTS idx_iam_application_template_status
   ON iam_application_template (status, updated_at, id);
 
-CREATE TABLE IF NOT EXISTS iam_application_template_package (
-  id TEXT PRIMARY KEY,
-  template_id TEXT NOT NULL REFERENCES iam_application_template(id) ON DELETE CASCADE,
-  package_id TEXT NOT NULL,
-  platform TEXT NOT NULL,
-  architecture TEXT,
-  language TEXT,
-  runtime_target TEXT NOT NULL,
-  deployment_profile TEXT NOT NULL,
-  package_format TEXT NOT NULL,
-  version TEXT,
-  config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-  status TEXT NOT NULL DEFAULT 'active',
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL,
-  UNIQUE (template_id, package_id)
-);
+
 
 CREATE INDEX IF NOT EXISTS idx_iam_application_template_package_lookup
   ON iam_application_template_package (template_id, platform, architecture, language, status);
 
-CREATE TABLE IF NOT EXISTS iam_tenant_application (
-  id TEXT PRIMARY KEY,
-  app_id TEXT NOT NULL,
-  tenant_id TEXT NOT NULL,
-  organization_id TEXT NOT NULL DEFAULT '0',
-  template_id TEXT NOT NULL REFERENCES iam_application_template(id),
-  template_version TEXT NOT NULL,
-  instance_key TEXT NOT NULL,
-  display_name TEXT NOT NULL,
-  environment TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending_config',
-  primary_domain TEXT,
-  domain_config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-  access_permissions_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-  runtime_config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-  provisioned_at TIMESTAMPTZ,
-  activated_at TIMESTAMPTZ,
-  last_synced_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL,
-  UNIQUE (app_id),
-  UNIQUE (tenant_id, instance_key)
-);
+
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_iam_tenant_application_primary_domain
   ON iam_tenant_application (tenant_id, primary_domain)
@@ -1770,9 +1771,12 @@ CREATE INDEX IF NOT EXISTS idx_iam_session_credential_active
   ON iam_session (credential_id, revoked_at, expires_at)
   WHERE credential_id IS NOT NULL;
 
-ALTER TABLE iam_session
-  ADD CONSTRAINT iam_session_service_account_credential_fk
-    FOREIGN KEY (credential_id) REFERENCES iam_service_account_credential(id);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_session_service_account_credential_fk') THEN
+        ALTER TABLE iam_session ADD CONSTRAINT iam_session_service_account_credential_fk FOREIGN KEY (credential_id) REFERENCES iam_service_account_credential(id);
+    END IF;
+END $$;
 
 -- folded migration: migrations/postgres/0013_iam_session_principal_compatibility.up.sql
 ALTER TABLE iam_session
@@ -1837,29 +1841,7 @@ WHERE principal_id IS NULL;
 ALTER TABLE iam_session
   ALTER COLUMN principal_id SET NOT NULL;
 
-CREATE TABLE IF NOT EXISTS iam_service_account_credential (
-  id TEXT PRIMARY KEY,
-  tenant_id TEXT NOT NULL,
-  organization_id TEXT,
-  service_account_id TEXT NOT NULL,
-  tenant_application_id TEXT NOT NULL,
-  app_id TEXT NOT NULL,
-  client_id TEXT NOT NULL,
-  secret_hash TEXT NOT NULL,
-  secret_version INTEGER NOT NULL DEFAULT 1,
-  status TEXT NOT NULL DEFAULT 'active',
-  expires_at TIMESTAMPTZ,
-  last_used_at TIMESTAMPTZ,
-  revoked_at TIMESTAMPTZ,
-  created_by TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL,
-  UNIQUE (client_id),
-  CONSTRAINT iam_service_account_credential_service_account_fk
-    FOREIGN KEY (service_account_id) REFERENCES iam_service_account(id),
-  CONSTRAINT iam_service_account_credential_tenant_application_fk
-    FOREIGN KEY (tenant_application_id) REFERENCES iam_tenant_application(id)
-);
+
 
 CREATE INDEX IF NOT EXISTS idx_iam_service_account_credential_client_active
   ON iam_service_account_credential (client_id, status, expires_at);
@@ -1874,9 +1856,12 @@ CREATE INDEX IF NOT EXISTS idx_iam_session_credential_active
   ON iam_session (credential_id, revoked_at, expires_at)
   WHERE credential_id IS NOT NULL;
 
-ALTER TABLE iam_session
-  ADD CONSTRAINT iam_session_service_account_credential_fk
-    FOREIGN KEY (credential_id) REFERENCES iam_service_account_credential(id);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'iam_session_service_account_credential_fk') THEN
+        ALTER TABLE iam_session ADD CONSTRAINT iam_session_service_account_credential_fk FOREIGN KEY (credential_id) REFERENCES iam_service_account_credential(id);
+    END IF;
+END $$;
 
 -- folded migration: migrations/postgres/0014_iam_scan_login_config.up.sql
 -- Scan login configuration for IAM login pages.
@@ -1889,6 +1874,7 @@ CREATE TABLE IF NOT EXISTS iam_oauth_scan_login_config (
   h5_login_origin TEXT NOT NULL DEFAULT '',
   url_login_enabled INTEGER NOT NULL DEFAULT 1,
   default_qr_mode TEXT NOT NULL DEFAULT 'auto',
+  modes_json TEXT NOT NULL DEFAULT '[]',
   updated_at TEXT NOT NULL
 );
 

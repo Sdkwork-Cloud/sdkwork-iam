@@ -1,9 +1,14 @@
 use sdkwork_web_core::{
-    AuthorizationPolicy, ManifestAuthorizationPolicy, WebApiSurface, WebFrameworkError,
-    WebLoginScope, WebRequestContext,
+    AuthorizationPolicy, ManifestAuthorizationPolicy, WebFrameworkError, WebRequestContext,
 };
 
-/// IAM authorization policy: organization membership gate + manifest permission checks.
+/// IAM authorization policy: manifest principal + per-route permission checks.
+///
+/// Backend APIs accept both organization logins and tenant-level logins
+/// (`login_scope = TENANT` with `organization_id = 0` or absent). Authorization
+/// stays principal- and permission-driven; per-route `required_permission`
+/// (and host-level admin boundaries such as `cloudrouter.admin.access`) gate
+/// the actual operations.
 #[derive(Clone, Debug)]
 pub struct IamAuthorizationPolicy {
     manifest_policy: ManifestAuthorizationPolicy,
@@ -23,22 +28,6 @@ impl AuthorizationPolicy for IamAuthorizationPolicy {
         ctx: &WebRequestContext,
         operation_id: Option<&str>,
     ) -> Result<(), WebFrameworkError> {
-        if ctx.api_surface == WebApiSurface::BackendApi {
-            if ctx.login_scope() != Some(WebLoginScope::Organization) {
-                return Err(WebFrameworkError::forbidden(
-                    "backend api requires organization login scope",
-                ));
-            }
-            if ctx.organization_id().is_none_or(|value| {
-                let trimmed = value.trim();
-                trimmed.is_empty() || trimmed == "0"
-            }) {
-                return Err(WebFrameworkError::forbidden(
-                    "backend api requires an active organization login context",
-                ));
-            }
-        }
-
         self.manifest_policy.authorize(ctx, operation_id)
     }
 }

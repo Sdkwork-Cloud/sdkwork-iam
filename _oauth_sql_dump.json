@@ -1,0 +1,50 @@
+[
+[
+"crates/sdkwork-routes-iam-backend-api\\src\\directory_crud.impl.rs",
+".to_owned());\n    let id_insert = id.clone();\n    let tenant_id_insert = tenant_id.clone();\n    let user_id_insert = user_id.clone();\n    let member_kind_insert = member_kind.clone();\n    match directory_create_with_audit(\n        pg,\n        &ctx,\n        "
+],
+[
+"crates/sdkwork-routes-iam-backend-api\\src\\oauth_handlers.impl.rs",
+": error }),\n        ),\n    };\n\n    let tenant_id_insert = tenant_id.clone();\n    let integration_id_insert = integration_id.clone();\n    let oauth_client_id_insert = oauth_client_id.clone();\n    let surface_id_insert = surface_id.clone();\n    let provider_code_insert = provider_code.clone();\n    let run_kind_insert = run_kind.clone();\n    let status_insert = status.to_owned();\n    let result_code_insert = result_code.to_owned();\n    let result_summary_insert = result_summary.clone();\n    let redacted_result_json_insert = redacted_result_json.to_string();\n\n    oauth_commit_create(\n        state,\n        ctx,\n        pg,\n        &id,\n        &DIAGNOSTIC_RUNS,\n        json!({ "
+],
+[
+"crates/sdkwork-iam-bootstrap\\src\\lib.rs",
+"\n        INSERT INTO iam_tenant\n            (id, code, name, status, created_at, updated_at)\n        VALUES\n            (?, ?, ?, 'active', ?, ?)\n        ON CONFLICT(id) DO UPDATE SET\n            code = excluded.code,\n            name = excluded.name,\n            status = excluded.status,\n            updated_at = excluded.updated_at\n        "
+],
+[
+"crates/sdkwork-iam-bootstrap\\src\\lib.rs",
+"\n        INSERT INTO iam_organization\n            (\n                id,\n                tenant_id,\n                parent_organization_id,\n                code,\n                name,\n                path,\n                status,\n                organization_kind,\n                tenant_boundary_kind,\n                data_boundary_kind,\n                app_boundary_enabled,\n                verification_status,\n                created_at,\n                updated_at\n            )\n        VALUES\n            (?, ?, NULL, ?, ?, ?, 'active', ?, ?, ?, 0, ?, ?, ?)\n        ON CONFLICT(id) DO UPDATE SET\n            tenant_id = excluded.tenant_id,\n            parent_organization_id = excluded.parent_organization_id,\n            code = excluded.code,\n            name = excluded.name,\n            path = excluded.path,\n            status = excluded.status,\n            organization_kind = excluded.organization_kind,\n            tenant_boundary_kind = excluded.tenant_boundary_kind,\n            data_boundary_kind = excluded.data_boundary_kind,\n            app_boundary_enabled = excluded.app_boundary_enabled,\n            verification_status = excluded.verification_status,\n            updated_at = excluded.updated_at\n        "
+],
+[
+"crates/sdkwork-iam-bootstrap\\src\\lib.rs",
+"\n        INSERT INTO iam_tenant\n            (id, code, name, status, created_at, updated_at)\n        VALUES\n            ($1, $2, $3, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)\n        ON CONFLICT(id) DO UPDATE SET\n            code = excluded.code,\n            name = excluded.name,\n            status = excluded.status,\n            updated_at = excluded.updated_at\n        "
+],
+[
+"crates/sdkwork-iam-bootstrap\\src\\lib.rs",
+"\n        INSERT INTO iam_organization\n            (\n                id,\n                tenant_id,\n                parent_organization_id,\n                code,\n                name,\n                path,\n                status,\n                organization_kind,\n                tenant_boundary_kind,\n                data_boundary_kind,\n                app_boundary_enabled,\n                verification_status,\n                created_at,\n                updated_at\n            )\n        VALUES\n            (\n                $1,\n                $2,\n                NULL,\n                $3,\n                $4,\n                $5,\n                'active',\n                $6,\n                $7,\n                $8,\n                0,\n                $9,\n                CURRENT_TIMESTAMP,\n                CURRENT_TIMESTAMP\n            )\n        ON CONFLICT(id) DO UPDATE SET\n            tenant_id = excluded.tenant_id,\n            parent_organization_id = excluded.parent_organization_id,\n            code = excluded.code,\n            name = excluded.name,\n            path = excluded.path,\n            status = excluded.status,\n            organization_kind = excluded.organization_kind,\n            tenant_boundary_kind = excluded.tenant_boundary_kind,\n            data_boundary_kind = excluded.data_boundary_kind,\n            app_boundary_enabled = excluded.app_boundary_enabled,\n            verification_status = excluded.verification_status,\n            updated_at = excluded.updated_at\n        "
+],
+[
+"crates/sdkwork-iam-bootstrap\\src\\lib.rs",
+"\n            INSERT INTO iam_permission\n                (id, code, name, resource, action, created_at)\n            VALUES\n                (?, ?, ?, ?, ?, ?)\n            ON CONFLICT(code) DO UPDATE SET\n                name = excluded.name,\n                resource = excluded.resource,\n                action = excluded.action\n            "
+],
+[
+"crates/sdkwork-iam-bootstrap\\src\\lib.rs",
+"\n            INSERT INTO iam_permission\n                (id, code, name, resource, action, created_at)\n            VALUES\n                ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)\n            ON CONFLICT(code) DO UPDATE SET\n                name = excluded.name,\n                resource = excluded.resource,\n                action = excluded.action\n            "
+],
+[
+"crates/sdkwork-iam-bootstrap\\src\\lib.rs",
+"\n        SELECT COUNT(1)\n        FROM iam_tenant t\n        JOIN iam_organization o ON o.tenant_id = t.id\n        WHERE t.id = ?\n          AND t.code = ?\n          AND t.status = 'active'\n          AND o.id = ?\n          AND o.code = ?\n          AND o.status = 'active'\n        "
+],
+[
+"crates/sdkwork-iam-bootstrap\\src\\lib.rs",
+"\n        SELECT (COUNT(1))::bigint\n        FROM iam_tenant t\n        JOIN iam_organization o ON o.tenant_id = t.id\n        WHERE t.id = $1\n          AND t.code = $2\n          AND t.status = 'active'\n          AND o.id = $3\n          AND o.code = $4\n          AND o.status = 'active'\n        "
+],
+[
+"crates/sdkwork-iam-bootstrap\\src\\lib.rs",
+"\n            SELECT COUNT(1)\n            FROM iam_permission\n            WHERE code = ?\n              AND resource = ?\n              AND action = ?\n            "
+],
+[
+"crates/sdkwork-iam-bootstrap\\src\\lib.rs",
+"\n            SELECT (COUNT(1))::bigint\n            FROM iam_permission\n            WHERE code = $1\n              AND resource = $2\n              AND action = $3\n            "
+]
+]
