@@ -700,6 +700,21 @@ describe("sdkwork-auth-pc-react", () => {
         "/workspace/auth",
       ),
     ).toBe("/dashboard");
+    // A nested `redirect=/auth/login?redirect=...` value must be rejected no
+    // matter how many times it was encoded; otherwise the login surface keeps
+    // bouncing through itself until the URL grows without bound.
+    expect(
+      resolveAuthRedirectTarget(
+        "/auth/login?redirect=%2Fauth%2Flogin%3Fredirect%3D%252Fauth%252Flogin%253Fredirect%253D%25252Fconsole%25252Fdashboard",
+      ),
+    ).toBe("/dashboard");
+    // Encoded path segments that still route into the auth surface are also
+    // rejected after full decoding.
+    expect(
+      resolveAuthRedirectTarget(
+        "/auth%2Flogin?redirect=%2Fconsole%2Fdashboard",
+      ),
+    ).toBe("/dashboard");
 
     const manifest = createAuthWorkspaceManifest({
       packageNames: ["@sdkwork/auth-pc-react", "@sdkwork/user-pc-react"],

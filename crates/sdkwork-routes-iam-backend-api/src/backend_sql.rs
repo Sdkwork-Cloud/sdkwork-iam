@@ -404,12 +404,22 @@ pub(crate) async fn retrieve_tenant_row(
         .await
 }
 
+/// Typed PATCH assignment value. Binding every value as TEXT broke INTEGER
+/// columns (e.g. `enabled`) with "column is of type integer but expression is
+/// of type text" because sqlx sends the parameter with an explicit type, so
+/// PostgreSQL never applies its implicit unknown-literal cast.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum PatchValue {
+    Text(String),
+    Int(i32),
+}
+
 pub(crate) async fn patch_tenant_row_tx<'e, E>(
     executor: E,
     tenant_id: &str,
     table: &str,
     id: &str,
-    assignments: &[(String, String)],
+    assignments: &[(String, PatchValue)],
 ) -> Result<bool, sqlx::Error>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -433,7 +443,10 @@ where
         .bind(tenant_id)
         .bind(id);
     for (_, value) in assignments {
-        query = query.bind(value);
+        query = match value {
+            PatchValue::Text(text) => query.bind(text),
+            PatchValue::Int(int) => query.bind(*int),
+        };
     }
 
     let result = query.execute(executor).await?;

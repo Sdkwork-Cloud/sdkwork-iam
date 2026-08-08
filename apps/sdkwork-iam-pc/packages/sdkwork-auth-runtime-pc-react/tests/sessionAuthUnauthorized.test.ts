@@ -62,6 +62,50 @@ describe("session auth unauthorized integration", () => {
     expect(reset).toBe(true);
   });
 
+  it("does not nest the redirect param when an unauthorized response arrives on an auth route", () => {
+    let redirectedTo: string | undefined;
+    const handled = handleSdkworkSessionAuthUnauthorizedError(
+      {
+        httpStatus: 401,
+        message: "Authentication failed",
+      },
+      {
+        readCurrentPath: () => "/auth/login?redirect=%2Fconsole%2Fdashboard",
+        readEnv: (name) =>
+          name === "VITE_SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE" ? "redirect" : undefined,
+        redirectToLogin: (loginUrl) => {
+          redirectedTo = loginUrl;
+        },
+        shouldRedirectOnUnauthorized: () => true,
+      },
+    );
+
+    expect(handled).toBe(true);
+    expect(redirectedTo).toBe("/auth/login");
+  });
+
+  it("keeps a single-level redirect target when an unauthorized response arrives on a protected path", () => {
+    let redirectedTo: string | undefined;
+    const handled = handleSdkworkSessionAuthUnauthorizedError(
+      {
+        httpStatus: 401,
+        message: "Authentication failed",
+      },
+      {
+        readCurrentPath: () => "/console/dashboard",
+        readEnv: (name) =>
+          name === "VITE_SDKWORK_SESSION_AUTH_UNAUTHORIZED_MODE" ? "redirect" : undefined,
+        redirectToLogin: (loginUrl) => {
+          redirectedTo = loginUrl;
+        },
+        shouldRedirectOnUnauthorized: () => true,
+      },
+    );
+
+    expect(handled).toBe(true);
+    expect(redirectedTo).toBe("/auth/login?redirect=%2Fconsole%2Fdashboard");
+  });
+
   it("does not clear an authenticated session for Access-Token-only or anonymous requests", async () => {
     let clearCalls = 0;
     const client: SdkworkSdkClientWithHttp = {

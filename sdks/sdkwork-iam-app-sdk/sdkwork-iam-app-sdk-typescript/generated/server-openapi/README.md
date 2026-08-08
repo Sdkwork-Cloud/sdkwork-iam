@@ -5,17 +5,17 @@ Generated SDKWork v3 dual-token transport SDK.
 ## Installation
 
 ```bash
-npm install @sdkwork/iam-app-sdk
+npm install @sdkwork/sdkwork-iam-app-sdk
 # or
-yarn add @sdkwork/iam-app-sdk
+yarn add @sdkwork/sdkwork-iam-app-sdk
 # or
-pnpm add @sdkwork/iam-app-sdk
+pnpm add @sdkwork/sdkwork-iam-app-sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { SdkworkAppClient } from '@sdkwork/iam-app-sdk';
+import { SdkworkAppClient } from '@sdkwork/sdkwork-iam-app-sdk';
 
 const client = new SdkworkAppClient({
   baseUrl: 'http://localhost:8080',
@@ -51,7 +51,7 @@ Access-Token: <accessToken>
 ## Configuration (Non-Auth)
 
 ```typescript
-import { SdkworkAppClient } from '@sdkwork/iam-app-sdk';
+import { SdkworkAppClient } from '@sdkwork/sdkwork-iam-app-sdk';
 
 const client = new SdkworkAppClient({
   baseUrl: 'http://localhost:8080',
@@ -122,7 +122,7 @@ const result = await client.system.iam.accountBindingPolicy.retrieve();
 ## Error Handling
 
 ```typescript
-import { SdkworkAppClient, NetworkError, TimeoutError, AuthenticationError } from '@sdkwork/iam-app-sdk';
+import { SdkworkAppClient, NetworkError, TimeoutError, AuthenticationError } from '@sdkwork/sdkwork-iam-app-sdk';
 
 try {
   const body = {

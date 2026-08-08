@@ -1,6 +1,7 @@
 //! Admin-scoped delegated access token issuance for backend IAM operators.
 
 use crate::application_registry::{intersect_permission_scopes, resolve_tenant_application};
+use crate::iam_database_env::resolve_iam_database_pool_from_env;
 use crate::is_blank;
 use crate::super_admin_auth::AccessTokenActor;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -153,42 +154,17 @@ pub async fn issue_delegated_access_credential(
     let access_token_hash = hash_token(&access_token);
     let refresh_token_hash = hash_token(&refresh_token);
 
-    sqlx::query(
-        "INSERT INTO iam_session (id, tenant_id, organization_id, login_scope, user_id, \
-         principal_kind, principal_id, app_id, environment, deployment_mode, auth_level, \
-         auth_token_hash, auth_token_kid, access_token_hash, access_token_kid, \
-         refresh_token_hash, refresh_token_kid, sharding_key, sharding_strategy, \
-         data_scope_json, permission_scope_json, expires_at, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, 'user', $5, $6, $7, $8, $9, \
-                 $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)",
+    persist_signed_session(
+        pg,
+        &context,
+        &signing_key,
+        &auth_token_hash,
+        &access_token_hash,
+        &refresh_token_hash,
+        &expires_at,
+        &now,
     )
-    .bind(&session_id)
-    .bind(&request.tenant_id)
-    .bind(&organization_id)
-    .bind(login_scope_to_string(&context.login_scope))
-    .bind(&actor.user_id)
-    .bind(&app_id)
-    .bind(environment_to_string(&context.environment))
-    .bind(deployment_mode_to_string(&context.deployment_mode))
-    .bind(auth_level_to_string(&context.auth_level))
-    .bind(&auth_token_hash)
-    .bind(&signing_key.kid)
-    .bind(&access_token_hash)
-    .bind(&signing_key.kid)
-    .bind(&refresh_token_hash)
-    .bind(&signing_key.kid)
-    .bind(&request.tenant_id)
-    .bind("tenant")
-    .bind(Json(&context.data_scope))
-    .bind(Json(&context.permission_scope))
-    .bind(expires_at)
-    .bind(now)
-    .bind(now)
-    .execute(pg)
-    .await
-    .map_err(|error| format!("insert delegated access token session failed: {error}"))?;
-
-    let _ = refresh_token;
+    .await?;
 
     Ok(IssuedAccessCredential {
         access_credential: access_token,
@@ -200,6 +176,247 @@ pub async fn issue_delegated_access_credential(
         tenant_application_id: tenant_application.id.clone(),
         expires_at: expires_at.to_rfc3339(),
     })
+}
+
+/// Issues a signed bootstrap Access-Token for standalone/container deployments.
+///
+/// Deployment order is executed here so first boot is fully automatic:
+/// 1. the tenant application must be provisioned and enabled (the installer
+///    creates it), 2. the bootstrap system user is ensured, 3. the **tenant
+///    signing key is ensured** — created on first boot, which is the "update
+///    the tenant secret" step, 4. a signed JWT is issued with the tenant
+///    application's access permissions as the token scope, 5. the session is
+///    persisted. The gateway then resolves the token through the verified
+///    database path (signature + tenant binding + scope), never through the
+///    payload-only development fallback.
+pub async fn issue_standalone_bootstrap_access_credential(
+    pg: &PgPool,
+    tenant_id: &str,
+    app_id: &str,
+    ttl_seconds: Option<u64>,
+) -> Result<IssuedAccessCredential, String> {
+    ensure_tenant_exists(pg, tenant_id).await?;
+
+    let tenant_application = resolve_tenant_application(pg, tenant_id, None, Some(app_id), None)
+        .await?
+        .ok_or_else(|| {
+            format!("tenant application {app_id} is not provisioned for tenant {tenant_id}")
+        })?;
+    if tenant_application.status != "enabled" {
+        return Err(format!(
+            "tenant application {app_id} must be enabled before issuing a bootstrap access credential"
+        ));
+    }
+    ensure_bootstrap_system_user(pg, tenant_id).await?;
+
+    let organization_id = tenant_application.organization_id.clone();
+    let session_id = generate_opaque_token("session");
+    let now = chrono::Utc::now();
+    let ttl = ttl_seconds.unwrap_or(LOCAL_TOKEN_TTL_SECONDS as u64);
+    let expires_at = now + chrono::Duration::seconds(ttl as i64);
+
+    let environment = bootstrap_environment();
+    let context = IamAppContext::new(
+        tenant_id.to_owned(),
+        Some(organization_id.as_str()),
+        "system",
+        session_id.clone(),
+        app_id.to_owned(),
+        environment,
+        DeploymentMode::Local,
+        AuthLevel::System,
+        vec![format!("tenant:{tenant_id}"), "user:system".to_owned()],
+        tenant_application.access_permissions.clone(),
+    );
+
+    // Step 3 above: ensure (or rotate on request) the tenant signing key
+    // before signing, so the issued token is always bound to the tenant
+    // secret and the database session.
+    let signing_key = ensure_tenant_signing_key(pg, tenant_id).await?;
+    let access_token =
+        sign_local_session_token_with_ttl(&signing_key, "access", &context, ttl as u128);
+    let auth_token = sign_local_session_token_with_ttl(&signing_key, "auth", &context, ttl as u128);
+    let refresh_token = generate_opaque_token("refresh");
+
+    let auth_token_hash = hash_token(&auth_token);
+    let access_token_hash = hash_token(&access_token);
+    let refresh_token_hash = hash_token(&refresh_token);
+    persist_signed_session(
+        pg,
+        &context,
+        &signing_key,
+        &auth_token_hash,
+        &access_token_hash,
+        &refresh_token_hash,
+        &expires_at,
+        &now,
+    )
+    .await?;
+
+    Ok(IssuedAccessCredential {
+        access_credential: access_token,
+        auth_token,
+        session_id,
+        tenant_id: tenant_id.to_owned(),
+        organization_id,
+        app_id: app_id.to_owned(),
+        tenant_application_id: tenant_application.id.clone(),
+        expires_at: expires_at.to_rfc3339(),
+    })
+}
+
+/// Resolves the deployment environment for bootstrap issuance with the same
+/// semantics as the Cloud Router web environment parser: unset or unknown
+/// values default to production.
+fn bootstrap_environment() -> Environment {
+    let value = std::env::var("SDKWORK_CLOUDROUTER_ROUTER_ENVIRONMENT")
+        .or_else(|_| std::env::var("SDKWORK_CLOUDROUTER_ENVIRONMENT"))
+        .map(|value| value.trim().to_ascii_lowercase())
+        .unwrap_or_default();
+    match value.as_str() {
+        "dev" | "development" => Environment::Dev,
+        "test" | "testing" => Environment::Test,
+        _ => Environment::Prod,
+    }
+}
+
+/// Resolves the deployment bootstrap Access-Token for packaged deployments.
+///
+/// Priority:
+/// 1. an explicitly configured `SDKWORK_ACCESS_TOKEN` wins unchanged;
+/// 2. otherwise a signed tenant-bound token is issued through
+///    [`issue_standalone_bootstrap_access_credential`] (tenant signing key
+///    ensured first — the "update the tenant secret" step on first boot —
+///    then a signed JWT persisted as an IAM session);
+/// 3. `Ok(None)` when no IAM database is configured, letting the caller fall
+///    back to a development-only token.
+///
+/// `tenant_id`/`app_id` default to the installer-provisioned tenant runtime
+/// app (`SDKWORK_WEB_FRAMEWORK_JWT_BOOTSTRAP_TENANT_ID` /
+/// `SDKWORK_WEB_FRAMEWORK_JWT_BOOTSTRAP_APP_ID` env overrides apply).
+pub async fn resolve_deployment_bootstrap_access_token(
+    tenant_id: Option<&str>,
+    app_id: Option<&str>,
+) -> Result<Option<String>, String> {
+    if let Some(token) = std::env::var("SDKWORK_ACCESS_TOKEN")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+    {
+        return Ok(Some(token));
+    }
+
+    let Some(pool) = resolve_iam_database_pool_from_env().await else {
+        tracing::debug!("IAM database pool unavailable; bootstrap token resolution deferred to caller fallback");
+        return Ok(None);
+    };
+    let Some(pg) = pool.as_postgres() else {
+        tracing::debug!("IAM database pool is not PostgreSQL; bootstrap token resolution deferred to caller fallback");
+        return Ok(None);
+    };
+
+    let tenant_id = tenant_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .or_else(|| {
+            std::env::var("SDKWORK_WEB_FRAMEWORK_JWT_BOOTSTRAP_TENANT_ID")
+                .ok()
+                .filter(|value| !value.trim().is_empty())
+        })
+        .unwrap_or_else(|| "100001".to_owned());
+    let app_id = app_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .or_else(|| {
+            std::env::var("SDKWORK_WEB_FRAMEWORK_JWT_BOOTSTRAP_APP_ID")
+                .ok()
+                .filter(|value| !value.trim().is_empty())
+        })
+        .unwrap_or_else(|| "sdkwork-cloudrouter".to_owned());
+
+    let issued =
+        issue_standalone_bootstrap_access_credential(pg, &tenant_id, &app_id, None).await?;
+    tracing::info!(
+        tenant_id = %issued.tenant_id,
+        app_id = %issued.app_id,
+        session_id = %issued.session_id,
+        expires_at = %issued.expires_at,
+        "issued signed bootstrap access credential for portal login",
+    );
+    Ok(Some(issued.access_credential))
+}
+
+/// Ensures the synthetic `system` user used as the bootstrap principal.
+///
+/// `find_iam_context_from_access_token` joins `iam_user` and requires an
+/// active row, so the bootstrap session needs this user to resolve through
+/// the verified database path.
+async fn ensure_bootstrap_system_user(pg: &PgPool, tenant_id: &str) -> Result<(), String> {    let now = chrono::Utc::now().to_rfc3339();
+    sqlx::query(
+        "INSERT INTO iam_user \
+         (id, tenant_id, username, display_name, email, status, created_at, updated_at, \
+          locale, timezone, source, is_deleted) \
+         VALUES ('system', $1, 'system', 'System', 'system@localhost', 'active', $2, $2, \
+                 'en-US', 'UTC', 'bootstrap', 0) \
+         ON CONFLICT (id, tenant_id) DO NOTHING",
+    )
+    .bind(tenant_id)
+    .bind(&now)
+    .execute(pg)
+    .await
+    .map_err(|error| format!("ensure bootstrap system user failed: {error}"))?;
+    Ok(())
+}
+
+/// Persists an issued session row with the signed token hashes and the
+/// tenant-bound signing key id. Shared by delegated and bootstrap issuance.
+#[allow(clippy::too_many_arguments)]
+async fn persist_signed_session(
+    pg: &PgPool,
+    context: &IamAppContext,
+    signing_key: &TenantSigningKey,
+    auth_token_hash: &str,
+    access_token_hash: &str,
+    refresh_token_hash: &str,
+    expires_at: &chrono::DateTime<chrono::Utc>,
+    now: &chrono::DateTime<chrono::Utc>,
+) -> Result<(), String> {
+    sqlx::query(
+        "INSERT INTO iam_session (id, tenant_id, organization_id, login_scope, user_id, \
+         principal_kind, principal_id, app_id, environment, deployment_mode, auth_level, \
+         auth_token_hash, auth_token_kid, access_token_hash, access_token_kid, \
+         refresh_token_hash, refresh_token_kid, sharding_key, sharding_strategy, \
+         data_scope_json, permission_scope_json, expires_at, created_at, updated_at) \
+         VALUES ($1, $2, $3, $4, $5, 'user', $5, $6, $7, $8, $9, \
+                 $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)",
+    )
+    .bind(&context.session_id)
+    .bind(&context.tenant_id)
+    .bind(context.organization_id.as_deref().unwrap_or("0"))
+    .bind(login_scope_to_string(&context.login_scope))
+    .bind(&context.user_id)
+    .bind(&context.app_id)
+    .bind(environment_to_string(&context.environment))
+    .bind(deployment_mode_to_string(&context.deployment_mode))
+    .bind(auth_level_to_string(&context.auth_level))
+    .bind(auth_token_hash)
+    .bind(&signing_key.kid)
+    .bind(access_token_hash)
+    .bind(&signing_key.kid)
+    .bind(refresh_token_hash)
+    .bind(&signing_key.kid)
+    .bind(&context.tenant_id)
+    .bind("tenant")
+    .bind(Json(&context.data_scope))
+    .bind(Json(&context.permission_scope))
+    .bind(expires_at)
+    .bind(now)
+    .bind(now)
+    .execute(pg)
+    .await
+    .map_err(|error| format!("insert issued session failed: {error}"))?;
+    Ok(())
 }
 
 pub fn issued_access_credential_to_json(issued: &IssuedAccessCredential) -> Value {

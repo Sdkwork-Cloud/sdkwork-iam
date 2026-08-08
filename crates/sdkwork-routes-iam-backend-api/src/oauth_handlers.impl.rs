@@ -184,16 +184,29 @@ async fn tenant_patch(
     } else {
         None
     };
+    // The integration row has no redirect_uri column — a provider callback URL
+    // belongs to the login surface. When the operator syncs the integration
+    // callback (`PATCH .../integrations/{id}` with `redirectUri`), cascade it
+    // to the integration's web login surface instead of writing a
+    // non-existent column (which previously failed with "column does not
+    // exist" and surfaced as a masked 500).
+    let cascade_redirect_uri = if spec.table == "iam_oauth_integration" {
+        read_string_field(body, &["redirectUri", "redirect_uri"])
+    } else {
+        None
+    };
     let mut assignments = collect_resource_patch_assignments(body, spec.table);
-    assignments.push(("updated_at".to_owned(), now.clone()));
+    assignments.push(("updated_at".to_owned(), PatchValue::Text(now.clone())));
 
-    let audit_detail = json!({
-        "updatedFields": assignments
-            .iter()
-            .map(|(column, _)| column.as_str())
-            .filter(|column| *column != "updated_at")
-            .collect::<Vec<_>>()
-    });
+    let mut updated_fields = assignments
+        .iter()
+        .map(|(column, _)| column.as_str())
+        .filter(|column| *column != "updated_at")
+        .collect::<Vec<_>>();
+    if cascade_redirect_uri.is_some() {
+        updated_fields.push("redirect_uri");
+    }
+    let audit_detail = json!({ "updatedFields": updated_fields });
     let table = spec.table.to_owned();
     let action = format!("{table}.update");
     let id_owned = id.to_owned();
@@ -239,6 +252,18 @@ async fn tenant_patch(
                         .execute(&mut **tx)
                         .await?;
                     }
+                    if let Some(redirect_uri) = cascade_redirect_uri {
+                        sqlx::query(
+                            "UPDATE iam_oauth_surface SET redirect_uri = $1, updated_at = $2 \
+                             WHERE tenant_id = $3 AND integration_id = $4 AND surface_kind = 'web'",
+                        )
+                        .bind(&redirect_uri)
+                        .bind(&now)
+                        .bind(&tenant_id)
+                        .bind(&id)
+                        .execute(&mut **tx)
+                        .await?;
+                    }
                 }
                 Ok(if updated { 1_u64 } else { 0_u64 })
             })
@@ -261,42 +286,100 @@ async fn tenant_patch(
     }
 }
 
-fn collect_patch_assignments(body: &Value) -> Vec<(String, String)> {
+/// Base PATCH fields each oauth table actually declares in the baseline DDL.
+/// A per-table allowlist keeps `tenant_patch` from writing columns that do
+/// not exist on the target table — writing a missing column used to fail the
+/// whole UPDATE with "column does not exist" and surface as a masked 500
+/// (e.g. `iam_oauth_integration.redirect_uri` or
+/// `iam_oauth_operational_resource.enabled`).
+fn base_patch_columns(table: &str) -> &'static [(&'static str, &'static [&'static str])] {
+    match table {
+        "iam_oauth_integration" => &[
+            ("display_name", &["displayName", "display_name"]),
+            ("status", &["status"]),
+            ("enabled", &["enabled"]),
+            ("health_status", &["healthStatus", "health_status"]),
+        ],
+        "iam_oauth_client" => &[
+            ("display_name", &["displayName", "display_name"]),
+            ("status", &["status"]),
+            ("enabled", &["enabled"]),
+        ],
+        "iam_oauth_surface" => &[
+            ("display_name", &["displayName", "display_name"]),
+            ("status", &["status"]),
+            ("enabled", &["enabled"]),
+        ],
+        "iam_oauth_flow_config" => &[("status", &["status"]), ("enabled", &["enabled"])],
+        "iam_oauth_scope_profile" => &[
+            ("display_name", &["displayName", "display_name"]),
+            ("status", &["status"]),
+        ],
+        "iam_oauth_claim_mapping" => &[("status", &["status"])],
+        "iam_oauth_policy" => &[
+            ("display_name", &["displayName", "display_name"]),
+            ("status", &["status"]),
+        ],
+        "iam_oauth_tenant_binding" => &[("status", &["status"])],
+        "iam_oauth_operator_platform" => &[
+            ("display_name", &["displayName", "display_name"]),
+            ("status", &["status"]),
+            ("enabled", &["enabled"]),
+            (
+                "authorization_status",
+                &["authorizationStatus", "authorization_status"],
+            ),
+        ],
+        "iam_oauth_resource_account" => &[
+            ("display_name", &["displayName", "display_name"]),
+            ("status", &["status"]),
+            ("enabled", &["enabled"]),
+            (
+                "authorization_status",
+                &["authorizationStatus", "authorization_status"],
+            ),
+            (
+                "verification_status",
+                &["verificationStatus", "verification_status"],
+            ),
+        ],
+        "iam_oauth_resource_authorization" => &[("status", &["status"])],
+        "iam_oauth_webhook_config" => &[
+            ("display_name", &["displayName", "display_name"]),
+            ("status", &["status"]),
+            ("enabled", &["enabled"]),
+        ],
+        "iam_oauth_operational_resource" => &[
+            ("display_name", &["displayName", "display_name"]),
+            ("status", &["status"]),
+        ],
+        "iam_oauth_account_link" => &[("status", &["status"])],
+        // provider display names live on `provider_display_name` and are
+        // handled by `update_provider_catalog` itself.
+        "iam_oauth_provider_catalog" => &[("status", &["status"])],
+        _ => &[],
+    }
+}
+
+fn collect_patch_assignments(body: &Value, table: &str) -> Vec<(String, PatchValue)> {
     let mut assignments = Vec::new();
-    for (column, keys) in [
-        ("display_name", ["displayName", "display_name"].as_slice()),
-        ("status", ["status"].as_slice()),
-        ("enabled", ["enabled"].as_slice()),
-        (
-            "health_status",
-            ["healthStatus", "health_status"].as_slice(),
-        ),
-        (
-            "authorization_status",
-            ["authorizationStatus", "authorization_status"].as_slice(),
-        ),
-        (
-            "verification_status",
-            ["verificationStatus", "verification_status"].as_slice(),
-        ),
-    ] {
+    for (column, keys) in base_patch_columns(table) {
         if let Some(value) = read_string_field(body, keys) {
-            assignments.push((column.to_owned(), value));
+            assignments.push((column.to_string(), PatchValue::Text(value)));
         } else if let Some(value) = read_i32_field(body, keys) {
-            assignments.push((column.to_owned(), value.to_string()));
+            assignments.push((column.to_string(), PatchValue::Int(value)));
         }
     }
     assignments
 }
 
-fn collect_resource_patch_assignments(body: &Value, table: &str) -> Vec<(String, String)> {
-    let mut assignments = collect_patch_assignments(body);
+fn collect_resource_patch_assignments(body: &Value, table: &str) -> Vec<(String, PatchValue)> {
+    let mut assignments = collect_patch_assignments(body, table);
     let fields: &[(&str, &[&str])] = match table {
         "iam_oauth_integration" => &[
             ("app_id", &["appId", "app_id"]),
             ("environment", &["environment"]),
             ("deployment_mode", &["deploymentMode", "deployment_mode"]),
-            ("redirect_uri", &["redirectUri", "redirect_uri"]),
         ],
         "iam_oauth_client" => &[
             ("provider_client_id", &["providerClientId", "provider_client_id"]),
@@ -317,7 +400,7 @@ fn collect_resource_patch_assignments(body: &Value, table: &str) -> Vec<(String,
     };
     for (column, keys) in fields {
         if let Some(value) = read_string_field(body, keys) {
-            assignments.push(((*column).to_owned(), value));
+            assignments.push(((*column).to_owned(), PatchValue::Text(value)));
         }
     }
     // The operator-facing account config (custom domains, domain verification
@@ -325,7 +408,10 @@ fn collect_resource_patch_assignments(body: &Value, table: &str) -> Vec<(String,
     // in provider_config_json; unknown fields in `config` stay forward-compatible.
     if table == "iam_oauth_resource_account" {
         if let Some(config) = body.get("config").filter(|value| value.is_object()) {
-            assignments.push(("provider_config_json".to_owned(), config.to_string()));
+            assignments.push((
+                "provider_config_json".to_owned(),
+                PatchValue::Text(config.to_string()),
+            ));
         }
     }
     assignments
@@ -534,16 +620,22 @@ async fn update_provider_catalog(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
 
-    let mut assignments = collect_patch_assignments(&body);
+    let mut assignments = collect_patch_assignments(&body, "iam_oauth_provider_catalog");
     if let Some(name) = read_string_field(&body, &["providerName", "provider_name"]) {
-        assignments.push(("provider_name".to_owned(), name));
+        assignments.push(("provider_name".to_owned(), PatchValue::Text(name)));
     }
     if let Some(display_name) =
         read_string_field(&body, &["providerDisplayName", "provider_display_name"])
     {
-        assignments.push(("provider_display_name".to_owned(), display_name));
+        assignments.push((
+            "provider_display_name".to_owned(),
+            PatchValue::Text(display_name),
+        ));
     }
-    assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    assignments.push((
+        "updated_at".to_owned(),
+        PatchValue::Text(Utc::now().to_rfc3339()),
+    ));
 
     if assignments.len() == 1 {
         return appbase_error(
@@ -582,7 +674,10 @@ async fn update_provider_catalog(
                     .bind(tenant_id_update)
                     .bind(provider_catalog_id_update);
                 for (_, value) in assignments {
-                    query = query.bind(value);
+                    query = match value {
+                        PatchValue::Text(text) => query.bind(text),
+                        PatchValue::Int(int) => query.bind(int),
+                    };
                 }
                 query
                     .execute(&mut **tx)
@@ -1636,9 +1731,9 @@ mod oauth_account_patch_tests {
             "iam_oauth_integration",
         );
 
-        assert!(assignments.contains(&("app_id".to_owned(), "runtime-app".to_owned())));
-        assert!(assignments.contains(&("environment".to_owned(), "production".to_owned())));
-        assert!(assignments.contains(&("deployment_mode".to_owned(), "saas".to_owned())));
+        assert!(assignments.contains(&("app_id".to_owned(), PatchValue::Text("runtime-app".to_owned()))));
+        assert!(assignments.contains(&("environment".to_owned(), PatchValue::Text("production".to_owned()))));
+        assert!(assignments.contains(&("deployment_mode".to_owned(), PatchValue::Text("saas".to_owned()))));
     }
 
     #[test]
@@ -1653,12 +1748,71 @@ mod oauth_account_patch_tests {
             "iam_oauth_surface",
         );
 
-        assert!(assignments.contains(&("mini_program_app_id".to_owned(), "wx-app-id".to_owned())));
-        assert!(assignments.contains(&("mini_program_original_id".to_owned(), "gh_demo".to_owned())));
-        assert!(assignments.contains(&("mini_program_environment".to_owned(), "release".to_owned())));
+        assert!(assignments.contains(&("mini_program_app_id".to_owned(), PatchValue::Text("wx-app-id".to_owned()))));
+        assert!(assignments.contains(&("mini_program_original_id".to_owned(), PatchValue::Text("gh_demo".to_owned()))));
+        assert!(assignments.contains(&("mini_program_environment".to_owned(), PatchValue::Text("release".to_owned()))));
         assert!(!assignments.iter().any(|(field, value)| {
-            field.contains("secret") || value.contains("must-not-be-collected")
+            field.contains("secret")
+                || matches!(value, PatchValue::Text(text) if text.contains("must-not-be-collected"))
         }));
+    }
+
+    #[test]
+    fn integration_redirect_uri_is_not_written_to_the_integration_row() {
+        // `redirectUri` on an integration PATCH must not become an UPDATE
+        // assignment on `iam_oauth_integration` — the table has no
+        // `redirect_uri` column (it lives on `iam_oauth_surface`), so writing
+        // it fails with "column does not exist" and surfaces as a masked 500.
+        let assignments = collect_resource_patch_assignments(
+            &json!({ "redirectUri": "https://login.example.com/callback" }),
+            "iam_oauth_integration",
+        );
+
+        assert!(!assignments.iter().any(|(field, _)| field == "redirect_uri"));
+    }
+
+    #[test]
+    fn surface_redirect_uri_remains_allowlisted() {
+        let assignments = collect_resource_patch_assignments(
+            &json!({ "redirectUri": "https://login.example.com/callback" }),
+            "iam_oauth_surface",
+        );
+
+        assert!(assignments.contains(&(
+            "redirect_uri".to_owned(),
+            PatchValue::Text("https://login.example.com/callback".to_owned())
+        )));
+    }
+
+    #[test]
+    fn operational_resource_patch_ignores_enabled_field() {
+        // `iam_oauth_operational_resource` has no `enabled` column; the admin
+        // UI toggle must fall back to `status`, and the allowlist must never
+        // produce an UPDATE assignment for `enabled` here.
+        let assignments = collect_resource_patch_assignments(
+            &json!({ "enabled": 1, "status": "inactive" }),
+            "iam_oauth_operational_resource",
+        );
+
+        assert!(!assignments.iter().any(|(field, _)| field == "enabled"));
+        assert!(assignments.contains(&("status".to_owned(), PatchValue::Text("inactive".to_owned()))));
+    }
+
+    #[test]
+    fn integration_patch_ignores_status_fields_without_columns() {
+        let assignments = collect_resource_patch_assignments(
+            &json!({
+                "authorizationStatus": "authorized",
+                "verificationStatus": "verified",
+                "enabled": 1,
+            }),
+            "iam_oauth_integration",
+        );
+
+        assert!(!assignments
+            .iter()
+            .any(|(field, _)| field == "authorization_status" || field == "verification_status"));
+        assert!(assignments.contains(&("enabled".to_owned(), PatchValue::Int(1))));
     }
 }
 

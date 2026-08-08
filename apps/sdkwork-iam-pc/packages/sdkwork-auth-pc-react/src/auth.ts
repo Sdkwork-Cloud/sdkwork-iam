@@ -4,6 +4,13 @@ import {
   type SdkworkAppCapabilityManifest,
 } from "@sdkwork/appbase-pc-react";
 import { isBlank, trim } from "@sdkwork/utils";
+import {
+  isSdkworkAuthRoutePath,
+  normalizeSdkworkAuthBasePath,
+  normalizeSdkworkAuthLoginBasePath,
+  normalizeSdkworkRedirectPath,
+  sanitizeSdkworkAuthRedirectTarget,
+} from "../../sdkwork-auth-runtime-pc-react/src/sessionAuthRedirect.ts";
 
 export type SdkworkAuthStatus = "anonymous" | "authenticated" | "authenticating" | "expired";
 export type SdkworkAuthRouteId =
@@ -301,18 +308,9 @@ export interface CreateSdkworkCanonicalAuthWorkspaceManifestOptions<
   sourcePackageName: TSourcePackageName;
 }
 
-function normalizeBasePath(basePath: string): string {
-  const normalized = basePath.trim().replace(/\/+$/, "");
-  return normalized || "/auth";
-}
-
 function normalizeRoute(route: string | null | undefined): string | undefined {
   const normalized = route?.trim();
   return normalized ? normalized : undefined;
-}
-
-function normalizeRedirectTarget(path: string): string {
-  return path.split(/[?#]/, 1)[0] ?? path;
 }
 
 function isExpired(expiresAt: ResolveSdkworkAuthStatusOptions["expiresAt"]): boolean {
@@ -328,8 +326,8 @@ function hasSessionToken(session: SdkworkAuthSessionLike | null | undefined): bo
 }
 
 function pathMatchesRoutePattern(pattern: string, path: string): boolean {
-  const normalizedPattern = normalizeRedirectTarget(pattern);
-  const normalizedPath = normalizeRedirectTarget(path);
+  const normalizedPattern = normalizeSdkworkRedirectPath(pattern);
+  const normalizedPath = normalizeSdkworkRedirectPath(path);
   const patternSegments = normalizedPattern.split("/").filter(Boolean);
   const pathSegments = normalizedPath.split("/").filter(Boolean);
 
@@ -417,12 +415,12 @@ function resolveAuthBasePathFromRoutes(
   }
 
   return loginRoute.endsWith("/login")
-    ? normalizeBasePath(loginRoute.slice(0, -"/login".length))
+    ? normalizeSdkworkAuthBasePath(loginRoute.slice(0, -"/login".length))
     : "/auth";
 }
 
 export function createAuthRouteCatalog(basePath = "/auth"): SdkworkAuthRouteDefinition[] {
-  const resolvedBasePath = normalizeBasePath(basePath);
+  const resolvedBasePath = normalizeSdkworkAuthBasePath(basePath);
 
   return [
     {
@@ -462,7 +460,7 @@ export function buildSdkworkAuthQrEntryPath(
   sessionKey: string,
   options: BuildSdkworkAuthQrEntryPathOptions = {},
 ): string {
-  const resolvedBasePath = normalizeBasePath(options.basePath ?? "/auth");
+  const resolvedBasePath = normalizeSdkworkAuthBasePath(options.basePath ?? "/auth");
   const normalizedSessionKey = sessionKey.trim();
 
   if (!normalizedSessionKey) {
@@ -576,10 +574,19 @@ export function resolveAuthAccess({
   const requiresAuth = protectedPrefixes.some((prefix) => currentPath.startsWith(prefix));
   if (requiresAuth && status !== "authenticated") {
     const loginPath = routes.find((route) => route.id === "login")?.path ?? "/login";
+    // Defensive: if a future caller passes a full URL (pathname + search)
+    // that is already on the auth surface, never re-wrap it — that would nest
+    // the `redirect` param one level deeper on every bounce.
+    const redirectTo = isSdkworkAuthRoutePath(
+      currentPath,
+      normalizeSdkworkAuthLoginBasePath(loginPath),
+    )
+      ? loginPath
+      : `${loginPath}?redirect=${encodeURIComponent(currentPath)}`;
     return {
       allowed: false,
       reason: "login-required",
-      redirectTo: `${loginPath}?redirect=${encodeURIComponent(currentPath)}`,
+      redirectTo,
       status,
     };
   }
@@ -763,51 +770,7 @@ export function resolveAuthRedirectTarget(
   fallbackRoute = "/dashboard",
   authBasePath = "/auth",
 ): string {
-  const normalizedTarget = rawTarget?.trim();
-  if (!normalizedTarget || !isSafeInAppRedirectTarget(normalizedTarget)) {
-    return fallbackRoute;
-  }
-
-  const redirectPath = normalizeRedirectTarget(normalizedTarget);
-  const normalizedAuthBasePath = normalizeBasePath(authBasePath);
-  const blockedExactRoutes = new Set([
-    normalizedAuthBasePath,
-    `${normalizedAuthBasePath}/login`,
-    `${normalizedAuthBasePath}/register`,
-    `${normalizedAuthBasePath}/forgot-password`,
-    `${normalizedAuthBasePath}/qr-login`,
-    "/login",
-    "/register",
-    "/forgot-password",
-    "/qr-login",
-  ]);
-
-  if (
-    blockedExactRoutes.has(redirectPath)
-    || redirectPath.startsWith(`${normalizedAuthBasePath}/oauth/callback`)
-    || redirectPath.startsWith(`${normalizedAuthBasePath}/qr/`)
-    || redirectPath.startsWith("/auth/oauth/callback")
-    || redirectPath.startsWith("/auth/qr/")
-    || redirectPath.startsWith("/login/oauth/callback")
-    || redirectPath.startsWith("/login/qr/")
-  ) {
-    return fallbackRoute;
-  }
-
-  return redirectPath;
-}
-
-function isSafeInAppRedirectTarget(target: string): boolean {
-  if (!target.startsWith("/")) {
-    return false;
-  }
-  if (target.startsWith("//") || target.startsWith("/\\")) {
-    return false;
-  }
-  if (target.includes("://") || target.includes("\\")) {
-    return false;
-  }
-  return true;
+  return sanitizeSdkworkAuthRedirectTarget(rawTarget, fallbackRoute, authBasePath);
 }
 
 export function createAuthWorkspaceManifest({

@@ -1,5 +1,10 @@
 import { isSdkworkSdkSessionAuthError } from "./sdkSessionAuthError.ts";
 import {
+  buildSdkworkLoginRedirectPath,
+  isSdkworkAuthRoutePath,
+  normalizeSdkworkAuthLoginBasePath,
+} from "./sessionAuthRedirect.ts";
+import {
   dispatchSdkworkSessionAuthUnauthorized,
   formatSdkworkSessionAuthUnauthorizedDetail,
   type SdkworkSessionAuthEnvReader,
@@ -56,20 +61,21 @@ function readBrowserRequestPath(): string | undefined {
   return `${readBrowserPathname()}${search ?? ""}`;
 }
 
-function isAuthRoutePath(pathname: string, authLoginPath: string): boolean {
-  const authBasePath = authLoginPath.replace(/\/login\/?$/u, "") || "/auth";
-  return pathname === authBasePath || pathname.startsWith(`${authBasePath}/`);
-}
-
-function buildLoginRedirectPath(
+/**
+ * @deprecated Use `isSdkworkAuthRoutePath` from `./sessionAuthRedirect.ts`
+ * with `normalizeSdkworkAuthLoginBasePath(authLoginPath)`. Kept as a
+ * compatibility alias: it takes the login path (for example "/auth/login")
+ * and checks the whole auth surface it belongs to.
+ */
+export function isSdkworkSessionAuthRoutePath(
+  pathname: string,
   authLoginPath: string,
-  returnPath: string,
-): string {
-  return `${authLoginPath}?redirect=${encodeURIComponent(returnPath)}`;
+): boolean {
+  return isSdkworkAuthRoutePath(pathname, normalizeSdkworkAuthLoginBasePath(authLoginPath));
 }
 
 function defaultShouldRedirectOnUnauthorized(pathname: string, authLoginPath: string): boolean {
-  return !isAuthRoutePath(pathname, authLoginPath);
+  return !isSdkworkSessionAuthRoutePath(pathname, authLoginPath);
 }
 
 function defaultRedirectToLogin(loginUrl: string): void {
@@ -122,7 +128,7 @@ export function handleSdkworkSessionAuthUnauthorizedError(
   }
 
   const returnPath = currentPath ?? pathname;
-  const loginUrl = buildLoginRedirectPath(authLoginPath, returnPath);
+  const loginUrl = buildSdkworkLoginRedirectPath(authLoginPath, returnPath);
   (options.redirectToLogin ?? defaultRedirectToLogin)(loginUrl);
   return true;
 }

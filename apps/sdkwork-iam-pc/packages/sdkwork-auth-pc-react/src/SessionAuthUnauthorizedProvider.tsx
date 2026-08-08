@@ -5,7 +5,11 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { resetSdkworkSessionAuthRedirectState } from "../../sdkwork-auth-runtime-pc-react/src/handleSdkworkSessionAuthUnauthorizedError.ts";
+import {
+  isSdkworkSessionAuthRoutePath,
+  resetSdkworkSessionAuthRedirectState,
+} from "../../sdkwork-auth-runtime-pc-react/src/handleSdkworkSessionAuthUnauthorizedError.ts";
+import { buildSdkworkLoginRedirectFromLocation } from "../../sdkwork-auth-runtime-pc-react/src/sessionAuthRedirect.ts";
 import type { SdkworkSessionAuthUnauthorizedDetail } from "../../sdkwork-auth-runtime-pc-react/src/sessionAuthUnauthorized.ts";
 import { subscribeSdkworkSessionAuthUnauthorized } from "../../sdkwork-auth-runtime-pc-react/src/sessionAuthUnauthorized.ts";
 import type { SdkworkAuthAppearanceConfig } from "./auth-appearance.ts";
@@ -49,13 +53,8 @@ export interface SdkworkSessionAuthUnauthorizedProviderProps {
   slots?: SdkworkAuthPageSlots;
 }
 
-function buildLoginRedirectPath(
-  authLoginPath: string,
-  location: { hash?: string; pathname: string; search?: string },
-): string {
-  const returnPath = `${location.pathname}${location.search ?? ""}${location.hash ?? ""}`;
-  return `${authLoginPath}?redirect=${encodeURIComponent(returnPath)}`;
-}
+/** Deduplicates the no-controller redirect so repeated unauthorized events for the same target do not re-navigate. */
+let providerAuthRedirectTarget: string | null = null;
 
 function resolveReturnPath(
   detail: SdkworkSessionAuthUnauthorizedDetail,
@@ -94,10 +93,29 @@ export function SdkworkSessionAuthUnauthorizedProvider({
   const canRenderLoginModal = Boolean(controller || getRuntime);
 
   useEffect(() => {
+    // A redirect target only protects the navigation that produced it. Once
+    // the user leaves the auth surface, forget it so a later unauthorized
+    // response can redirect again.
+    if (!isSdkworkSessionAuthRoutePath(location.pathname, authLoginPath)) {
+      providerAuthRedirectTarget = null;
+    }
+
     return subscribeSdkworkSessionAuthUnauthorized((nextDetail) => {
       if (!controller && !getRuntime) {
         onBeforeLoginRedirect?.(nextDetail);
-        navigate(buildLoginRedirectPath(authLoginPath, location), { replace: true });
+        // Never wrap an auth-route URL: the login surface already carries the
+        // original return target, and wrapping the full current URL again
+        // nests the `redirect` param one level deeper on every unauthorized
+        // response (unbounded URL growth).
+        if (isSdkworkSessionAuthRoutePath(location.pathname, authLoginPath)) {
+          return;
+        }
+        const redirectTo = buildSdkworkLoginRedirectFromLocation(authLoginPath, location);
+        if (providerAuthRedirectTarget === redirectTo) {
+          return;
+        }
+        providerAuthRedirectTarget = redirectTo;
+        navigate(redirectTo, { replace: true });
         return;
       }
 

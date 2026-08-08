@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { SdkworkI18nProvider } from "@sdkwork/i18n-pc-react";
 import {
@@ -22,6 +22,11 @@ function renderSessionAuthProvider(
       </SdkworkI18nProvider>
     </MemoryRouter>,
   );
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
 }
 
 vi.mock("qrcode", () => ({
@@ -155,5 +160,58 @@ describe("SdkworkSessionAuthUnauthorizedProvider", () => {
     });
     expect(onAuthSuccess).toHaveBeenCalledTimes(1);
     expect(screen.getByText("protected content")).toBeTruthy();
+  });
+
+  it("does not re-wrap the URL when an unauthorized response arrives on the auth surface", async () => {
+    const onBeforeLoginRedirect = vi.fn();
+    const initialEntry = "/auth/login?redirect=%2Fconsole%2Fdashboard";
+
+    renderSessionAuthProvider(
+      <SdkworkSessionAuthUnauthorizedProvider
+        authLoginPath="/auth/login"
+        onBeforeLoginRedirect={onBeforeLoginRedirect}
+      >
+        <LocationProbe />
+      </SdkworkSessionAuthUnauthorizedProvider>,
+      initialEntry,
+    );
+
+    dispatchSdkworkSessionAuthUnauthorized({
+      code: "40101",
+      httpStatus: 401,
+      message: "Session expired",
+      occurredAt: new Date().toISOString(),
+      path: initialEntry,
+    });
+
+    await waitFor(() => {
+      expect(onBeforeLoginRedirect).toHaveBeenCalledTimes(1);
+    });
+    // Wrapping the full current URL again would nest the `redirect` param one
+    // level deeper; the provider must leave the URL untouched.
+    expect(screen.getByTestId("location").textContent).toBe(initialEntry);
+  });
+
+  it("navigates to login with a single-level redirect for unauthorized responses on protected paths", async () => {
+    renderSessionAuthProvider(
+      <SdkworkSessionAuthUnauthorizedProvider authLoginPath="/auth/login">
+        <LocationProbe />
+      </SdkworkSessionAuthUnauthorizedProvider>,
+      "/console/dashboard",
+    );
+
+    dispatchSdkworkSessionAuthUnauthorized({
+      code: "40101",
+      httpStatus: 401,
+      message: "Session expired",
+      occurredAt: new Date().toISOString(),
+      path: "/console/dashboard",
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("location").textContent).toBe(
+        "/auth/login?redirect=%2Fconsole%2Fdashboard",
+      );
+    });
   });
 });

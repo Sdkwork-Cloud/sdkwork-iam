@@ -7,7 +7,7 @@
     "language": "typescript",
     "sdkType": "app",
     "protocol": "http",
-    "packageName": "@sdkwork/iam-app-sdk"
+    "packageName": "@sdkwork/sdkwork-iam-app-sdk"
   },
   "generatedFiles": [
     {
@@ -40,11 +40,11 @@
     },
     {
       "path": "package.json",
-      "sha256": "8e5468c0234cb433a72b09923e5949670d40f3d4e033ae6ab130efd86aa6e9e9"
+      "sha256": "dbe18410f49924be811f712cccb3765c526b012ea047b75304c6dfa73d05fd21"
     },
     {
       "path": "README.md",
-      "sha256": "3bada505c707625992b25285d345b246eb0bdbadcd25a4f6838db78d92c8565e"
+      "sha256": "f048a75465d90ca99e8e04c996756db04cf58014d8e557d8e44d93986e7d42fd"
     },
     {
       "path": "sdkwork-sdk.json",
@@ -84,7 +84,7 @@
     },
     {
       "path": "src/http/client.ts",
-      "sha256": "a04a08a939fa910f73d5af99fe47ddf56b39ee3c7e0e3839ca6d5b34f5c5fca2"
+      "sha256": "9349831b44a1a7336bdb8963379ad2ee616c48a4ae7c6d2540737780810ee8bc"
     },
     {
       "path": "src/http/index.ts",

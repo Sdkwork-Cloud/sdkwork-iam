@@ -21,6 +21,7 @@ use crate::backend_audit::{
     execute_mutation_with_audit, record_backend_mutation_audit_tx,
 };
 use crate::backend_sql::{
+    PatchValue,
     cursor_page_json, encode_timeline_keyset_cursor, internal_handler_error,
     list_page_params_or_error, list_search_pattern, list_tenant_rows, page_json_from_rows,
     patch_tenant_row_tx, read_i32_field, read_string_field, retrieve_tenant_row,
@@ -1487,7 +1488,7 @@ async fn patch_directory_row(
     tenant_id: &str,
     table: &str,
     id: &str,
-    assignments: &[(String, String)],
+    assignments: &[(String, PatchValue)],
 ) -> Result<bool, sqlx::Error> {
     let mut tx = pg.begin().await?;
     let updated = patch_tenant_row_tx(&mut *tx, tenant_id, table, id, assignments).await?;

@@ -19,7 +19,7 @@ use crate::backend_audit::{directory_create_with_audit, execute_conditional_muta
 use crate::backend_sql::{
     internal_handler_error, list_page_params_or_error, list_search_pattern, list_tenant_rows,
     page_json_from_rows, patch_tenant_row_tx, read_i32_field, read_string_field,
-    retrieve_tenant_row, row_to_json_with_aliases, LIST_TOTAL_COLUMN,
+    retrieve_tenant_row, row_to_json_with_aliases, PatchValue, LIST_TOTAL_COLUMN,
 };
 use crate::handlers::{
     appbase_error, appbase_ok, organization_id_from_context, postgres_pool_or_error,

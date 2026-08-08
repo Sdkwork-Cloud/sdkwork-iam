@@ -775,8 +775,11 @@ export function createSdkworkIamOauthAdminController(
       );
     },
     updateOperationalResource(resourceId, enabled) {
+      // `iam_oauth_operational_resource` has no `enabled` column — its
+      // lifecycle is expressed through `status` (the same contract the
+      // scope/claim/policy toggles use), so the toggle maps to status.
       return wrapCreate(
-        () => service.iam.oauth.operationalResources.update(resourceId.trim(), { enabled }),
+        () => service.iam.oauth.operationalResources.update(resourceId.trim(), lifecycleStatus(enabled)),
         "Failed to update OAuth operational resource",
         true,
       );

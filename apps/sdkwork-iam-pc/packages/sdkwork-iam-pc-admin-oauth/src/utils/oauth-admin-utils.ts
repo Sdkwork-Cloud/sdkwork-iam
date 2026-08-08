@@ -546,6 +546,15 @@ export function readEnabled(item: unknown): boolean | undefined {
   if (typeof record.is_enabled === "boolean") {
     return record.is_enabled;
   }
+  // Resources without an `enabled` column (e.g. operational resources)
+  // express their lifecycle through `status`.
+  const status = readStatus(item);
+  if (status === "active") {
+    return true;
+  }
+  if (status === "inactive") {
+    return false;
+  }
   return undefined;
 }
 

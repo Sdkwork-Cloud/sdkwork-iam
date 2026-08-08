@@ -245,8 +245,10 @@ export interface SdkworkIamOauthAdminMessages {
   };
   scanLogin: {
     accounts: {
+      disableLogin: string;
       emptyLabel: string;
       enableHint: string;
+      enableLogin: string;
       generateLabel: string;
       listTitle: string;
       noAccountHint: string;
@@ -257,19 +259,24 @@ export interface SdkworkIamOauthAdminMessages {
     };
     modes: {
       add: string;
+      addKindLabel: string;
+      addKindOfficialAccount: string;
+      addKindPlaceholder: string;
+      addKindProvider: string;
+      addKindUrl: string;
       addProvider: string;
       addProviderPlaceholder: string;
-      addUrl: string;
-      addOfficialAccount: string;
       defaultHint: string;
-      defaultTitle: string;
       disable: string;
-      enable: string;
       emptyHint: string;
+      enable: string;
       moveDown: string;
       moveUp: string;
       providerModeLabel: string;
       remove: string;
+      removeConfirm: string;
+      removeDescriptionTemplate: string;
+      removeTitle: string;
       title: string;
     };
     common: {
@@ -278,6 +285,10 @@ export interface SdkworkIamOauthAdminMessages {
       refresh: string;
       save: string;
       saveSuccess: string;
+    };
+    help: {
+      description: string;
+      title: string;
     };
     preview: {
       copy: string;

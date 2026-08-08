@@ -36,6 +36,7 @@ import {
   createAuthRouteCatalog,
   resolveAuthRedirectTarget,
 } from "../auth.ts";
+import { buildSdkworkLoginRedirectPath } from "../../../sdkwork-auth-runtime-pc-react/src/sessionAuthRedirect.ts";
 import {
   buildSdkworkAuthOAuthCallbackUri,
   isConfiguredSdkworkAuthOAuthProvider,
@@ -86,7 +87,7 @@ function buildLoginRoute(
     return loginRoutePath;
   }
 
-  return `${loginRoutePath}?redirect=${encodeURIComponent(redirectTarget)}`;
+  return buildSdkworkLoginRedirectPath(loginRoutePath, redirectTarget);
 }
 
 interface SdkworkAuthOAuthCallbackPageContentProps extends SdkworkAuthOAuthCallbackPageProps {}

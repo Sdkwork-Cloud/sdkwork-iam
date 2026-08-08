@@ -38,9 +38,10 @@ use sdkwork_web_core::{
 };
 
 pub use access_token_issue::{
-    issue_delegated_access_credential, issued_access_credential_to_json,
-    parse_access_credential_create_request, principal_has_permission, resolve_runtime_app_id,
-    AccessCredentialCreateRequest, IssuedAccessCredential,
+    issue_delegated_access_credential, issue_standalone_bootstrap_access_credential,
+    issued_access_credential_to_json, parse_access_credential_create_request,
+    principal_has_permission, resolve_deployment_bootstrap_access_token,
+    resolve_runtime_app_id, AccessCredentialCreateRequest, IssuedAccessCredential,
     IAM_ACCESS_CREDENTIALS_CREATE_PERMISSION,
 };
 pub use account_binding_policy::{
@@ -295,7 +296,6 @@ fn resolve_web_environment_from_process_env() -> WebEnvironment {
 fn iam_web_security_policy(environment: &WebEnvironment) -> SecurityPolicy {
     let configured_origins = sdkwork_web_bootstrap::cors_allowed_origins_from_env(&[
         "SDKWORK_CORS_ALLOWED_ORIGINS",
-        "SDKWORK_IAM_CORS_ALLOWED_ORIGINS",
     ]);
     let cors =
         sdkwork_web_bootstrap::security_policy_for_environment(environment, configured_origins)

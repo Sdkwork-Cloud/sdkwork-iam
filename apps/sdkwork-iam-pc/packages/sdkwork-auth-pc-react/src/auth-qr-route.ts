@@ -1,3 +1,5 @@
+import { sanitizeSdkworkAuthRedirectTarget } from "../../sdkwork-auth-runtime-pc-react/src/sessionAuthRedirect.ts";
+
 export const SDKWORK_AUTH_QR_ENTRY_SEGMENT = "/qr/";
 
 export type SdkworkAuthQrRouteId = "forgot-password" | "login" | "register";
@@ -49,9 +51,17 @@ export function buildSdkworkAuthRouteWithContext(
 ): string {
   const query = new URLSearchParams();
   const normalizedQrEntryKey = options.qrEntryKey?.trim();
+  // The redirect target must never point back into the auth surface; sanitize
+  // through the canonical consume-side helper before re-emitting it.
+  const authBasePath = pathname.split(SDKWORK_AUTH_QR_ENTRY_SEGMENT, 1)[0] ?? "/auth";
+  const sanitizedRedirectTarget = sanitizeSdkworkAuthRedirectTarget(
+    options.redirectTarget,
+    options.homePath,
+    authBasePath,
+  );
 
-  if (options.redirectTarget !== options.homePath) {
-    query.set("redirect", options.redirectTarget);
+  if (sanitizedRedirectTarget !== options.homePath) {
+    query.set("redirect", sanitizedRedirectTarget);
   }
 
   if (normalizedQrEntryKey) {

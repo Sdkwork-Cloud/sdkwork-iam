@@ -1,4 +1,4 @@
-fn patch_fields(body: &Value) -> Vec<(String, String)> {
+fn patch_fields(body: &Value) -> Vec<(String, PatchValue)> {
     let mut assignments = Vec::new();
     for (column, keys) in [
         ("username", ["username"].as_slice()),
@@ -19,7 +19,7 @@ fn patch_fields(body: &Value) -> Vec<(String, String)> {
         ("organization_id", ["organizationId", "organization_id"].as_slice()),
     ] {
         if let Some(value) = read_string_field(body, keys) {
-            assignments.push((column.to_owned(), value));
+            assignments.push((column.to_owned(), PatchValue::Text(value)));
         }
     }
     for (column, keys) in [
@@ -27,7 +27,7 @@ fn patch_fields(body: &Value) -> Vec<(String, String)> {
         ("rank_level", ["rankLevel", "rank_level"].as_slice()),
     ] {
         if let Some(value) = read_i32_field(body, keys) {
-            assignments.push((column.to_owned(), value.to_string()));
+            assignments.push((column.to_owned(), PatchValue::Int(value)));
         }
     }
     assignments
@@ -317,7 +317,7 @@ async fn update_user(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
     let mut assignments = patch_fields(&body);
-    assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     if assignments.len() == 1 {
         return appbase_error(
             StatusCode::BAD_REQUEST,
@@ -438,7 +438,7 @@ async fn update_role(
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
     let mut assignments = patch_fields(&body);
-    assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     match patch_directory_row(pg, &ctx, &tenant_id, "iam_role", &role_id, &assignments).await {
         Ok(true) => match fetch_role_row(pg, &tenant_id, &role_id).await {
             Ok(Some(row)) => appbase_ok(role_row_to_json(&row)),
@@ -578,7 +578,7 @@ async fn update_permission(
     }
     let sql = format!("UPDATE iam_permission SET {set_clause} WHERE id = $1 OR code = $1");
     let permission_id_for_update = permission_id.clone();
-    let assignment_values: Vec<String> = assignments.iter().map(|(_, value)| value.clone()).collect();
+    let assignment_values: Vec<PatchValue> = assignments.iter().map(|(_, value)| value.clone()).collect();
     let audit_detail = json!({
         "updatedFields": assignments
             .iter()
@@ -599,7 +599,10 @@ let sql = sql.clone();
             
                 let mut query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str())).bind(&permission_id);
                 for value in &assignment_values {
-                    query = query.bind(value);
+                    query = match value {
+                        PatchValue::Text(text) => query.bind(text),
+                        PatchValue::Int(int) => query.bind(*int),
+                    };
                 }
                 query
                     .execute(&mut **tx)
@@ -974,9 +977,9 @@ async fn update_policy(
     let mut assignments = patch_fields(&body);
     if let Some(policy_json) = read_policy_json(&body) {
         assignments.retain(|(column, _)| column != "policy_json");
-        assignments.push(("policy_json".to_owned(), policy_json));
+        assignments.push(("policy_json".to_owned(), PatchValue::Text(policy_json)));
     }
-    assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     match patch_directory_row(pg, &ctx, &tenant_id, "iam_policy", &policy_id, &assignments).await {
         Ok(true) => retrieve_policy(State(state), ctx, Path(policy_id)).await,
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_policy_not_found", "policy not found"),
@@ -1141,7 +1144,7 @@ async fn update_organization(State(state): State<BackendIamState>, ctx: WebReque
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
     let mut assignments = patch_fields(&body);
-    assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     match patch_directory_row(pg, &ctx, &tenant_id, "iam_organization", &organization_id, &assignments).await {
         Ok(true) => retrieve_organization(State(state), ctx, Path(organization_id)).await,
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_organization_not_found", "organization not found"),
@@ -1214,7 +1217,7 @@ async fn create_organization_membership(State(state): State<BackendIamState>, ct
 async fn update_organization_membership(State(state): State<BackendIamState>, ctx: WebRequestContext, Path(membership_id): Path<String>, Json(body): Json<Value>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     match patch_directory_row(pg, &ctx, &tenant_id, "iam_organization_membership", &membership_id, &assignments).await {
         Ok(true) => appbase_ok(json!({ "membershipId": membership_id })),
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_membership_not_found", "membership not found"),
@@ -1317,7 +1320,7 @@ async fn retrieve_department(State(state): State<BackendIamState>, ctx: WebReque
 async fn update_department(State(state): State<BackendIamState>, ctx: WebRequestContext, Path(department_id): Path<String>, Json(body): Json<Value>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     match patch_directory_row(pg, &ctx, &tenant_id, "iam_department", &department_id, &assignments).await {
         Ok(true) => retrieve_department(State(state), ctx, Path(department_id)).await,
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_department_not_found", "department not found"),
@@ -1432,7 +1435,7 @@ async fn create_department_assignment(State(state): State<BackendIamState>, ctx:
 async fn update_department_assignment(State(state): State<BackendIamState>, ctx: WebRequestContext, Path(assignment_id): Path<String>, Json(body): Json<Value>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     match patch_directory_row(pg, &ctx, &tenant_id, "iam_department_assignment", &assignment_id, &assignments).await {
         Ok(true) => appbase_ok(json!({ "assignmentId": assignment_id })),
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_department_assignment_not_found", "assignment not found"),
@@ -1504,7 +1507,7 @@ async fn create_position(State(state): State<BackendIamState>, ctx: WebRequestCo
 async fn update_position(State(state): State<BackendIamState>, ctx: WebRequestContext, Path(position_id): Path<String>, Json(body): Json<Value>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     match patch_directory_row(pg, &ctx, &tenant_id, "iam_position", &position_id, &assignments).await {
         Ok(true) => appbase_ok(json!({ "positionId": position_id })),
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_position_not_found", "position not found"),
@@ -1593,7 +1596,7 @@ async fn create_position_assignment(State(state): State<BackendIamState>, ctx: W
 async fn update_position_assignment(State(state): State<BackendIamState>, ctx: WebRequestContext, Path(assignment_id): Path<String>, Json(body): Json<Value>) -> Response {
     let Ok(pg) = postgres_pool_or_error(&state) else { return postgres_pool_or_error(&state).err().expect("error response"); };
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else { return tenant_id_from_context(&ctx).err().expect("error response"); };
-    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     match patch_directory_row(pg, &ctx, &tenant_id, "iam_position_assignment", &assignment_id, &assignments).await {
         Ok(true) => appbase_ok(json!({ "assignmentId": assignment_id })),
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_position_assignment_not_found", "assignment not found"),
@@ -1689,7 +1692,7 @@ async fn update_tenant(State(state): State<BackendIamState>, ctx: WebRequestCont
     if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
         return response;
     }
-    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     if assignments.len() == 1 { return appbase_error(StatusCode::BAD_REQUEST, "iam_tenant_invalid", "no updatable fields provided"); }
     let mut set_clause = String::new();
     for (index, (column, _)) in assignments.iter().enumerate() { if index > 0 { set_clause.push_str(", "); } set_clause.push_str(column); set_clause.push_str(" = $"); set_clause.push_str(&(index + 2).to_string()); }
@@ -1717,7 +1720,10 @@ let sql = sql.clone();
             
                 let mut query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str())).bind(&tenant_id);
                 for (_, value) in &assignments {
-                    query = query.bind(value);
+                    query = match value {
+                        PatchValue::Text(text) => query.bind(text),
+                        PatchValue::Int(int) => query.bind(*int),
+                    };
                 }
                 query
                     .execute(&mut **tx)
@@ -1841,7 +1847,7 @@ async fn update_tenant_member(State(state): State<BackendIamState>, ctx: WebRequ
     if let Err(response) = ensure_target_tenant_access(&ctx, &tenant_id) {
         return response;
     }
-    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    let mut assignments = patch_fields(&body); assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     let mut set_clause = String::new();
     for (index, (column, _)) in assignments.iter().enumerate() { if index > 0 { set_clause.push_str(", "); } set_clause.push_str(column); set_clause.push_str(" = $"); set_clause.push_str(&(index + 3).to_string()); }
     let sql = format!("UPDATE iam_tenant_member SET {set_clause} WHERE tenant_id = $1 AND user_id = $2");
@@ -1856,7 +1862,12 @@ async fn update_tenant_member(State(state): State<BackendIamState>, ctx: WebRequ
         json!({ "userId": user_id }),
         |tx| Box::pin(async move {
             let mut query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str())).bind(tenant_id_update).bind(user_id_update);
-            for (_, value) in assignments { query = query.bind(value); }
+            for (_, value) in assignments {
+                query = match value {
+                    PatchValue::Text(text) => query.bind(text),
+                    PatchValue::Int(int) => query.bind(int),
+                };
+            }
             query.execute(&mut **tx).await.map(|result| result.rows_affected())
         }),
         |rows_affected| *rows_affected > 0,
@@ -2127,7 +2138,7 @@ async fn update_group(
         .await
         .unwrap_or(group_id);
     let mut assignments = patch_fields(&body);
-    assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     match patch_directory_row(pg, &ctx, &tenant_id, "iam_group", &group_id, &assignments).await {
         Ok(true) => retrieve_group(State(state), ctx, Path(group_id)).await,
         Ok(false) => appbase_error(StatusCode::NOT_FOUND, "iam_group_not_found", "group not found"),
@@ -2501,7 +2512,7 @@ async fn update_service_account(
         .map(|row| row.get::<String, _>(0))
         .unwrap_or(service_account_id);
     let mut assignments = patch_fields(&body);
-    assignments.push(("updated_at".to_owned(), Utc::now().to_rfc3339()));
+    assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     match patch_directory_row(
         pg,
         &ctx,

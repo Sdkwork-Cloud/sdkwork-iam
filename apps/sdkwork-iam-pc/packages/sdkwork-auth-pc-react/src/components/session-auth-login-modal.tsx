@@ -9,6 +9,7 @@ import {
   createSdkworkAuthPageRouting,
   createSdkworkAuthPageRoutingNavigate,
 } from "../auth-page-routing.ts";
+import { buildSdkworkLoginRedirectPath } from "../../../sdkwork-auth-runtime-pc-react/src/sessionAuthRedirect.ts";
 import type { SdkworkAuthAppearanceConfig } from "../auth-appearance.ts";
 import type { SdkworkAuthRuntimeConfig } from "../auth-config.ts";
 import type { SdkworkAuthController } from "../auth-controller.ts";
@@ -64,7 +65,7 @@ function buildLoginEntryPath(
   authLoginPath: string,
   returnPath: string,
 ): string {
-  return `${authLoginPath}?redirect=${encodeURIComponent(returnPath)}`;
+  return buildSdkworkLoginRedirectPath(authLoginPath, returnPath);
 }
 
 function parseAuthLocation(path: string) {

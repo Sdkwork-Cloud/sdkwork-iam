@@ -71,6 +71,31 @@ async fn repair_postgres_iam_user_id_references(
     new_user_id: &str,
 ) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
+
+    // PostgreSQL checks non-deferrable foreign keys immediately: child rows
+    // cannot be re-pointed at a user id that does not exist yet, and iam_user
+    // cannot be re-keyed while child rows still reference the old id. Drop the
+    // inbound foreign keys for the duration of the transaction and restore
+    // them afterwards with their exact catalog definitions.
+    let inbound_foreign_keys = sqlx::query(
+        "SELECT conrelid::regclass::text, conname, pg_get_constraintdef(oid) \
+         FROM pg_constraint \
+         WHERE contype = 'f' AND confrelid = 'iam_user'::regclass \
+         ORDER BY conname",
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+
+    for row in &inbound_foreign_keys {
+        let child_table: String = row.get(0);
+        let constraint_name: String = row.get(1);
+        sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
+            "ALTER TABLE {child_table} DROP CONSTRAINT \"{constraint_name}\""
+        )))
+        .execute(&mut *tx)
+        .await?;
+    }
+
     for sql in postgres_user_id_reference_updates() {
         sqlx::query(sql)
             .bind(new_user_id)
@@ -79,6 +104,19 @@ async fn repair_postgres_iam_user_id_references(
             .execute(&mut *tx)
             .await?;
     }
+
+    for row in &inbound_foreign_keys {
+        let child_table: String = row.get(0);
+        let constraint_name: String = row.get(1);
+        let constraint_definition: String = row.get(2);
+        sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
+            "ALTER TABLE {child_table} \
+             ADD CONSTRAINT \"{constraint_name}\" {constraint_definition}"
+        )))
+        .execute(&mut *tx)
+        .await?;
+    }
+
     tx.commit().await
 }
 
@@ -134,14 +172,20 @@ fn sqlite_user_id_reference_updates() -> [&'static str; 10] {
 
 #[cfg(test)]
 mod tests {
-    use super::{postgres_user_id_reference_updates, sqlite_user_id_reference_updates};
+    use super::postgres_user_id_reference_updates;
+    #[cfg(feature = "sqlite")]
+    use super::sqlite_user_id_reference_updates;
 
     #[test]
     fn reference_updates_cover_directory_assignment_tables() {
-        for updates in [
+        #[cfg(feature = "sqlite")]
+        let engine_updates = [
             postgres_user_id_reference_updates(),
             sqlite_user_id_reference_updates(),
-        ] {
+        ];
+        #[cfg(not(feature = "sqlite"))]
+        let engine_updates = [postgres_user_id_reference_updates()];
+        for updates in engine_updates {
             let joined = updates.join("\n");
             assert!(
                 joined.contains("iam_department_assignment"),

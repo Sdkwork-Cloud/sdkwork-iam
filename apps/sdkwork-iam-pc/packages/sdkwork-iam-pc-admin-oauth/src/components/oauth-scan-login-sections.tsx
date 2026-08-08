@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, QrCode, Trash2 } from "lucide-react";
 import {
   Button,
-  Label,
+  ConfirmDialog,
+  IconButton,
   SettingsSection,
   StatusBadge,
   StatusNotice,
+  Switch,
 } from "@sdkwork/ui-pc-react";
 
 import type {
@@ -14,11 +16,19 @@ import type {
   SdkworkIamOauthScanLoginModeEntry,
   SdkworkIamOauthScanLoginOfficialAccount,
   SdkworkIamOauthScanLoginPreview,
-  SdkworkIamOauthScanLoginQrMode,
   SdkworkIamOauthScanLoginSettings,
 } from "../types/oauth-admin-types";
 import { useSdkworkIamOauthAdminMessages } from "../i18n";
-import { OauthAdminField } from "./oauth-admin-ui";
+import { OauthAdminField, OauthAdminSelectField } from "./oauth-admin-ui";
+
+/** Reports a generated scan-login preview to the page-level preview drawer. */
+export type OauthScanLoginPreviewHandler = (
+  preview: SdkworkIamOauthScanLoginPreview,
+  hint: string,
+) => void;
+
+/** Reports a transient success message shown at page level. */
+export type OauthScanLoginNoticeHandler = (message: string) => void;
 
 /**
  * Official-account scan login configuration.
@@ -34,25 +44,23 @@ export function OauthOfficialAccountScanLoginSection({
   controller,
   onChanged,
   onError,
+  onPreview,
 }: {
   accounts: SdkworkIamOauthScanLoginOfficialAccount[];
   busy: boolean;
   controller: SdkworkIamOauthAdminController;
   onChanged: () => void;
   onError: (message: string) => void;
+  onPreview: OauthScanLoginPreviewHandler;
 }) {
   const messages = useSdkworkIamOauthAdminMessages();
   const copy = messages.scanLogin;
-  const [preview, setPreview] = useState<SdkworkIamOauthScanLoginPreview | undefined>();
-  const [previewAccountId, setPreviewAccountId] = useState<string | undefined>();
   const [generating, setGenerating] = useState<string | undefined>();
 
   const generatePreview = (accountId: string) => {
     setGenerating(accountId);
-    setPreview(undefined);
-    setPreviewAccountId(accountId);
     void controller.generateScanLoginPreview("official_account", accountId)
-      .then(setPreview)
+      .then((preview) => onPreview(preview, copy.preview.officialAccountHint))
       .catch((error) => {
         onError(error instanceof Error ? error.message : "Failed to generate QR code");
       })
@@ -77,7 +85,6 @@ export function OauthOfficialAccountScanLoginSection({
 
   return (
     <SettingsSection description={copy.accounts.enableHint} title={copy.accounts.title}>
-      <StatusNotice tone="default">{copy.accounts.webhookCallbackHint}</StatusNotice>
       <div className="space-y-3">
         {accounts.map((account) => {
           const webhookReady = Boolean(account.webhook?.enabled);
@@ -106,16 +113,14 @@ export function OauthOfficialAccountScanLoginSection({
                   ) : null}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
+              <div className="flex flex-wrap items-center gap-3">
+                <Switch
+                  aria-label={account.qrLoginEnabled ? copy.accounts.disableLogin : copy.accounts.enableLogin}
+                  checked={account.qrLoginEnabled}
                   disabled={busy}
-                  onClick={() => toggleQrLogin(account, !account.qrLoginEnabled)}
-                  size="sm"
-                  type="button"
-                  variant={account.qrLoginEnabled ? "outline" : "primary"}
-                >
-                  {account.qrLoginEnabled ? "已启用扫码登录" : "启用扫码登录"}
-                </Button>
+                  onCheckedChange={(enabled) => toggleQrLogin(account, enabled)}
+                  title={account.qrLoginEnabled ? copy.accounts.disableLogin : copy.accounts.enableLogin}
+                />
                 <Button
                   disabled={busy || !account.enabled}
                   loading={generating === account.accountId}
@@ -130,13 +135,6 @@ export function OauthOfficialAccountScanLoginSection({
           );
         })}
       </div>
-      {preview && previewAccountId ? (
-        <OauthScanLoginPreview
-          busy={busy}
-          hint={copy.preview.officialAccountHint}
-          preview={preview}
-        />
-      ) : null}
     </SettingsSection>
   );
 }
@@ -150,12 +148,16 @@ export function OauthUrlScanLoginSection({
   controller,
   onChanged,
   onError,
+  onNotice,
+  onPreview,
   settings,
 }: {
   busy: boolean;
   controller: SdkworkIamOauthAdminController;
   onChanged: (settings: SdkworkIamOauthScanLoginSettings) => void;
   onError: (message: string) => void;
+  onNotice: OauthScanLoginNoticeHandler;
+  onPreview: OauthScanLoginPreviewHandler;
   settings: SdkworkIamOauthScanLoginSettings;
 }) {
   const messages = useSdkworkIamOauthAdminMessages();
@@ -163,7 +165,6 @@ export function OauthUrlScanLoginSection({
   const [h5LoginOrigin, setH5LoginOrigin] = useState(settings.urlLogin.h5LoginOrigin);
   const [urlEnabled, setUrlEnabled] = useState(settings.urlLogin.enabled);
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState<SdkworkIamOauthScanLoginPreview | undefined>();
   const [generating, setGenerating] = useState(false);
 
   // Sync local draft when the page reloads settings.
@@ -183,6 +184,7 @@ export function OauthUrlScanLoginSection({
       .then((updated) => {
         onChanged(updated);
         onError("");
+        onNotice(copy.common.saveSuccess);
       })
       .catch((error) => {
         onError(error instanceof Error ? error.message : "Failed to save URL configuration");
@@ -192,9 +194,8 @@ export function OauthUrlScanLoginSection({
 
   const generatePreview = () => {
     setGenerating(true);
-    setPreview(undefined);
     void controller.generateScanLoginPreview("url")
-      .then(setPreview)
+      .then((preview) => onPreview(preview, copy.preview.urlHint))
       .catch((error) => {
         onError(error instanceof Error ? error.message : "Failed to generate QR code");
       })
@@ -213,11 +214,12 @@ export function OauthUrlScanLoginSection({
         />
         <p className="text-xs text-[var(--sdk-color-text-muted)]">{copy.url.h5LoginOriginHint}</p>
         <label className="flex items-center gap-2 text-sm" htmlFor="oauth-scan-login-url-enabled">
-          <input
+          <Switch
+            aria-label={copy.url.enabledLabel}
             checked={urlEnabled}
+            disabled={busy}
             id="oauth-scan-login-url-enabled"
-            onChange={(event) => setUrlEnabled(event.target.checked)}
-            type="checkbox"
+            onCheckedChange={setUrlEnabled}
           />
           {copy.url.enabledLabel}
         </label>
@@ -242,27 +244,21 @@ export function OauthUrlScanLoginSection({
           </Button>
         </div>
       </div>
-      {preview ? (
-        <OauthScanLoginPreview busy={busy} hint={copy.preview.urlHint} preview={preview} />
-      ) : null}
     </SettingsSection>
   );
 }
 
-/** Renders a generated scan-login QR (image URL or locally drawn QR code). */
-export function OauthScanLoginPreview({
+/** Renders a generated scan-login QR inside the page-level preview drawer. */
+export function OauthScanLoginPreviewContent({
   busy,
-  hint,
   preview,
 }: {
   busy: boolean;
-  hint: string;
   preview: SdkworkIamOauthScanLoginPreview;
 }) {
   const messages = useSdkworkIamOauthAdminMessages();
   const copy = messages.scanLogin.preview;
   const [copied, setCopied] = useState(false);
-  const qrModeLabel = preview.qrMode === "official_account" ? "official_account" : "url";
 
   const copyContent = () => {
     void navigator.clipboard?.writeText(preview.qrContent)
@@ -284,25 +280,21 @@ export function OauthScanLoginPreview({
   }, [preview]);
 
   return (
-    <div className="flex flex-wrap items-start gap-4 rounded border p-3">
-      <div className="shrink-0">{qrImage}</div>
-      <div className="min-w-0 flex-1 space-y-2">
-        <Label>{copy.title}</Label>
-        <StatusNotice tone="default">{hint}</StatusNotice>
+    <div className="space-y-4">
+      <div className="flex justify-center">{qrImage}</div>
+      {preview.qrContent ? (
         <div className="flex flex-wrap items-center gap-2">
-          <code className="break-all text-xs text-[var(--sdk-color-text-muted)]">{preview.qrContent}</code>
-          {preview.qrContent ? (
-            <Button disabled={busy} onClick={copyContent} size="sm" type="button" variant="outline">
-              {copied ? copy.copied : copy.copy}
-            </Button>
-          ) : null}
+          <code className="min-w-0 flex-1 break-all text-xs text-[var(--sdk-color-text-muted)]">{preview.qrContent}</code>
+          <Button disabled={busy} onClick={copyContent} size="sm" type="button" variant="outline">
+            {copied ? copy.copied : copy.copy}
+          </Button>
         </div>
-        {preview.expireSeconds ? (
-          <p className="text-xs text-[var(--sdk-color-text-muted)]">
-            {copy.expireTemplate.replace("{seconds}", String(preview.expireSeconds))}
-          </p>
-        ) : null}
-      </div>
+      ) : null}
+      {preview.expireSeconds ? (
+        <p className="text-xs text-[var(--sdk-color-text-muted)]">
+          {copy.expireTemplate.replace("{seconds}", String(preview.expireSeconds))}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -344,6 +336,8 @@ function QrCodeCanvasSvg({ content }: { content: string }) {
   return <img alt="Scan login URL QR" className="h-52 w-52 rounded border object-contain" src={dataUrl} />;
 }
 
+type AddModeKind = "official_account" | "url" | "provider" | "";
+
 /**
  * Scan-login mode registry management: ordered, enable/disable, add and
  * remove modes (official account follow login, H5 URL, third-party OAuth
@@ -356,6 +350,8 @@ export function OauthScanLoginModesSection({
   modes,
   onChanged,
   onError,
+  onNotice,
+  onPreview,
   providerCatalog,
 }: {
   busy: boolean;
@@ -363,14 +359,16 @@ export function OauthScanLoginModesSection({
   modes: SdkworkIamOauthScanLoginModeEntry[];
   onChanged: (settings: SdkworkIamOauthScanLoginSettings) => void;
   onError: (message: string) => void;
+  onNotice: OauthScanLoginNoticeHandler;
+  onPreview: OauthScanLoginPreviewHandler;
   providerCatalog: unknown[];
 }) {
   const messages = useSdkworkIamOauthAdminMessages();
   const copy = messages.scanLogin.modes;
+  const [addKind, setAddKind] = useState<AddModeKind>("");
   const [providerCode, setProviderCode] = useState("");
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState<SdkworkIamOauthScanLoginPreview | undefined>();
-  const [previewQrMode, setPreviewQrMode] = useState<string | undefined>();
+  const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | undefined>();
   const [generating, setGenerating] = useState<string | undefined>();
 
   const providerOptions = useMemo(() => providerCatalog
@@ -390,6 +388,7 @@ export function OauthScanLoginModesSection({
       .then((updated) => {
         onChanged(updated);
         onError("");
+        onNotice(messages.scanLogin.common.saveSuccess);
       })
       .catch((error) => {
         onError(error instanceof Error ? error.message : "Failed to update scan login modes");
@@ -425,28 +424,60 @@ export function OauthScanLoginModesSection({
     saveModes([...modes, { ...mode, sortOrder: nextSortOrder }]);
   };
 
-  const addProviderMode = () => {
-    const code = providerCode.trim();
-    if (!code) {
+  const addSelectedKind = () => {
+    if (addKind === "official_account") {
+      addMode({
+        displayName: undefined,
+        enabled: true,
+        mode: "official_account",
+        providerCode: undefined,
+        qrMode: "official_account",
+        sortOrder: 999,
+      });
+    } else if (addKind === "url") {
+      addMode({
+        displayName: undefined,
+        enabled: true,
+        mode: "url",
+        providerCode: undefined,
+        qrMode: "url",
+        sortOrder: 999,
+      });
+    } else if (addKind === "provider") {
+      const code = providerCode.trim();
+      if (!code) {
+        return;
+      }
+      addMode({
+        displayName: undefined,
+        enabled: true,
+        mode: "provider",
+        providerCode: code,
+        qrMode: `provider:${code}`,
+        sortOrder: 999,
+      });
+      setProviderCode("");
+    } else {
       return;
     }
+    setAddKind("");
+  };
+
+  const addProviderMode = (option: { code: string; name: string }) => {
     addMode({
-      displayName: undefined,
+      displayName: option.name,
       enabled: true,
       mode: "provider",
-      providerCode: code,
-      qrMode: `provider:${code}`,
+      providerCode: option.code,
+      qrMode: `provider:${option.code}`,
       sortOrder: 999,
     });
-    setProviderCode("");
   };
 
   const generatePreview = (qrMode: string) => {
     setGenerating(qrMode);
-    setPreview(undefined);
-    setPreviewQrMode(qrMode);
     void controller.generateScanLoginPreview(qrMode)
-      .then(setPreview)
+      .then((preview) => onPreview(preview, previewHint(qrMode)))
       .catch((error) => {
         onError(error instanceof Error ? error.message : "Failed to generate QR code");
       })
@@ -476,9 +507,10 @@ export function OauthScanLoginModesSection({
     return messages.scanLogin.preview.urlHint;
   };
 
+  const addDisabled = busy || saving || addKind === "" || (addKind === "provider" && !providerCode.trim());
+
   return (
     <SettingsSection description={copy.defaultHint} title={copy.title}>
-      <StatusNotice tone="default">{copy.defaultHint}</StatusNotice>
       {modes.length === 0 ? (
         <StatusNotice tone="default">{copy.emptyHint}</StatusNotice>
       ) : (
@@ -496,116 +528,93 @@ export function OauthScanLoginModesSection({
                 ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-1">
-                <Button
+                <IconButton
+                  aria-label={copy.moveUp}
                   disabled={busy || saving || index === 0}
                   onClick={() => move(index, -1)}
-                  size="sm"
+                  title={copy.moveUp}
                   type="button"
                   variant="outline"
                 >
                   <ArrowUp aria-hidden="true" className="h-3.5 w-3.5" />
-                </Button>
-                <Button
+                </IconButton>
+                <IconButton
+                  aria-label={copy.moveDown}
                   disabled={busy || saving || index === modes.length - 1}
                   onClick={() => move(index, 1)}
-                  size="sm"
+                  title={copy.moveDown}
                   type="button"
                   variant="outline"
                 >
                   <ArrowDown aria-hidden="true" className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  disabled={busy || saving}
-                  onClick={() => toggleEnabled(index)}
-                  size="sm"
-                  type="button"
-                  variant={entry.enabled ? "outline" : "primary"}
-                >
-                  {entry.enabled ? copy.disable : copy.enable}
-                </Button>
-                <Button
+                </IconButton>
+                <IconButton
+                  aria-label={messages.scanLogin.accounts.generateLabel}
                   disabled={busy || saving}
                   loading={generating === entry.qrMode}
                   onClick={() => generatePreview(entry.qrMode)}
-                  size="sm"
+                  title={messages.scanLogin.accounts.generateLabel}
                   type="button"
                 >
-                  {messages.scanLogin.accounts.generateLabel}
-                </Button>
-                <Button
+                  <QrCode aria-hidden="true" className="h-3.5 w-3.5" />
+                </IconButton>
+                <IconButton
+                  aria-label={copy.remove}
                   disabled={busy || saving}
-                  onClick={() => remove(index)}
-                  size="sm"
+                  onClick={() => setPendingRemoveIndex(index)}
+                  title={copy.remove}
                   type="button"
                   variant="outline"
                 >
-                  {copy.remove}
-                </Button>
+                  <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                </IconButton>
+                <Switch
+                  aria-label={entry.enabled ? copy.disable : copy.enable}
+                  checked={entry.enabled}
+                  disabled={busy || saving}
+                  onCheckedChange={() => toggleEnabled(index)}
+                  title={entry.enabled ? copy.disable : copy.enable}
+                />
               </div>
             </div>
           ))}
         </div>
       )}
       <div className="flex flex-wrap items-end gap-2">
-        <Button
-          disabled={busy || saving}
-          onClick={() => addMode({
-            displayName: undefined,
-            enabled: true,
-            mode: "official_account",
-            providerCode: undefined,
-            qrMode: "official_account",
-            sortOrder: 999,
-          })}
-          size="sm"
-          type="button"
-        >
-          {copy.addOfficialAccount}
-        </Button>
-        <Button
-          disabled={busy || saving}
-          onClick={() => addMode({
-            displayName: undefined,
-            enabled: true,
-            mode: "url",
-            providerCode: undefined,
-            qrMode: "url",
-            sortOrder: 999,
-          })}
-          size="sm"
-          type="button"
-        >
-          {copy.addUrl}
-        </Button>
-        <OauthAdminField
-          label={copy.addProvider}
-          onChange={setProviderCode}
-          placeholder={copy.addProviderPlaceholder}
-          value={providerCode}
-        />
-        <Button
-          disabled={busy || saving || !providerCode.trim()}
-          onClick={addProviderMode}
-          size="sm"
-          type="button"
-        >
+        <div className="w-56">
+          <OauthAdminSelectField
+            label={copy.addKindLabel}
+            onChange={(value) => setAddKind(value as AddModeKind)}
+            options={[
+              { label: copy.addKindPlaceholder, value: "" },
+              { label: copy.addKindOfficialAccount, value: "official_account" },
+              { label: copy.addKindUrl, value: "url" },
+              { label: copy.addKindProvider, value: "provider" },
+            ]}
+            value={addKind}
+          />
+        </div>
+        {addKind === "provider" ? (
+          <div className="w-72">
+            <OauthAdminField
+              label={copy.addProvider}
+              onChange={setProviderCode}
+              placeholder={copy.addProviderPlaceholder}
+              value={providerCode}
+            />
+          </div>
+        ) : null}
+        <Button disabled={addDisabled} loading={saving} onClick={addSelectedKind} size="sm" type="button">
           {copy.add}
         </Button>
       </div>
-      {providerOptions.length > 0 ? (
+      {addKind === "provider" && providerOptions.length > 0 ? (
         <div className="flex flex-wrap gap-1">
           {providerOptions.map((option) => (
             <Button
               disabled={busy || saving || modes.some((mode) => mode.providerCode === option.code)}
               key={option.code}
-              onClick={() => addMode({
-                displayName: option.name,
-                enabled: true,
-                mode: "provider",
-                providerCode: option.code,
-                qrMode: `provider:${option.code}`,
-                sortOrder: 999,
-              })}
+              onClick={() => addProviderMode(option)}
               size="sm"
               type="button"
               variant="outline"
@@ -615,13 +624,27 @@ export function OauthScanLoginModesSection({
           ))}
         </div>
       ) : null}
-      {preview && previewQrMode ? (
-        <OauthScanLoginPreview
-          busy={busy}
-          hint={previewHint(previewQrMode)}
-          preview={preview}
-        />
-      ) : null}
+      <ConfirmDialog
+        closeOnConfirm={false}
+        confirmLabel={copy.removeConfirm}
+        confirmLoading={saving}
+        description={pendingRemoveIndex === undefined ? undefined : copy.removeDescriptionTemplate.replace("{name}", modeLabel(modes[pendingRemoveIndex]))}
+        onConfirm={() => {
+          if (pendingRemoveIndex === undefined) {
+            return;
+          }
+          remove(pendingRemoveIndex);
+          setPendingRemoveIndex(undefined);
+        }}
+        onOpenChange={(open) => {
+          if (!open && !saving) {
+            setPendingRemoveIndex(undefined);
+          }
+        }}
+        open={pendingRemoveIndex !== undefined}
+        title={copy.removeTitle}
+        tone="danger"
+      />
     </SettingsSection>
   );
 }

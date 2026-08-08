@@ -5,6 +5,7 @@ export * from "./appbasePcAuthRuntime.ts";
 export * from "./sessionAuthUnauthorized.ts";
 export * from "./sdkSessionAuthError.ts";
 export * from "./sessionAuthUnauthorizedEnv.ts";
+export * from "./sessionAuthRedirect.ts";
 export * from "./handleSdkworkSessionAuthUnauthorizedError.ts";
 export * from "./attachSdkworkSdkSessionAuthBoundary.ts";
 export * from "./createSdkworkSessionAuthUnauthorizedIntegration.ts";
