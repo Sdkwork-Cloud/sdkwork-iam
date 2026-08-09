@@ -12,7 +12,9 @@
     "messaging",
     "integrations",
     "ops",
-    "system"
+    "system",
+    "skills",
+    "mcp"
   ],
   "optionalModules": [
     "iot"

@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.module",
+  "moduleId": "mcp",
+  "catalogVersion": "1.0.0",
+  "domain": "mcp",
+  "owner": "sdkwork-mcp",
+  "displayName": "SDKWork MCP Module",
+  "permissions": {
+    "catalog": [
+      {
+        "code": "mcp.marketplace.read",
+        "name": "Read the tenant MCP marketplace catalog",
+        "resource": "marketplace",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "mcp.invocations.read",
+        "name": "Read tenant MCP invocation activity",
+        "resource": "invocations",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "mcp.servers.create",
+        "name": "Create MCP servers owned by the authenticated user",
+        "resource": "servers",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "mcp.servers.update",
+        "name": "Update MCP servers owned by the authenticated user",
+        "resource": "servers",
+        "action": "update",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "mcp.servers.delete",
+        "name": "Delete MCP servers owned by the authenticated user",
+        "resource": "servers",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "mcp.connectors.create",
+        "name": "Attach connectors to MCP servers owned by the authenticated user",
+        "resource": "connectors",
+        "action": "create",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "mcp.connectors.delete",
+        "name": "Remove connectors from MCP servers owned by the authenticated user",
+        "resource": "connectors",
+        "action": "delete",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "mcp.admin.server.manage",
+        "name": "Manage MCP servers, connectors, tools, resources, and prompts",
+        "resource": "servers",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "mcp.admin.category.manage",
+        "name": "Manage MCP marketplace categories",
+        "resource": "categories",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "mcp.admin.invocation.read",
+        "name": "Read MCP invocation audit logs",
+        "resource": "invocations",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "mcp.admin.marketplace.read",
+        "name": "Read MCP marketplace admin metadata",
+        "resource": "marketplace",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      }
+    ],
+    "openapiAuthorities": [
+      "sdkwork-mcp-app-api",
+      "sdkwork-mcp-backend-api"
+    ]
+  },
+  "roles": {
+    "domainStandardRoles": [
+      {
+        "code": "mcp_admin_operator",
+        "name": "MCP Admin Operator",
+        "surface": "organization",
+        "scope": "organization",
+        "standard": true,
+        "assignable": true,
+        "bindingPrincipalKind": "organization_membership",
+        "permissionPatterns": [
+          "mcp.admin.*",
+          "mcp.marketplace.read",
+          "mcp.invocations.read"
+        ]
+      },
+      {
+        "code": "mcp_workspace_user",
+        "name": "MCP Workspace User",
+        "surface": "application",
+        "scope": "tenant",
+        "standard": true,
+        "assignable": true,
+        "bindingPrincipalKind": "user",
+        "permissionPatterns": [
+          "mcp.marketplace.read",
+          "mcp.invocations.read",
+          "mcp.servers.create",
+          "mcp.servers.update",
+          "mcp.servers.delete",
+          "mcp.connectors.create",
+          "mcp.connectors.delete"
+        ]
+      }
+    ],
+    "roleGrantExtensions": [
+      {
+        "roleCode": "app_user",
+        "patterns": [
+          "mcp.marketplace.read",
+          "mcp.invocations.read",
+          "mcp.servers.create",
+          "mcp.servers.update",
+          "mcp.servers.delete",
+          "mcp.connectors.create",
+          "mcp.connectors.delete"
+        ]
+      },
+      {
+        "roleCode": "org_admin",
+        "patterns": [
+          "mcp.*"
+        ]
+      }
+    ],
+    "roleExclusions": []
+  },
+  "directory": {
+    "organizationTemplates": [],
+    "departmentTemplates": [],
+    "positionTemplates": [],
+    "membershipTemplates": []
+  },
+  "policyConditions": {
+    "supportedAttributes": []
+  },
+  "oauthScopeMappings": [],
+  "dependencies": {
+    "requiresModules": [
+      "iam-kernel"
+    ]
+  }
+}
