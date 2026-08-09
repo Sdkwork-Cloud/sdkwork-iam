@@ -1,6 +1,6 @@
 {
   "kind": "sdkwork.iam.registry.lock",
-  "materializedAt": "2026-08-04T05:01:58.266363500+00:00",
+  "materializedAt": "2026-08-09T12:34:08.463377984+00:00",
   "modules": [
     {
       "catalogVersion": "1.0.0",
@@ -51,10 +51,20 @@
       "catalogVersion": "1.0.0",
       "manifestSha256": "cb94ef77a2531967ef42222f4c3a2009d1808a29b277da2292a7174b42cb716e",
       "moduleId": "system"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "705cee727c60b9cca7b4987c97ff5ea464e4456ccbcff268e9b1c4470d2245ac",
+      "moduleId": "skills"
+    },
+    {
+      "catalogVersion": "1.0.0",
+      "manifestSha256": "28e2ce7f9c35a305d42e95e26db9fa4355a7569d2a696077ce9267105fe95410",
+      "moduleId": "mcp"
     }
   ],
-  "permissionCount": 172,
+  "permissionCount": 195,
   "profile": "operational",
-  "roleCount": 8,
+  "roleCount": 12,
   "schemaVersion": 1
 }
