@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS iam_organization_closure (
 CREATE TABLE IF NOT EXISTS iam_organization_membership (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
-  organization_id TEXT NOT NULL,
+  organization_id TEXT NOT NULL DEFAULT '0',
   user_id TEXT NOT NULL,
   membership_kind TEXT NOT NULL,
   employee_no TEXT,
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS iam_organization_membership (
 CREATE TABLE IF NOT EXISTS iam_department (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
-  organization_id TEXT NOT NULL,
+  organization_id TEXT NOT NULL DEFAULT '0',
   parent_department_id TEXT,
   code TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS iam_department (
 CREATE TABLE IF NOT EXISTS iam_department_closure (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
-  organization_id TEXT NOT NULL,
+  organization_id TEXT NOT NULL DEFAULT '0',
   ancestor_department_id TEXT NOT NULL,
   descendant_department_id TEXT NOT NULL,
   depth INTEGER NOT NULL,
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS iam_department_closure (
 CREATE TABLE IF NOT EXISTS iam_department_assignment (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
-  organization_id TEXT NOT NULL,
+  organization_id TEXT NOT NULL DEFAULT '0',
   organization_membership_id TEXT NOT NULL,
   department_id TEXT NOT NULL,
   user_id TEXT NOT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS iam_department_assignment (
 CREATE TABLE IF NOT EXISTS iam_position (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
-  organization_id TEXT NOT NULL,
+  organization_id TEXT NOT NULL DEFAULT '0',
   department_id TEXT,
   code TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS iam_position (
 CREATE TABLE IF NOT EXISTS iam_position_assignment (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
-  organization_id TEXT NOT NULL,
+  organization_id TEXT NOT NULL DEFAULT '0',
   department_assignment_id TEXT NOT NULL,
   position_id TEXT NOT NULL,
   user_id TEXT NOT NULL,
@@ -223,7 +223,7 @@ CREATE TABLE IF NOT EXISTS iam_credential (
 CREATE TABLE IF NOT EXISTS iam_session (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
-  organization_id TEXT,
+  organization_id TEXT NOT NULL DEFAULT '0',
   login_scope TEXT NOT NULL,
   user_id TEXT NOT NULL,
   principal_kind TEXT NOT NULL DEFAULT 'user',
@@ -362,7 +362,7 @@ CREATE TABLE IF NOT EXISTS iam_security_event (
 CREATE TABLE IF NOT EXISTS iam_audit_event (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
-  organization_id TEXT,
+  organization_id TEXT NOT NULL DEFAULT '0',
   actor_user_id TEXT,
   action TEXT NOT NULL,
   resource_type TEXT NOT NULL,
@@ -1603,7 +1603,7 @@ CREATE INDEX IF NOT EXISTS idx_iam_module_registry_entry_domain
 CREATE TABLE IF NOT EXISTS iam_group (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
-  organization_id TEXT,
+  organization_id TEXT NOT NULL DEFAULT '0',
   code TEXT NOT NULL,
   name TEXT NOT NULL,
   group_kind TEXT NOT NULL DEFAULT 'general',
@@ -1631,7 +1631,7 @@ CREATE TABLE IF NOT EXISTS iam_group_member (
 CREATE TABLE IF NOT EXISTS iam_service_account (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
-  organization_id TEXT,
+  organization_id TEXT NOT NULL DEFAULT '0',
   code TEXT NOT NULL,
   name TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',
@@ -1747,7 +1747,7 @@ WHERE principal_id IS NULL;
 CREATE TABLE IF NOT EXISTS iam_service_account_credential (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
-  organization_id TEXT,
+  organization_id TEXT NOT NULL DEFAULT '0',
   service_account_id TEXT NOT NULL,
   tenant_application_id TEXT NOT NULL,
   app_id TEXT NOT NULL,
