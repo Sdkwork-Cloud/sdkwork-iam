@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createSdkworkIamH5AuthController } from "../src/index";
+import {
+  assertSdkworkIamH5AuthI18nCatalogParity,
+  createSdkworkIamH5AuthController,
+  createSdkworkIamH5AuthMessages,
+  resolveSdkworkIamH5VerifyType,
+} from "../src/index";
 
 describe("@sdkwork/iam-h5-auth", () => {
   it("creates sessions and clears them on logout through the IAM service", async () => {
@@ -31,7 +36,11 @@ describe("@sdkwork/iam-h5-auth", () => {
     });
     await controller.logout();
 
-    expect(service.auth.sessions.create).toHaveBeenCalledWith({ username: "alice", password: "secret" });
+    expect(service.auth.sessions.create).toHaveBeenCalledWith({
+      grantType: "password",
+      password: "secret",
+      username: "alice",
+    });
     expect(service.auth.sessions.current.delete).toHaveBeenCalled();
     expect(controller.getState().session).toBeUndefined();
   });
@@ -141,5 +150,166 @@ describe("@sdkwork/iam-h5-auth", () => {
     expect(readScanLoginSessionKeyFromOAuthState("oauthstate_abc")).toBeUndefined();
     expect(readScanLoginProviderFromOAuthState(undefined)).toBeUndefined();
     expect(readScanLoginPollSecretFromOAuthState(undefined)).toBeUndefined();
+  });
+
+  it("logs in with a phone or email verification code through sessions.create", async () => {
+    const service = {
+      auth: {
+        sessions: {
+          create: vi.fn().mockResolvedValue({
+            accessToken: "token",
+            authToken: "auth-token",
+            sessionId: "sess-code",
+            userId: "1",
+          }),
+        },
+      },
+    };
+
+    const controller = createSdkworkIamH5AuthController({ service: service as never });
+    const phoneResult = await controller.loginWithCode({ target: "13800138000", code: "8888" });
+    expect(phoneResult).toMatchObject({ kind: "session", session: { sessionId: "sess-code" } });
+    expect(service.auth.sessions.create).toHaveBeenLastCalledWith({
+      code: "8888",
+      grantType: "phone_code",
+      phone: "13800138000",
+    });
+
+    const emailResult = await controller.loginWithCode({ target: "a@example.com", code: "8888" });
+    expect(emailResult).toMatchObject({ kind: "session", session: { sessionId: "sess-code" } });
+    expect(service.auth.sessions.create).toHaveBeenLastCalledWith({
+      code: "8888",
+      grantType: "email_code",
+      email: "a@example.com",
+    });
+  });
+
+  it("returns login context selection challenge for code login", async () => {
+    const service = {
+      auth: {
+        sessions: {
+          create: vi.fn().mockResolvedValue({
+            challengeType: "LOGIN_CONTEXT_SELECTION",
+            continuationToken: "continue-code",
+            options: [{ loginScope: "TENANT", organizationId: "0", displayName: "Personal account" }],
+            organizations: [],
+          }),
+        },
+      },
+    };
+
+    const controller = createSdkworkIamH5AuthController({ service: service as never });
+    const result = await controller.loginWithCode({ target: "13800138000", code: "8888" });
+    expect(result.kind).toBe("loginContextSelectionRequired");
+    expect(controller.getState().status).toBe("loginContextSelectionRequired");
+    expect(controller.getState().session).toBeUndefined();
+  });
+
+  it("registers an account through registrations.create with a verification code", async () => {
+    const service = {
+      auth: {
+        registrations: {
+          create: vi.fn().mockResolvedValue({
+            accessToken: "token",
+            authToken: "auth-token",
+            sessionId: "sess-register",
+            userId: "1",
+          }),
+        },
+      },
+    };
+
+    const controller = createSdkworkIamH5AuthController({ service: service as never });
+    await expect(controller.register({
+      account: "13800138000",
+      code: "8888",
+      password: "secret",
+    })).resolves.toMatchObject({ kind: "session", session: { sessionId: "sess-register" } });
+    expect(service.auth.registrations.create).toHaveBeenCalledWith({
+      channel: "PHONE",
+      password: "secret",
+      username: "13800138000",
+      verificationCode: "8888",
+    });
+  });
+
+  it("resets the password through passwordResetRequests and passwordResets", async () => {
+    const service = {
+      auth: {
+        passwordResetRequests: {
+          create: vi.fn().mockResolvedValue(undefined),
+        },
+        passwordResets: {
+          create: vi.fn().mockResolvedValue(undefined),
+        },
+      },
+    };
+
+    const controller = createSdkworkIamH5AuthController({ service: service as never });
+    await controller.resetPassword({
+      account: "a@example.com",
+      code: "8888",
+      newPassword: "new-secret",
+    });
+    expect(service.auth.passwordResetRequests.create).toHaveBeenCalledWith({
+      account: "a@example.com",
+      channel: "EMAIL",
+    });
+    expect(service.auth.passwordResets.create).toHaveBeenCalledWith({
+      account: "a@example.com",
+      code: "8888",
+      confirmPassword: "new-secret",
+      newPassword: "new-secret",
+    });
+    expect(controller.getState().session).toBeUndefined();
+  });
+
+  it("sends verification codes through the injected verification code client", async () => {
+    const service = { auth: {} };
+    const verificationCodeClient = {
+      send: vi.fn().mockResolvedValue(undefined),
+    };
+    const controller = createSdkworkIamH5AuthController({
+      service: service as never,
+      verificationCodeClient,
+    });
+
+    await controller.sendVerificationCode({
+      scene: "LOGIN",
+      target: "13800138000",
+      verifyType: "PHONE",
+    });
+    expect(verificationCodeClient.send).toHaveBeenCalledWith({
+      scene: "LOGIN",
+      target: "13800138000",
+      verifyType: "PHONE",
+    });
+  });
+
+  it("fails closed when no verification code client is injected", async () => {
+    const controller = createSdkworkIamH5AuthController({ service: { auth: {} } as never });
+    await expect(controller.sendVerificationCode({
+      scene: "REGISTER",
+      target: "13800138000",
+      verifyType: "PHONE",
+    })).rejects.toThrow(/unavailable/i);
+  });
+
+  it("resolves the verification channel from the account value", () => {
+    expect(resolveSdkworkIamH5VerifyType("13800138000")).toBe("PHONE");
+    expect(resolveSdkworkIamH5VerifyType("a@example.com")).toBe("EMAIL");
+    expect(resolveSdkworkIamH5VerifyType("  user@corp.cn ")).toBe("EMAIL");
+  });
+
+  it("keeps en-US and zh-CN auth message catalogs in parity", () => {
+    expect(() => assertSdkworkIamH5AuthI18nCatalogParity()).not.toThrow();
+    const zh = createSdkworkIamH5AuthMessages("zh-CN");
+    const en = createSdkworkIamH5AuthMessages("en-US");
+    expect(zh.modes.loginPwd).toBe("密码登录");
+    expect(zh.actions.agreeAndLogin).toBe("同意并登录");
+    expect(zh.toasts.agreeTermsFirst).toBe("请先阅读并同意条款");
+    expect(en.modes.loginPwd).toBe("Password sign in");
+    expect(en.actions.agreeAndLogin).toBe("Agree & Sign in");
+    expect(Object.keys(zh).sort()).toEqual(Object.keys(en).sort());
   });
 });

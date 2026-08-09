@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::state::LocalConfiguredOrganization;
+use crate::tokens::resolve_login_username;
 
 pub(crate) use sdkwork_utils_rust::LIST_TOTAL_SQL_COLUMN as LIST_TOTAL_COLUMN;
 
@@ -192,6 +193,51 @@ pub(crate) fn optional_string(value: Option<&Value>) -> Option<String> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(str::to_string)
+}
+
+/// Resolves the login grant type from `grantType`/`grant_type`
+/// (`"password"`, `"phone_code"`, `"email_code"`), mirroring
+/// `is_password_grant`'s field precedence.
+pub(crate) fn resolve_login_grant_type(body: &Value) -> Option<String> {
+    optional_string(body.get("grantType"))
+        .or_else(|| optional_string(body.get("grant_type")))
+}
+
+/// Resolves the credential account for a code-login grant: the dedicated
+/// `phone`/`email` field first, then the shared username field.
+pub(crate) fn resolve_code_login_account(body: &Value, grant_type: &str) -> String {
+    match grant_type {
+        "phone_code" => optional_string(body.get("phone"))
+            .or_else(|| optional_string(body.get("username")))
+            .unwrap_or_default(),
+        "email_code" => optional_string(body.get("email"))
+            .or_else(|| optional_string(body.get("username")))
+            .unwrap_or_default(),
+        _ => resolve_login_username(body),
+    }
+}
+
+/// The code-login account must resolve to the user's own verified contact:
+/// `phone_code` requires a verified phone, `email_code` a verified email.
+pub(crate) fn code_login_contact_verified(
+    user: &crate::state::LocalIamUser,
+    account: &str,
+    grant_type: &str,
+) -> bool {
+    let account_key = canonical_identity(account);
+    match grant_type {
+        "phone_code" => user
+            .phone
+            .as_deref()
+            .is_some_and(|phone| canonical_identity(phone) == account_key)
+            && user.phone_verified,
+        "email_code" => user
+            .email
+            .as_deref()
+            .is_some_and(|email| canonical_identity(email) == account_key)
+            && user.email_verified,
+        _ => false,
+    }
 }
 
 /// Shared ephemeral artifact scope for pre-auth flows that are not tenant-bound.

@@ -164,6 +164,10 @@ fn build_sdkwork_iam_app_api_core_router(state: LocalIamState) -> Router {
             post(create_password_reset_request),
         )
         .route(
+            "/app/v3/api/auth/verification_code_requests",
+            post(create_verification_code_request),
+        )
+        .route(
             "/app/v3/api/auth/password_resets",
             post(create_password_reset),
         )
@@ -413,6 +417,25 @@ async fn create_session(
         Ok(tenant_id) => tenant_id,
         Err(response) => return response,
     };
+    match resolve_login_grant_type(&body).as_deref() {
+        Some("password") => create_password_login_session(&state, &ctx, &body, &tenant_id).await,
+        Some("phone_code" | "email_code") => {
+            create_code_login_session(&state, &ctx, &body, &tenant_id).await
+        }
+        _ => appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_unsupported_grant_type",
+            "unsupported authentication grant type",
+        ),
+    }
+}
+
+async fn create_password_login_session(
+    state: &LocalIamState,
+    ctx: &WebRequestContext,
+    body: &Value,
+    tenant_id: &str,
+) -> Response {
     #[cfg(feature = "sqlite")]
     if let Some(sqlite) = state.pool.as_sqlite() {
         let runtime_app_id = match ctx
@@ -430,19 +453,12 @@ async fn create_session(
                 )
             }
         };
-        let username = resolve_login_username(&body);
+        let username = resolve_login_username(body);
         if username.is_empty() {
             return appbase_error(
                 StatusCode::BAD_REQUEST,
                 "iam_invalid_login",
                 "username, email, or phone is required",
-            );
-        }
-        if !is_password_grant(&body) {
-            return appbase_error(
-                StatusCode::BAD_REQUEST,
-                "iam_unsupported_grant_type",
-                "unsupported authentication grant type",
             );
         }
         let Some(password) = read_password(body.get("password")) else {
@@ -453,7 +469,7 @@ async fn create_session(
             );
         };
         if let Some(response) = enforce_ephemeral_rate_limit(
-            &state,
+            state,
             &format!("auth:login:{}", canonical_identity(&username)),
         )
         .await
@@ -463,7 +479,7 @@ async fn create_session(
         return match crate::sqlite_sessions::authenticate_password_and_create_session(
             sqlite,
             &state.config,
-            &tenant_id,
+            tenant_id,
             runtime_app_id,
             &username,
             &password,
@@ -486,29 +502,22 @@ async fn create_session(
             ),
         };
     }
-    let Ok(pg) = postgres_pool_or_error(&state) else {
-        return postgres_pool_or_error(&state)
+    let Ok(pg) = postgres_pool_or_error(state) else {
+        return postgres_pool_or_error(state)
             .err()
             .expect("error response");
     };
-    let runtime_app_id = match resolve_credential_entry_runtime_app(pg, &ctx, tenant_id).await {
+    let runtime_app_id = match resolve_credential_entry_runtime_app(pg, ctx, tenant_id).await {
         Ok(app_id) => app_id,
         Err(response) => return response,
     };
 
-    let username = resolve_login_username(&body);
+    let username = resolve_login_username(body);
     if username.is_empty() {
         return appbase_error(
             StatusCode::BAD_REQUEST,
             "iam_invalid_login",
             "username, email, or phone is required",
-        );
-    }
-    if !is_password_grant(&body) {
-        return appbase_error(
-            StatusCode::BAD_REQUEST,
-            "iam_unsupported_grant_type",
-            "unsupported authentication grant type",
         );
     }
     let Some(password) = read_password(body.get("password")) else {
@@ -519,8 +528,8 @@ async fn create_session(
         );
     };
     if let Some(response) = enforce_rate_limit(
-        &state,
-        &tenant_id,
+        state,
+        tenant_id,
         &format!("auth:login:{}", canonical_identity(&username)),
     )
     .await
@@ -531,7 +540,7 @@ async fn create_session(
     match authenticate_password(pg, tenant_id, &username, &password, &state.config).await {
         PasswordAuthenticationOutcome::Authenticated(user) => {
             record_successful_password_login(pg, &state.config, &user, &username).await;
-            create_authenticated_session_response(&state, &user, &runtime_app_id).await
+            create_authenticated_session_response(state, &user, &runtime_app_id).await
         }
         PasswordAuthenticationOutcome::AccountLocked => account_locked_error(),
         PasswordAuthenticationOutcome::InvalidCredentials => {
@@ -545,6 +554,150 @@ async fn create_session(
             invalid_credentials_error()
         }
     }
+}
+
+async fn create_code_login_session(
+    state: &LocalIamState,
+    ctx: &WebRequestContext,
+    body: &Value,
+    tenant_id: &str,
+) -> Response {
+    let Some(grant_type) = resolve_login_grant_type(body) else {
+        return appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_unsupported_grant_type",
+            "unsupported authentication grant type",
+        );
+    };
+    let account = resolve_code_login_account(body, &grant_type);
+    if account.is_empty() {
+        return appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_invalid_login",
+            "phone or email is required",
+        );
+    }
+    let Some(code) = optional_string(body.get("code")) else {
+        return appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_verification_code_required",
+            "verification code is required",
+        );
+    };
+    #[cfg(feature = "sqlite")]
+    if let Some(sqlite) = state.pool.as_sqlite() {
+        let runtime_app_id = match ctx
+            .principal
+            .as_ref()
+            .map(|principal| principal.app_id().trim())
+            .filter(|value| !value.is_empty())
+        {
+            Some(app_id) => app_id,
+            None => {
+                return appbase_error(
+                    StatusCode::UNAUTHORIZED,
+                    "iam_credential_entry_app_required",
+                    "credential entry app context is required",
+                )
+            }
+        };
+        if let Some(response) = enforce_ephemeral_rate_limit(
+            state,
+            &format!("auth:login:{}", canonical_identity(&account)),
+        )
+        .await
+        {
+            return response;
+        }
+        return match crate::sqlite_sessions::authenticate_code_and_create_session(
+            sqlite,
+            &state.config,
+            tenant_id,
+            runtime_app_id,
+            &account,
+            &code,
+            &grant_type,
+        )
+        .await
+        {
+            crate::sqlite_sessions::SqliteCodeSessionOutcome::Authenticated(session) => {
+                appbase_ok(session_to_json(&session))
+            }
+            crate::sqlite_sessions::SqliteCodeSessionOutcome::InvalidCredentials => {
+                invalid_credentials_error()
+            }
+            crate::sqlite_sessions::SqliteCodeSessionOutcome::NotConfigured => appbase_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "iam_code_login_verification_unavailable",
+                "verification code login is not configured",
+            ),
+            crate::sqlite_sessions::SqliteCodeSessionOutcome::Failed(error) => appbase_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "iam_session_create_failed",
+                &error,
+            ),
+        };
+    }
+    let Ok(pg) = postgres_pool_or_error(state) else {
+        return postgres_pool_or_error(state)
+            .err()
+            .expect("error response");
+    };
+    let runtime_app_id = match resolve_credential_entry_runtime_app(pg, ctx, tenant_id).await {
+        Ok(app_id) => app_id,
+        Err(response) => return response,
+    };
+    if let Some(response) = enforce_rate_limit(
+        state,
+        tenant_id,
+        &format!("auth:login:{}", canonical_identity(&account)),
+    )
+    .await
+    {
+        return response;
+    }
+    let Some(user) = load_user_by_account(pg, tenant_id, &account).await else {
+        return invalid_credentials_error();
+    };
+    if !code_login_contact_verified(&user, &account, &grant_type) {
+        return invalid_credentials_error();
+    }
+    if let Err(error) = verify_code_login(pg, &state.config, &user, &account, &code).await {
+        return match error {
+            CodeLoginVerificationError::InvalidChallenge => invalid_credentials_error(),
+            CodeLoginVerificationError::NotConfigured => appbase_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "iam_code_login_verification_unavailable",
+                "verification code login is not configured",
+            ),
+            CodeLoginVerificationError::Storage(error) => {
+                tracing::error!(%error, "code login verification storage failed");
+                appbase_error(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "iam_code_login_verification_unavailable",
+                    "verification code login is temporarily unavailable",
+                )
+            }
+        };
+    }
+    crate::security_events::record_login_success(
+        pg,
+        &user.tenant_id,
+        &user.id,
+        &canonical_identity(&account),
+        &grant_type,
+    )
+    .await;
+    crate::audit_events::record_login_success(
+        pg,
+        &state.config,
+        &user.tenant_id,
+        &user.id,
+        &canonical_identity(&account),
+        &grant_type,
+    )
+    .await;
+    create_authenticated_session_response(state, &user, &runtime_app_id).await
 }
 
 async fn create_session_organization_selection(
@@ -1454,6 +1607,103 @@ async fn create_password_reset_request(
     }
 
     appbase_ok(json!({ "accepted": true }))
+}
+
+/// Requests a verification code for a pre-auth scene
+/// (`LOGIN`/`REGISTER`/`RESET_PASSWORD`).
+///
+/// In local/test deployments the fixed dev code is staged in the ephemeral
+/// artifact store (replay-protected on consumption) and echoed back as
+/// `devCode` so hosts can surface a demo hint. Production deployments accept
+/// the request and leave delivery to the messaging plane
+/// (`sdkwork-messaging`), which `verify_code_login` consumes via the shared
+/// `messaging_verification_challenge` store.
+async fn create_verification_code_request(
+    State(state): State<LocalIamState>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Response {
+    if let Some(response) = reject_login_credential_headers(&headers) {
+        return response;
+    }
+    let Some(target) = optional_string(body.get("target"))
+        .or_else(|| optional_string(body.get("account")))
+    else {
+        return appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_account_required",
+            "account is required",
+        );
+    };
+    let scene = optional_string(body.get("scene")).unwrap_or_else(|| "LOGIN".to_string());
+    if !matches!(scene.as_str(), "LOGIN" | "REGISTER" | "RESET_PASSWORD") {
+        return appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_unsupported_verification_scene",
+            "unsupported verification code scene",
+        );
+    }
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    if let Some(response) = enforce_rate_limit(
+        &state,
+        LOCAL_EPHEMERAL_SCOPE,
+        &format!("auth:verification_code:{}", canonical_identity(&target)),
+    )
+    .await
+    {
+        return response;
+    }
+
+    let mut dev_code: Option<String> = None;
+    if fixed_verification_code_allowed(&state.config) {
+        if let Some(user) = load_user_by_account_global(pg, &target).await {
+            let code = state
+                .config
+                .dev_fixed_verify_code
+                .clone()
+                .unwrap_or_else(generate_verification_code);
+            let request = LocalPasswordResetRequest {
+                code: code.clone(),
+                expire_time: current_millis() + PASSWORD_RESET_TTL_MILLIS,
+                username: user.username.clone(),
+            };
+            let result = match scene.as_str() {
+                "LOGIN" => crate::ephemeral::upsert_code_login_request(
+                    pg,
+                    &user.tenant_id,
+                    &canonical_identity(&target),
+                    &request,
+                )
+                .await,
+                _ => crate::ephemeral::upsert_password_reset_request(
+                    pg,
+                    &user.tenant_id,
+                    &canonical_identity(&user.username),
+                    &request,
+                )
+                .await,
+            };
+            if let Err(error) = result {
+                return appbase_error(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "iam_ephemeral_unavailable",
+                    &error,
+                );
+            }
+            dev_code = Some(code);
+        }
+    }
+
+    let mut payload = serde_json::Map::new();
+    payload.insert("accepted".to_string(), json!(true));
+    if let Some(code) = dev_code {
+        payload.insert("devCode".to_string(), json!(code));
+    }
+    appbase_ok(Value::Object(payload))
 }
 
 async fn create_password_reset(
@@ -2881,19 +3131,25 @@ async fn retrieve_verification_policy(State(state): State<LocalIamState>) -> Res
         }
         Err(_) => account_binding_policy_to_json(&default_account_binding_policy()),
     };
+    let code_login_enabled = code_login_enabled_for_config(&state.config);
 
     appbase_ok(json!({
         "accountBinding": account_binding,
-        "emailCodeLoginEnabled": false,
+        "emailCodeLoginEnabled": code_login_enabled,
         "emailRegisterVerificationRequired": state.config.email_verification_required,
         "emailRegistrationVerificationRequired": state.config.email_verification_required,
         "passwordLoginEnabled": true,
-        "phoneCodeLoginEnabled": false,
+        "phoneCodeLoginEnabled": code_login_enabled,
         "phoneRegisterVerificationRequired": false,
         "phoneRegistrationVerificationRequired": false,
         "qrLoginEnabled": true,
         "registrationEnabled": true
     }))
+}
+
+fn code_login_enabled_for_config(config: &LocalIamConfig) -> bool {
+    fixed_verification_code_allowed(config)
+        || sdkwork_iam_web_adapter::messaging_verification_enabled()
 }
 
 async fn retrieve_account_binding_policy(State(state): State<LocalIamState>) -> Response {

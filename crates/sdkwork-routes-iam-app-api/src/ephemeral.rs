@@ -10,6 +10,7 @@ use crate::{
 
 const KIND_LOGIN_CONTINUATION: &str = "login_continuation";
 const KIND_PASSWORD_RESET: &str = "password_reset";
+const KIND_CODE_LOGIN: &str = "code_login";
 const KIND_QR_SESSION: &str = "qr_session";
 const KIND_OAUTH_STATE: &str = "oauth_state";
 
@@ -102,6 +103,66 @@ pub(crate) async fn consume_password_reset_request(
     .fetch_optional(pg)
     .await
     .map_err(|error| format!("consume password reset artifact failed: {error}"))?;
+    Ok(consumed_key.is_some())
+}
+
+pub(crate) async fn upsert_code_login_request(
+    pg: &PgPool,
+    tenant_id: &str,
+    account_key: &str,
+    request: &LocalPasswordResetRequest,
+) -> Result<(), String> {
+    let storage_key = artifact_key(tenant_id, KIND_CODE_LOGIN, account_key);
+    let payload = json!({
+        "code": request.code,
+        "expireTimeMs": request.expire_time,
+        "account": request.username,
+    });
+    let timestamp = current_timestamp_utc();
+    sqlx::query(
+        "INSERT INTO iam_ephemeral_artifact \
+         (artifact_key, tenant_id, artifact_kind, payload_json, expires_at, created_at, updated_at) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7) \
+         ON CONFLICT (artifact_key) DO UPDATE SET \
+           payload_json = EXCLUDED.payload_json, \
+           expires_at = EXCLUDED.expires_at, \
+           updated_at = EXCLUDED.updated_at",
+    )
+    .bind(&storage_key)
+    .bind(tenant_id)
+    .bind(KIND_CODE_LOGIN)
+    .bind(Json(payload))
+    .bind(millis_to_timestamp(request.expire_time))
+    .bind(&timestamp)
+    .bind(&timestamp)
+    .execute(pg)
+    .await
+    .map_err(|error| format!("upsert code login artifact failed: {error}"))?;
+    Ok(())
+}
+
+pub(crate) async fn consume_code_login_request(
+    pg: &PgPool,
+    tenant_id: &str,
+    account_key: &str,
+    expected_account: &str,
+    expected_code: &str,
+) -> Result<bool, String> {
+    let storage_key = artifact_key(tenant_id, KIND_CODE_LOGIN, account_key);
+    let consumed_key = sqlx::query_scalar::<_, String>(
+        "DELETE FROM iam_ephemeral_artifact \
+         WHERE artifact_key = $1 AND expires_at > $2 \
+           AND payload_json ->> 'account' = $3 \
+           AND payload_json ->> 'code' = $4 \
+         RETURNING artifact_key",
+    )
+    .bind(&storage_key)
+    .bind(current_timestamp_utc())
+    .bind(expected_account)
+    .bind(expected_code)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("consume code login artifact failed: {error}"))?;
     Ok(consumed_key.is_some())
 }
 

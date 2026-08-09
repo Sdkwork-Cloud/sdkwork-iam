@@ -11,12 +11,18 @@ import type {
   SdkworkIamH5AuthController,
   SdkworkIamH5AuthSession,
   SdkworkIamH5AuthState,
+  SdkworkIamH5CodeLoginInput,
   SdkworkIamH5LoginCredentials,
   SdkworkIamH5LoginResult,
   SdkworkIamH5OAuthLoginInput,
   SdkworkIamH5MiniProgramLoginInput,
   SdkworkIamH5OAuthProvider,
+  SdkworkIamH5RegisterInput,
+  SdkworkIamH5ResetPasswordInput,
   SdkworkIamH5ScanLoginContext,
+  SdkworkIamH5SendVerificationCodeInput,
+  SdkworkIamH5VerificationCodeClient,
+  SdkworkIamH5VerifyType,
 } from "../types/auth-h5-types";
 
 /** Storage key for the scan-login context kept across the WeChat authorization redirect. */
@@ -35,10 +41,24 @@ const SCAN_LOGIN_PROVIDER_STATE_PREFIX = "p:";
 
 const WECHAT_PROVIDER = "wechat";
 
+/** Message shown when the host did not inject a verification-code client. */
+export const SDKWORK_IAM_H5_AUTH_VERIFICATION_UNAVAILABLE_MESSAGE =
+  "Verification code service is unavailable in this app; try password login.";
+
+/**
+ * Resolves the IAM verification channel from the account value
+ * (手机号或邮箱): values containing `@` are emails, everything else is a phone.
+ */
+export function resolveSdkworkIamH5VerifyType(account: string): SdkworkIamH5VerifyType {
+  return /@/.test(trim(account)) ? "EMAIL" : "PHONE";
+}
+
 export function createSdkworkIamH5AuthController(
   input: SdkworkIamService | CreateSdkworkIamH5AuthControllerInput,
 ): SdkworkIamH5AuthController {
   const service = "service" in input ? input.service : input;
+  const verificationCodeClient: SdkworkIamH5VerificationCodeClient | undefined =
+    "service" in input ? input.verificationCodeClient : undefined;
   let state: SdkworkIamH5AuthState = { status: "idle" };
 
   const setState = (patch: Partial<SdkworkIamH5AuthState>) => {
@@ -51,6 +71,24 @@ export function createSdkworkIamH5AuthController(
     return session;
   };
 
+  /** Normalizes a session/context-selection response like {@link login}. */
+  const resolveLoginResult = (response: unknown): SdkworkIamH5LoginResult => {
+    const challenge = normalizeIamLoginContextSelectionChallenge(response);
+    if (challenge) {
+      setState({
+        challenge,
+        session: undefined,
+        status: "loginContextSelectionRequired",
+      });
+      return {
+        challenge,
+        kind: "loginContextSelectionRequired",
+      };
+    }
+    const session = completeSession(response);
+    return { kind: "session", session };
+  };
+
   return {
     getState: () => ({
       ...state,
@@ -60,27 +98,83 @@ export function createSdkworkIamH5AuthController(
     login: async (credentials) => {
       setState({ challenge: undefined, lastError: undefined, status: "loading" });
       try {
+        // The IAM app-api backend only accepts the password grant
+        // (`is_password_grant`); omitting `grantType` fails with 40001
+        // "unsupported authentication grant type".
         const response = await service.auth.sessions.create({
+          grantType: "password",
           password: credentials.password,
-          username: credentials.username,
+          username: credentials.username.trim(),
         });
-        const challenge = normalizeIamLoginContextSelectionChallenge(response);
-        if (challenge) {
-          setState({
-            challenge,
-            session: undefined,
-            status: "loginContextSelectionRequired",
-          });
-          return {
-            challenge,
-            kind: "loginContextSelectionRequired",
-          };
-        }
-
-        const session = completeSession(response);
-        return { kind: "session", session };
+        return resolveLoginResult(response);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Login failed";
+        setState({ lastError: message, status: "error" });
+        throw error;
+      }
+    },
+    loginWithCode: async (input: SdkworkIamH5CodeLoginInput) => {
+      setState({ challenge: undefined, lastError: undefined, status: "loading" });
+      try {
+        const verifyType = resolveSdkworkIamH5VerifyType(input.target);
+        const response = await service.auth.sessions.create({
+          code: input.code.trim(),
+          grantType: verifyType === "PHONE" ? "phone_code" : "email_code",
+          ...(verifyType === "PHONE"
+            ? { phone: input.target.trim() }
+            : { email: input.target.trim() }),
+        });
+        return resolveLoginResult(response);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Code login failed";
+        setState({ lastError: message, status: "error" });
+        throw error;
+      }
+    },
+    register: async (input: SdkworkIamH5RegisterInput) => {
+      setState({ challenge: undefined, lastError: undefined, status: "loading" });
+      try {
+        const verifyType = resolveSdkworkIamH5VerifyType(input.account);
+        const response = await service.auth.registrations.create({
+          channel: verifyType,
+          password: input.password,
+          username: input.account.trim(),
+          verificationCode: input.code.trim(),
+        });
+        return resolveLoginResult(response);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Registration failed";
+        setState({ lastError: message, status: "error" });
+        throw error;
+      }
+    },
+    sendVerificationCode: async (input: SdkworkIamH5SendVerificationCodeInput) => {
+      if (!verificationCodeClient?.send) {
+        throw new Error(SDKWORK_IAM_H5_AUTH_VERIFICATION_UNAVAILABLE_MESSAGE);
+      }
+      await verificationCodeClient.send({
+        scene: input.scene,
+        target: input.target.trim(),
+        verifyType: input.verifyType,
+      });
+    },
+    resetPassword: async (input: SdkworkIamH5ResetPasswordInput) => {
+      setState({ lastError: undefined, status: "loading" });
+      try {
+        const verifyType = resolveSdkworkIamH5VerifyType(input.account);
+        await service.auth.passwordResetRequests.create({
+          account: input.account.trim(),
+          channel: verifyType === "PHONE" ? "SMS" : "EMAIL",
+        });
+        await service.auth.passwordResets.create({
+          account: input.account.trim(),
+          code: input.code.trim(),
+          confirmPassword: input.newPassword,
+          newPassword: input.newPassword,
+        });
+        setState({ challenge: undefined, session: undefined, status: "ready" });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Password reset failed";
         setState({ lastError: message, status: "error" });
         throw error;
       }

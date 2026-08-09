@@ -90,6 +90,9 @@ export interface SdkworkIamService {
     passwordResetRequests: {
       create(body: Record<string, unknown>): Promise<unknown>;
     };
+    verificationCodeRequests: {
+      create(body: Record<string, unknown>): Promise<unknown>;
+    };
     passwordResets: {
       create(body: Record<string, unknown>): Promise<unknown>;
     };
@@ -365,6 +368,9 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
     auth: {
       passwordResetRequests: {
         create: (body) => callRaw(input.appbaseAppClient.auth?.passwordResetRequests, "create", "appbaseAppClient.auth.passwordResetRequests.create", body),
+      },
+      verificationCodeRequests: {
+        create: (body) => callRaw(input.appbaseAppClient.auth?.verificationCodeRequests, "create", "appbaseAppClient.auth.verificationCodeRequests.create", body),
       },
       passwordResets: {
         create: (body) => callRaw(input.appbaseAppClient.auth?.passwordResets, "create", "appbaseAppClient.auth.passwordResets.create", body),

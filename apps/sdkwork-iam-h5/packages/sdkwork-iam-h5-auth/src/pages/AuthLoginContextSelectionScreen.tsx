@@ -5,6 +5,7 @@ import type {
   IamLoginContextSelectionChallenge,
 } from "@sdkwork/iam-contracts";
 
+import { useSdkworkIamH5AuthMessages } from "../i18n";
 import type { SdkworkIamH5AuthController, SdkworkIamH5AuthSession } from "../types/auth-h5-types";
 
 export interface SdkworkIamH5AuthLoginContextSelectionScreenProps {
@@ -13,7 +14,6 @@ export interface SdkworkIamH5AuthLoginContextSelectionScreenProps {
   errorMessage?: string;
   onAuthenticated?: (session: SdkworkIamH5AuthSession) => void;
   onCancel?: () => void;
-  title?: string;
 }
 
 function resolveOrganizationLabel(organization: IamLoginContextOrganizationChoice): string {
@@ -31,8 +31,8 @@ export function SdkworkIamH5AuthLoginContextSelectionScreen({
   errorMessage,
   onAuthenticated,
   onCancel,
-  title = "Choose login context",
 }: SdkworkIamH5AuthLoginContextSelectionScreenProps) {
+  const messages = useSdkworkIamH5AuthMessages();
   const [busyTarget, setBusyTarget] = useState<string | undefined>();
   const [localError, setLocalError] = useState<string | undefined>();
 
@@ -62,45 +62,62 @@ export function SdkworkIamH5AuthLoginContextSelectionScreen({
   };
 
   const resolvedError = localError || errorMessage;
+  const optionClass =
+    "rounded-lg border border-[var(--iam-h5-auth-border)] bg-[var(--iam-h5-auth-btn-disabled-bg)] px-4 py-3 text-left text-[15px] text-[var(--iam-h5-auth-text-main)] transition-colors active:opacity-70 disabled:opacity-50";
 
   return (
-    <section className="mx-auto flex w-full max-w-md flex-col gap-4 p-4">
-      <h1 className="text-lg font-semibold">{title}</h1>
-      <p className="text-sm text-zinc-600">Choose personal platform access or an organization workspace.</p>
-      {resolvedError ? <p className="text-sm text-red-600">{resolvedError}</p> : null}
-      {challenge.challengeType === "LOGIN_CONTEXT_SELECTION" ? (
-        <button
-          className="rounded border px-4 py-3 text-left text-sm disabled:opacity-50"
-          disabled={Boolean(busyTarget)}
-          onClick={handlePersonalLogin}
-          type="button"
-        >
-          {busyTarget === "personal" ? "Signing in..." : resolvePersonalLabel(challenge)}
-        </button>
-      ) : null}
-      {challenge.organizations.map((organization) => (
-        <button
-          className="rounded border px-4 py-3 text-left text-sm disabled:opacity-50"
-          disabled={Boolean(busyTarget)}
-          key={organization.organizationId}
-          onClick={() => handleOrganizationLogin(organization.organizationId)}
-          type="button"
-        >
-          {busyTarget === organization.organizationId
-            ? "Signing in..."
-            : resolveOrganizationLabel(organization)}
-        </button>
-      ))}
-      {onCancel ? (
-        <button
-          className="rounded px-4 py-2 text-sm text-zinc-600"
-          disabled={Boolean(busyTarget)}
-          onClick={onCancel}
-          type="button"
-        >
-          Cancel
-        </button>
-      ) : null}
-    </section>
+    <div className="sdkwork-iam-h5-auth-surface relative flex h-full flex-col overflow-y-auto">
+      <div className="flex min-h-[500px] flex-1 flex-col justify-center px-8 py-8">
+        <div className="mb-10 flex flex-col items-center">
+          <h1 className="text-center text-2xl font-semibold">{messages.contextSelection.title}</h1>
+          <p className="mt-2 text-center text-[14px] text-[var(--iam-h5-auth-text-sub)]">
+            {messages.contextSelection.description}
+          </p>
+        </div>
+
+        {resolvedError ? (
+          <p className="mb-5 text-center text-[14px] text-[#EF4444]">{resolvedError}</p>
+        ) : null}
+
+        <div className="flex w-full flex-col gap-4">
+          {challenge.challengeType === "LOGIN_CONTEXT_SELECTION" ? (
+            <button
+              className={optionClass}
+              disabled={Boolean(busyTarget)}
+              onClick={handlePersonalLogin}
+              type="button"
+            >
+              {busyTarget === "personal"
+                ? messages.contextSelection.signingIn
+                : resolvePersonalLabel(challenge)}
+            </button>
+          ) : null}
+          {challenge.organizations.map((organization) => (
+            <button
+              className={optionClass}
+              disabled={Boolean(busyTarget)}
+              key={organization.organizationId}
+              onClick={() => handleOrganizationLogin(organization.organizationId)}
+              type="button"
+            >
+              {busyTarget === organization.organizationId
+                ? messages.contextSelection.signingIn
+                : resolveOrganizationLabel(organization)}
+            </button>
+          ))}
+        </div>
+
+        {onCancel ? (
+          <button
+            className="mt-8 cursor-pointer text-center text-[14px] font-medium text-[var(--iam-h5-auth-link)] active:opacity-70 disabled:opacity-50"
+            disabled={Boolean(busyTarget)}
+            onClick={onCancel}
+            type="button"
+          >
+            {messages.contextSelection.cancel}
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }

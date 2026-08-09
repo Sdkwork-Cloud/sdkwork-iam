@@ -4,6 +4,20 @@ import type { ApiRequestOptions, HttpClient } from '../http/client';
 import type { AppbaseOperationCommand, AppbaseSessionCreateCommand, SdkWorkCommandData } from '../types';
 
 
+export class AuthVerificationCodeRequestsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Verification Code Requests create. */
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/auth/verification_code_requests`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', accessTokenOnly: true, sdkworkUnwrapKind: 'item' });
+  }
+}
+
 export class AuthSessionsOrganizationSelectionApi {
   private client: HttpClient;
 
@@ -129,6 +143,7 @@ export class AuthApi {
   public readonly passwordResets: AuthPasswordResetsApi;
   public readonly registrations: AuthRegistrationsApi;
   public readonly sessions: AuthSessionsApi;
+  public readonly verificationCodeRequests: AuthVerificationCodeRequestsApi;
 
   constructor(client: HttpClient) {
     this.client = client;
@@ -136,6 +151,7 @@ export class AuthApi {
     this.passwordResets = new AuthPasswordResetsApi(client);
     this.registrations = new AuthRegistrationsApi(client);
     this.sessions = new AuthSessionsApi(client);
+    this.verificationCodeRequests = new AuthVerificationCodeRequestsApi(client);
   }
 
 }

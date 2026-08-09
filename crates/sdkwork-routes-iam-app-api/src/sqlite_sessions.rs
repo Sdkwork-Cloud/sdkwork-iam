@@ -26,6 +26,79 @@ pub(crate) enum SqlitePasswordSessionOutcome {
     Failed(String),
 }
 
+pub(crate) enum SqliteCodeSessionOutcome {
+    Authenticated(LocalSession),
+    InvalidCredentials,
+    NotConfigured,
+    Failed(String),
+}
+
+/// Code-login mirror of `authenticate_password_and_create_session` for the
+/// embedded SQLite router. The dev fixed verification code is compared
+/// directly (the ephemeral replay-protection artifact lives in Postgres);
+/// the account's verified phone/email contact is required.
+pub(crate) async fn authenticate_code_and_create_session(
+    sqlite: &SqlitePool,
+    config: &LocalIamConfig,
+    tenant_id: &str,
+    runtime_app_id: &str,
+    account: &str,
+    code: &str,
+    grant_type: &str,
+) -> SqliteCodeSessionOutcome {
+    if !crate::utils::fixed_verification_code_allowed(config) {
+        return SqliteCodeSessionOutcome::NotConfigured;
+    }
+    let Some(expected_code) = config.dev_fixed_verify_code.as_deref() else {
+        return SqliteCodeSessionOutcome::NotConfigured;
+    };
+    if code != expected_code {
+        return SqliteCodeSessionOutcome::InvalidCredentials;
+    }
+
+    let account_key = canonical_identity(account);
+    let row = match sqlx::query(
+        "SELECT u.id, u.tenant_id, u.username, u.display_name, u.email, u.phone, \
+                COALESCE(u.email_verified, 0), COALESCE(u.phone_verified, 0), \
+                u.last_login_at, u.password_changed_at \
+         FROM iam_user u \
+         JOIN iam_tenant_member m ON m.tenant_id = u.tenant_id AND m.user_id = u.id \
+           AND m.status = 'active' \
+         WHERE u.tenant_id = ? AND \
+           (LOWER(u.username) = ? OR LOWER(u.email) = ? OR u.phone = ?) \
+           AND u.status = 'active' AND u.is_deleted = 0 LIMIT 2",
+    )
+    .bind(tenant_id)
+    .bind(&account_key)
+    .bind(&account_key)
+    .bind(&account_key)
+    .fetch_all(sqlite)
+    .await
+    {
+        Ok(rows) if rows.len() == 1 => rows.into_iter().next().expect("one row"),
+        Ok(_) => return SqliteCodeSessionOutcome::InvalidCredentials,
+        Err(error) => {
+            return SqliteCodeSessionOutcome::Failed(format!(
+                "load SQLite IAM code login account failed: {error}"
+            ))
+        }
+    };
+
+    let user = local_user_from_row(&row);
+    if !crate::utils::code_login_contact_verified(&user, account, grant_type) {
+        return SqliteCodeSessionOutcome::InvalidCredentials;
+    }
+
+    let organization_id = match resolve_login_organization(sqlite, tenant_id, &user.id).await {
+        Ok(value) => value,
+        Err(error) => return SqliteCodeSessionOutcome::Failed(error),
+    };
+    match create_session(sqlite, config, &user, organization_id, runtime_app_id).await {
+        Ok(session) => SqliteCodeSessionOutcome::Authenticated(session),
+        Err(error) => SqliteCodeSessionOutcome::Failed(error),
+    }
+}
+
 pub(crate) async fn authenticate_password_and_create_session(
     sqlite: &SqlitePool,
     config: &LocalIamConfig,

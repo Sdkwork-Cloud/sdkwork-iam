@@ -10,6 +10,9 @@ export interface IamAppSdkClient {
     passwordResetRequests?: {
       create?: IamSdkMethod;
     };
+    verificationCodeRequests?: {
+      create?: IamSdkMethod;
+    };
     passwordResets?: {
       create?: IamSdkMethod;
     };

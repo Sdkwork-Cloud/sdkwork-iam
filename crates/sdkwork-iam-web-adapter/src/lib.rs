@@ -115,7 +115,7 @@ pub use messaging_verification::{
     messaging_verification_table_available, messaging_verification_target_hash,
     verify_and_consume_messaging_challenge, MessagingVerificationRequest,
     MESSAGING_VERIFICATION_SCENE_BIND_EMAIL, MESSAGING_VERIFICATION_SCENE_BIND_PHONE,
-    MESSAGING_VERIFICATION_SCENE_RESET_PASSWORD,
+    MESSAGING_VERIFICATION_SCENE_LOGIN, MESSAGING_VERIFICATION_SCENE_RESET_PASSWORD,
 };
 pub use oauth_authorization_server::{
     build_oauth_jwks_document, build_openid_configuration_document, build_userinfo_claims,

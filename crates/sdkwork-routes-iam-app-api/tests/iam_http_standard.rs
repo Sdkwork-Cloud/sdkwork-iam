@@ -705,6 +705,7 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
         "users.current.phoneBindings.delete",
         "users.current.retrieve",
         "users.current.update",
+        "verificationCodeRequests.create",
     ];
     expected_operation_ids.sort();
 

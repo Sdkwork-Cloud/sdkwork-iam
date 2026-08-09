@@ -2290,19 +2290,18 @@ async fn local_app_router_rejects_passwords_outside_policy() {
 }
 
 #[tokio::test]
-async fn local_app_router_disables_external_login_modes_without_real_verification() {
+async fn local_app_router_rejects_unsupported_grants_and_fails_closed_code_login() {
     let app = build_router_without_bootstrap().await;
 
+    // Code grants are supported by the router now: without a real
+    // verification channel the login must fail closed (unknown account) —
+    // never fall through to a session.
     for (grant_type, account_field) in [
         (
             "email_code",
             json!({ "email": "code-login@sdkwork-iam.test" }),
         ),
         ("phone_code", json!({ "phone": "13800000000" })),
-        (
-            "session_bridge",
-            json!({ "email": "bridge-login@sdkwork-iam.test" }),
-        ),
     ] {
         let mut payload = account_field;
         payload["grantType"] = json!(grant_type);
@@ -2315,11 +2314,27 @@ async fn local_app_router_disables_external_login_modes_without_real_verificatio
             Body::from(payload.to_string()),
         )
         .await;
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
         let body = read_json(response).await;
-        assert_problem_detail_code(&body, StatusCode::BAD_REQUEST, "iam_unsupported_grant_type");
+        assert_problem_detail_code(&body, StatusCode::UNAUTHORIZED, "iam_invalid_credentials");
         assert!(body.get("data").is_none() || body["data"].is_null());
     }
+
+    // Grants outside the supported set stay rejected up front.
+    let mut bridge_payload = json!({ "email": "bridge-login@sdkwork-iam.test" });
+    bridge_payload["grantType"] = json!("session_bridge");
+    bridge_payload["code"] = json!("987654");
+    let bridge_response = request_open_registration_json(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(bridge_payload.to_string()),
+    )
+    .await;
+    assert_eq!(bridge_response.status(), StatusCode::BAD_REQUEST);
+    let bridge_body = read_json(bridge_response).await;
+    assert_problem_detail_code(&bridge_body, StatusCode::BAD_REQUEST, "iam_unsupported_grant_type");
+    assert!(bridge_body.get("data").is_none() || bridge_body["data"].is_null());
 }
 
 #[tokio::test]
@@ -2636,6 +2651,361 @@ async fn local_app_router_resets_password_only_with_valid_reset_token_and_code()
     .await;
 
     assert_eq!(reused_token_response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn local_app_router_issues_and_consumes_login_verification_codes() {
+    let code_login_username = format!(
+        "{}@sdkwork-iam.test",
+        unique_registration_username("code-login-user")
+    );
+    let code_login_password = "CodeLoginPass#2026";
+    let tenant_id = format!("tenant_{}", uuid::Uuid::now_v7());
+    let app = build_router_with_env(
+        Some((
+            tenant_id.as_str(),
+            code_login_username.as_str(),
+            code_login_password,
+        )),
+        Some(CONFIGURED_RESET_CODE),
+    )
+    .await;
+
+    let tenant_access_token = test_bootstrap_access_token_for_tenant(&tenant_id);
+
+    // Code login without a prior verification-code request must fail even
+    // for an existing account (no staged artifact to consume).
+    let unreceived_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(
+            json!({
+                "grantType": "email_code",
+                "email": code_login_username,
+                "code": CONFIGURED_RESET_CODE
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    assert_eq!(unreceived_response.status(), StatusCode::UNAUTHORIZED);
+
+    let request_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/verification_code_requests",
+        Body::from(
+            json!({
+                "scene": "LOGIN",
+                "target": code_login_username,
+                "channel": "email"
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+
+    let request_body = read_json(request_response).await;
+    assert_eq!(
+        request_body["code"].as_i64(),
+        Some(0),
+        "verification code request failed: {request_body}"
+    );
+    assert_eq!(request_body["data"]["accepted"], true);
+    assert_eq!(
+        request_body["data"]["devCode"],
+        CONFIGURED_RESET_CODE,
+        "dev fixed code should be echoed to the host: {request_body}"
+    );
+
+    let login_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(
+            json!({
+                "grantType": "email_code",
+                "email": code_login_username,
+                "code": CONFIGURED_RESET_CODE
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+
+    assert_eq!(login_response.status(), StatusCode::OK);
+    let login_body = read_json(login_response).await;
+    assert_eq!(login_body["code"].as_i64(), Some(0), "code login failed: {login_body}");
+    assert!(
+        login_body["data"]["accessToken"].is_string()
+            && login_body["data"]["authToken"].is_string(),
+        "code login should issue a dual-token session: {login_body}"
+    );
+
+    // The code artifact is consumed atomically: replaying the same code must fail.
+    let replay_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(
+            json!({
+                "grantType": "email_code",
+                "email": code_login_username,
+                "code": CONFIGURED_RESET_CODE
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    assert_eq!(replay_response.status(), StatusCode::UNAUTHORIZED);
+
+    // A fresh request followed by a wrong code must fail without consuming
+    // the staged artifact.
+    let refresh_request_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/verification_code_requests",
+        Body::from(
+            json!({
+                "scene": "LOGIN",
+                "target": code_login_username,
+                "channel": "email"
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    assert_eq!(refresh_request_response.status(), StatusCode::OK);
+
+    let wrong_code_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(
+            json!({
+                "grantType": "email_code",
+                "email": code_login_username,
+                "code": "000000"
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    assert_eq!(wrong_code_response.status(), StatusCode::UNAUTHORIZED);
+
+    // The correct code still works afterwards (wrong codes do not consume).
+    let retry_login_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(
+            json!({
+                "grantType": "email_code",
+                "email": code_login_username,
+                "code": CONFIGURED_RESET_CODE
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    assert_eq!(retry_login_response.status(), StatusCode::OK);
+
+    // Unknown grants and scenes are rejected before any auth work.
+    let unsupported_grant_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(
+            json!({
+                "grantType": "sms_code",
+                "phone": "13800000000",
+                "code": CONFIGURED_RESET_CODE
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    assert_eq!(unsupported_grant_response.status(), StatusCode::BAD_REQUEST);
+
+    let unsupported_scene_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/verification_code_requests",
+        Body::from(
+            json!({
+                "scene": "SCAN",
+                "target": code_login_username,
+                "channel": "email"
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    assert_eq!(unsupported_scene_response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn local_app_router_rejects_code_login_for_unverified_or_phone_accounts() {
+    let code_login_username = format!(
+        "{}@sdkwork-iam.test",
+        unique_registration_username("code-login-phone")
+    );
+    let code_login_password = "CodeLoginPass#2026";
+    let tenant_id = format!("tenant_{}", uuid::Uuid::now_v7());
+    let app = build_router_with_env(
+        Some((
+            tenant_id.as_str(),
+            code_login_username.as_str(),
+            code_login_password,
+        )),
+        Some(CONFIGURED_RESET_CODE),
+    )
+    .await;
+
+    let pg = postgres_pool_for_tests().await;
+    // Unique phone per run: the code-request endpoint resolves the account
+    // globally (like password reset), so a fixed phone left behind by a
+    // previous test run would bind the artifact to a stale user/tenant.
+    let phone = format!("139{}", &uuid::Uuid::now_v7().simple().to_string()[..8]);
+    let updated = sqlx::query(
+        "UPDATE iam_user SET phone = $1, phone_verified = 1 WHERE email = $2",
+    )
+    .bind(&phone)
+    .bind(code_login_username.as_str())
+    .execute(&pg)
+    .await
+    .expect("bind phone to code-login user");
+    assert_eq!(updated.rows_affected(), 1, "phone bind must hit the seeded user");
+
+    let tenant_access_token = test_bootstrap_access_token_for_tenant(&tenant_id);
+
+    // Phone-code login succeeds for the verified phone contact.
+    let phone_request_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/verification_code_requests",
+        Body::from(
+            json!({
+                "scene": "LOGIN",
+                "target": phone,
+                "channel": "sms"
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    let phone_request_body = read_json(phone_request_response).await;
+    assert_eq!(
+        phone_request_body["data"]["accepted"],
+        true,
+        "phone code request failed: {phone_request_body}"
+    );
+
+    let phone_login_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(
+            json!({
+                "grantType": "phone_code",
+                "phone": phone,
+                "code": CONFIGURED_RESET_CODE
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    let phone_login_body = read_json(phone_login_response).await;
+    assert_eq!(
+        phone_login_body["code"].as_i64(),
+        Some(0),
+        "phone code login failed: {phone_login_body}"
+    );
+
+    // A verified email must not satisfy the phone grant.
+    let email_as_phone_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(
+            json!({
+                "grantType": "phone_code",
+                "phone": code_login_username,
+                "code": CONFIGURED_RESET_CODE
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    assert_eq!(email_as_phone_response.status(), StatusCode::UNAUTHORIZED);
+
+    // An unverified email contact must be rejected.
+    sqlx::query("UPDATE iam_user SET email_verified = 0 WHERE email = $1")
+        .bind(code_login_username.as_str())
+        .execute(&pg)
+        .await
+        .expect("unverify code-login email");
+
+    let unverified_request_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/verification_code_requests",
+        Body::from(
+            json!({
+                "scene": "LOGIN",
+                "target": code_login_username,
+                "channel": "email"
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    assert_eq!(unverified_request_response.status(), StatusCode::OK);
+
+    let unverified_login_response = request_json_with_auth(
+        &app,
+        Method::POST,
+        "/app/v3/api/auth/sessions",
+        Body::from(
+            json!({
+                "grantType": "email_code",
+                "email": code_login_username,
+                "code": CONFIGURED_RESET_CODE
+            })
+            .to_string(),
+        ),
+        None,
+        Some(&tenant_access_token),
+    )
+    .await;
+    assert_eq!(unverified_login_response.status(), StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]

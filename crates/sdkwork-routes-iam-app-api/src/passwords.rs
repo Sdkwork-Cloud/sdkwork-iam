@@ -8,7 +8,8 @@ use tokio::sync::Semaphore;
 
 use sdkwork_iam_web_adapter::{
     messaging_verification_enabled, verify_and_consume_messaging_challenge,
-    MessagingVerificationRequest, MESSAGING_VERIFICATION_SCENE_RESET_PASSWORD,
+    MessagingVerificationRequest, MESSAGING_VERIFICATION_SCENE_LOGIN,
+    MESSAGING_VERIFICATION_SCENE_RESET_PASSWORD,
 };
 
 use crate::state::*;
@@ -17,6 +18,12 @@ use crate::utils::*;
 static PASSWORD_HASH_PERMITS: OnceLock<Arc<Semaphore>> = OnceLock::new();
 
 pub(crate) enum PasswordResetVerificationError {
+    InvalidChallenge,
+    NotConfigured,
+    Storage(String),
+}
+
+pub(crate) enum CodeLoginVerificationError {
     InvalidChallenge,
     NotConfigured,
     Storage(String),
@@ -642,4 +649,81 @@ pub(crate) async fn validate_password_reset_verification(
     }
 
     Err(PasswordResetVerificationError::NotConfigured)
+}
+
+/// Resolves the messaging channel for a code-login account, mirroring
+/// `password_reset_channel_for_account`: the account's own verified contact
+/// wins, otherwise the value shape decides (email vs sms).
+pub(crate) fn code_login_channel_for_account(
+    account: &str,
+    user: &LocalIamUser,
+) -> (&'static str, String) {
+    password_reset_channel_for_account(account, user)
+}
+
+/// Verifies a login verification code against the two supported stores:
+///
+/// 1. Messaging (production): consumes a `messaging_verification_challenge`
+///    row for scene `LOGIN` when the shared store is deployed.
+/// 2. Dev fixed code (local/test): compares against
+///    `SDKWORK_IAM_DEV_FIXED_VERIFY_CODE` and atomically consumes the
+///    `code_login` ephemeral artifact created by `verification_code_requests`
+///    (replay protection).
+///
+/// Callers are responsible for the account→user resolution and the
+/// `phone_verified`/`email_verified` check before issuing a session.
+pub(crate) async fn verify_code_login(
+    pg: &PgPool,
+    config: &LocalIamConfig,
+    user: &LocalIamUser,
+    account: &str,
+    code: &str,
+) -> Result<(), CodeLoginVerificationError> {
+    if messaging_verification_enabled() {
+        let (channel, target) = code_login_channel_for_account(account, user);
+        return verify_and_consume_messaging_challenge(
+            pg,
+            &MessagingVerificationRequest {
+                tenant_id: &user.tenant_id,
+                organization_id: "0",
+                scene_code: MESSAGING_VERIFICATION_SCENE_LOGIN,
+                channel,
+                target: &target,
+                code,
+            },
+        )
+        .await
+        .map_err(|error| {
+            if error.contains("verification code") {
+                CodeLoginVerificationError::InvalidChallenge
+            } else {
+                CodeLoginVerificationError::Storage(error)
+            }
+        });
+    }
+
+    if fixed_verification_code_allowed(config) {
+        let Some(expected_code) = config.dev_fixed_verify_code.as_deref() else {
+            return Err(CodeLoginVerificationError::NotConfigured);
+        };
+        if code != expected_code {
+            return Err(CodeLoginVerificationError::InvalidChallenge);
+        }
+        let account_key = canonical_identity(account);
+        let consumed = crate::ephemeral::consume_code_login_request(
+            pg,
+            &user.tenant_id,
+            &account_key,
+            &user.username,
+            code,
+        )
+        .await
+        .map_err(CodeLoginVerificationError::Storage)?;
+        if !consumed {
+            return Err(CodeLoginVerificationError::InvalidChallenge);
+        }
+        return Ok(());
+    }
+
+    Err(CodeLoginVerificationError::NotConfigured)
 }

@@ -1,0 +1,70 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Mobile auth surface design tokens (based on the ClawChat mobile auth
+ * design: dark-first, WeChat-style green accents).
+ *
+ * The surface is self-contained: it always renders the design's dark
+ * palette regardless of the host application theme, so the login experience
+ * stays pixel-consistent with the product design in every host.
+ */
+
+.sdkwork-iam-h5-auth-surface {
+  --iam-h5-auth-bg: #0a0a0a;
+  --iam-h5-auth-text-main: #f3f4f6;
+  --iam-h5-auth-text-sub: #9ca3af;
+  --iam-h5-auth-border: #262626;
+  --iam-h5-auth-green: #07c160;
+  --iam-h5-auth-link: #576b95;
+  --iam-h5-auth-btn-disabled-bg: #2c2c2c;
+  --iam-h5-auth-btn-disabled-text: #5b5b5b;
+  --iam-h5-auth-input-placeholder: rgba(156, 163, 175, 0.5);
+  --iam-h5-auth-modal-bg: #1c1c1e;
+  --iam-h5-auth-border-soft: rgba(156, 163, 175, 0.4);
+  --iam-h5-auth-green-shadow: rgba(7, 193, 96, 0.2);
+
+  background-color: var(--iam-h5-auth-bg);
+  color: var(--iam-h5-auth-text-main);
+  color-scheme: dark;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sdkwork-iam-h5-auth-surface input,
+.sdkwork-iam-h5-auth-surface textarea {
+  color: var(--iam-h5-auth-text-main);
+  caret-color: var(--iam-h5-auth-green);
+}
+
+.sdkwork-iam-h5-auth-surface input::placeholder {
+  color: var(--iam-h5-auth-input-placeholder);
+}
+
+/* Hide scrollbars for the mobile-app feel while keeping scrollability. */
+.sdkwork-iam-h5-auth-surface ::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+.sdkwork-iam-h5-auth-surface {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe-area helpers for mobile hosts (notched phones). */
+.sdkwork-iam-h5-auth-surface .sdkwork-iam-h5-auth-pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: content-box;
+}
+
+.sdkwork-iam-h5-auth-surface .sdkwork-iam-h5-auth-pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: content-box;
+}

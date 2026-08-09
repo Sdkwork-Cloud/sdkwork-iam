@@ -52,6 +52,12 @@ const IAM_APP_API_ROUTES: &[HttpRoute] = &[
     ),
     HttpRoute::credential_entry_bootstrap(
         HttpMethod::Post,
+        "/app/v3/api/auth/verification_code_requests",
+        "auth",
+        "verificationCodeRequests.create",
+    ),
+    HttpRoute::credential_entry_bootstrap(
+        HttpMethod::Post,
         "/app/v3/api/auth/password_resets",
         "auth",
         "passwordResets.create",
@@ -313,6 +319,7 @@ pub const IAM_CREDENTIAL_ENTRY_OPERATION_IDS: &[&str] = &[
     "sessions.loginContextSelection.create",
     "sessions.organizationSelection.create",
     "passwordResetRequests.create",
+    "verificationCodeRequests.create",
     "passwordResets.create",
     "registrations.create",
     "authorizationUrls.create",
