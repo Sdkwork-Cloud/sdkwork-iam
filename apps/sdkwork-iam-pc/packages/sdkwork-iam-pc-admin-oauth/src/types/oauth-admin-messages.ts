@@ -86,10 +86,12 @@ export interface SdkworkIamOauthAdminMessages {
     disabled: string;
     enable: string;
     enabled: string;
+    hideSecret: string;
     logo: string;
     noResourcesFound: string;
     notConnected: string;
     resource: string;
+    showSecret: string;
     status: string;
     statusHint: string;
     statuses: {
@@ -163,6 +165,9 @@ export interface SdkworkIamOauthAdminMessages {
     description: string;
     displayNameLabel: string;
     displayNamePlaceholder: string;
+    editButton: string;
+    editDescription: string;
+    editTitle: string;
     emptyLabel: string;
     enabledLabel: string;
     integrationCodeLabel: string;
@@ -679,10 +684,16 @@ export interface SdkworkIamOauthAdminMessages {
     title: string;
   };
   webhookConfigs: {
+    accountLabel: string;
+    accountUnbound: string;
     addButton: string;
     addDescription: string;
     addTrigger: string;
+    deleteConfirm: string;
     description: string;
+    editButton: string;
+    editDescription: string;
+    editTitle: string;
     emptyLabel: string;
     fields: {
       callbackUrl: string;
@@ -699,6 +710,7 @@ export interface SdkworkIamOauthAdminMessages {
       webhookKindPlaceholder: string;
     };
     listLabelTemplate: string;
+    saveButton: string;
     title: string;
     verify: string;
   };

@@ -598,7 +598,7 @@ pub fn apply_oauth_routes(router: Router<BackendIamState>) -> Router<BackendIamS
         )
         .route(
             "/backend/v3/api/iam/oauth/webhook_configs/{webhookConfigId}",
-            patch(update_webhook_config),
+            patch(update_webhook_config).delete(delete_webhook_config),
         )
         .route(
             "/backend/v3/api/iam/oauth/webhook_configs/{webhookConfigId}/verifications",

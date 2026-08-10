@@ -1363,6 +1363,12 @@ oauth_patch_handler!(
 
 oauth_list_handler!(list_webhook_configs, WEBHOOK_CONFIGS);
 oauth_patch_handler!(update_webhook_config, WEBHOOK_CONFIGS, webhook_config_id);
+oauth_delete_handler!(
+    delete_webhook_config,
+    WEBHOOK_CONFIGS,
+    webhook_config_id,
+    "iam_oauth_webhook_config_delete_failed"
+);
 
 oauth_list_handler!(list_operational_resources, OPERATIONAL_RESOURCES);
 oauth_patch_handler!(

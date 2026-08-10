@@ -121,6 +121,7 @@ export interface IamBackendOAuthResourceClient {
   };
   webhookConfigs?: {
     create?: IamSdkMethod;
+    delete?: IamSdkMethod;
     list?: IamSdkMethod;
     update?: IamSdkMethod;
     verifications?: {

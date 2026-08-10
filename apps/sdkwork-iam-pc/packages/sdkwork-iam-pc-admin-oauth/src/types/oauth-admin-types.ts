@@ -52,6 +52,9 @@ export interface SdkworkIamOauthWebhookConfigDraft {
   displayName: string;
   integrationId: string;
   providerCode: string;
+  // Optional binding to the resource account this webhook receives events
+  // for; the scan-login settings surface shows webhooks bound to an account.
+  resourceAccountId?: string;
   webhookCode: string;
   webhookKind: string;
 }
@@ -374,6 +377,11 @@ export interface SdkworkIamOauthAdminController {
   createDiagnosticRun(body: SdkworkIamOauthDiagnosticRunDraft): Promise<unknown>;
   createClaimMapping(body: SdkworkIamOauthClaimMappingDraft): Promise<unknown>;
   createWebhookConfig(body: SdkworkIamOauthWebhookConfigDraft): Promise<unknown>;
+  updateWebhookConfigSetup(
+    webhookConfigId: string,
+    body: Partial<SdkworkIamOauthWebhookConfigDraft>,
+  ): Promise<unknown>;
+  deleteWebhookConfig(webhookConfigId: string): Promise<unknown>;
   createFlowConfig(body: SdkworkIamOauthFlowConfigDraft): Promise<unknown>;
   createSurface(body: SdkworkIamOauthSurfaceDraft): Promise<unknown>;
   createResourceAccount(body: SdkworkIamOauthResourceAccountDraft): Promise<unknown>;

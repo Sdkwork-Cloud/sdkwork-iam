@@ -634,5 +634,88 @@ describe("SDKWork IAM OAuth PC admin controller", () => {
       enabled: true,
       qrDefaultEnabled: true,
     });
+
+    // Disabling QR login must never re-enable a deliberately disabled account.
+    await controller.setResourceAccountQrLogin("iamora-1", false);
+    expect(service.iam.oauth.resourceAccounts.update).toHaveBeenLastCalledWith("iamora-1", {
+      qrDefaultEnabled: false,
+    });
+  });
+
+  it("edits an integration setup and only re-submits changed credentials", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    // Secret untouched -> only profile/callback/enabled fields are patched.
+    await controller.updateIntegrationSetup("iamoi-1", {
+      displayName: "WeChat login",
+      enabled: true,
+      integrationCode: "",
+      providerClientId: "wx-oa-001",
+      providerClientSecret: "",
+      providerCode: "wechat",
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+    });
+    expect(service.iam.oauth.integrations.update).toHaveBeenLastCalledWith("iamoi-1", {
+      displayName: "WeChat login",
+      enabled: true,
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+      providerClientId: "wx-oa-001",
+    });
+
+    // Rotated secret is forwarded for the backend credential cascade.
+    await controller.updateIntegrationSetup("iamoi-1", {
+      displayName: "WeChat login",
+      enabled: true,
+      integrationCode: "",
+      providerClientId: "wx-oa-001",
+      providerClientSecret: "rotated-secret",
+      providerCode: "wechat",
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+    });
+    expect(service.iam.oauth.integrations.update).toHaveBeenLastCalledWith("iamoi-1", {
+      displayName: "WeChat login",
+      enabled: true,
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+      providerClientId: "wx-oa-001",
+      providerClientSecret: "rotated-secret",
+    });
+  });
+
+  it("deletes and edits webhook configs through the backend service", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    await controller.deleteWebhookConfig("iamowh-1");
+    expect(service.iam.oauth.webhookConfigs.delete).toHaveBeenCalledWith("iamowh-1");
+
+    await controller.updateWebhookConfigSetup("iamowh-1", {
+      callbackUrl: "https://app.example.com/wechat/notify-v2",
+      resourceAccountId: "iamora-1",
+    });
+    expect(service.iam.oauth.webhookConfigs.update).toHaveBeenCalledWith("iamowh-1", {
+      callbackUrl: "https://app.example.com/wechat/notify-v2",
+      resourceAccountId: "iamora-1",
+    });
+
+    // Creating a webhook forwards the optional account binding.
+    await controller.createWebhookConfig({
+      callbackUrl: "https://app.example.com/wechat/notify",
+      displayName: "Message push",
+      integrationId: "iamoi-1",
+      providerCode: "wechat",
+      resourceAccountId: "iamora-1",
+      webhookCode: "oa-notify-iamora-1",
+      webhookKind: "message_push",
+    });
+    expect(service.iam.oauth.webhookConfigs.create).toHaveBeenCalledWith({
+      callbackUrl: "https://app.example.com/wechat/notify",
+      displayName: "Message push",
+      integrationId: "iamoi-1",
+      providerCode: "wechat",
+      resourceAccountId: "iamora-1",
+      webhookCode: "oa-notify-iamora-1",
+      webhookKind: "message_push",
+    });
   });
 });

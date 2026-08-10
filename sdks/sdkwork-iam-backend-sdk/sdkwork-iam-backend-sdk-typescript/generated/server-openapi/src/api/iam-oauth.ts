@@ -53,6 +53,11 @@ export class IamOauthIamOauthWebhookConfigsApi {
     return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/webhook_configs`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
   }
 
+/** Iam oauth webhook Configs delete. */
+  async delete(webhookConfigId: string, requestOptions?: ApiRequestOptions): Promise<void> {
+    return this.client.request<void>(backendApiPath(`/iam/oauth/webhook_configs/${serializePathParameter(webhookConfigId, { name: 'webhookConfigId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any });
+  }
+
 /** Iam oauth webhook Configs update. */
   async update(webhookConfigId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
     return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/webhook_configs/${serializePathParameter(webhookConfigId, { name: 'webhookConfigId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });

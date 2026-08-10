@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Button,
   Label,
@@ -20,6 +20,12 @@ import {
   canSubmitScopeProfile,
   canSubmitSurface,
   canSubmitWebhookConfig,
+  readDisplayName,
+  readIntegrationId,
+  readProviderCode,
+  readResourceAccountId,
+  readResourceAccountKind,
+  readWebhookConfigId,
   templateMessage,
 } from "../utils/oauth-admin-utils";
 import { useSdkworkIamOauthAdminMessages } from "../i18n";
@@ -30,7 +36,7 @@ import {
   SurfaceResourceList,
   WebhookConfigResourceList,
 } from "./OauthAdminResourceList";
-import { OauthAdminField, OauthResourceDrawer } from "./oauth-admin-ui";
+import { OauthAdminField, OauthAdminSelectField, OauthResourceDrawer } from "./oauth-admin-ui";
 import type { SdkworkIamOauthAdminSectionProps } from "../types/oauth-admin-types";
 
 const EMPTY_SCOPE_PROFILE_DRAFT = (): SdkworkIamOauthScopeProfileDraft => ({
@@ -221,11 +227,71 @@ export function OauthWebhookConfigSection({
   disabled,
   listPageInfo,
   onChanged,
+  resourceAccounts = [],
   status,
   webhookConfigs,
-}: SdkworkIamOauthAdminSectionProps & { webhookConfigs: unknown[] }) {
+}: SdkworkIamOauthAdminSectionProps & {
+  resourceAccounts?: unknown[];
+  webhookConfigs: unknown[];
+}) {
   const messages = useSdkworkIamOauthAdminMessages();
   const [draft, setDraft] = useState<SdkworkIamOauthWebhookConfigDraft>(EMPTY_WEBHOOK_DRAFT);
+  const [editingWebhook, setEditingWebhook] = useState<unknown>();
+  const [editDraft, setEditDraft] = useState<SdkworkIamOauthWebhookConfigDraft>(EMPTY_WEBHOOK_DRAFT);
+  // Official accounts the operator can bind a message-push webhook to.
+  const officialAccounts = useMemo(
+    () => resourceAccounts.filter((item) => readResourceAccountKind(item) === "official_account"),
+    [resourceAccounts],
+  );
+
+  const openEdit = (webhookConfigId: string) => {
+    const row = webhookConfigs.find((item) => readWebhookConfigId(item) === webhookConfigId);
+    if (!row) {
+      return;
+    }
+    const record = row as Record<string, unknown>;
+    setEditingWebhook(row);
+    setEditDraft({
+      callbackUrl: String(record.callbackUrl ?? record.callback_url ?? ""),
+      displayName: readDisplayName(row),
+      integrationId: readIntegrationId(row),
+      providerCode: readProviderCode(row),
+      resourceAccountId: String(record.resourceAccountId ?? record.resource_account_id ?? ""),
+      webhookCode: String(record.webhookCode ?? record.webhook_code ?? ""),
+      webhookKind: String(record.webhookKind ?? record.webhook_kind ?? "provider_callback"),
+    });
+  };
+
+  const saveEdit = () => {
+    if (!editingWebhook) {
+      return;
+    }
+    void controller.updateWebhookConfigSetup(readWebhookConfigId(editingWebhook), editDraft)
+      .then(onChanged)
+      .catch(onChanged)
+      .then(() => {
+        if (controller.getState().status !== "error") {
+          setEditingWebhook(undefined);
+        }
+      });
+  };
+
+  const accountOptions = [
+    { label: messages.webhookConfigs.accountUnbound, value: "" },
+    ...officialAccounts.map((account) => ({
+      label: readDisplayName(account) || readResourceAccountId(account),
+      value: readResourceAccountId(account),
+    })),
+  ];
+  const accountSelect = (value: string, onChange: (value: string) => void) => (
+    <OauthAdminSelectField
+      label={messages.webhookConfigs.accountLabel}
+      onChange={onChange}
+      options={accountOptions}
+      value={value}
+    />
+  );
+
   return (
     <SettingsSection description={messages.webhookConfigs.description} title={messages.webhookConfigs.title}>
       <div className="space-y-3">
@@ -238,6 +304,8 @@ export function OauthWebhookConfigSection({
           disabled={disabled}
           emptyLabel={messages.webhookConfigs.emptyLabel}
           onChanged={onChanged}
+          onDelete={(id) => controller.deleteWebhookConfig(id)}
+          onEdit={openEdit}
           webhookConfigs={webhookConfigs}
         />
       </div>
@@ -288,6 +356,34 @@ export function OauthWebhookConfigSection({
           placeholder={messages.webhookConfigs.fields.displayNamePlaceholder}
           value={draft.displayName}
         />
+        {accountSelect(draft.resourceAccountId ?? "", (resourceAccountId) =>
+          setDraft((current) => ({ ...current, resourceAccountId })))}
+      </OauthResourceDrawer>
+
+      <OauthResourceDrawer
+        confirmDisabled={disabled || !editDraft.callbackUrl.trim()}
+        confirmLabel={messages.webhookConfigs.saveButton}
+        confirmLoading={status === "saving"}
+        description={messages.webhookConfigs.editDescription}
+        onConfirm={saveEdit}
+        onOpenChange={(open) => { if (!open) setEditingWebhook(undefined); }}
+        open={Boolean(editingWebhook)}
+        triggerLabel={messages.webhookConfigs.editTitle}
+      >
+        <OauthAdminField
+          label={messages.webhookConfigs.fields.callbackUrl}
+          onChange={(callbackUrl) => setEditDraft((current) => ({ ...current, callbackUrl }))}
+          placeholder={messages.webhookConfigs.fields.callbackUrlPlaceholder}
+          value={editDraft.callbackUrl}
+        />
+        <OauthAdminField
+          label={messages.webhookConfigs.fields.displayName}
+          onChange={(displayName) => setEditDraft((current) => ({ ...current, displayName }))}
+          placeholder={messages.webhookConfigs.fields.displayNamePlaceholder}
+          value={editDraft.displayName}
+        />
+        {accountSelect(editDraft.resourceAccountId ?? "", (resourceAccountId) =>
+          setEditDraft((current) => ({ ...current, resourceAccountId })))}
       </OauthResourceDrawer>
     </SettingsSection>
   );

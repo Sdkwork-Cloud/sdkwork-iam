@@ -124,6 +124,7 @@ export function OauthAllAdminSections(
         disabled={disabled}
         listPageInfo={listPageInfo}
         onChanged={sync}
+        resourceAccounts={data.resourceAccounts}
         status={status}
         webhookConfigs={data.webhookConfigs}
       />

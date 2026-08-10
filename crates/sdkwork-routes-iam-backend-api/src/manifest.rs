@@ -899,6 +899,12 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
         "iam.oauth.webhookConfigs.update",
     ),
     HttpRoute::dual_token(
+        HttpMethod::Delete,
+        "/backend/v3/api/iam/oauth/webhook_configs/{webhookConfigId}",
+        "iam.oauth",
+        "iam.oauth.webhookConfigs.delete",
+    ),
+    HttpRoute::dual_token(
         HttpMethod::Post,
         "/backend/v3/api/iam/oauth/webhook_configs/{webhookConfigId}/verifications",
         "iam.oauth",

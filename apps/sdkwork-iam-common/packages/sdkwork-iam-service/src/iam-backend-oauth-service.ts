@@ -127,6 +127,7 @@ export type IamBackendOauthService = {
     };
     webhookConfigs: {
       create(...args: unknown[]): Promise<unknown>;
+      delete(...args: unknown[]): Promise<unknown>;
       list(params?: Record<string, unknown>): Promise<unknown>;
       update(...args: unknown[]): Promise<unknown>;
       verifications: {
@@ -260,6 +261,7 @@ export function createIamBackendOauthService(
       },
       webhookConfigs: {
         create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.webhookConfigs, "create", "iam.oauth.webhookConfigs.create", ...args),
+        delete: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.webhookConfigs, "delete", "iam.oauth.webhookConfigs.delete", ...args),
         list: (params?: Record<string, unknown>) => callBackendOauth(backendOauth, (oauth) => oauth?.webhookConfigs, "list", "iam.oauth.webhookConfigs.list", iamOauthListQuery(params)),
         update: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.webhookConfigs, "update", "iam.oauth.webhookConfigs.update", ...args),
         verifications: {

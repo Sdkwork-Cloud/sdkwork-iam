@@ -32,6 +32,7 @@ export function OauthInboundAdminPage({ controller }: SdkworkIamOauthAdminPagePr
     "webhookConfigs",
     "flowConfigs",
     "surfaces",
+    "resourceAccounts",
   ]);
   return (
     <div className="flex h-full min-h-0 flex-col gap-6 overflow-y-auto">
@@ -89,6 +90,7 @@ export function OauthInboundAdminPage({ controller }: SdkworkIamOauthAdminPagePr
         disabled={disabled}
         listPageInfo={listPageInfo}
         onChanged={sync}
+        resourceAccounts={data.resourceAccounts}
         status={status}
         webhookConfigs={data.webhookConfigs}
       />

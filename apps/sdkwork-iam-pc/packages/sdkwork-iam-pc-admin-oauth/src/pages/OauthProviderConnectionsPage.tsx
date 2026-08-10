@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AtSign,
   GitBranch,
   Globe,
   MessageCircle,
   Music2,
+  Pencil,
   Plus,
   ShieldCheck,
   ThumbsUp,
@@ -107,6 +108,8 @@ export function SdkworkIamOauthProviderConnectionsPage({
   const [draft, setDraft] = useState<SdkworkIamOauthIntegrationDraft>(EMPTY_INTEGRATION_DRAFT);
   const [selectedProvider, setSelectedProvider] = useState<string>();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState<SdkworkIamOauthProviderConnectionRow>();
+  const [editDraft, setEditDraft] = useState<SdkworkIamOauthIntegrationDraft>(EMPTY_INTEGRATION_DRAFT);
   const [deleteTarget, setDeleteTarget] = useState<SdkworkIamOauthProviderConnectionRow>();
   const platforms = useMemo(
     () => buildProviderPlatforms(data.providerCatalog, data.integrations, locale),
@@ -146,6 +149,44 @@ export function SdkworkIamOauthProviderConnectionsPage({
 
   const toggleEnabled = (integrationId: string, enabled: boolean) => {
     void controller.updateIntegration(integrationId, enabled).then(sync).catch(sync);
+  };
+
+  // Opening the edit drawer prefills the draft from the echoed row so the
+  // operator sees the complete saved record (credentials included).
+  useEffect(() => {
+    if (!editingRow) {
+      return;
+    }
+    setEditDraft({
+      ...EMPTY_INTEGRATION_DRAFT(),
+      displayName: editingRow.displayName ?? "",
+      enabled: editingRow.enabled ?? true,
+      providerClientId: editingRow.providerClientId ?? "",
+      providerClientSecret: editingRow.providerClientSecret ?? "",
+      providerCode: editingRow.providerCode,
+      redirectUri: editingRow.redirectUri ?? "",
+    });
+  }, [editingRow]);
+
+  const saveEdit = () => {
+    if (!editingRow?.integrationId || !editDraft) {
+      return;
+    }
+    const secretChanged = (editDraft.providerClientSecret ?? "")
+      !== (editingRow.providerClientSecret ?? "");
+    void controller.updateIntegrationSetup(editingRow.integrationId, {
+      ...editDraft,
+      // An untouched echoed secret is never re-submitted (no re-rotation);
+      // the backend keeps the stored value.
+      providerClientSecret: secretChanged ? editDraft.providerClientSecret : "",
+    })
+      .then(sync)
+      .catch(sync)
+      .then(() => {
+        if (controller.getState().status !== "error") {
+          setEditingRow(undefined);
+        }
+      });
   };
 
   const columns = useMemo<DataTableColumn<SdkworkIamOauthProviderPlatform>[]>(() => [
@@ -214,6 +255,15 @@ export function SdkworkIamOauthProviderConnectionsPage({
                 onCheckedChange={(checked) => toggleEnabled(activeIntegration.integrationId, checked)}
                 title={isEnabled ? quick.disable : quick.enable}
               />
+              <IconButton
+                aria-label={messages.integrations.editButton}
+                disabled={disabled}
+                onClick={() => setEditingRow(activeIntegration)}
+                title={messages.integrations.editButton}
+                variant="ghost"
+              >
+                <Pencil aria-hidden="true" className="h-4 w-4" />
+              </IconButton>
               <IconButton
                 aria-label={messages.common.delete}
                 disabled={disabled}
@@ -324,6 +374,61 @@ export function SdkworkIamOauthProviderConnectionsPage({
               onChange={(providerTenantId) => setDraft((current) => ({ ...current, providerTenantId }))}
               value={draft.providerTenantId ?? ""}
             />
+          </>
+        ) : null}
+      </OauthResourceDrawer>
+
+      <OauthResourceDrawer
+        confirmDisabled={disabled || !editDraft.displayName.trim()}
+        confirmLabel={messages.integrations.saveButton}
+        confirmLoading={status === "saving"}
+        description={messages.integrations.editDescription}
+        onConfirm={saveEdit}
+        onOpenChange={(open) => { if (!open) setEditingRow(undefined); }}
+        open={Boolean(editingRow)}
+        triggerLabel={messages.integrations.editTitle}
+      >
+        {editingRow ? (
+          <>
+            <div className="space-y-1.5">
+              <Label>{messages.integrations.providerCodeLabel}</Label>
+              <div className="rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-[var(--sdk-color-surface-muted)] px-3 py-2 text-sm">
+                {editingRow.providerCode}
+              </div>
+            </div>
+            <OauthAdminField
+              label={messages.integrations.displayNameLabel}
+              onChange={(displayName) => setEditDraft((current) => ({ ...current, displayName }))}
+              placeholder={messages.integrations.displayNamePlaceholder}
+              value={editDraft.displayName}
+            />
+            <OauthAdminField
+              label={messages.integrations.clientIdLabel}
+              onChange={(providerClientId) => setEditDraft((current) => ({ ...current, providerClientId }))}
+              value={editDraft.providerClientId ?? ""}
+            />
+            <OauthAdminField
+              label={messages.integrations.clientSecretLabel}
+              onChange={(providerClientSecret) => setEditDraft((current) => ({ ...current, providerClientSecret }))}
+              type="password"
+              value={editDraft.providerClientSecret ?? ""}
+            />
+            <OauthAdminField
+              label={messages.integrations.redirectUriLabel}
+              onChange={(redirectUri) => setEditDraft((current) => ({ ...current, redirectUri }))}
+              placeholder={messages.integrations.redirectUriPlaceholder}
+              type="url"
+              value={editDraft.redirectUri ?? ""}
+            />
+            <label className="flex items-center gap-2 text-sm" htmlFor="oauth-integration-enabled-edit">
+              <input
+                checked={editDraft.enabled ?? true}
+                id="oauth-integration-enabled-edit"
+                onChange={(event) => setEditDraft((current) => ({ ...current, enabled: event.target.checked }))}
+                type="checkbox"
+              />
+              {quick.enable}
+            </label>
           </>
         ) : null}
       </OauthResourceDrawer>

@@ -37,6 +37,7 @@ export function createOauthServiceMock() {
           list: vi.fn().mockResolvedValue({ items: [] }),
           create: vi.fn(),
           update: vi.fn(),
+          delete: vi.fn(),
           verifications: { create: vi.fn() },
         },
         flowConfigs: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn() },

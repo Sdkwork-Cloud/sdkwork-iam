@@ -286,17 +286,31 @@ export function WebhookConfigResourceList({ controller,
   disabled,
   emptyLabel,
   onChanged,
+  onDelete,
+  onEdit,
   webhookConfigs,
   listPageInfo,
-}: ListProps & { webhookConfigs: unknown[] }) {
+}: ListProps & {
+  onDelete?: (webhookConfigId: string) => Promise<unknown>;
+  onEdit?: (webhookConfigId: string) => void;
+  webhookConfigs: unknown[];
+}) {
   const messages = useSdkworkIamOauthAdminMessages();
+  const actions = [
+    { label: messages.webhookConfigs.verify, onAction: (id: string) => controller.runWebhookVerification(id) },
+  ];
+  if (onEdit) {
+    actions.push({ label: messages.webhookConfigs.editButton, onAction: async (id: string) => { onEdit(id); } });
+  }
   return (
     <ManagedOAuthResourceList
-      actions={[{ label: messages.webhookConfigs.verify, onAction: (id) => controller.runWebhookVerification(id) }]}
+      actions={actions}
+      confirmDeleteMessage={messages.webhookConfigs.deleteConfirm}
       disabled={disabled}
       emptyLabel={emptyLabel}
       items={webhookConfigs}
       onChanged={onChanged}
+      onDelete={onDelete}
       {...managedListPagination({ controller, disabled, emptyLabel, listPageInfo, onChanged }, "webhookConfigs")}
       readId={readWebhookConfigId}
       toggleEnabled={(id, enabled) => controller.updateWebhookConfig(id, enabled)}

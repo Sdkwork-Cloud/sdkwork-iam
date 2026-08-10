@@ -19,6 +19,8 @@ function createStatefulOauthBackend() {
   const accounts = new Map<string, Record<string, unknown>>();
   const webhooks: Array<Record<string, unknown>> = [];
   const secretsByIntegration = new Map<string, string>();
+  const clientIdByIntegration = new Map<string, string>();
+  const redirectByIntegration = new Map<string, string>();
   let integrationSeq = 1;
   let accountSeq = 1;
   let webhookSeq = 1;
@@ -58,13 +60,27 @@ function createStatefulOauthBackend() {
   };
 
   return {
+    clientIdByIntegration,
+    redirectByIntegration,
     secretsByIntegration,
     webhooks,
     service: {
       iam: {
         oauth: {
           integrations: {
-            list: async () => ({ items: [...integrations.values()].map((row) => ({ ...row })) }),
+            list: async () => ({
+              items: [...integrations.values()].map((row) => {
+                const integrationId = String(row.id);
+                return {
+                  ...row,
+                  // The read enrichment echoes the linked client credentials
+                  // and the web surface callback back on integration rows.
+                  providerClientId: row.providerClientId ?? clientIdByIntegration.get(integrationId),
+                  providerClientSecret: secretsByIntegration.get(integrationId),
+                  redirectUri: redirectByIntegration.get(integrationId),
+                };
+              }),
+            }),
             create: async (body: Record<string, unknown>) => {
               const row = {
                 id: `iamoi-${integrationSeq++}`,
@@ -76,8 +92,14 @@ function createStatefulOauthBackend() {
                 ...(body.redirectUri ? { redirectUri: body.redirectUri } : {}),
               };
               integrations.set(String(row.id), row);
+              if (typeof body.providerClientId === "string") {
+                clientIdByIntegration.set(String(row.id), body.providerClientId);
+              }
               if (typeof body.providerClientSecret === "string") {
                 secretsByIntegration.set(String(row.id), body.providerClientSecret);
+              }
+              if (typeof body.redirectUri === "string") {
+                redirectByIntegration.set(String(row.id), body.redirectUri);
               }
               return { ...row };
             },
@@ -85,6 +107,20 @@ function createStatefulOauthBackend() {
               const row = integrations.get(id);
               if (row) {
                 Object.assign(row, patch);
+              }
+              // Credential cascades mirror the backend: the client id and the
+              // encoded secret row rotate together with the integration.
+              if (patch.providerClientId !== undefined) {
+                clientIdByIntegration.set(id, String(patch.providerClientId));
+                if (row) {
+                  row.providerClientId = patch.providerClientId;
+                }
+              }
+              if (patch.providerClientSecret !== undefined) {
+                secretsByIntegration.set(id, String(patch.providerClientSecret));
+              }
+              if (patch.redirectUri !== undefined) {
+                redirectByIntegration.set(id, String(patch.redirectUri));
               }
               return { ...(row ?? { id }) };
             },
@@ -332,5 +368,68 @@ describe("SDKWork IAM OAuth account lifecycle (create -> list -> edit -> save)",
     await controller.updateAccountCredentials("iamora-1", { appSecret: "mini-secret-2" });
     await controller.load(["resourceAccounts"]);
     expect(controller.getState().resourceAccounts[0].providerClientSecret).toBe("mini-secret-2");
+  });
+
+  it("round-trips a provider connection record through create -> list -> edit", async () => {
+    const backend = createStatefulOauthBackend();
+    const controller = createSdkworkIamOauthAdminController(backend.service as never);
+
+    // 1. Create a third-party provider connection with full credentials.
+    await controller.createIntegration({
+      appId: "",
+      displayName: "GitHub login",
+      enabled: true,
+      integrationCode: "login-github",
+      providerCatalogId: "catalog:0:github",
+      providerClientId: "github-client-1",
+      providerClientSecret: "github-secret-1",
+      providerCode: "github",
+      providerTenantId: "",
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+      surfaceKind: "web",
+    });
+
+    // 2. The integration list row echoes the complete record — the edit
+    //    drawer prefills from exactly this row.
+    await controller.load(["integrations"]);
+    const row = controller.getState().integrations[0];
+    expect(row).toMatchObject({
+      displayName: "GitHub login",
+      enabled: true,
+      providerClientId: "github-client-1",
+      providerClientSecret: "github-secret-1",
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+    });
+
+    // 3. Saving the profile without touching the secret never re-rotates it.
+    await controller.updateIntegrationSetup("iamoi-1", {
+      displayName: "GitHub login (renamed)",
+      enabled: true,
+      integrationCode: "",
+      providerClientId: "github-client-1",
+      providerClientSecret: "",
+      providerCode: "github",
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+    });
+    expect(backend.secretsByIntegration.get("iamoi-1")).toBe("github-secret-1");
+
+    // 4. Rotating the secret and the client id persists, and the next read
+    //    echoes the new values.
+    await controller.updateIntegrationSetup("iamoi-1", {
+      displayName: "GitHub login (renamed)",
+      enabled: true,
+      integrationCode: "",
+      providerClientId: "github-client-2",
+      providerClientSecret: "github-secret-2",
+      providerCode: "github",
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+    });
+    expect(backend.clientIdByIntegration.get("iamoi-1")).toBe("github-client-2");
+    expect(backend.secretsByIntegration.get("iamoi-1")).toBe("github-secret-2");
+    await controller.load(["integrations"]);
+    expect(controller.getState().integrations[0]).toMatchObject({
+      providerClientId: "github-client-2",
+      providerClientSecret: "github-secret-2",
+    });
   });
 });

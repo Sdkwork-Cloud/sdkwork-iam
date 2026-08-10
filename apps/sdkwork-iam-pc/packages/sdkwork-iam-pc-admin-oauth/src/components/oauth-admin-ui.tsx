@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import {
   Button,
   Drawer,
@@ -35,17 +36,34 @@ export function OauthAdminField({
   type?: "password" | "text" | "url";
   value: string;
 }) {
+  const messages = useSdkworkIamOauthAdminMessages();
+  const [revealed, setRevealed] = useState(false);
+  const isPassword = type === "password";
   return (
     <label className="block space-y-1.5 text-sm">
       <span className="font-medium text-[var(--sdk-color-text-primary)]">{label}</span>
-      <Input
-        autoComplete={type === "password" ? "new-password" : undefined}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        type={type}
-        value={value}
-      />
+      <div className="relative">
+        <Input
+          autoComplete={isPassword ? "new-password" : undefined}
+          className={isPassword ? "pr-10" : undefined}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          type={isPassword && revealed ? "text" : type}
+          value={value}
+        />
+        {isPassword ? (
+          <button
+            aria-label={revealed ? messages.common.hideSecret : messages.common.showSecret}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--sdk-color-text-muted)] transition-colors hover:text-[var(--sdk-color-text-primary)]"
+            onClick={() => setRevealed((current) => !current)}
+            title={revealed ? messages.common.hideSecret : messages.common.showSecret}
+            type="button"
+          >
+            {revealed ? <EyeOff aria-hidden="true" className="h-4 w-4" /> : <Eye aria-hidden="true" className="h-4 w-4" />}
+          </button>
+        ) : null}
+      </div>
     </label>
   );
 }

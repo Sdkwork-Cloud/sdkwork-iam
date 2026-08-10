@@ -602,6 +602,33 @@ export function createSdkworkIamOauthAdminController(
         true,
       );
     },
+    updateIntegrationSetup(integrationId, body) {
+      return wrapCreate(
+        () => {
+          const patch: Record<string, unknown> = {
+            displayName: body.displayName.trim(),
+            enabled: body.enabled ?? true,
+          };
+          const redirectUri = body.redirectUri?.trim();
+          if (redirectUri) {
+            patch.redirectUri = redirectUri;
+          }
+          // Credentials are only re-submitted when the operator changed them;
+          // the backend cascades them to the linked client/secret rows.
+          const clientId = body.providerClientId?.trim();
+          if (clientId) {
+            patch.providerClientId = clientId;
+          }
+          const clientSecret = body.providerClientSecret?.trim();
+          if (clientSecret) {
+            patch.providerClientSecret = clientSecret;
+          }
+          return service.iam.oauth.integrations.update(integrationId.trim(), patch);
+        },
+        "Failed to update OAuth integration",
+        true,
+      );
+    },
     createClient(body) {
       return wrapCreate(
         () => {
@@ -724,8 +751,39 @@ export function createSdkworkIamOauthAdminController(
           providerCode: body.providerCode.trim(),
           webhookCode: body.webhookCode.trim(),
           webhookKind: body.webhookKind.trim(),
+          ...(body.resourceAccountId?.trim()
+            ? { resourceAccountId: body.resourceAccountId.trim() }
+            : {}),
         }),
         "Failed to create OAuth webhook config",
+        true,
+      );
+    },
+    updateWebhookConfigSetup(webhookConfigId, body) {
+      return wrapCreate(
+        () => {
+          const patch: Record<string, unknown> = {};
+          const callbackUrl = body.callbackUrl?.trim();
+          if (callbackUrl) {
+            patch.callbackUrl = callbackUrl;
+          }
+          const displayName = body.displayName?.trim();
+          if (displayName) {
+            patch.displayName = displayName;
+          }
+          if (body.resourceAccountId !== undefined) {
+            patch.resourceAccountId = body.resourceAccountId.trim();
+          }
+          return service.iam.oauth.webhookConfigs.update(webhookConfigId.trim(), patch);
+        },
+        "Failed to update OAuth webhook config",
+        true,
+      );
+    },
+    deleteWebhookConfig(webhookConfigId) {
+      return wrapCreate(
+        () => service.iam.oauth.webhookConfigs.delete(webhookConfigId.trim()),
+        "Failed to delete OAuth webhook config",
         true,
       );
     },

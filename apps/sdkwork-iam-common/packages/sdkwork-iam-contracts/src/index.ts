@@ -865,6 +865,7 @@ export const SDKWORK_IAM_API_ROUTES = {
       },
       webhookConfigs: {
         create: operation("POST", `${backend}/iam/oauth/webhook_configs`, "iam", "iam.oauth.webhookConfigs.create", "dualToken"),
+        delete: operation("DELETE", `${backend}/iam/oauth/webhook_configs/{webhookConfigId}`, "iam", "iam.oauth.webhookConfigs.delete", "dualToken"),
         list: operation("GET", `${backend}/iam/oauth/webhook_configs`, "iam", "iam.oauth.webhookConfigs.list", "dualToken"),
         update: operation("PATCH", `${backend}/iam/oauth/webhook_configs/{webhookConfigId}`, "iam", "iam.oauth.webhookConfigs.update", "dualToken"),
         verifications: {
@@ -1136,6 +1137,7 @@ export const SDKWORK_IAM_CAPABILITIES = [
       "iam.oauth.tenantBindings.list",
       "iam.oauth.tenantBindings.update",
       "iam.oauth.webhookConfigs.create",
+      "iam.oauth.webhookConfigs.delete",
       "iam.oauth.webhookConfigs.list",
       "iam.oauth.webhookConfigs.update",
       "iam.oauth.webhookConfigs.verifications.create",
