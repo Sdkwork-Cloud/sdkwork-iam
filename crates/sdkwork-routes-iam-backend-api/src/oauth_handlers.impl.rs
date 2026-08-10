@@ -297,10 +297,12 @@ async fn enrich_resource_account_client_secrets(
     Ok(())
 }
 
-/// Enriches integration rows with the provider client id of their active OAuth
-/// client. The integration table has no `provider_client_id` column; the id
-/// lives on the linked client row, and the quick-setup controller matches an
-/// existing integration by AppID to reuse it instead of duplicating it.
+/// Enriches integration rows with the provider client id and the decrypted
+/// client secret of their active OAuth client. The integration table has no
+/// `provider_client_id`/secret columns — both live on the linked client and
+/// secret rows — so the quick-setup controller can match an existing
+/// integration by AppID (reuse instead of duplicate) and the edit drawer can
+/// show the complete saved record.
 async fn enrich_integration_client_ids(
     pg: &PgPool,
     tenant_id: &str,
@@ -314,10 +316,14 @@ async fn enrich_integration_client_ids(
         return Ok(());
     }
     let rows = sqlx::query(
-        "SELECT integration_id, provider_client_id \
-         FROM iam_oauth_client \
-         WHERE tenant_id = $1 AND integration_id = ANY($2) AND status = 'active' \
-         ORDER BY integration_id, CASE WHEN enabled = 1 THEN 0 ELSE 1 END",
+        "SELECT c.integration_id, c.provider_client_id, s.secret_ref \
+         FROM iam_oauth_client c \
+         LEFT JOIN iam_oauth_secret s \
+           ON s.tenant_id = c.tenant_id AND s.secret_owner_kind = 'oauth_client' \
+          AND s.secret_owner_id = c.id AND s.secret_kind = 'client_secret' \
+          AND s.status = 'active' \
+         WHERE c.tenant_id = $1 AND c.integration_id = ANY($2) AND c.status = 'active' \
+         ORDER BY c.integration_id, CASE WHEN c.enabled = 1 THEN 0 ELSE 1 END, s.active_from DESC",
     )
     .bind(tenant_id)
     .bind(&integration_ids)
@@ -326,21 +332,39 @@ async fn enrich_integration_client_ids(
     .map_err(|error| format!("load oauth integration client ids failed: {error}"))?;
 
     let mut client_id_by_integration: HashMap<String, String> = HashMap::new();
+    let mut secret_by_integration: HashMap<String, String> = HashMap::new();
     for row in rows {
         let integration_id: String = row.get(0);
         let provider_client_id: String = row.get(1);
+        let secret_ref: Option<String> = row.get(2);
         client_id_by_integration
-            .entry(integration_id)
+            .entry(integration_id.clone())
             .or_insert(provider_client_id);
+        if let Some(secret_ref) = secret_ref {
+            if secret_by_integration.contains_key(&integration_id) {
+                continue;
+            }
+            if let Ok(decoded) = sdkwork_iam_web_adapter::decode_signing_secret_ref(&secret_ref) {
+                if let Ok(secret) = String::from_utf8(decoded) {
+                    if !secret.trim().is_empty() {
+                        secret_by_integration.insert(integration_id, secret);
+                    }
+                }
+            }
+        }
     }
     for item in items {
         let Some(integration_id) = item.get("id").and_then(Value::as_str) else {
             continue;
         };
-        if let (Some(client_id), Value::Object(map)) =
-            (client_id_by_integration.get(integration_id), item)
-        {
+        let Value::Object(map) = item else {
+            continue;
+        };
+        if let Some(client_id) = client_id_by_integration.get(integration_id) {
             map.insert("providerClientId".to_owned(), json!(client_id));
+        }
+        if let Some(secret) = secret_by_integration.get(integration_id) {
+            map.insert("providerClientSecret".to_owned(), json!(secret));
         }
     }
     Ok(())
@@ -392,6 +416,20 @@ async fn tenant_patch(
     // exist" and surfaced as a masked 500).
     let cascade_redirect_uri = if spec.table == "iam_oauth_integration" {
         read_string_field(body, &["redirectUri", "redirect_uri"])
+    } else {
+        None
+    };
+    // Provider credentials also live on the linked client/secret rows, not on
+    // the integration row. Editing an integration's AppID/Secret cascades the
+    // change to `iam_oauth_client.provider_client_id` and the encoded
+    // `iam_oauth_secret` row so the provider connection stays in sync.
+    let cascade_integration_client_id = if spec.table == "iam_oauth_integration" {
+        read_string_field(body, &["providerClientId", "provider_client_id"])
+    } else {
+        None
+    };
+    let cascade_integration_client_secret = if spec.table == "iam_oauth_integration" {
+        read_string_field(body, &["providerClientSecret", "provider_client_secret"])
     } else {
         None
     };
@@ -531,6 +569,50 @@ async fn tenant_patch(
                         .bind(&id)
                         .execute(&mut **tx)
                         .await?;
+                    }
+                    if let Some(new_client_id) = cascade_integration_client_id {
+                        sqlx::query(
+                            "UPDATE iam_oauth_client SET provider_client_id = $1, updated_at = $2 \
+                             WHERE tenant_id = $3 AND integration_id = $4 AND status = 'active'",
+                        )
+                        .bind(&new_client_id)
+                        .bind(&now)
+                        .bind(&tenant_id)
+                        .bind(&id)
+                        .execute(&mut **tx)
+                        .await?;
+                    }
+                    if let Some(secret_value) = cascade_integration_client_secret {
+                        let client_id = sqlx::query(
+                            "SELECT id FROM iam_oauth_client \
+                             WHERE tenant_id = $1 AND integration_id = $2 AND status = 'active' \
+                             LIMIT 1",
+                        )
+                        .bind(&tenant_id)
+                        .bind(&id)
+                        .fetch_optional(&mut **tx)
+                        .await?
+                        .map(|row| row.get::<String, _>(0));
+                        if let Some(client_id) = client_id {
+                            let secret_ref =
+                                sdkwork_iam_bootstrap::encode_signing_secret_ref(
+                                    secret_value.as_bytes(),
+                                );
+                            let secret_hash =
+                                sdkwork_iam_bootstrap::hash_secret_ref(&secret_ref);
+                            sqlx::query(
+                                "UPDATE iam_oauth_secret SET secret_ref = $1, secret_hash = $2, updated_at = $3 \
+                                 WHERE tenant_id = $4 AND secret_owner_kind = 'oauth_client' \
+                                   AND secret_owner_id = $5 AND secret_kind = 'client_secret'",
+                            )
+                            .bind(&secret_ref)
+                            .bind(&secret_hash)
+                            .bind(&now)
+                            .bind(&tenant_id)
+                            .bind(&client_id)
+                            .execute(&mut **tx)
+                            .await?;
+                        }
                     }
                     if let Some((integration_id, previous_app_id, authorization_status)) = account_credentials {
                         if let Some(new_app_id) = cascade_provider_account_id {
