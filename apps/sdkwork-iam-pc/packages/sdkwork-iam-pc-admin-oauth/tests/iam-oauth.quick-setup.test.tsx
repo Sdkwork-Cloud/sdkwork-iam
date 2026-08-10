@@ -413,7 +413,12 @@ describe("SDKWork IAM OAuth quick setup pages", () => {
     expect(appIdField).not.toBeDisabled();
     // The saved AppSecret is echoed back and prefilled so the edit drawer
     // shows the complete record.
-    expect(screen.getByDisplayValue("mini-secret-1")).toBeTruthy();
+    const secretInput = screen.getByDisplayValue("mini-secret-1") as HTMLInputElement;
+    expect(secretInput).toBeTruthy();
+    expect(secretInput.type).toBe("password");
+    // The eye toggle reveals the secret in plain text.
+    fireEvent.click(screen.getByTitle("显示明文"));
+    expect((screen.getByDisplayValue("mini-secret-1") as HTMLInputElement).type).toBe("text");
     expect(screen.getByPlaceholderText("留空则保留原密钥")).toBeTruthy();
 
     // Developer config tab: server domains (dynamic rows), login callback and
