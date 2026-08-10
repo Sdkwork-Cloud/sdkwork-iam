@@ -361,6 +361,10 @@ export interface SdkworkIamOauthAdminController {
   ): Promise<unknown>;
   deleteResourceAccount(resourceAccountId: string): Promise<unknown>;
   createIntegration(body: SdkworkIamOauthIntegrationDraft): Promise<unknown>;
+  updateIntegrationSetup(
+    integrationId: string,
+    body: SdkworkIamOauthIntegrationDraft,
+  ): Promise<unknown>;
   createClient(body: SdkworkIamOauthClientDraft): Promise<unknown>;
   createSecret(body: SdkworkIamOauthSecretDraft): Promise<unknown>;
   createScopeProfile(body: SdkworkIamOauthScopeProfileDraft): Promise<unknown>;

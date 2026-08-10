@@ -353,18 +353,47 @@ async fn enrich_integration_client_ids(
             }
         }
     }
+    // The integration row has no callback column either; the redirect URI
+    // lives on the web login surface, so surface it alongside the credentials
+    // for the edit drawer.
+    let surface_rows = sqlx::query(
+        "SELECT integration_id, redirect_uri \
+         FROM iam_oauth_surface \
+         WHERE tenant_id = $1 AND integration_id = ANY($2) AND surface_kind = 'web' \
+           AND status = 'active' AND redirect_uri IS NOT NULL",
+    )
+    .bind(tenant_id)
+    .bind(&integration_ids)
+    .fetch_all(pg)
+    .await
+    .map_err(|error| format!("load oauth integration redirect uris failed: {error}"))?;
+    let mut redirect_by_integration: HashMap<String, String> = HashMap::new();
+    for row in surface_rows {
+        let integration_id: String = row.get(0);
+        let redirect_uri: String = row.get(1);
+        redirect_by_integration
+            .entry(integration_id)
+            .or_insert(redirect_uri);
+    }
     for item in items {
-        let Some(integration_id) = item.get("id").and_then(Value::as_str) else {
+        let Some(integration_id) = item
+            .get("id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+        else {
             continue;
         };
         let Value::Object(map) = item else {
             continue;
         };
-        if let Some(client_id) = client_id_by_integration.get(integration_id) {
+        if let Some(client_id) = client_id_by_integration.get(&integration_id) {
             map.insert("providerClientId".to_owned(), json!(client_id));
         }
-        if let Some(secret) = secret_by_integration.get(integration_id) {
+        if let Some(secret) = secret_by_integration.get(&integration_id) {
             map.insert("providerClientSecret".to_owned(), json!(secret));
+        }
+        if let Some(redirect_uri) = redirect_by_integration.get(&integration_id) {
+            map.insert("redirectUri".to_owned(), json!(redirect_uri));
         }
     }
     Ok(())

@@ -255,9 +255,17 @@ export function SdkworkIamOauthProviderConnectionsPage({
           if (!selectedProvider) {
             return;
           }
-          void controller.createIntegration(draft).then(sync).catch(sync);
-          setDrawerOpen(false);
-          setSelectedProvider(undefined);
+          void controller.createIntegration(draft)
+            .then(sync)
+            .catch(sync)
+            .then(() => {
+              // Only close after the creation resolved; a failed save keeps
+              // the drawer open with the entered credentials intact.
+              if (controller.getState().status !== "error") {
+                setDrawerOpen(false);
+                setSelectedProvider(undefined);
+              }
+            });
         }}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}

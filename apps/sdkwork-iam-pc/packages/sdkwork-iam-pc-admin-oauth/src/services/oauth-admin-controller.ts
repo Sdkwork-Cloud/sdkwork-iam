@@ -1135,10 +1135,15 @@ export function createSdkworkIamOauthAdminController(
     },
     setResourceAccountQrLogin(resourceAccountId, enabled) {
       return wrapCreate(
-        () => service.iam.oauth.resourceAccounts.update(resourceAccountId.trim(), {
-          enabled: true,
-          qrDefaultEnabled: enabled,
-        }),
+        () => {
+          const patch: Record<string, unknown> = { qrDefaultEnabled: enabled };
+          // Only enabling QR login activates the account; disabling it must
+          // never silently re-enable an account the operator turned off.
+          if (enabled) {
+            patch.enabled = true;
+          }
+          return service.iam.oauth.resourceAccounts.update(resourceAccountId.trim(), patch);
+        },
         "Failed to update official account scan login",
         true,
       );

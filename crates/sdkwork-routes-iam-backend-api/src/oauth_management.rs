@@ -332,7 +332,7 @@ const RESOURCE_AUTHORIZATIONS: TenantResourceSpec = TenantResourceSpec {
 
 const WEBHOOK_CONFIGS: TenantResourceSpec = TenantResourceSpec {
     table: "iam_oauth_webhook_config",
-    list_select: "id, tenant_id, integration_id, resource_account_id, provider_code, webhook_code, display_name, status, enabled, created_at, updated_at",
+    list_select: "id, tenant_id, integration_id, resource_account_id, provider_code, webhook_code, webhook_kind, callback_url, display_name, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_webhook_configs_list_failed",
     create_error: "iam_oauth_webhook_configs_create_failed",
@@ -344,6 +344,8 @@ const WEBHOOK_CONFIGS: TenantResourceSpec = TenantResourceSpec {
         "resource_account_id",
         "provider_code",
         "webhook_code",
+        "webhook_kind",
+        "callback_url",
         "display_name",
         "status",
         "enabled",

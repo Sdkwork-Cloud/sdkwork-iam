@@ -25,6 +25,10 @@ export interface SdkworkIamOauthProviderConnectionRow {
   integrationId: string;
   enabled?: boolean;
   providerCode: string;
+  displayName?: string;
+  providerClientId?: string;
+  providerClientSecret?: string;
+  redirectUri?: string;
 }
 
 export interface SdkworkIamOauthProviderPlatform {
@@ -55,6 +59,12 @@ export function buildProviderPlatforms(
       integrationId: readIntegrationId(integration),
       enabled: readEnabled(integration),
       providerCode,
+      // Credentials and callback are echoed by the read enrichment so the
+      // provider edit drawer can show the complete saved record.
+      displayName: readDisplayName(integration),
+      providerClientId: readProviderClientId(integration),
+      providerClientSecret: readProviderClientSecret(integration),
+      redirectUri: readRedirectUri(integration),
     });
     integrationsByProvider.set(providerCode, rows);
   }
@@ -140,11 +150,14 @@ export function canSubmitIntegration(draft: SdkworkIamOauthIntegrationDraft): bo
 }
 
 export function canSubmitProviderConnection(draft: SdkworkIamOauthIntegrationDraft): boolean {
+  // Mini programs sign in through `jscode2session` and never need an OAuth
+  // callback; the redirect URL stays optional for them (mirrors the backend).
+  const miniProgram = draft.providerCode.trim() === "wechat_mini_program";
   return Boolean(
     canSubmitIntegration(draft)
     && draft.providerClientId?.trim()
     && draft.providerClientSecret?.trim()
-    && draft.redirectUri?.trim(),
+    && (miniProgram || Boolean(draft.redirectUri?.trim())),
   );
 }
 
@@ -414,6 +427,15 @@ export function readAccountOriginalId(item: unknown): string {
 export function readProviderClientSecret(item: unknown): string {
   const record = toRecord(item);
   return readString(record.providerClientSecret ?? record.provider_client_secret);
+}
+
+/**
+ * Reads the callback URL the backend surfaces on integration rows from the
+ * linked web login surface (the integration table itself has no column).
+ */
+export function readRedirectUri(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.redirectUri ?? record.redirect_uri);
 }
 
 export function readResourceAccountKind(item: unknown): string {
