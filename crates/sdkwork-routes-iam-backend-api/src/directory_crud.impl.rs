@@ -865,6 +865,7 @@ async fn list_policies(
         &params,
         list_search_pattern(&query),
         &["code", "name"],
+        &[],
     )
     .await
     {
@@ -1449,7 +1450,7 @@ async fn list_positions(State(state): State<BackendIamState>, ctx: WebRequestCon
     let Ok(params) = list_page_params_or_error(&query) else {
         return list_page_params_or_error(&query).err().expect("error response");
     };
-    match list_tenant_rows(pg, &tenant_id, "iam_position", "id, tenant_id, organization_id, code, name, position_kind, status, created_at, updated_at", "name, id", &params, list_search_pattern(&query), &["code", "name"]).await {
+    match list_tenant_rows(pg, &tenant_id, "iam_position", "id, tenant_id, organization_id, code, name, position_kind, status, created_at, updated_at", "name, id", &params, list_search_pattern(&query), &["code", "name"], &[]).await {
         Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| json!({"code": row.get::<String,_>(3), "id": row.get::<String,_>(0), "name": row.get::<String,_>(4), "organizationId": row.get::<String,_>(2), "positionId": row.get::<String,_>(0), "positionKind": row.get::<String,_>(5), "status": row.get::<String,_>(6), "tenantId": row.get::<String,_>(1)}))),
         Err(error) => internal_handler_error("iam_positions_list_failed", error),
     }

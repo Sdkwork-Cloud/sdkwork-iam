@@ -227,6 +227,120 @@ async fn backend_postgres_authenticated_user_list_roundtrip() {
     );
 }
 
+#[tokio::test]
+async fn backend_postgres_oauth_lists_succeed_with_and_without_search_query() {
+    use backend_postgres_bootstrap::{
+        configure_backend_integration_runtime_env, integration_access_credential_request_body,
+        seed_backend_integration_bootstrap_owner,
+    };
+
+    let _guard = lock_local_iam_env();
+    let Some(_database_url) = iam_postgres_url() else {
+        eprintln!("SKIP backend_postgres_oauth_lists_succeed_with_and_without_search_query: IAM postgres URL not configured");
+        return;
+    };
+
+    unified_database_env::apply_workspace_postgres_env();
+    configure_backend_integration_runtime_env();
+
+    let pg = connect_iam_postgres().await;
+    let _ = seed_backend_integration_bootstrap_owner(&pg).await;
+
+    // Seed one integration row so the list has data to return.
+    let integration_id = format!("iomi_{}", Uuid::now_v7());
+    sqlx::query(
+        "INSERT INTO iam_oauth_integration \
+         (id, uuid, tenant_id, organization_id, app_id, environment, deployment_mode, \
+          provider_code, provider_catalog_id, integration_code, display_name, purpose_json, \
+          capability_json, region_group, protocol_family, account_operation_enabled, \
+          operator_authorization_enabled, enabled, health_status, status, created_at, updated_at, version) \
+         VALUES ($1, $2, $3, '0', '0', 'development', 'standalone', 'wechat', 'c_direct_0000000000', \
+          'wechat-official', 'WeChat Official Account', '[]', '[]', 'cn', 'web_authorization', 0, 0, 1, \
+          'healthy', 'enabled', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)",
+    )
+    .bind(&integration_id)
+    .bind(Uuid::now_v7().to_string())
+    .bind(DEFAULT_IAM_TENANT_ID)
+    .execute(&pg)
+    .await
+    .expect("insert integration test oauth integration row");
+
+    let router = build_sdkwork_iam_backend_api_router_from_env().await;
+    let credential_body = integration_access_credential_request_body();
+    let (credential_status, credential_text, credential_payload) = request_backend_route(
+        router.clone(),
+        Method::POST,
+        "/backend/v3/api/iam/access_credentials",
+        Some(&credential_body),
+    )
+    .await;
+
+    assert_eq!(
+        StatusCode::OK,
+        credential_status,
+        "bootstrap access credential issuance must succeed: {credential_text}"
+    );
+    let access_token = credential_payload["data"]["accessToken"]
+        .as_str()
+        .or_else(|| credential_payload["data"]["accessCredential"].as_str())
+        .expect("access credential response must include accessToken");
+    let auth_token = credential_payload["data"]["authToken"]
+        .as_str()
+        .expect("access credential response must include authToken");
+
+    // Regression: the oauth list SQL must bind the search placeholder even
+    // when no `q` query parameter is supplied, or the positional binds shift
+    // and the list endpoint fails with a 50001 internal error.
+    for path in [
+        "/backend/v3/api/iam/oauth/integrations",
+        "/backend/v3/api/iam/oauth/resource_accounts",
+        "/backend/v3/api/iam/oauth/integrations?q=wechat",
+        "/backend/v3/api/iam/oauth/resource_accounts?q=wechat",
+    ] {
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri(path)
+                    .header("content-type", "application/json")
+                    .header("authorization", format!("Bearer {auth_token}"))
+                    .header("access-token", access_token)
+                    .body(Body::from(String::new()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let status = response.status();
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let body_text = String::from_utf8(bytes.to_vec()).unwrap();
+        let payload = serde_json::from_str(&body_text).unwrap_or(Value::Null);
+        assert_eq!(
+            StatusCode::OK,
+            status,
+            "authenticated oauth list must succeed for {path}: {body_text}"
+        );
+        assert_eq!(
+            payload["code"], 0,
+            "authenticated oauth list must return appbase success envelope for {path}: {body_text}"
+        );
+        let items = payload["data"]["items"]
+            .as_array()
+            .expect("oauth list must return page items");
+        if path.starts_with("/backend/v3/api/iam/oauth/integrations") {
+            assert!(
+                items.iter().any(|item| item["id"].as_str() == Some(integration_id.as_str())),
+                "integrations list must include the seeded row: {body_text}"
+            );
+        }
+    }
+
+    let _ = sqlx::query("DELETE FROM iam_oauth_integration WHERE id = $1")
+        .bind(&integration_id)
+        .execute(&pg)
+        .await;
+}
+
 async fn request_backend_route(
     router: axum::Router,
     method: Method,

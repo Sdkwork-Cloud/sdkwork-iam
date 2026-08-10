@@ -507,6 +507,15 @@ function buildOperation(surface, route) {
     delete operation.responses[201];
   }
 
+  if (route.operationId === 'wechatPaymentOauth.start') {
+    const redirect = queryParameter('redirect', {
+      type: 'string',
+      description: 'Relative cashier route the payer returns to after the WeChat OAuth step.',
+    });
+    redirect.required = true;
+    operation.parameters.push(redirect);
+  }
+
   if (isListOperation(route)) {
     operation.parameters.push(
       queryParameter('page', { type: 'integer', minimum: 1, default: 1 }),

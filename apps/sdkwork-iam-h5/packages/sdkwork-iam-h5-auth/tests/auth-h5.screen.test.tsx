@@ -103,11 +103,16 @@ describe("@sdkwork/iam-h5-auth login screen (design)", () => {
     fireEvent.change(screen.getByPlaceholderText("请输入密码"), { target: { value: "secret" } });
 
     const primary = screen.getByRole("button", { name: "同意并登录" }) as HTMLButtonElement;
-    expect(primary.disabled).toBe(true);
+    // "我已阅读" is checked by default, so the primary action is enabled.
+    expect(primary.disabled).toBe(false);
 
     fireEvent.click(screen.getByText("软件许可及服务协议"));
     expect(screen.getByText("知道了")).toBeTruthy();
     fireEvent.click(screen.getByText("知道了"));
+
+    // Unchecking the agreement disables submission; re-checking re-enables it.
+    clickTermsCheckbox();
+    expect(primary.disabled).toBe(true);
 
     clickTermsCheckbox();
     expect(primary.disabled).toBe(false);

@@ -51,7 +51,7 @@ export function SdkworkIamH5AuthLoginScreen({
   const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
-  const [agreed, setAgreed] = useState(false);
+  const [agreed, setAgreed] = useState(true);
   const [showPwd, setShowPwd] = useState(false);
   const [showTerms, setShowTerms] = useState<string | null>(null);
 

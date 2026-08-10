@@ -457,6 +457,11 @@ export const SDKWORK_IAM_API_ROUTES = {
         forbidCredentialHeaders: true,
       }),
     },
+    verificationCodeRequests: {
+      create: operation("POST", `${app}/auth/verification_code_requests`, "auth", "verificationCodeRequests.create", "public", {
+        forbidCredentialHeaders: true,
+      }),
+    },
     registrations: {
       create: operation("POST", `${app}/auth/registrations`, "auth", "registrations.create", "public", {
         forbidCredentialHeaders: true,
@@ -558,6 +563,16 @@ export const SDKWORK_IAM_API_ROUTES = {
           "public",
         ),
       },
+      sessionCompletions: {
+        create: operation(
+          "POST",
+          `${app}/oauth/device_authorizations/{deviceAuthorizationId}/session_completions`,
+          "oauth",
+          "oauth.deviceAuthorizations.sessionCompletions.create",
+          "public",
+          { forbidCredentialHeaders: true },
+        ),
+      },
     },
     callbacks: {
       retrieve: operation("GET", `${app}/oauth/callbacks/{providerCode}`, "oauth", "oauth.callbacks.retrieve", "public", {
@@ -574,6 +589,11 @@ export const SDKWORK_IAM_API_ROUTES = {
     },
     sessions: {
       create: operation("POST", `${app}/oauth/sessions`, "oauth", "oauth.sessions.create", "public", {
+        forbidCredentialHeaders: true,
+      }),
+    },
+    scanLoginModes: {
+      list: operation("GET", `${app}/oauth/scan_login_modes`, "oauth", "oauth.scanLoginModes.list", "public", {
         forbidCredentialHeaders: true,
       }),
     },
@@ -797,6 +817,10 @@ export const SDKWORK_IAM_API_ROUTES = {
           create: operation("POST", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}/authorization_refreshes`, "iam", "iam.oauth.resourceAccounts.authorizationRefreshes.create", "dualToken"),
         },
         create: operation("POST", `${backend}/iam/oauth/resource_accounts`, "iam", "iam.oauth.resourceAccounts.create", "dualToken"),
+        delete: operation("DELETE", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}`, "iam", "iam.oauth.resourceAccounts.delete", "dualToken"),
+        followQrCodes: {
+          create: operation("POST", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}/follow_qr_codes`, "iam", "iam.oauth.resourceAccounts.followQrCodes.create", "dualToken"),
+        },
         list: operation("GET", `${backend}/iam/oauth/resource_accounts`, "iam", "iam.oauth.resourceAccounts.list", "dualToken"),
         miniProgramLoginChecks: {
           create: operation("POST", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}/mini_program_login_checks`, "iam", "iam.oauth.resourceAccounts.miniProgramLoginChecks.create", "dualToken"),
@@ -805,6 +829,13 @@ export const SDKWORK_IAM_API_ROUTES = {
         verifications: {
           create: operation("POST", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}/verifications`, "iam", "iam.oauth.resourceAccounts.verifications.create", "dualToken"),
         },
+      },
+      scanLoginPreviews: {
+        create: operation("POST", `${backend}/iam/oauth/scan_login_previews`, "iam", "iam.oauth.scanLoginPreviews.create", "dualToken"),
+      },
+      scanLoginSettings: {
+        retrieve: operation("GET", `${backend}/iam/oauth/scan_login_settings`, "iam", "iam.oauth.scanLoginSettings.retrieve", "dualToken"),
+        update: operation("PATCH", `${backend}/iam/oauth/scan_login_settings`, "iam", "iam.oauth.scanLoginSettings.update", "dualToken"),
       },
       resourceAuthorizations: {
         create: operation("POST", `${backend}/iam/oauth/resource_authorizations`, "iam", "iam.oauth.resourceAuthorizations.create", "dualToken"),
@@ -948,6 +979,7 @@ export const SDKWORK_IAM_CAPABILITIES = [
       "passwordResetRequests.create",
       "passwordResets.create",
       "registrations.create",
+      "verificationCodeRequests.create",
       "users.current.emailBindings.create",
       "users.current.emailBindings.delete",
       "users.current.password.update",
@@ -972,11 +1004,13 @@ export const SDKWORK_IAM_CAPABILITIES = [
       "oauth.deviceAuthorizations.passwordCompletions.create",
       "oauth.deviceAuthorizations.retrieve",
       "oauth.deviceAuthorizations.scans.create",
+      "oauth.deviceAuthorizations.sessionCompletions.create",
       "oauth.deviceAuthorizations.sessionExchanges.create",
       "oauth.grants.delete",
       "oauth.grants.list",
       "oauth.miniProgramSessions.create",
       "oauth.providers.list",
+      "oauth.scanLoginModes.list",
       "oauth.sessions.create",
       "sessions.create",
       "sessions.loginContextSelection.create",
@@ -1076,6 +1110,8 @@ export const SDKWORK_IAM_CAPABILITIES = [
       "iam.oauth.providerCatalog.update",
       "iam.oauth.resourceAccounts.authorizationRefreshes.create",
       "iam.oauth.resourceAccounts.create",
+      "iam.oauth.resourceAccounts.delete",
+      "iam.oauth.resourceAccounts.followQrCodes.create",
       "iam.oauth.resourceAccounts.list",
       "iam.oauth.resourceAccounts.miniProgramLoginChecks.create",
       "iam.oauth.resourceAccounts.update",
@@ -1083,6 +1119,9 @@ export const SDKWORK_IAM_CAPABILITIES = [
       "iam.oauth.resourceAuthorizations.create",
       "iam.oauth.resourceAuthorizations.list",
       "iam.oauth.resourceAuthorizations.update",
+      "iam.oauth.scanLoginPreviews.create",
+      "iam.oauth.scanLoginSettings.retrieve",
+      "iam.oauth.scanLoginSettings.update",
       "iam.oauth.scopeProfiles.create",
       "iam.oauth.scopeProfiles.list",
       "iam.oauth.scopeProfiles.update",

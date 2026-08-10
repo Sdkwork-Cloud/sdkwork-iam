@@ -357,28 +357,42 @@ pub(crate) async fn list_tenant_rows(
     params: &ListPageParams,
     search_pattern: Option<String>,
     search_columns: &[&str],
+    filters: &[(&str, String)],
 ) -> Result<Vec<PgRow>, sqlx::Error> {
-    if search_columns.is_empty() {
-        let sql = format!(
-            "SELECT {select}, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN} \
-             FROM {table} WHERE tenant_id = $1 ORDER BY {order_by} LIMIT $2 OFFSET $3"
-        );
-        return sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
-            .bind(tenant_id)
-            .bind(params.page_size)
-            .bind(params.offset)
-            .fetch_all(pg)
-            .await;
+    // Compose the WHERE clause with positional parameters: tenant first,
+    // then the fixed-column filters, then the search pattern, then the
+    // paging bound. Filter column names are allowlisted by the caller, so
+    // user input never reaches the SQL text.
+    let mut where_sql = String::from("tenant_id = $1");
+    let mut bind_count = 1usize;
+    for (column, _) in filters {
+        bind_count += 1;
+        where_sql.push_str(&format!(" AND {column} = ${bind_count}"));
     }
-
-    let search_clause = list_search_sql_clause(search_columns, "$2");
+    if !search_columns.is_empty() {
+        bind_count += 1;
+        let clause = list_search_sql_clause(search_columns, &format!("${bind_count}"));
+        where_sql.push_str(&format!(" {clause}"));
+    }
+    let limit_bind = bind_count + 1;
+    let offset_bind = bind_count + 2;
     let sql = format!(
         "SELECT {select}, COUNT(*) OVER() AS {LIST_TOTAL_SQL_COLUMN} \
-         FROM {table} WHERE tenant_id = $1 {search_clause} ORDER BY {order_by} LIMIT $3 OFFSET $4"
+         FROM {table} WHERE {where_sql} ORDER BY {order_by} LIMIT ${limit_bind} OFFSET ${offset_bind}"
     );
-    sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
-        .bind(tenant_id)
-        .bind(search_pattern)
+    let mut query = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()));
+    query = query.bind(tenant_id);
+    for (_, value) in filters {
+        query = query.bind(value.as_str());
+    }
+    // The search clause is present whenever `search_columns` is non-empty,
+    // so its placeholder must always be bound. Bind NULL when no `q`
+    // pattern was supplied — the clause is `$N::text IS NULL OR ...`
+    // (NULL-safe), so an absent pattern matches every row.
+    if !search_columns.is_empty() {
+        query = query.bind(search_pattern);
+    }
+    query
         .bind(params.page_size)
         .bind(params.offset)
         .fetch_all(pg)

@@ -154,11 +154,11 @@ pub use production_runtime::{
     is_explicit_development_iam_deployment, is_production_iam_deployment,
 };
 pub use wechat_mp::{
-    create_wechat_mp_temp_qr_code, fetch_wechat_mp_access_token, generate_wechat_mp_scene,
-    parse_oauth_follow_login_scene, record_oauth_follow_login_confirmation, wechat_mp_api_base,
-    OAuthFollowLoginConfirmation, WechatMpTempQrCode, OAUTH_QR_FOLLOW_CONFIRMED_STATUS,
-    OAUTH_QR_FOLLOW_LOGIN_FIELD, OAUTH_QR_SCENE_EVENT_KEY_PREFIX, OAUTH_QR_SESSION_KIND,
-    OAUTH_QR_SESSION_SCOPE,
+    create_wechat_mp_permanent_qr_code, create_wechat_mp_temp_qr_code,
+    fetch_wechat_mp_access_token, generate_wechat_mp_scene, parse_oauth_follow_login_scene,
+    record_oauth_follow_login_confirmation, wechat_mp_api_base, OAuthFollowLoginConfirmation,
+    WechatMpTempQrCode, OAUTH_QR_FOLLOW_CONFIRMED_STATUS, OAUTH_QR_FOLLOW_LOGIN_FIELD,
+    OAUTH_QR_SCENE_EVENT_KEY_PREFIX, OAUTH_QR_SESSION_KIND, OAUTH_QR_SESSION_SCOPE,
 };
 
 #[cfg(test)]

@@ -106,6 +106,7 @@ export function OauthAdminSelectField({
 export function OauthResourceDrawer({
   cancelLabel,
   children,
+  className,
   confirmDisabled = false,
   confirmLabel,
   confirmLoading = false,
@@ -114,10 +115,14 @@ export function OauthResourceDrawer({
   onConfirm,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
+  side = "right",
+  size = "md",
   triggerLabel,
+  width,
 }: {
   cancelLabel?: string;
   children: ReactNode;
+  className?: string;
   confirmDisabled?: boolean;
   confirmLabel: string;
   confirmLoading?: boolean;
@@ -126,7 +131,10 @@ export function OauthResourceDrawer({
   onConfirm: () => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  side?: "left" | "right";
+  size?: "sm" | "md" | "lg" | "xl" | "full";
   triggerLabel: string;
+  width?: string;
 }) {
   const messages = useSdkworkIamOauthAdminMessages();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -150,7 +158,9 @@ export function OauthResourceDrawer({
         <Button onClick={() => setOpen(true)} type="button">{triggerLabel}</Button>
       )}
       <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerContent size="md">
+        {/* An explicit width keeps the drawer size constant across tab
+            switches instead of relying on class merging with the size preset. */}
+        <DrawerContent className={className} side={side} size={size} style={width ? { width } : undefined}>
           <DrawerHeader>
             <DrawerTitle>{triggerLabel}</DrawerTitle>
             <DrawerDescription>{description}</DrawerDescription>

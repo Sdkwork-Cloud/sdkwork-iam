@@ -9,6 +9,15 @@ fn oauth_list_search_columns(table: &str) -> &'static [&'static str] {
         "iam_oauth_callback_event" => &["provider_code", "integration_id", "flow_kind"],
         "iam_oauth_diagnostic_run" => &["provider_code", "integration_id", "run_kind"],
         "iam_oauth_policy" => &["policy_code", "display_name"],
+        // Account search covers the operator-facing identity fields: the
+        // display name, the AppID (provider_account_id), the account code and
+        // the WeChat original id (gh_xxx).
+        "iam_oauth_resource_account" => &[
+            "display_name",
+            "provider_account_id",
+            "resource_account_code",
+            "provider_account_original_id",
+        ],
         _ if table.starts_with("iam_oauth_") => &["provider_code"],
         _ => &[],
     }
@@ -34,6 +43,7 @@ async fn tenant_list(
     };
     let search_pattern = list_search_pattern(query);
     let search_columns = oauth_list_search_columns(spec.table);
+    let filters = collect_oauth_list_filters(query, spec.table);
     match list_tenant_rows(
         pg,
         &tenant_id,
@@ -43,18 +53,64 @@ async fn tenant_list(
         &params,
         search_pattern,
         search_columns,
+        &filters,
     )
     .await
     {
-        Ok(rows) => appbase_ok(page_json_from_rows(rows, &params, |row| {
-            row_to_json_with_aliases(row, spec.columns, spec.id_aliases)
-        })),
+        Ok(rows) => {
+            let mut page = page_json_from_rows(rows, &params, |row| {
+                row_to_json_with_aliases(row, spec.columns, spec.id_aliases)
+            });
+            let enriched = match page.get_mut("items").and_then(Value::as_array_mut) {
+                Some(items) => {
+                    enrich_oauth_list_items(pg, &tenant_id, spec.table, items).await
+                }
+                None => Ok(()),
+            };
+            match enriched {
+                Ok(()) => appbase_ok(page),
+                Err(error) => internal_handler_error(spec.list_error, error),
+            }
+        }
         Err(error) => appbase_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             spec.list_error,
             &error.to_string(),
         ),
     }
+}
+
+/// OAuth resource-account list filters (`enabled`, `authorizationStatus`,
+/// `accountType`). Column names come from a fixed allowlist so user input
+/// never reaches the SQL text.
+fn collect_oauth_list_filters(
+    query: &HashMap<String, String>,
+    table: &str,
+) -> Vec<(&'static str, String)> {
+    let mut filters: Vec<(&'static str, String)> = Vec::new();
+    if table == "iam_oauth_resource_account" {
+        if let Some(value) = query.get("enabled") {
+            if value == "0" || value == "1" {
+                filters.push(("enabled", value.clone()));
+            }
+        }
+        for (key, column) in [
+            ("authorizationStatus", "authorization_status"),
+            ("authorization_status", "authorization_status"),
+            ("accountType", "provider_account_type"),
+            ("account_type", "provider_account_type"),
+        ] {
+            let Some(value) = query.get(key) else {
+                continue;
+            };
+            let normalized = value.trim();
+            if !normalized.is_empty() {
+                filters.push((column, normalized.to_owned()));
+                break;
+            }
+        }
+    }
+    filters
 }
 
 async fn oauth_create_response(
@@ -102,11 +158,20 @@ async fn tenant_retrieve(
     };
 
     match retrieve_tenant_row(pg, &tenant_id, spec.table, spec.list_select, id).await {
-        Ok(Some(row)) => appbase_ok(row_to_json_with_aliases(
-            &row,
-            spec.columns,
-            spec.id_aliases,
-        )),
+        Ok(Some(row)) => {
+            let mut item = row_to_json_with_aliases(&row, spec.columns, spec.id_aliases);
+            let enriched =
+                enrich_oauth_list_items(pg, &tenant_id, spec.table, std::slice::from_mut(&mut item))
+                    .await;
+            match enriched {
+                Ok(()) => appbase_ok(item),
+                Err(error) => appbase_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    spec.retrieve_error,
+                    &error,
+                ),
+            }
+        }
         Ok(None) => appbase_error(
             StatusCode::NOT_FOUND,
             spec.retrieve_error,
@@ -164,6 +229,140 @@ async fn tenant_delete(
     }
 }
 
+/// Enriches resource-account rows with the decrypted provider client secret
+/// from the linked OAuth client's active `client_secret` row. The admin edit
+/// drawer shows the full saved record (AppID + AppSecret); the secret is only
+/// stored encoded/encrypted and is decoded here for display, never on write.
+/// Accounts without a matching active client/secret row keep no secret field.
+async fn enrich_resource_account_client_secrets(
+    pg: &PgPool,
+    tenant_id: &str,
+    items: &mut [Value],
+) -> Result<(), String> {
+    let account_ids: Vec<String> = items
+        .iter()
+        .filter_map(|item| {
+            item.get("resourceAccountId")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        })
+        .collect();
+    if account_ids.is_empty() {
+        return Ok(());
+    }
+    // One pass: join each account to the client matching its AppID and to the
+    // client's most recent active secret row (ordered so the newest wins).
+    let rows = sqlx::query(
+        "SELECT ra.id, s.secret_ref \
+         FROM iam_oauth_resource_account ra \
+         JOIN iam_oauth_client c \
+           ON c.tenant_id = ra.tenant_id AND c.integration_id = ra.integration_id \
+          AND c.provider_client_id = ra.provider_account_id AND c.status = 'active' \
+         JOIN iam_oauth_secret s \
+           ON s.tenant_id = ra.tenant_id AND s.secret_owner_kind = 'oauth_client' \
+          AND s.secret_owner_id = c.id AND s.secret_kind = 'client_secret' \
+          AND s.status = 'active' \
+         WHERE ra.tenant_id = $1 AND ra.id = ANY($2) \
+         ORDER BY ra.id, s.active_from DESC",
+    )
+    .bind(tenant_id)
+    .bind(&account_ids)
+    .fetch_all(pg)
+    .await
+    .map_err(|error| format!("load oauth client secrets failed: {error}"))?;
+
+    let mut secrets_by_account: HashMap<String, String> = HashMap::new();
+    for row in rows {
+        let account_id: String = row.get(0);
+        if secrets_by_account.contains_key(&account_id) {
+            continue;
+        }
+        let secret_ref: String = row.get(1);
+        if let Ok(decoded) = sdkwork_iam_web_adapter::decode_signing_secret_ref(&secret_ref) {
+            if let Ok(secret) = String::from_utf8(decoded) {
+                if !secret.trim().is_empty() {
+                    secrets_by_account.insert(account_id, secret);
+                }
+            }
+        }
+    }
+    for item in items {
+        let Some(account_id) = item.get("resourceAccountId").and_then(Value::as_str) else {
+            continue;
+        };
+        if let (Some(secret), Value::Object(map)) = (secrets_by_account.get(account_id), item) {
+            map.insert("providerClientSecret".to_owned(), json!(secret));
+        }
+    }
+    Ok(())
+}
+
+/// Enriches integration rows with the provider client id of their active OAuth
+/// client. The integration table has no `provider_client_id` column; the id
+/// lives on the linked client row, and the quick-setup controller matches an
+/// existing integration by AppID to reuse it instead of duplicating it.
+async fn enrich_integration_client_ids(
+    pg: &PgPool,
+    tenant_id: &str,
+    items: &mut [Value],
+) -> Result<(), String> {
+    let integration_ids: Vec<String> = items
+        .iter()
+        .filter_map(|item| item.get("id").and_then(Value::as_str).map(str::to_string))
+        .collect();
+    if integration_ids.is_empty() {
+        return Ok(());
+    }
+    let rows = sqlx::query(
+        "SELECT integration_id, provider_client_id \
+         FROM iam_oauth_client \
+         WHERE tenant_id = $1 AND integration_id = ANY($2) AND status = 'active' \
+         ORDER BY integration_id, CASE WHEN enabled = 1 THEN 0 ELSE 1 END",
+    )
+    .bind(tenant_id)
+    .bind(&integration_ids)
+    .fetch_all(pg)
+    .await
+    .map_err(|error| format!("load oauth integration client ids failed: {error}"))?;
+
+    let mut client_id_by_integration: HashMap<String, String> = HashMap::new();
+    for row in rows {
+        let integration_id: String = row.get(0);
+        let provider_client_id: String = row.get(1);
+        client_id_by_integration
+            .entry(integration_id)
+            .or_insert(provider_client_id);
+    }
+    for item in items {
+        let Some(integration_id) = item.get("id").and_then(Value::as_str) else {
+            continue;
+        };
+        if let (Some(client_id), Value::Object(map)) =
+            (client_id_by_integration.get(integration_id), item)
+        {
+            map.insert("providerClientId".to_owned(), json!(client_id));
+        }
+    }
+    Ok(())
+}
+
+/// Applies per-table read enrichment to a list of row JSON objects so the
+/// oauth quick-setup surface can show the complete saved record.
+async fn enrich_oauth_list_items(
+    pg: &PgPool,
+    tenant_id: &str,
+    table: &str,
+    items: &mut [Value],
+) -> Result<(), String> {
+    match table {
+        "iam_oauth_resource_account" => {
+            enrich_resource_account_client_secrets(pg, tenant_id, items).await
+        }
+        "iam_oauth_integration" => enrich_integration_client_ids(pg, tenant_id, items).await,
+        _ => Ok(()),
+    }
+}
+
 async fn tenant_patch(
     state: &BackendIamState,
     ctx: &WebRequestContext,
@@ -179,6 +378,7 @@ async fn tenant_patch(
     };
 
     let now = Utc::now().to_rfc3339();
+    let is_resource_account = spec.table == "iam_oauth_resource_account";
     let cascade_enabled = if spec.table == "iam_oauth_integration" {
         read_i32_field(body, &["enabled"])
     } else {
@@ -195,6 +395,42 @@ async fn tenant_patch(
     } else {
         None
     };
+    // The operator-facing AppID lives on both the resource account row
+    // (provider_account_id) and the linked OAuth client
+    // (provider_client_id); the AppSecret lives as an encoded, hashed
+    // `iam_oauth_secret` row. When the quick-setup edit drawer patches the
+    // resource account with either credential, cascade the change to the
+    // client/secret rows so the provider connection stays in sync.
+    let cascade_provider_account_id = if is_resource_account {
+        read_string_field(body, &["providerAccountId", "provider_account_id"])
+    } else {
+        None
+    };
+    let cascade_provider_client_secret = if is_resource_account {
+        read_string_field(body, &["providerClientSecret", "provider_client_secret"])
+    } else {
+        None
+    };
+    // The web authorization domain of the account config mirrors onto the web
+    // login surface so the surface row stays in sync with the account record.
+    let cascade_web_domain = if is_resource_account {
+        body.get("config")
+            .and_then(|config| read_string_field(config, &["webDomain", "web_domain"]))
+    } else {
+        None
+    };
+    // Webhook callback URLs carry a one-way integrity hash; recalculate it
+    // whenever the URL is patched so the fingerprint stays truthful.
+    let cascade_webhook_callback_url = if spec.table == "iam_oauth_webhook_config" {
+        read_string_field(body, &["callbackUrl", "callback_url"])
+    } else {
+        None
+    };
+    // Saving the developer configuration (`config` JSON) marks the account as
+    // connected: the operator has completed the provider setup, so the pending
+    // authorization status is promoted to `authorized` exactly once.
+    let cascade_authorize = is_resource_account
+        && body.get("config").filter(|value| value.is_object()).is_some();
     let mut assignments = collect_resource_patch_assignments(body, spec.table);
     assignments.push(("updated_at".to_owned(), PatchValue::Text(now.clone())));
 
@@ -205,6 +441,15 @@ async fn tenant_patch(
         .collect::<Vec<_>>();
     if cascade_redirect_uri.is_some() {
         updated_fields.push("redirect_uri");
+    }
+    if cascade_provider_account_id.is_some() {
+        updated_fields.push("provider_account_id");
+    }
+    if cascade_provider_client_secret.is_some() {
+        updated_fields.push("provider_client_secret");
+    }
+    if cascade_authorize {
+        updated_fields.push("authorization_status");
     }
     let audit_detail = json!({ "updatedFields": updated_fields });
     let table = spec.table.to_owned();
@@ -226,6 +471,29 @@ async fn tenant_patch(
                 let table = table_name.clone();
                 let id = id_owned.clone();
                 let assignments = assignments.clone();
+                // Read the pre-update account row so credential cascades match
+                // the linked client by the previous AppID (the account row is
+                // patched right below and would otherwise carry the new value).
+                let account_credentials = if is_resource_account {
+                    sqlx::query(
+                        "SELECT integration_id, provider_account_id, authorization_status \
+                         FROM iam_oauth_resource_account \
+                         WHERE tenant_id = $1 AND id = $2 LIMIT 1",
+                    )
+                    .bind(&tenant_id)
+                    .bind(&id)
+                    .fetch_optional(&mut **tx)
+                    .await?
+                    .map(|row| {
+                        (
+                            row.get::<String, _>(0),
+                            row.get::<String, _>(1),
+                            row.get::<String, _>(2),
+                        )
+                    })
+                } else {
+                    None
+                };
                 let updated =
                     patch_tenant_row_tx(&mut **tx, &tenant_id, &table, &id, &assignments)
                         .await?;
@@ -258,6 +526,105 @@ async fn tenant_patch(
                              WHERE tenant_id = $3 AND integration_id = $4 AND surface_kind = 'web'",
                         )
                         .bind(&redirect_uri)
+                        .bind(&now)
+                        .bind(&tenant_id)
+                        .bind(&id)
+                        .execute(&mut **tx)
+                        .await?;
+                    }
+                    if let Some((integration_id, previous_app_id, authorization_status)) = account_credentials {
+                        if let Some(new_app_id) = cascade_provider_account_id {
+                            sqlx::query(
+                                "UPDATE iam_oauth_client SET provider_client_id = $1, updated_at = $2 \
+                                 WHERE tenant_id = $3 AND integration_id = $4 AND provider_client_id = $5",
+                            )
+                            .bind(&new_app_id)
+                            .bind(&now)
+                            .bind(&tenant_id)
+                            .bind(&integration_id)
+                            .bind(&previous_app_id)
+                            .execute(&mut **tx)
+                            .await?;
+                            // Mirror the rotated AppID onto the mini program
+                            // surface so the surface row keeps the account
+                            // identity of the login entry.
+                            sqlx::query(
+                                "UPDATE iam_oauth_surface SET mini_program_app_id = $1, updated_at = $2 \
+                                 WHERE tenant_id = $3 AND integration_id = $4 AND surface_kind = 'mini_program'",
+                            )
+                            .bind(&new_app_id)
+                            .bind(&now)
+                            .bind(&tenant_id)
+                            .bind(&integration_id)
+                            .execute(&mut **tx)
+                            .await?;
+                        }
+                        if let Some(secret_value) = cascade_provider_client_secret {
+                            let client_id = sqlx::query(
+                                "SELECT id FROM iam_oauth_client \
+                                 WHERE tenant_id = $1 AND integration_id = $2 AND provider_client_id = $3 \
+                                 LIMIT 1",
+                            )
+                            .bind(&tenant_id)
+                            .bind(&integration_id)
+                            .bind(&previous_app_id)
+                            .fetch_optional(&mut **tx)
+                            .await?
+                            .map(|row| row.get::<String, _>(0));
+                            if let Some(client_id) = client_id {
+                                let secret_ref = sdkwork_iam_bootstrap::encode_signing_secret_ref(
+                                    secret_value.as_bytes(),
+                                );
+                                let secret_hash =
+                                    sdkwork_iam_bootstrap::hash_secret_ref(&secret_ref);
+                                sqlx::query(
+                                    "UPDATE iam_oauth_secret SET secret_ref = $1, secret_hash = $2, updated_at = $3 \
+                                     WHERE tenant_id = $4 AND secret_owner_kind = 'oauth_client' \
+                                       AND secret_owner_id = $5 AND secret_kind = 'client_secret'",
+                                )
+                                .bind(&secret_ref)
+                                .bind(&secret_hash)
+                                .bind(&now)
+                                .bind(&tenant_id)
+                                .bind(&client_id)
+                                .execute(&mut **tx)
+                                .await?;
+                            }
+                        }
+                        // A completed developer configuration means the account
+                        // is connected; promote a pending authorization once.
+                        if cascade_authorize && authorization_status == "pending" {
+                            sqlx::query(
+                                "UPDATE iam_oauth_resource_account SET authorization_status = 'authorized', updated_at = $1 \
+                                 WHERE tenant_id = $2 AND id = $3",
+                            )
+                            .bind(&now)
+                            .bind(&tenant_id)
+                            .bind(&id)
+                            .execute(&mut **tx)
+                            .await?;
+                        }
+                    }
+                    if let Some(web_domain) = cascade_web_domain {
+                        sqlx::query(
+                            "UPDATE iam_oauth_surface SET web_domain = $1, updated_at = $2 \
+                             WHERE tenant_id = $3 AND integration_id = $4 AND surface_kind = 'web'",
+                        )
+                        .bind(&web_domain)
+                        .bind(&now)
+                        .bind(&tenant_id)
+                        .bind(&id)
+                        .execute(&mut **tx)
+                        .await?;
+                    }
+                    if let Some(callback_url) = cascade_webhook_callback_url {
+                        let callback_url_hash =
+                            sdkwork_iam_bootstrap::hash_secret_ref(&callback_url);
+                        sqlx::query(
+                            "UPDATE iam_oauth_webhook_config SET callback_url_hash = $1, updated_at = $2 \
+                             WHERE tenant_id = $3 AND id = $4",
+                        )
+                        .bind(&callback_url_hash)
                         .bind(&now)
                         .bind(&tenant_id)
                         .bind(&id)
@@ -396,6 +763,28 @@ fn collect_resource_patch_assignments(body: &Value, table: &str) -> Vec<(String,
             ("mini_program_environment", &["miniProgramEnvironment", "mini_program_environment"]),
             ("mini_program_release_channel", &["miniProgramReleaseChannel", "mini_program_release_channel"]),
         ],
+        "iam_oauth_resource_account" => &[
+            ("provider_account_id", &["providerAccountId", "provider_account_id"]),
+            ("provider_account_type", &["providerAccountType", "provider_account_type"]),
+            (
+                "provider_account_original_id",
+                &["providerAccountOriginalId", "provider_account_original_id"],
+            ),
+        ],
+        "iam_oauth_webhook_config" => &[
+            (
+                "callback_url",
+                &["callbackUrl", "callback_url"],
+            ),
+            (
+                "verification_token_status",
+                &["verificationTokenStatus", "verification_token_status"],
+            ),
+            (
+                "encoding_aes_key_status",
+                &["encodingAesKeyStatus", "encoding_aes_key_status"],
+            ),
+        ],
         _ => &[],
     };
     for (column, keys) in fields {
@@ -412,6 +801,34 @@ fn collect_resource_patch_assignments(body: &Value, table: &str) -> Vec<(String,
                 "provider_config_json".to_owned(),
                 PatchValue::Text(config.to_string()),
             ));
+        }
+        // The scan-login "default official account" flag is an INTEGER column;
+        // `setResourceAccountQrLogin` patches it through this allowlist.
+        if let Some(value) = read_i32_field(body, &["qrDefaultEnabled", "qr_default_enabled"]) {
+            assignments.push(("qr_default_enabled".to_owned(), PatchValue::Int(value)));
+        }
+        // `read_string_field` skips blank values, so an explicit empty string
+        // would never clear a wrong account type or original id; detect the
+        // blank keys directly and write the empty value.
+        for (column, keys) in [
+            (
+                "provider_account_type",
+                &["providerAccountType", "provider_account_type"] as &[&str],
+            ),
+            (
+                "provider_account_original_id",
+                &["providerAccountOriginalId", "provider_account_original_id"] as &[&str],
+            ),
+        ] {
+            let explicitly_blank = keys.iter().any(|key| {
+                body.get(*key)
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .is_some_and(|value| value.is_empty())
+            });
+            if explicitly_blank {
+                assignments.push((column.to_owned(), PatchValue::Text(String::new())));
+            }
         }
     }
     assignments
@@ -819,6 +1236,12 @@ oauth_patch_handler!(
     RESOURCE_ACCOUNTS,
     resource_account_id
 );
+oauth_delete_handler!(
+    delete_resource_account,
+    RESOURCE_ACCOUNTS,
+    resource_account_id,
+    "iam_oauth_resource_account_delete_failed"
+);
 
 oauth_list_handler!(list_resource_authorizations, RESOURCE_AUTHORIZATIONS);
 oauth_patch_handler!(
@@ -909,10 +1332,14 @@ async fn create_integration(
     let has_connection_details = provider_client_id.is_some()
         || provider_client_secret.is_some()
         || redirect_uri.is_some();
+    // WeChat mini programs sign in through `jscode2session` and never go
+    // through an OAuth redirect, so the callback URL is optional for them;
+    // every other provider connection still requires all three fields.
+    let requires_redirect_uri = provider_code.as_deref() != Some("wechat_mini_program");
     if has_connection_details
         && (provider_client_id.as_deref().unwrap_or("").is_empty()
             || provider_client_secret.as_deref().unwrap_or("").is_empty()
-            || redirect_uri.as_deref().unwrap_or("").is_empty())
+            || (requires_redirect_uri && redirect_uri.as_deref().unwrap_or("").is_empty()))
     {
         return appbase_error(
             StatusCode::BAD_REQUEST,
@@ -1014,10 +1441,9 @@ async fn create_integration(
                 .await
                 .map(|_| ())?;
 
-            if let (Some(provider_client_id), Some(provider_client_secret), Some(redirect_uri)) = (
+            if let (Some(provider_client_id), Some(provider_client_secret)) = (
                 provider_client_id,
                 provider_client_secret,
-                redirect_uri,
             ) {
                 let client_auth_method = if provider_code_value == "twitter" {
                     "client_secret_basic"
@@ -1078,10 +1504,10 @@ async fn create_integration(
                 sqlx::query(
                     "INSERT INTO iam_oauth_surface \
                         (id, uuid, tenant_id, organization_id, integration_id, oauth_client_id, surface_kind, surface_code, \
-                         display_name, redirect_uri, redirect_validation_mode, pkce_mode, client_auth_method, enabled, \
-                         status, created_at, updated_at) \
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'strict', $11, $12, $13, \
-                             'active', $14, $14)",
+                         display_name, redirect_uri, redirect_validation_mode, pkce_mode, client_auth_method, mini_program_app_id, \
+                         enabled, status, created_at, updated_at) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'strict', $11, $12, $13, $14, \
+                             'active', $15, $15)",
                 )
                 .bind(&oauth_surface_id)
                 .bind(Uuid::new_v4().to_string())
@@ -1095,6 +1521,14 @@ async fn create_integration(
                 .bind(redirect_uri)
                 .bind(pkce_mode)
                 .bind(client_auth_method)
+                // Mirror the provider app id onto the mini program surface so
+                // the surface row carries the account identity for future
+                // app-id based lookups (NULL for web surfaces).
+                .bind(if surface_kind == "mini_program" {
+                    Some(provider_client_id.clone())
+                } else {
+                    None
+                })
                 .bind(enabled)
                 .bind(&now)
                 .execute(&mut **tx)
@@ -1393,6 +1827,112 @@ async fn create_authorization_refresh(
         map.insert("resourceAccountId".to_owned(), json!(resource_account_id));
     }
     insert_diagnostic_run(&state, &ctx, &payload, "authorization_refresh").await
+}
+
+/// Creates the WeChat permanent parameterized follow QR (`QR_LIMIT_STR_SCENE`)
+/// for an official account. The scene is pinned to `follow:{accountId}` so the
+/// QR stays stable for long-term distribution; scanning it subscribes the user
+/// to the account and the `subscribe` event carries the scene back through the
+/// message webhook.
+async fn create_resource_account_follow_qr_code(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(resource_account_id): Path<String>,
+    Json(_body): Json<Value>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
+        return tenant_id_from_context(&ctx).err().expect("error response");
+    };
+
+    let row = match sqlx::query(
+        "SELECT ra.integration_id, ra.provider_code, ra.resource_account_kind, ra.enabled, ra.status \
+         FROM iam_oauth_resource_account ra \
+         WHERE ra.tenant_id = $1 AND ra.id = $2",
+    )
+    .bind(&tenant_id)
+    .bind(&resource_account_id)
+    .fetch_optional(pg)
+    .await
+    {
+        Ok(value) => value,
+        Err(error) => {
+            return internal_handler_error("iam_oauth_follow_qr_code_failed", error);
+        }
+    };
+    let Some(row) = row else {
+        return appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_oauth_resource_account_not_found",
+            "resource account not found",
+        );
+    };
+    let integration_id: String = row.get(0);
+    let provider_code: String = row.get(1);
+    let resource_account_kind: String = row.get(2);
+    let enabled: i32 = row.get(3);
+    let status: String = row.get(4);
+    if provider_code != "wechat"
+        || resource_account_kind != "official_account"
+        || enabled != 1
+        || status != "active"
+    {
+        return appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_follow_qr_code_unavailable",
+            "follow QR codes require an enabled WeChat official account",
+        );
+    }
+
+    let exchange = match sdkwork_iam_web_adapter::load_oauth_integration_exchange_context_for_integration(
+        pg,
+        &tenant_id,
+        &integration_id,
+    )
+    .await
+    {
+        Ok(Some(exchange)) => exchange,
+        Ok(None) => {
+            return appbase_error(
+                StatusCode::CONFLICT,
+                "iam_oauth_follow_qr_code_unavailable",
+                "official account integration is not configured",
+            );
+        }
+        Err(error) => {
+            return internal_handler_error("iam_oauth_follow_qr_code_failed", error);
+        }
+    };
+
+    // One stable scene per account keeps the permanent QR constant and under
+    // WeChat's 64-character `scene_str` limit.
+    let scene = format!("follow:{resource_account_id}");
+    let qr = match sdkwork_iam_web_adapter::create_wechat_mp_permanent_qr_code(
+        pg,
+        &exchange.provider_client_id,
+        &exchange.client_secret,
+        &scene,
+    )
+    .await
+    {
+        Ok(value) => value,
+        Err(error) => {
+            return internal_handler_error("iam_oauth_follow_qr_code_failed", error);
+        }
+    };
+    appbase_ok(json!({
+        "expireSeconds": 0,
+        "permanent": true,
+        "qrCode": qr.image_url,
+        "qrContent": qr.image_url,
+        "qrMode": "official_account",
+        "scene": qr.scene,
+        "ticket": qr.ticket,
+    }))
 }
 
 async fn create_webhook_verification(
@@ -2265,6 +2805,9 @@ async fn create_resource_account(
     let provider_account_id =
         read_string_field(&body, &["providerAccountId", "provider_account_id"]);
     let access_mode = read_string_field(&body, &["accessMode", "access_mode"]);
+    let account_type = read_string_field(&body, &["providerAccountType", "provider_account_type"]);
+    let original_id =
+        read_string_field(&body, &["providerAccountOriginalId", "provider_account_original_id"]);
     let config = body.get("config").filter(|value| value.is_object());
     if integration_id.as_deref().unwrap_or("").is_empty()
         || provider_code.as_deref().unwrap_or("").is_empty()
@@ -2285,6 +2828,9 @@ async fn create_resource_account(
     let id = format!("iamora-{}", Uuid::new_v4());
     let insert_id = id.clone();
     let now = Utc::now().to_rfc3339();
+    // `enabled` is an INTEGER column; quick-setup creation carries the drawer
+    // checkbox state so a newly added account honors "enable immediately".
+    let enabled = read_i32_field(&body, &["enabled"]).unwrap_or(0);
     let integration_id_value = integration_id.as_ref().expect("validated").clone();
     let provider_code_value = provider_code.as_ref().expect("validated").clone();
     let resource_account_code_value = resource_account_code.as_ref().expect("validated").clone();
@@ -2314,13 +2860,17 @@ async fn create_resource_account(
             let provider_account_id_value = provider_account_id_value.clone();
             let config_value = config_value.clone();
             let now = now.clone();
+            let enabled_value = enabled;
+            let account_type_value = account_type.clone();
+            let original_id_value = original_id.clone();
             
                 sqlx::query(
                     "INSERT INTO iam_oauth_resource_account \
                         (id, uuid, tenant_id, organization_id, integration_id, provider_code, resource_account_code, resource_account_kind, \
-                         access_mode, display_name, provider_account_id, verification_status, authorization_status, self_managed_config_status, \
-                         operator_authorization_status, webhook_verify_status, domain_verify_status, provider_config_json, status, created_at, updated_at) \
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 'pending', 'missing', 'pending', 'pending', 'pending', $12, 'active', $13, $13)",
+                         access_mode, display_name, provider_account_id, provider_account_type, provider_account_original_id, verification_status, \
+                         authorization_status, self_managed_config_status, operator_authorization_status, webhook_verify_status, domain_verify_status, \
+                         provider_config_json, enabled, status, created_at, updated_at) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending', 'pending', 'missing', 'pending', 'pending', 'pending', $14, $15, 'active', $16, $16)",
                 )
                 .bind(&insert_id)
                 .bind(Uuid::new_v4().to_string())
@@ -2333,7 +2883,10 @@ async fn create_resource_account(
                 .bind(&access_mode_value)
                 .bind(&display_name_value)
                 .bind(&provider_account_id_value)
+                .bind(account_type_value)
+                .bind(original_id_value)
                 .bind(&config_value)
+                .bind(enabled_value)
                 .bind(&now)
                 .execute(&mut **tx)
                 .await
@@ -2387,6 +2940,23 @@ async fn create_webhook_config(
     let webhook_kind = read_string_field(&body, &["webhookKind", "webhook_kind"]);
     let callback_url = read_string_field(&body, &["callbackUrl", "callback_url"]);
     let display_name = read_string_field(&body, &["displayName", "display_name"]);
+    // Optional link to the resource account this webhook receives events for
+    // (official-account message pushes); the scan-login settings surface joins
+    // webhook rows to accounts through this column.
+    let resource_account_id =
+        read_string_field(&body, &["resourceAccountId", "resource_account_id"]);
+    // Configuration-completeness status for the push token and AES key; the
+    // quick-setup save marks them configured when the operator filled both.
+    let verification_token_status = read_string_field(
+        &body,
+        &["verificationTokenStatus", "verification_token_status"],
+    )
+    .unwrap_or_else(|| "missing".to_owned());
+    let encoding_aes_key_status = read_string_field(
+        &body,
+        &["encodingAesKeyStatus", "encoding_aes_key_status"],
+    )
+    .unwrap_or_else(|| "missing".to_owned());
     if integration_id.as_deref().unwrap_or("").is_empty()
         || provider_code.as_deref().unwrap_or("").is_empty()
         || webhook_code.as_deref().unwrap_or("").is_empty()
@@ -2434,20 +3004,24 @@ async fn create_webhook_config(
             let callback_url_value = callback_url_value.clone();
             let callback_url_hash = callback_url_hash.clone();
             let callback_public_id = callback_public_id.clone();
+            let resource_account_id = resource_account_id.clone();
+            let verification_token_status = verification_token_status.clone();
+            let encoding_aes_key_status = encoding_aes_key_status.clone();
             let now = now.clone();
             
                 sqlx::query(
                     "INSERT INTO iam_oauth_webhook_config \
-                        (id, uuid, tenant_id, organization_id, integration_id, provider_code, webhook_code, webhook_kind, display_name, \
+                        (id, uuid, tenant_id, organization_id, integration_id, resource_account_id, provider_code, webhook_code, webhook_kind, display_name, \
                          callback_url, callback_url_hash, callback_public_id, verification_token_status, encoding_aes_key_status, \
                          encryption_mode, message_handling_mode, status, created_at, updated_at) \
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'missing', 'missing', 'plain', 'ack_only', 'active', $13, $13)",
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'plain', 'ack_only', 'active', $16, $16)",
                 )
                 .bind(&insert_id)
                 .bind(Uuid::new_v4().to_string())
                 .bind(&tenant_id)
                 .bind(&organization_id)
                 .bind(&integration_id_value)
+                .bind(resource_account_id)
                 .bind(&provider_code_value)
                 .bind(&webhook_code_value)
                 .bind(&webhook_kind_value)
@@ -2455,6 +3029,8 @@ async fn create_webhook_config(
                 .bind(&callback_url_value)
                 .bind(&callback_url_hash)
                 .bind(&callback_public_id)
+                .bind(&verification_token_status)
+                .bind(&encoding_aes_key_status)
                 .bind(&now)
                 .execute(&mut **tx)
                 .await

@@ -4,6 +4,7 @@ import { isBlank, trim } from "@sdkwork/utils";
 
 import type {
   CreateSdkworkIamOauthAdminControllerInput,
+  SdkworkIamOauthAccountFollowQrCode,
   SdkworkIamOauthAccountKind,
   SdkworkIamOauthAccountSetupDraft,
   SdkworkIamOauthAdminController,
@@ -35,10 +36,12 @@ import {
   buildStandardCallbackUri,
   normalizeList,
   readAccountIntegrationId,
+  readDisplayName,
   readIntegrationId,
   readProviderClientId,
   readProviderCode,
   readResourceAccountId,
+  readWebhookConfigId,
   splitMultilineList,
   parseRelyingPartyDraftFromTenantApplication,
 } from "../utils/oauth-admin-utils";
@@ -317,6 +320,19 @@ export function createSdkworkIamOauthAdminController(
           }
         }
 
+        // Refuse a second account row for the same provider AppID so every
+        // account stays unique and the credential cascades keep one owner.
+        const existingAccounts = normalizeList(
+          await service.iam.oauth.resourceAccounts.list({ page_size: 200, q: appId }),
+        );
+        const duplicate = existingAccounts.find((row) =>
+          readProviderCode(row) === providerCode && readProviderClientId(row) === appId);
+        if (duplicate) {
+          throw new Error(
+            `An ${kind === "mini_program" ? "mini program" : "official account"} with AppID ${appId} already exists`,
+          );
+        }
+
         const account = await service.iam.oauth.resourceAccounts.create({
           integrationId: resolvedIntegrationId,
           providerCode,
@@ -324,7 +340,10 @@ export function createSdkworkIamOauthAdminController(
           resourceAccountKind: kind,
           displayName,
           providerAccountId: appId,
+          providerAccountType: optionalString(body.accountType),
+          providerAccountOriginalId: optionalString(body.originalId),
           accessMode: "operator_managed",
+          enabled,
           config,
         });
 
@@ -359,6 +378,24 @@ export function createSdkworkIamOauthAdminController(
         throw error;
       }
     },
+    async deleteResourceAccount(resourceAccountId) {
+      setState({ status: "saving", lastError: undefined });
+      try {
+        // Only the account row is removed; the shared login integration,
+        // OAuth client, and secret rows stay untouched.
+        await service.iam.oauth.resourceAccounts.delete(resourceAccountId.trim());
+        await controller.load(QUICK_SETUP_RESOURCE_KEYS);
+        return { resourceAccountId: resourceAccountId.trim() };
+      } catch (error) {
+        setState({
+          status: "error",
+          lastError: error instanceof Error
+            ? error.message
+            : "Failed to delete resource account",
+        });
+        throw error;
+      }
+    },
     async updateAccountConfig(resourceAccountId, config) {
       setState({ status: "saving", lastError: undefined });
       try {
@@ -374,6 +411,45 @@ export function createSdkworkIamOauthAdminController(
         if (integrationId && redirectUri) {
           await service.iam.oauth.integrations.update(integrationId, { redirectUri });
         }
+        // Official account server configuration (message push) syncs to the
+        // message-push webhook row bound to this account, so the scan-login
+        // surface reflects the configured callback and can confirm follows.
+        const notifyUrl = config.notify?.url?.trim();
+        if (notifyUrl && integrationId) {
+          const webhookRows = normalizeList(
+            await service.iam.oauth.webhookConfigs.list({ page_size: 200 }),
+          );
+          // Webhook rows carry their bound account in `resourceAccountId`
+          // (the row's own id lives in `id` / `webhookConfigId`).
+          const existingWebhook = webhookRows.find((row) => {
+            const record = toRecord(row);
+            return (optionalString(record.resourceAccountId)
+              || optionalString(record.resource_account_id)) === normalizedId;
+          });
+          const displayName = account ? readDisplayName(account) : "";
+          if (existingWebhook) {
+            await service.iam.oauth.webhookConfigs.update(
+              readWebhookConfigId(existingWebhook),
+              {
+                callbackUrl: notifyUrl,
+                encodingAesKeyStatus: config.notify?.encodingAesKey?.trim() ? "configured" : "missing",
+                verificationTokenStatus: config.notify?.token?.trim() ? "configured" : "missing",
+              },
+            );
+          } else {
+            await service.iam.oauth.webhookConfigs.create({
+              callbackUrl: notifyUrl,
+              displayName: displayName || "Official account message push",
+              encodingAesKeyStatus: config.notify?.encodingAesKey?.trim() ? "configured" : "missing",
+              integrationId,
+              providerCode: "wechat",
+              resourceAccountId: normalizedId,
+              verificationTokenStatus: config.notify?.token?.trim() ? "configured" : "missing",
+              webhookCode: `oa-notify-${normalizedId}`,
+              webhookKind: "message_push",
+            });
+          }
+        }
         await controller.load(QUICK_SETUP_RESOURCE_KEYS);
         return { resourceAccountId: normalizedId, config };
       } catch (error) {
@@ -382,6 +458,70 @@ export function createSdkworkIamOauthAdminController(
           lastError: error instanceof Error
             ? error.message
             : "Failed to update account developer configuration",
+        });
+        throw error;
+      }
+    },
+    async updateAccountCredentials(resourceAccountId, body) {
+      setState({ status: "saving", lastError: undefined });
+      try {
+        const normalizedId = resourceAccountId.trim();
+        const patch: Record<string, unknown> = {};
+        const appId = body.appId?.trim();
+        const appSecret = body.appSecret?.trim();
+        // The backend cascades providerAccountId to the linked OAuth client
+        // and rotates the encoded AppSecret on the client's secret row; an
+        // empty AppSecret keeps the current secret unchanged.
+        if (appId) {
+          patch.providerAccountId = appId;
+        }
+        if (appSecret) {
+          patch.providerClientSecret = appSecret;
+        }
+        await service.iam.oauth.resourceAccounts.update(normalizedId, patch);
+        await controller.load(QUICK_SETUP_RESOURCE_KEYS);
+        return { resourceAccountId: normalizedId, patch };
+      } catch (error) {
+        setState({
+          status: "error",
+          lastError: error instanceof Error
+            ? error.message
+            : "Failed to update account credentials",
+        });
+        throw error;
+      }
+    },
+    async updateAccountProfile(resourceAccountId, integrationId, body) {
+      setState({ status: "saving", lastError: undefined });
+      try {
+        const normalizedId = resourceAccountId.trim();
+        const displayName = body.displayName.trim();
+        const patch: Record<string, unknown> = { displayName };
+        const accountType = body.accountType?.trim();
+        const originalId = body.originalId?.trim();
+        // Official account profile metadata mirrors the WeChat console
+        // account-info fields; type/original id stay optional and an explicit
+        // empty value clears the stored one.
+        if (body.accountType !== undefined) {
+          patch.providerAccountType = accountType;
+        }
+        if (body.originalId !== undefined) {
+          patch.providerAccountOriginalId = originalId;
+        }
+        await service.iam.oauth.resourceAccounts.update(normalizedId, patch);
+        // Keep the login integration's display name in sync so provider
+        // lists and logs show the same account name.
+        if (integrationId.trim()) {
+          await service.iam.oauth.integrations.update(integrationId.trim(), { displayName });
+        }
+        await controller.load(QUICK_SETUP_RESOURCE_KEYS);
+        return { resourceAccountId: normalizedId, patch };
+      } catch (error) {
+        setState({
+          status: "error",
+          lastError: error instanceof Error
+            ? error.message
+            : "Failed to update account profile",
         });
         throw error;
       }
@@ -978,6 +1118,21 @@ export function createSdkworkIamOauthAdminController(
           throw error;
         });
     },
+    createAccountFollowQrCode(resourceAccountId) {
+      setState({ status: "saving", lastError: undefined });
+      return service.iam.oauth.resourceAccounts.followQrCodes.create(resourceAccountId.trim(), {})
+        .then((detail) => {
+          setState({ status: "ready" });
+          return normalizeAccountFollowQrCode(detail);
+        })
+        .catch((error) => {
+          setState({
+            status: "error",
+            lastError: error instanceof Error ? error.message : "Failed to generate official account follow QR code",
+          });
+          throw error;
+        });
+    },
     setResourceAccountQrLogin(resourceAccountId, enabled) {
       return wrapCreate(
         () => service.iam.oauth.resourceAccounts.update(resourceAccountId.trim(), {
@@ -1046,6 +1201,19 @@ function normalizeScanLoginPreview(value: unknown): SdkworkIamOauthScanLoginPrev
     qrCode: optionalString(record.qrCode),
     qrContent: optionalString(record.qrContent) || "",
     qrMode: optionalString(record.qrMode) || "url",
+  };
+}
+
+function normalizeAccountFollowQrCode(value: unknown): SdkworkIamOauthAccountFollowQrCode {
+  const record = toRecord(value);
+  return {
+    expireSeconds: typeof record.expireSeconds === "number" ? record.expireSeconds : 0,
+    permanent: Boolean(record.permanent),
+    qrCode: optionalString(record.qrCode) || "",
+    qrContent: optionalString(record.qrContent) || "",
+    qrMode: optionalString(record.qrMode) || "official_account",
+    scene: optionalString(record.scene) || "",
+    ticket: optionalString(record.ticket) || "",
   };
 }
 

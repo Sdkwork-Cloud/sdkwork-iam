@@ -396,6 +396,26 @@ export function readAccountIntegrationId(item: unknown): string {
   return readString(record.integrationId ?? record.integration_id);
 }
 
+export function readAccountType(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.providerAccountType ?? record.provider_account_type);
+}
+
+export function readAccountOriginalId(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.providerAccountOriginalId ?? record.provider_account_original_id);
+}
+
+/**
+ * Reads the decrypted provider client secret the backend attaches to resource
+ * account rows so the edit drawer can show the complete saved record. The
+ * secret is only returned on read paths (never written back from this field).
+ */
+export function readProviderClientSecret(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.providerClientSecret ?? record.provider_client_secret);
+}
+
 export function readResourceAccountKind(item: unknown): string {
   const record = toRecord(item);
   return readString(record.resourceAccountKind ?? record.resource_account_kind);
@@ -518,6 +538,11 @@ export function readDomainVerifyStatus(item: unknown): string {
   return readString(record.domainVerifyStatus ?? record.domain_verify_status);
 }
 
+export function readAuthorizationStatus(item: unknown): string {
+  const record = toRecord(item);
+  return readString(record.authorizationStatus ?? record.authorization_status);
+}
+
 export function readWebhookVerifyStatus(item: unknown): string {
   const record = toRecord(item);
   return readString(record.webhookVerifyStatus ?? record.webhook_verify_status);
@@ -545,6 +570,14 @@ export function readEnabled(item: unknown): boolean | undefined {
   }
   if (typeof record.is_enabled === "boolean") {
     return record.is_enabled;
+  }
+  // The backend stores `enabled` as a PostgreSQL INTEGER (0/1) on tables such
+  // as iam_oauth_resource_account; list responses carry it as a JSON number.
+  if (record.enabled === 0 || record.enabled === 1) {
+    return record.enabled === 1;
+  }
+  if (record.is_enabled === 0 || record.is_enabled === 1) {
+    return record.is_enabled === 1;
   }
   // Resources without an `enabled` column (e.g. operational resources)
   // express their lifecycle through `status`.

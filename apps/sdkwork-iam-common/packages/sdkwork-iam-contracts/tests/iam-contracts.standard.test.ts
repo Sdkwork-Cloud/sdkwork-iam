@@ -251,7 +251,7 @@ describe("SDKWork IAM standard contracts", () => {
     ) as { tables: Array<{ table_name: string }> };
     const storageTables = new Set(registry.tables.map((entry) => entry.table_name));
 
-    expect(registry.tables).toHaveLength(57);
+    expect(registry.tables).toHaveLength(58);
 
     for (const tableName of Object.values(SDKWORK_IAM_TABLES)) {
       expect(storageTables.has(tableName)).toBe(true);

@@ -58,9 +58,11 @@ export function createOauthServiceMock() {
           list: vi.fn().mockResolvedValue({ items: [] }),
           create: vi.fn().mockResolvedValue({ id: "iamora-1" }),
           update: vi.fn().mockResolvedValue({ id: "iamora-1" }),
+          delete: vi.fn().mockResolvedValue(undefined),
           verifications: { create: vi.fn() },
           authorizationRefreshes: { create: vi.fn() },
           miniProgramLoginChecks: { create: vi.fn() },
+          followQrCodes: { create: vi.fn() },
         },
         resourceAuthorizations: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn() },
         operationalResources: {

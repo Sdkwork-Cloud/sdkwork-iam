@@ -176,11 +176,26 @@ export interface SdkworkIamOauthAccountVerifyFileConfig {
   fileName?: string;
 }
 
+/**
+ * One WeChat domain verification file bound to a single root domain. Each
+ * configured domain (web authorization domain or legal domain) carries its
+ * own `MP_verify_*.txt` file issued by WeChat.
+ */
+export interface SdkworkIamOauthAccountDomainVerifyFile {
+  content: string;
+  domain: string;
+  fileName: string;
+}
+
 export interface SdkworkIamOauthAccountConfig {
+  businessDomains?: string[];
   domains?: SdkworkIamOauthAccountDomainsConfig;
+  jsSecureDomains?: string[];
+  logoUrl?: string;
   notify?: SdkworkIamOauthAccountNotifyConfig;
   redirectUri?: string;
   verifyFile?: SdkworkIamOauthAccountVerifyFileConfig;
+  verifyFiles?: SdkworkIamOauthAccountDomainVerifyFile[];
   webDomain?: string;
 }
 
@@ -192,11 +207,13 @@ export interface SdkworkIamOauthAccountConfig {
  * `https://{webDomain}/auth/oauth/callback`.
  */
 export interface SdkworkIamOauthAccountSetupDraft {
+  accountType?: string;
   appId: string;
   appSecret: string;
   config?: SdkworkIamOauthAccountConfig;
   displayName: string;
   enabled: boolean;
+  originalId?: string;
   redirectUri: string;
 }
 
@@ -306,6 +323,23 @@ export interface SdkworkIamOauthScanLoginPreview {
   qrMode: string;
 }
 
+/**
+ * WeChat permanent parameterized follow QR for one official account.
+ *
+ * `qrCode` is the `mp.weixin.qq.com/cgi-bin/showqrcode?ticket=...` image URL;
+ * `scene` (`follow:{accountId}`) travels back through the subscribe event so
+ * the platform can attribute followers to the account.
+ */
+export interface SdkworkIamOauthAccountFollowQrCode {
+  expireSeconds: number;
+  permanent: boolean;
+  qrCode: string;
+  qrContent: string;
+  qrMode: string;
+  scene: string;
+  ticket: string;
+}
+
 export interface SdkworkIamOauthAdminController {
   getState(): SdkworkIamOauthAdminState;
   load(
@@ -325,6 +359,7 @@ export interface SdkworkIamOauthAdminController {
     integrationId: string,
     enabled: boolean,
   ): Promise<unknown>;
+  deleteResourceAccount(resourceAccountId: string): Promise<unknown>;
   createIntegration(body: SdkworkIamOauthIntegrationDraft): Promise<unknown>;
   createClient(body: SdkworkIamOauthClientDraft): Promise<unknown>;
   createSecret(body: SdkworkIamOauthSecretDraft): Promise<unknown>;
@@ -358,6 +393,15 @@ export interface SdkworkIamOauthAdminController {
     resourceAccountId: string,
     config: SdkworkIamOauthAccountConfig,
   ): Promise<unknown>;
+  updateAccountCredentials(
+    resourceAccountId: string,
+    body: { appId?: string; appSecret?: string },
+  ): Promise<unknown>;
+  updateAccountProfile(
+    resourceAccountId: string,
+    integrationId: string,
+    body: { accountType?: string; displayName: string; originalId?: string },
+  ): Promise<unknown>;
   updateOperationalResource(resourceId: string, enabled: boolean): Promise<unknown>;
   updateScopeProfileStatus(scopeProfileId: string, active: boolean): Promise<unknown>;
   updateClaimMappingStatus(mappingId: string, active: boolean): Promise<unknown>;
@@ -384,6 +428,9 @@ export interface SdkworkIamOauthAdminController {
     qrMode: string,
     accountId?: string,
   ): Promise<SdkworkIamOauthScanLoginPreview>;
+  createAccountFollowQrCode(
+    resourceAccountId: string,
+  ): Promise<SdkworkIamOauthAccountFollowQrCode>;
   setResourceAccountQrLogin(resourceAccountId: string, enabled: boolean): Promise<unknown>;
 }
 

@@ -4,6 +4,27 @@ import type { ApiRequestOptions, HttpClient } from '../http/client';
 import type { AppbaseOperationCommand, AppbaseSessionCreateCommand, SdkWorkPageData, WechatMiniProgramSessionCreateCommand } from '../types';
 
 
+export interface OauthWechatPaymentOauthStartParams {
+  redirect: string;
+}
+
+export class OauthWechatPaymentOauthApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Wechat Payment Oauth start. */
+  async start(params: OauthWechatPaymentOauthStartParams, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    const query = buildQueryString([
+      { name: 'redirect', value: params.redirect, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<Record<string, unknown>>(appendQueryString(appApiPath(`/oauth/wechat/payment/start`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+  }
+}
+
 export class OauthSessionsApi {
   private client: HttpClient;
 
@@ -311,6 +332,7 @@ export class OauthApi {
   public readonly providers: OauthProvidersApi;
   public readonly scanLoginModes: OauthScanLoginModesApi;
   public readonly sessions: OauthSessionsApi;
+  public readonly wechatPaymentOauth: OauthWechatPaymentOauthApi;
 
   constructor(client: HttpClient) {
     this.client = client;
@@ -324,6 +346,7 @@ export class OauthApi {
     this.providers = new OauthProvidersApi(client);
     this.scanLoginModes = new OauthScanLoginModesApi(client);
     this.sessions = new OauthSessionsApi(client);
+    this.wechatPaymentOauth = new OauthWechatPaymentOauthApi(client);
   }
 
 }

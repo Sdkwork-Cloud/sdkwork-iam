@@ -79,6 +79,10 @@ export type IamBackendOauthService = {
         create(...args: unknown[]): Promise<unknown>;
       };
       create(...args: unknown[]): Promise<unknown>;
+      delete(...args: unknown[]): Promise<unknown>;
+      followQrCodes: {
+        create(...args: unknown[]): Promise<unknown>;
+      };
       list(params?: Record<string, unknown>): Promise<unknown>;
       miniProgramLoginChecks: {
         create(...args: unknown[]): Promise<unknown>;
@@ -208,6 +212,10 @@ export function createIamBackendOauthService(
           create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts?.authorizationRefreshes, "create", "iam.oauth.resourceAccounts.authorizationRefreshes.create", ...args),
         },
         create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts, "create", "iam.oauth.resourceAccounts.create", ...args),
+        delete: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts, "delete", "iam.oauth.resourceAccounts.delete", ...args),
+        followQrCodes: {
+          create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts?.followQrCodes, "create", "iam.oauth.resourceAccounts.followQrCodes.create", ...args),
+        },
         list: (params?: Record<string, unknown>) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts, "list", "iam.oauth.resourceAccounts.list", iamOauthListQuery(params)),
         miniProgramLoginChecks: {
           create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts?.miniProgramLoginChecks, "create", "iam.oauth.resourceAccounts.miniProgramLoginChecks.create", ...args),

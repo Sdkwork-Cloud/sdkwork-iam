@@ -5,17 +5,17 @@ Generated SDKWork v3 dual-token transport SDK.
 ## Installation
 
 ```bash
-npm install @sdkwork/sdkwork-iam-backend-sdk
+npm install @sdkwork/iam-backend-sdk
 # or
-yarn add @sdkwork/sdkwork-iam-backend-sdk
+yarn add @sdkwork/iam-backend-sdk
 # or
-pnpm add @sdkwork/sdkwork-iam-backend-sdk
+pnpm add @sdkwork/iam-backend-sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { SdkworkBackendClient } from '@sdkwork/sdkwork-iam-backend-sdk';
+import { SdkworkBackendClient } from '@sdkwork/iam-backend-sdk';
 
 const client = new SdkworkBackendClient({
   baseUrl: 'http://localhost:8080',
@@ -53,7 +53,7 @@ Access-Token: <accessToken>
 ## Configuration (Non-Auth)
 
 ```typescript
-import { SdkworkBackendClient } from '@sdkwork/sdkwork-iam-backend-sdk';
+import { SdkworkBackendClient } from '@sdkwork/iam-backend-sdk';
 
 const client = new SdkworkBackendClient({
   baseUrl: 'http://localhost:8080',
@@ -100,7 +100,7 @@ const result = await client.iamOauth.iam.oauth.scanLoginSettings.retrieve();
 ## Error Handling
 
 ```typescript
-import { SdkworkBackendClient, NetworkError, TimeoutError, AuthenticationError } from '@sdkwork/sdkwork-iam-backend-sdk';
+import { SdkworkBackendClient, NetworkError, TimeoutError, AuthenticationError } from '@sdkwork/iam-backend-sdk';
 
 try {
   const body = {

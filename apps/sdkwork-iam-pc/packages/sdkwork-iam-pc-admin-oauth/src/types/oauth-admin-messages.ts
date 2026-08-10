@@ -70,19 +70,28 @@ export interface SdkworkIamOauthAdminMessages {
   };
   common: {
     activate: string;
+    all: string;
     booleanFalse: string;
     booleanTrue: string;
     cancel: string;
     confirm: string;
+    connected: string;
+    connectionStatus: string;
+    connectionStatusHint: string;
+    copied: string;
+    copy: string;
     deactivate: string;
     delete: string;
     disable: string;
     disabled: string;
     enable: string;
     enabled: string;
+    logo: string;
     noResourcesFound: string;
+    notConnected: string;
     resource: string;
     status: string;
+    statusHint: string;
     statuses: {
       active: string;
       archived: string;
@@ -311,21 +320,52 @@ export interface SdkworkIamOauthAdminMessages {
     };
   };
   quickSetup: {
+    accountType: {
+      enterprise: string;
+      label: string;
+      personal: string;
+      service: string;
+      subjectLabel: string;
+      subscription: string;
+    };
+    originalId: {
+      label: string;
+      placeholder: string;
+    };
+    tabs: {
+      basic: string;
+      config: string;
+      server: string;
+      status: string;
+    };
+    createStatusHint: string;
+    deleteAccountConfirmTemplate: string;
+    searchPlaceholder: string;
+    webhookVerifyStatus: string;
     accountConfig: {
       basic: {
         appId: string;
         appSecret: string;
+        appSecretPlaceholder: string;
         callbackUrl: string;
         callbackUrlHint: string;
         displayName: string;
+        miniCallbackHint: string;
         webDomain: string;
         webDomainPlaceholder: string;
       };
       domains: {
+        addDomain: string;
         business: string;
+        businessDomains: string;
         businessHint: string;
         description: string;
+        domainPlaceholder: string;
         downloadFile: string;
+        jsSecureDomains: string;
+        miniDescription: string;
+        officialDescription: string;
+        officialTitle: string;
         request: string;
         requestHint: string;
         socket: string;
@@ -334,6 +374,14 @@ export interface SdkworkIamOauthAdminMessages {
       };
       editDescription: string;
       editTitle: string;
+      logo: {
+        choose: string;
+        hint: string;
+        invalidType: string;
+        remove: string;
+        title: string;
+        tooLarge: string;
+      };
       notify: {
         dataFormat: string;
         dataFormatJson: string;
@@ -342,6 +390,8 @@ export interface SdkworkIamOauthAdminMessages {
         encodingAesKey: string;
         encodingAesKeyPlaceholder: string;
         encryptMode: string;
+        generateAesKey: string;
+        generateToken: string;
         encryptModeCompatible: string;
         encryptModePlain: string;
         encryptModeSafe: string;
@@ -368,12 +418,17 @@ export interface SdkworkIamOauthAdminMessages {
         download: string;
         fileName: string;
         fileNamePlaceholder: string;
+        invalidType: string;
+        noDomains: string;
         status: string;
         statusFailed: string;
         statusPending: string;
         statusUnknown: string;
         statusVerified: string;
         title: string;
+        tooLarge: string;
+        upload: string;
+        uploaded: string;
         verify: string;
         verifyHint: string;
       };
@@ -420,6 +475,17 @@ export interface SdkworkIamOauthAdminMessages {
         displayNamePlaceholder: string;
         redirectUri: string;
         redirectUriPlaceholder: string;
+      };
+      followQrCode: {
+        close: string;
+        description: string;
+        download: string;
+        failure: string;
+        generate: string;
+        loading: string;
+        permanentHint: string;
+        sceneLabel: string;
+        title: string;
       };
       listLabelTemplate: string;
       title: string;

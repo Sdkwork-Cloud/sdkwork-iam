@@ -227,10 +227,49 @@ pub async fn create_wechat_mp_temp_qr_code(
     scene: &str,
     expire_seconds: u64,
 ) -> Result<WechatMpTempQrCode, String> {
+    create_wechat_mp_qr_code(pg, app_id, app_secret, scene, "QR_SCENE", Some(expire_seconds)).await
+}
+
+/// Creates a WeChat permanent parameterized QR (`QR_LIMIT_STR_SCENE`).
+///
+/// Permanent QRs never expire and are the right fit for follow-target QR codes
+/// distributed through marketing material: the same `scene_str` always yields
+/// the same QR for the account, so repeated calls stay stable. WeChat limits
+/// each account to 100,000 distinct permanent scenes; callers should pin one
+/// stable scene per account. `expire_seconds` is 0 on the result.
+pub async fn create_wechat_mp_permanent_qr_code(
+    pg: &PgPool,
+    app_id: &str,
+    app_secret: &str,
+    scene: &str,
+) -> Result<WechatMpTempQrCode, String> {
+    create_wechat_mp_qr_code(pg, app_id, app_secret, scene, "QR_LIMIT_STR_SCENE", None).await
+}
+
+/// Shared `cgi-bin/qrcode/create` request for parameterized temp and permanent
+/// QRs. `action_name` selects the QR kind; `expire_seconds` is only sent (and
+/// defaults back from the response) for temp QRs.
+async fn create_wechat_mp_qr_code(
+    pg: &PgPool,
+    app_id: &str,
+    app_secret: &str,
+    scene: &str,
+    action_name: &str,
+    expire_seconds: Option<u64>,
+) -> Result<WechatMpTempQrCode, String> {
     if scene.len() > 64 {
         return Err("WeChat QR scene exceeds the 64 character limit".to_string());
     }
     let access_token = fetch_wechat_mp_access_token(pg, app_id, app_secret).await?;
+    let mut request_body = json!({
+        "action_name": action_name,
+        "action_info": {
+            "scene": { "scene_str": scene }
+        }
+    });
+    if let Some(seconds) = expire_seconds {
+        request_body["expire_seconds"] = json!(seconds);
+    }
     let client = http_client()?;
     let response = client
         .post(format!(
@@ -239,13 +278,7 @@ pub async fn create_wechat_mp_temp_qr_code(
             access_token
         ))
         .header(ACCEPT, "application/json")
-        .json(&json!({
-            "expire_seconds": expire_seconds,
-            "action_name": "QR_SCENE",
-            "action_info": {
-                "scene": { "scene_str": scene }
-            }
-        }))
+        .json(&request_body)
         .send()
         .await
         .map_err(|error| format!("WeChat QR create request failed: {error}"))?;
@@ -260,7 +293,20 @@ pub async fn create_wechat_mp_temp_qr_code(
             status.as_u16()
         ));
     }
-    let payload: Value = serde_json::from_str(&body)
+    let qr = parse_wechat_qr_create_response(&body, expire_seconds)?;
+    Ok(WechatMpTempQrCode {
+        scene: scene.to_string(),
+        ..qr
+    })
+}
+
+/// Parses a `cgi-bin/qrcode/create` response into a QR result. Permanent QRs
+/// carry no `expire_seconds`; 0 means the QR never expires.
+fn parse_wechat_qr_create_response(
+    body: &str,
+    default_expire_seconds: Option<u64>,
+) -> Result<WechatMpTempQrCode, String> {
+    let payload: Value = serde_json::from_str(body)
         .map_err(|error| format!("WeChat QR create response is invalid: {error}"))?;
     if let Some(error_code) = payload.get("errcode").and_then(Value::as_i64) {
         if error_code != 0 {
@@ -282,13 +328,14 @@ pub async fn create_wechat_mp_temp_qr_code(
     let qr_expire_seconds = payload
         .get("expire_seconds")
         .and_then(Value::as_u64)
-        .unwrap_or(expire_seconds);
+        .or(default_expire_seconds)
+        .unwrap_or(0);
     Ok(WechatMpTempQrCode {
         image_url: format!(
             "{WECHAT_QR_IMAGE_BASE}?ticket={}",
             urlencoding::encode(&ticket)
         ),
-        scene: scene.to_string(),
+        scene: String::new(),
         ticket,
         expire_seconds: qr_expire_seconds,
     })
@@ -538,5 +585,58 @@ mod tests {
             let scene = generate_wechat_mp_scene("sdkwork-qr");
             assert!(scene.len() <= 64, "scene too long: {scene}");
         }
+    }
+
+    #[test]
+    fn follow_scene_for_account_id_fits_wechat_64_char_limit() {
+        // Longest realistic resource account id shape: `iamora-` + 36-char uuid.
+        let scene = format!("follow:iamora-{}", "a".repeat(36));
+        assert!(scene.len() <= 64, "scene too long: {scene}");
+        assert_eq!(scene.len(), 7 + 7 + 36);
+    }
+
+    #[test]
+    fn parses_permanent_qr_response_without_expiry() {
+        let qr = parse_wechat_qr_create_response(
+            r#"{"ticket":"permanent-ticket-1","url":"http://weixin.qq.com/q/abc"}"#,
+            None,
+        )
+        .expect("permanent QR response");
+        assert_eq!(qr.ticket, "permanent-ticket-1");
+        assert_eq!(qr.expire_seconds, 0);
+        assert!(
+            qr.image_url.contains("showqrcode?ticket=permanent-ticket-1"),
+            "unexpected image url: {}",
+            qr.image_url
+        );
+    }
+
+    #[test]
+    fn parses_temp_qr_response_with_expiry() {
+        let qr = parse_wechat_qr_create_response(
+            r#"{"ticket":"temp-ticket-1","expire_seconds":300}"#,
+            Some(300),
+        )
+        .expect("temp QR response");
+        assert_eq!(qr.ticket, "temp-ticket-1");
+        assert_eq!(qr.expire_seconds, 300);
+    }
+
+    #[test]
+    fn rejects_qr_create_provider_errors() {
+        let error = parse_wechat_qr_create_response(
+            r#"{"errcode":40001,"errmsg":"invalid credential"}"#,
+            None,
+        )
+        .expect_err("provider error must fail");
+        assert!(error.contains("40001"));
+        assert!(error.contains("invalid credential"));
+    }
+
+    #[test]
+    fn rejects_qr_create_response_without_ticket() {
+        let error = parse_wechat_qr_create_response(r#"{"errcode":0}"#, None)
+            .expect_err("missing ticket must fail");
+        assert!(error.contains("missing ticket"));
     }
 }

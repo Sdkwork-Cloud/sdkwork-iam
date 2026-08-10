@@ -367,4 +367,272 @@ describe("SDKWork IAM OAuth PC admin controller", () => {
     await syncingController.runResourceAccountVerification("iamora-1");
     expect(serviceWithAccount.iam.oauth.resourceAccounts.verifications.create).toHaveBeenCalled();
   });
+
+  it("rotates account credentials through resourceAccounts.update patches", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    // AppID + new secret: both patch fields are sent to the backend, which
+    // cascades them to the linked OAuth client and secret rows.
+    await controller.updateAccountCredentials("iamora-1", {
+      appId: "wx-new-appid",
+      appSecret: "new-secret",
+    });
+    expect(service.iam.oauth.resourceAccounts.update).toHaveBeenLastCalledWith("iamora-1", {
+      providerAccountId: "wx-new-appid",
+      providerClientSecret: "new-secret",
+    });
+
+    // Secret only: the untouched AppID is not part of the patch.
+    await controller.updateAccountCredentials("iamora-1", { appSecret: "rotated-secret" });
+    expect(service.iam.oauth.resourceAccounts.update).toHaveBeenLastCalledWith("iamora-1", {
+      providerClientSecret: "rotated-secret",
+    });
+
+    // AppID only: the empty secret is omitted so the stored secret is kept.
+    await controller.updateAccountCredentials("iamora-1", { appId: "wx-again" });
+    expect(service.iam.oauth.resourceAccounts.update).toHaveBeenLastCalledWith("iamora-1", {
+      providerAccountId: "wx-again",
+    });
+  });
+
+  it("carries the official account type and original id on quick setup", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    await controller.createAccountSetup("official_account", {
+      accountType: "subscription",
+      appId: "wx-oa-2",
+      appSecret: "secret-2",
+      displayName: "My subscription account",
+      enabled: true,
+      originalId: "gh_abc123",
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+    });
+
+    expect(service.iam.oauth.resourceAccounts.create).toHaveBeenCalledWith(expect.objectContaining({
+      providerAccountType: "subscription",
+      providerAccountOriginalId: "gh_abc123",
+    }));
+  });
+
+  it("updates the account profile and keeps the integration name in sync", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    await controller.updateAccountProfile("iamora-1", "iamoi-1", {
+      accountType: "service",
+      displayName: "Renamed account",
+      originalId: "gh_renamed",
+    });
+    expect(service.iam.oauth.resourceAccounts.update).toHaveBeenCalledWith("iamora-1", {
+      displayName: "Renamed account",
+      providerAccountType: "service",
+      providerAccountOriginalId: "gh_renamed",
+    });
+    expect(service.iam.oauth.integrations.update).toHaveBeenCalledWith("iamoi-1", {
+      displayName: "Renamed account",
+    });
+
+    // Profile update without an integration only touches the account row.
+    await controller.updateAccountProfile("iamora-1", "", {
+      displayName: "No integration",
+    });
+    expect(service.iam.oauth.integrations.update).not.toHaveBeenCalledWith(
+      "",
+      expect.anything(),
+    );
+
+    // An explicit empty type/original id clears the stored profile fields.
+    await controller.updateAccountProfile("iamora-1", "iamoi-1", {
+      accountType: "",
+      displayName: "Cleared profile",
+      originalId: "",
+    });
+    expect(service.iam.oauth.resourceAccounts.update).toHaveBeenLastCalledWith("iamora-1", {
+      displayName: "Cleared profile",
+      providerAccountType: "",
+      providerAccountOriginalId: "",
+    });
+  });
+
+  it("deletes a resource account through resourceAccounts.delete", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    await controller.deleteResourceAccount("iamora-1");
+    expect(service.iam.oauth.resourceAccounts.delete).toHaveBeenCalledWith("iamora-1");
+  });
+
+  it("generates the official account follow QR through resourceAccounts.followQrCodes.create", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+    service.iam.oauth.resourceAccounts.followQrCodes.create = vi.fn().mockResolvedValue({
+      expireSeconds: 0,
+      permanent: true,
+      qrCode: "https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=abc",
+      qrContent: "https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=abc",
+      qrMode: "official_account",
+      scene: "follow:iamora-1",
+      ticket: "abc",
+    });
+
+    const qr = await controller.createAccountFollowQrCode("iamora-1");
+
+    expect(service.iam.oauth.resourceAccounts.followQrCodes.create).toHaveBeenCalledWith(
+      "iamora-1",
+      {},
+    );
+    expect(qr).toEqual({
+      expireSeconds: 0,
+      permanent: true,
+      qrCode: "https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=abc",
+      qrContent: "https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=abc",
+      qrMode: "official_account",
+      scene: "follow:iamora-1",
+      ticket: "abc",
+    });
+  });
+
+  it("surfaces follow QR generation failures on the controller state", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+    service.iam.oauth.resourceAccounts.followQrCodes.create = vi
+      .fn()
+      .mockRejectedValue(new Error("WeChat QR create failed: 40001"));
+
+    await expect(controller.createAccountFollowQrCode("iamora-1")).rejects.toThrow(
+      "WeChat QR create failed: 40001",
+    );
+    expect(controller.getState().status).toBe("error");
+    expect(controller.getState().lastError).toContain("40001");
+  });
+
+  it("creates a mini program account setup without a callback URL", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    await controller.createAccountSetup("mini_program", {
+      appId: "wx-mini-001",
+      appSecret: "secret-001",
+      displayName: "My mini program",
+      enabled: true,
+      redirectUri: "",
+    });
+
+    // Mini programs sign in through jscode2session; the callback URL stays
+    // optional and is forwarded as an empty value, never required.
+    expect(service.iam.oauth.integrations.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerCode: "wechat_mini_program",
+        redirectUri: "",
+        surfaceKind: "mini_program",
+      }),
+    );
+    expect(service.iam.oauth.resourceAccounts.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceAccountKind: "mini_program",
+        providerAccountId: "wx-mini-001",
+      }),
+    );
+  });
+
+  it("syncs the official account server config to the bound message-push webhook", async () => {
+    const service = createOauthServiceMock();
+    (service.iam.oauth.resourceAccounts.list as ReturnType<typeof vi.fn>).mockResolvedValue({
+      items: [{
+        id: "iamora-1",
+        integrationId: "iamoi-1",
+        providerCode: "wechat",
+        resourceAccountKind: "official_account",
+        displayName: "My official account",
+        providerAccountId: "wx-oa-001",
+        enabled: true,
+      }],
+    });
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+    await controller.load(["resourceAccounts"]);
+
+    // No webhook row yet -> create one bound to the account.
+    await controller.updateAccountConfig("iamora-1", {
+      notify: { url: "https://app.example.com/wechat/notify" },
+    });
+    expect(service.iam.oauth.webhookConfigs.create).toHaveBeenCalledWith({
+      callbackUrl: "https://app.example.com/wechat/notify",
+      displayName: "My official account",
+      encodingAesKeyStatus: "missing",
+      integrationId: "iamoi-1",
+      providerCode: "wechat",
+      resourceAccountId: "iamora-1",
+      verificationTokenStatus: "missing",
+      webhookCode: "oa-notify-iamora-1",
+      webhookKind: "message_push",
+    });
+
+    // Token and AES key filled -> the push security fields count as
+    // configured on the bound webhook.
+    await controller.updateAccountConfig("iamora-1", {
+      notify: { url: "https://app.example.com/wechat/notify", token: "t", encodingAesKey: "k" },
+    });
+    expect(service.iam.oauth.webhookConfigs.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        encodingAesKeyStatus: "configured",
+        verificationTokenStatus: "configured",
+      }),
+    );
+
+    // Existing row -> update its callback URL instead of creating another.
+    (service.iam.oauth.webhookConfigs.list as ReturnType<typeof vi.fn>).mockResolvedValue({
+      items: [{ id: "iamowh-1", resourceAccountId: "iamora-1" }],
+    });
+    await controller.updateAccountConfig("iamora-1", {
+      notify: { url: "https://app.example.com/wechat/notify-v2" },
+    });
+    expect(service.iam.oauth.webhookConfigs.update).toHaveBeenCalledWith("iamowh-1", {
+      callbackUrl: "https://app.example.com/wechat/notify-v2",
+      encodingAesKeyStatus: "missing",
+      verificationTokenStatus: "missing",
+    });
+    expect(service.iam.oauth.webhookConfigs.create).toHaveBeenCalledTimes(2);
+
+    // Saving without a server URL never touches the webhook surface (the
+    // three previous saves with a notify URL are the only list calls).
+    await controller.updateAccountConfig("iamora-1", { webDomain: "app.example.com" });
+    expect(service.iam.oauth.webhookConfigs.list).toHaveBeenCalledTimes(3);
+  });
+
+  it("refuses a duplicate account for an existing provider AppID", async () => {
+    const service = createOauthServiceMock();
+    (service.iam.oauth.resourceAccounts.list as ReturnType<typeof vi.fn>).mockResolvedValue({
+      items: [{
+        id: "iamora-existing",
+        integrationId: "iamoi-1",
+        providerCode: "wechat",
+        resourceAccountKind: "official_account",
+        displayName: "Existing account",
+        providerAccountId: "wx-oa-001",
+      }],
+    });
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    await expect(controller.createAccountSetup("official_account", {
+      appId: "wx-oa-001",
+      appSecret: "secret-001",
+      displayName: "Duplicate",
+      enabled: true,
+      redirectUri: "https://app.example.com/auth/oauth/callback",
+    })).rejects.toThrow("An official account with AppID wx-oa-001 already exists");
+    expect(service.iam.oauth.resourceAccounts.create).not.toHaveBeenCalled();
+  });
+
+  it("persists the scan-login default account flag through resourceAccounts.update", async () => {
+    const service = createOauthServiceMock();
+    const controller = createSdkworkIamOauthAdminController({ service: service as never });
+
+    await controller.setResourceAccountQrLogin("iamora-1", true);
+    expect(service.iam.oauth.resourceAccounts.update).toHaveBeenCalledWith("iamora-1", {
+      enabled: true,
+      qrDefaultEnabled: true,
+    });
+  });
 });

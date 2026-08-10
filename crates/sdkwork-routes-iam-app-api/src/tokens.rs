@@ -88,6 +88,14 @@ pub(crate) async fn create_session_record(
     organization_id: Option<String>,
     runtime_app_id: &str,
 ) -> Result<LocalSession, String> {
+    // iam_session.organization_id is NOT NULL DEFAULT '0'; the platform
+    // sentinel stands in for an absent organization scope so personal-login
+    // sessions (no org membership) still persist.
+    let organization_id = Some(
+        organization_id
+            .filter(|value| !crate::is_blank(Some(value)))
+            .unwrap_or_else(|| "0".to_string()),
+    );
     if runtime_app_id.trim().is_empty() {
         return Err("runtime appId is required for session creation".to_string());
     }

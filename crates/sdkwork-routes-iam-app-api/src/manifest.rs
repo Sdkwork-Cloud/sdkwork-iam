@@ -176,6 +176,12 @@ const IAM_APP_API_ROUTES: &[HttpRoute] = &[
         "oauth",
         "authorizations.completions.create",
     ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/app/v3/api/oauth/wechat/payment/start",
+        "oauth",
+        "wechatPaymentOauth.start",
+    ),
     HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/system/iam/runtime",

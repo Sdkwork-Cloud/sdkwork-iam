@@ -41,8 +41,6 @@ export function SdkworkIamOauthOfficialAccountsPage({
         listPageInfo={listPageInfo?.resourceAccounts}
         messages={messages.quickSetup.officialAccounts}
         onChanged={sync}
-        onPageChange={(page, pageSize) => controller.listPageResource("resourceAccounts", { page, page_size: pageSize }).then(sync)}
-        onPageSizeChange={(pageSize) => controller.listPageResource("resourceAccounts", { page: 1, page_size: pageSize }).then(sync)}
         status={status}
         switchMessages={messages.quickSetup.accountSwitch}
       />

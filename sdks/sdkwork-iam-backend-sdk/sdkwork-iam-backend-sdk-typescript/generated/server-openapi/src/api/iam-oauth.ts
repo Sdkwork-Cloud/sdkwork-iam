@@ -320,6 +320,20 @@ export class IamOauthIamOauthResourceAccountsMiniProgramLoginChecksApi {
   }
 }
 
+export class IamOauthIamOauthResourceAccountsFollowQrCodesApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Iam oauth resource Accounts follow Qr Codes create. */
+  async create(resourceAccountId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}/follow_qr_codes`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+  }
+}
+
 export class IamOauthIamOauthResourceAccountsAuthorizationRefreshesApi {
   private client: HttpClient;
 
@@ -345,12 +359,14 @@ export interface IamOauthIamOauthResourceAccountsListParams {
 export class IamOauthIamOauthResourceAccountsApi {
   private client: HttpClient;
   public readonly authorizationRefreshes: IamOauthIamOauthResourceAccountsAuthorizationRefreshesApi;
+  public readonly followQrCodes: IamOauthIamOauthResourceAccountsFollowQrCodesApi;
   public readonly miniProgramLoginChecks: IamOauthIamOauthResourceAccountsMiniProgramLoginChecksApi;
   public readonly verifications: IamOauthIamOauthResourceAccountsVerificationsApi;
 
   constructor(client: HttpClient) {
     this.client = client;
     this.authorizationRefreshes = new IamOauthIamOauthResourceAccountsAuthorizationRefreshesApi(client);
+    this.followQrCodes = new IamOauthIamOauthResourceAccountsFollowQrCodesApi(client);
     this.miniProgramLoginChecks = new IamOauthIamOauthResourceAccountsMiniProgramLoginChecksApi(client);
     this.verifications = new IamOauthIamOauthResourceAccountsVerificationsApi(client);
   }

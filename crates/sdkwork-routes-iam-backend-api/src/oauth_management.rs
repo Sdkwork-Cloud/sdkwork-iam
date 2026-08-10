@@ -277,7 +277,7 @@ const OPERATOR_PLATFORMS: TenantResourceSpec = TenantResourceSpec {
 
 const RESOURCE_ACCOUNTS: TenantResourceSpec = TenantResourceSpec {
     table: "iam_oauth_resource_account",
-    list_select: "id, tenant_id, integration_id, provider_code, resource_account_code, resource_account_kind, display_name, verification_status, authorization_status, domain_verify_status, webhook_verify_status, last_verified_at, provider_config_json, qr_default_enabled, status, enabled, created_at, updated_at",
+    list_select: "id, tenant_id, integration_id, provider_code, resource_account_code, resource_account_kind, display_name, provider_account_id, provider_account_type, provider_account_original_id, provider_union_scope_id, verification_status, authorization_status, domain_verify_status, webhook_verify_status, last_verified_at, provider_config_json, qr_default_enabled, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_resource_accounts_list_failed",
     create_error: "iam_oauth_resource_accounts_create_failed",
@@ -291,6 +291,7 @@ const RESOURCE_ACCOUNTS: TenantResourceSpec = TenantResourceSpec {
         "resource_account_kind",
         "display_name",
         "provider_account_id",
+        "provider_account_type",
         "provider_account_original_id",
         "provider_union_scope_id",
         "verification_status",
@@ -331,7 +332,7 @@ const RESOURCE_AUTHORIZATIONS: TenantResourceSpec = TenantResourceSpec {
 
 const WEBHOOK_CONFIGS: TenantResourceSpec = TenantResourceSpec {
     table: "iam_oauth_webhook_config",
-    list_select: "id, tenant_id, integration_id, provider_code, webhook_code, display_name, status, enabled, created_at, updated_at",
+    list_select: "id, tenant_id, integration_id, resource_account_id, provider_code, webhook_code, display_name, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_webhook_configs_list_failed",
     create_error: "iam_oauth_webhook_configs_create_failed",
@@ -340,6 +341,7 @@ const WEBHOOK_CONFIGS: TenantResourceSpec = TenantResourceSpec {
         "id",
         "tenant_id",
         "integration_id",
+        "resource_account_id",
         "provider_code",
         "webhook_code",
         "display_name",
@@ -562,11 +564,15 @@ pub fn apply_oauth_routes(router: Router<BackendIamState>) -> Router<BackendIamS
         )
         .route(
             "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}",
-            patch(update_resource_account),
+            patch(update_resource_account).delete(delete_resource_account),
         )
         .route(
             "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/verifications",
             post(create_resource_account_verification),
+        )
+        .route(
+            "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/follow_qr_codes",
+            post(create_resource_account_follow_qr_code),
         )
         .route(
             "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/mini_program_login_checks",

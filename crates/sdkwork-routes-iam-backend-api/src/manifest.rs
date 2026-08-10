@@ -846,6 +846,12 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
     ),
     HttpRoute::dual_token(
         HttpMethod::Post,
+        "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/follow_qr_codes",
+        "iam.oauth",
+        "iam.oauth.resourceAccounts.followQrCodes.create",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
         "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/mini_program_login_checks",
         "iam.oauth",
         "iam.oauth.resourceAccounts.miniProgramLoginChecks.create",

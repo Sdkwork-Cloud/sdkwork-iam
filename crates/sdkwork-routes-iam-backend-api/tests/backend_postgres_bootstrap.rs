@@ -53,7 +53,7 @@ pub async fn seed_backend_integration_bootstrap_owner(pg: &PgPool) -> String {
 
     sqlx::query(
         "UPDATE iam_tenant_application \
-         SET access_permissions_json = '[\"iam:self\", \"iam.users.read\"]'::jsonb, updated_at = CURRENT_TIMESTAMP \
+         SET access_permissions_json = '[\"iam:self\", \"iam.users.read\", \"iam.oauth.read\"]'::jsonb, updated_at = CURRENT_TIMESTAMP \
          WHERE tenant_id = $1 AND organization_id = $2",
     )
     .bind(DEFAULT_IAM_TENANT_ID)
@@ -107,6 +107,16 @@ pub async fn seed_backend_integration_bootstrap_owner(pg: &PgPool) -> String {
 
     sqlx::query(
         "DELETE FROM iam_tenant_member WHERE tenant_id = $1 AND user_id IN \
+         (SELECT id FROM iam_user WHERE tenant_id = $1 AND LOWER(email) = $2)",
+    )
+    .bind(DEFAULT_IAM_TENANT_ID)
+    .bind(&account_key)
+    .execute(pg)
+    .await
+    .ok();
+
+    sqlx::query(
+        "DELETE FROM iam_session WHERE tenant_id = $1 AND user_id IN \
          (SELECT id FROM iam_user WHERE tenant_id = $1 AND LOWER(email) = $2)",
     )
     .bind(DEFAULT_IAM_TENANT_ID)
