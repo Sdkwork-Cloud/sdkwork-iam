@@ -795,9 +795,14 @@ fn database_baseline_declares_oauth_provider_callback_and_operational_resources(
         );
     }
 
-    let scan_login = table_definition(sql, "iam_oauth_scan_login_config")
-        .expect("scan login config table");
-    for column in ["h5_login_origin", "url_login_enabled", "default_qr_mode", "modes_json"] {
+    let scan_login =
+        table_definition(sql, "iam_oauth_scan_login_config").expect("scan login config table");
+    for column in [
+        "h5_login_origin",
+        "url_login_enabled",
+        "default_qr_mode",
+        "modes_json",
+    ] {
         assert!(
             scan_login.contains(column),
             "iam_oauth_scan_login_config must declare {column}",

@@ -259,13 +259,18 @@ export interface SdkworkIamOauthAdminMessages {
   };
   scanLogin: {
     accounts: {
+      addDescription: string;
+      addServiceAccount: string;
+      addSuccess: string;
       disableLogin: string;
       emptyLabel: string;
       enableHint: string;
       enableLogin: string;
       generateLabel: string;
       listTitle: string;
+      mutualExclusiveHint: string;
       noAccountHint: string;
+      stopLogin: string;
       title: string;
       webhookCallbackHint: string;
       webhookMissing: string;
@@ -300,9 +305,17 @@ export interface SdkworkIamOauthAdminMessages {
       save: string;
       saveSuccess: string;
     };
+    currentActiveBadge: string;
+    currentModeLabel: string;
+    modeNotEnabledBadge: string;
     help: {
       description: string;
       title: string;
+    };
+    modeCardDescriptions: {
+      officialAccount: string;
+      provider: string;
+      url: string;
     };
     preview: {
       copy: string;
@@ -312,13 +325,30 @@ export interface SdkworkIamOauthAdminMessages {
       title: string;
       urlHint: string;
     };
+    providerModeHint: string;
+    providerSelectLabel: string;
+    providerSelectPlaceholder: string;
+    quickSetupOfficialAccountFields: {
+      appId: string;
+      appIdPlaceholder: string;
+      appSecret: string;
+      appSecretPlaceholder: string;
+      displayName: string;
+      displayNamePlaceholder: string;
+    };
+    quickSetupOriginalIdLabel: string;
+    quickSetupOriginalIdPlaceholder: string;
     title: string;
     url: {
+      domainLabel: string;
+      domainPlaceholder: string;
       enabledLabel: string;
       generateLabel: string;
       h5LoginOrigin: string;
       h5LoginOriginHint: string;
       h5LoginOriginPlaceholder: string;
+      loginUrlPreview: string;
+      protocolLabel: string;
       save: string;
       title: string;
       titleHint: string;
@@ -494,6 +524,70 @@ export interface SdkworkIamOauthAdminMessages {
       };
       listLabelTemplate: string;
       title: string;
+    };
+    customMenus: {
+      actions: string;
+      openButton: string;
+      title: string;
+      description: string;
+      back: string;
+      phonePreviewTitle: string;
+      phoneEmptyHint: string;
+      addTopMenu: string;
+      addSubMenu: string;
+      deleteMenu: string;
+      deleteSubMenu: string;
+      moveUp: string;
+      moveDown: string;
+      menuName: string;
+      menuNamePlaceholder: string;
+      nameUnitHint: string;
+      actionTitle: string;
+      actionUnset: string;
+      actionUnsetHint: string;
+      actionTypes: {
+        click: string;
+        clickDescription: string;
+        view: string;
+        viewDescription: string;
+        miniprogram: string;
+        miniprogramDescription: string;
+      };
+      messageLabel: string;
+      messagePlaceholder: string;
+      messageHint: string;
+      urlLabel: string;
+      urlPlaceholder: string;
+      appIdLabel: string;
+      appIdPlaceholder: string;
+      pagePathLabel: string;
+      pagePathPlaceholder: string;
+      rules: string;
+      rulesText: string;
+      rulesText2: string;
+      loading: string;
+      loadFailed: string;
+      selectHint: string;
+      saveDraft: string;
+      saveAndPublish: string;
+      saved: string;
+      publishSuccess: string;
+      publishUnavailable: string;
+      publishFailedTemplate: string;
+      validation: {
+        atLeastOneTop: string;
+        tooManyTop: string;
+        tooManySub: string;
+        nameRequired: string;
+        nameTooLongTop: string;
+        nameTooLongSub: string;
+        actionRequired: string;
+        messageRequired: string;
+        urlRequired: string;
+        urlInvalid: string;
+        appIdRequired: string;
+        pagePathRequired: string;
+      };
     };
     providerConnections: {
       actions: string;

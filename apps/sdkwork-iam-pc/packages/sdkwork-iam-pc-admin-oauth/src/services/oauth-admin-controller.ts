@@ -12,6 +12,10 @@ import type {
   SdkworkIamOauthAdminState,
   SdkworkIamOauthClaimMappingDraft,
   SdkworkIamOauthClientDraft,
+  SdkworkIamOauthCustomMenuButton,
+  SdkworkIamOauthCustomMenuContext,
+  SdkworkIamOauthCustomMenuDraft,
+  SdkworkIamOauthCustomMenuPublishResult,
   SdkworkIamOauthDiagnosticRunDraft,
   SdkworkIamOauthFlowConfigDraft,
   SdkworkIamOauthIntegrationDraft,
@@ -28,6 +32,7 @@ import type {
   SdkworkIamOauthWebhookConfigDraft,
   SdkworkIamOauthAccountLinkUpdateDraft,
   SdkworkIamOauthOperationalResourceDraft,
+  SdkworkIamOauthScanLoginModeEntry,
   SdkworkIamOauthScanLoginPreview,
   SdkworkIamOauthScanLoginSettings,
   SdkworkIamOauthScanLoginWebhookInfo,
@@ -35,6 +40,7 @@ import type {
 import {
   buildStandardCallbackUri,
   normalizeList,
+  readAccountConfig,
   readAccountIntegrationId,
   readDisplayName,
   readIntegrationId,
@@ -1191,6 +1197,103 @@ export function createSdkworkIamOauthAdminController(
           throw error;
         });
     },
+    async loadAccountCustomMenu(resourceAccountId) {
+      setState({ status: "saving", lastError: undefined });
+      try {
+        const normalizedId = resourceAccountId.trim();
+        let row = state.resourceAccounts.find((item) => readResourceAccountId(item) === normalizedId);
+        if (!row) {
+          // The account may sit outside the currently loaded page; refresh the
+          // quick-setup lists once before falling back to an empty draft.
+          await controller.load(QUICK_SETUP_RESOURCE_KEYS);
+          row = state.resourceAccounts.find((item) => readResourceAccountId(item) === normalizedId);
+        }
+        const config = row ? readAccountConfig(row) : undefined;
+        setState({ status: "ready" });
+        return {
+          displayName: row ? readDisplayName(row) : normalizedId,
+          logoUrl: config?.logoUrl,
+          draft: normalizeCustomMenuDraft(config?.customMenu),
+        } satisfies SdkworkIamOauthCustomMenuContext;
+      } catch (error) {
+        setState({
+          status: "error",
+          lastError: error instanceof Error
+            ? error.message
+            : "Failed to load official account custom menu",
+        });
+        throw error;
+      }
+    },
+    async saveAccountCustomMenu(resourceAccountId, draft) {
+      setState({ status: "saving", lastError: undefined });
+      try {
+        const normalizedId = resourceAccountId.trim();
+        let account = state.resourceAccounts.find(
+          (item) => readResourceAccountId(item) === normalizedId,
+        );
+        if (!account) {
+          // Never overwrite the provider config with a partial view: refresh
+          // the quick-setup lists before merging into the stored document.
+          await controller.load(QUICK_SETUP_RESOURCE_KEYS);
+          account = state.resourceAccounts.find(
+            (item) => readResourceAccountId(item) === normalizedId,
+          );
+        }
+        const existing = account ? readAccountConfig(account) : undefined;
+        const config = {
+          ...existing,
+          customMenu: {
+            buttons: draft.buttons.map(cloneMenuButton),
+            updatedAt: new Date().toISOString(),
+          } satisfies SdkworkIamOauthCustomMenuDraft,
+        };
+        await service.iam.oauth.resourceAccounts.update(normalizedId, { config });
+        await controller.load(QUICK_SETUP_RESOURCE_KEYS);
+        return { resourceAccountId: normalizedId };
+      } catch (error) {
+        setState({
+          status: "error",
+          lastError: error instanceof Error
+            ? error.message
+            : "Failed to save official account custom menu",
+        });
+        throw error;
+      }
+    },
+    async publishAccountCustomMenu(resourceAccountId, draft) {
+      setState({ status: "saving", lastError: undefined });
+      const normalizedId = resourceAccountId.trim();
+      try {
+        await controller.saveAccountCustomMenu(normalizedId, draft);
+      } catch (error) {
+        setState({ status: "error", lastError: error instanceof Error ? error.message : "Failed to save custom menu draft" });
+        throw error;
+      }
+      try {
+        await service.iam.oauth.resourceAccounts.customMenus.publish(normalizedId, {
+          buttons: draft.buttons.map(cloneMenuButton),
+        });
+        setState({ status: "ready" });
+        return { saved: true, published: true } satisfies SdkworkIamOauthCustomMenuPublishResult;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to publish custom menu";
+        setState({
+          status: "error",
+          lastError: message,
+        });
+        // The publish capability only exists once the IAM backend exposes the
+        // custom-menu SDK resource; until then keep the saved draft and tell
+        // the UI why publishing did not run.
+        const backendUnavailable = message.includes("Missing SDKWork IAM SDK resource");
+        return {
+          saved: true,
+          published: false,
+          reason: backendUnavailable ? "backend_unavailable" : "publish_failed",
+          errorMessage: backendUnavailable ? undefined : message,
+        } satisfies SdkworkIamOauthCustomMenuPublishResult;
+      }
+    },
     setResourceAccountQrLogin(resourceAccountId, enabled) {
       return wrapCreate(
         () => {
@@ -1229,22 +1332,7 @@ function normalizeScanLoginSettings(value: unknown): SdkworkIamOauthScanLoginSet
       };
     })
     : [];
-  const modes = Array.isArray(record.modes)
-    ? record.modes.map((item) => {
-      const mode = toRecord(item);
-      const entryMode = optionalString(mode.mode) || "url";
-      const providerCode = optionalString(mode.providerCode);
-      return {
-        displayName: optionalString(mode.displayName),
-        enabled: Boolean(mode.enabled),
-        mode: entryMode,
-        providerCode,
-        qrMode: optionalString(mode.qrMode)
-          || (entryMode === "provider" && providerCode ? `provider:${providerCode}` : entryMode),
-        sortOrder: typeof mode.sortOrder === "number" ? mode.sortOrder : 999,
-      };
-    }).filter((mode) => Boolean(mode.qrMode))
-    : [];
+  const modes = normalizeScanLoginModes(record.modes);
   const requestedMode = optionalString(record.defaultQrMode) || "auto";
   return {
     defaultQrMode: requestedMode === "official_account" || requestedMode === "url" ? requestedMode : "auto",
@@ -1255,6 +1343,38 @@ function normalizeScanLoginSettings(value: unknown): SdkworkIamOauthScanLoginSet
       h5LoginOrigin: optionalString(urlLogin.h5LoginOrigin) || "",
     },
   };
+}
+
+function normalizeScanLoginModes(value: unknown): SdkworkIamOauthScanLoginModeEntry[] {
+  // The backend historically returned the modes registry as a JSON string;
+  // accept both the array and the string shape.
+  let entries: unknown[] = [];
+  if (Array.isArray(value)) {
+    entries = value;
+  } else if (typeof value === "string") {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        entries = parsed;
+      }
+    } catch {
+      // Fall through to the empty registry.
+    }
+  }
+  return entries.map((item) => {
+    const mode = toRecord(item);
+    const entryMode = optionalString(mode.mode) || "url";
+    const providerCode = optionalString(mode.providerCode);
+    return {
+      displayName: optionalString(mode.displayName),
+      enabled: Boolean(mode.enabled),
+      mode: entryMode,
+      providerCode,
+      qrMode: optionalString(mode.qrMode)
+        || (entryMode === "provider" && providerCode ? `provider:${providerCode}` : entryMode),
+      sortOrder: typeof mode.sortOrder === "number" ? mode.sortOrder : 999,
+    };
+  }).filter((mode) => Boolean(mode.qrMode));
 }
 
 function normalizeScanLoginPreview(value: unknown): SdkworkIamOauthScanLoginPreview {
@@ -1277,6 +1397,53 @@ function normalizeAccountFollowQrCode(value: unknown): SdkworkIamOauthAccountFol
     qrMode: optionalString(record.qrMode) || "official_account",
     scene: optionalString(record.scene) || "",
     ticket: optionalString(record.ticket) || "",
+  };
+}
+
+/**
+ * Normalizes a raw `config.customMenu` document from the backend into the
+ * typed draft, tolerating partial/foreign shapes and repairing malformed
+ * entries so the editor always renders a valid tree.
+ */
+function normalizeCustomMenuDraft(value: unknown): SdkworkIamOauthCustomMenuDraft {
+  const record = toRecord(value);
+  if (!Array.isArray(record.buttons)) {
+    return { buttons: [] };
+  }
+  return {
+    buttons: record.buttons
+      .map(normalizeMenuButton)
+      .filter((button) => button !== undefined),
+    updatedAt: optionalString(record.updatedAt),
+  };
+}
+
+function normalizeMenuButton(value: unknown): SdkworkIamOauthCustomMenuButton | undefined {
+  const record = toRecord(value);
+  const key = optionalString(record.key);
+  if (!key) {
+    return undefined;
+  }
+  const type = optionalString(record.type);
+  const actionType = type === "click" || type === "view" || type === "miniprogram" ? type : undefined;
+  return {
+    key,
+    name: optionalString(record.name) || "",
+    type: actionType,
+    url: optionalString(record.url),
+    appId: optionalString(record.appId),
+    pagePath: optionalString(record.pagePath),
+    message: optionalString(record.message),
+    subButtons: Array.isArray(record.subButtons)
+      ? record.subButtons.map(normalizeMenuButton).filter((button) => button !== undefined)
+      : undefined,
+  };
+}
+
+function cloneMenuButton(button: SdkworkIamOauthCustomMenuButton): SdkworkIamOauthCustomMenuButton {
+  return {
+    ...button,
+    subButtons: button.subButtons ? button.subButtons.map(cloneMenuButton) : undefined,
   };
 }
 

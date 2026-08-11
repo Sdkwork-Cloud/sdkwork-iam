@@ -817,6 +817,9 @@ export const SDKWORK_IAM_API_ROUTES = {
           create: operation("POST", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}/authorization_refreshes`, "iam", "iam.oauth.resourceAccounts.authorizationRefreshes.create", "dualToken"),
         },
         create: operation("POST", `${backend}/iam/oauth/resource_accounts`, "iam", "iam.oauth.resourceAccounts.create", "dualToken"),
+        customMenus: {
+          publish: operation("POST", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}/custom_menus/publish`, "iam", "iam.oauth.resourceAccounts.customMenus.publish", "dualToken"),
+        },
         delete: operation("DELETE", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}`, "iam", "iam.oauth.resourceAccounts.delete", "dualToken"),
         followQrCodes: {
           create: operation("POST", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}/follow_qr_codes`, "iam", "iam.oauth.resourceAccounts.followQrCodes.create", "dualToken"),

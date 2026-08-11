@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import { ArrowDown, ArrowUp, QrCode, Trash2 } from "lucide-react";
+import { Globe, MessageCircle, Plus, QrCode, ShieldCheck } from "lucide-react";
 import {
   Button,
-  ConfirmDialog,
-  IconButton,
   SettingsSection,
   StatusBadge,
   StatusNotice,
@@ -33,15 +31,18 @@ export type OauthScanLoginNoticeHandler = (message: string) => void;
 /**
  * Official-account scan login configuration.
  *
- * Each enabled official account can enable "scan to follow, follow to sign
- * in": the login page then shows a WeChat parameterized temp QR of that
- * account. The message callback (webhook) state is surfaced so the WeChat
- * console server configuration can be completed.
+ * Service accounts (the backend only returns `service` type accounts) can
+ * enable "scan to follow, follow to sign in": the login page then shows a
+ * WeChat parameterized temp QR of that account. Exactly one account is active
+ * at a time — the backend clears `qr_default_enabled` on every other account
+ * when one is enabled. When no service account exists, an add action jumps to
+ * the official-accounts management page with the add drawer open.
  */
 export function OauthOfficialAccountScanLoginSection({
   accounts,
   busy,
   controller,
+  onAddAccount,
   onChanged,
   onError,
   onPreview,
@@ -49,6 +50,7 @@ export function OauthOfficialAccountScanLoginSection({
   accounts: SdkworkIamOauthScanLoginOfficialAccount[];
   busy: boolean;
   controller: SdkworkIamOauthAdminController;
+  onAddAccount: () => void;
   onChanged: () => void;
   onError: (message: string) => void;
   onPreview: OauthScanLoginPreviewHandler;
@@ -75,10 +77,20 @@ export function OauthOfficialAccountScanLoginSection({
       });
   };
 
+
   if (accounts.length === 0) {
     return (
       <SettingsSection description={copy.accounts.noAccountHint} title={copy.accounts.title}>
-        <StatusNotice tone="default">{copy.accounts.emptyLabel}</StatusNotice>
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-[var(--sdk-color-border-default)] px-6 py-10">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--sdk-color-surface-panel-muted)] text-[var(--sdk-color-text-muted)]">
+            <MessageCircle aria-hidden="true" className="h-6 w-6" />
+          </span>
+          <StatusNotice tone="default">{copy.accounts.emptyLabel}</StatusNotice>
+          <Button onClick={onAddAccount} size="sm" type="button" variant="outline">
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            {copy.accounts.addServiceAccount}
+          </Button>
+        </div>
       </SettingsSection>
     );
   }
@@ -88,60 +100,105 @@ export function OauthOfficialAccountScanLoginSection({
       <div className="space-y-3">
         {accounts.map((account) => {
           const webhookReady = Boolean(account.webhook?.enabled);
+          const active = account.qrLoginEnabled;
           return (
-            <div
-              className="flex flex-wrap items-center justify-between gap-3 rounded border p-3"
+            <label
+              className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 transition-colors ${
+                active
+                  ? "border-[var(--sdk-color-brand-primary)] bg-[var(--sdk-color-brand-primary-soft)]"
+                  : "border-[var(--sdk-color-border-default)] hover:border-[var(--sdk-color-border-strong)]"
+              }`}
               key={account.accountId}
             >
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-[var(--sdk-color-text-primary)]">
-                    {account.displayName}
-                  </span>
-                  {account.appId ? (
-                    <code className="text-xs text-[var(--sdk-color-text-muted)]">{account.appId}</code>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--sdk-color-text-muted)]">
-                  <StatusBadge
-                    label={webhookReady ? copy.accounts.webhookReady : copy.accounts.webhookMissing}
-                    showIcon
-                    status={webhookReady ? "enabled" : "disabled"}
-                  />
-                  {account.webhook?.callbackUrl ? (
-                    <code className="break-all">{account.webhook.callbackUrl}</code>
-                  ) : null}
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Switch
-                  aria-label={account.qrLoginEnabled ? copy.accounts.disableLogin : copy.accounts.enableLogin}
-                  checked={account.qrLoginEnabled}
+              <span className="flex min-w-0 flex-1 items-start gap-3">
+                <input
+                  checked={active}
+                  className="mt-1 h-4 w-4 accent-[var(--sdk-color-brand-primary)]"
                   disabled={busy}
-                  onCheckedChange={(enabled) => toggleQrLogin(account, enabled)}
-                  title={account.qrLoginEnabled ? copy.accounts.disableLogin : copy.accounts.enableLogin}
+                  name="oauth-scan-login-active-account"
+                  onChange={() => toggleQrLogin(account, true)}
+                  onClick={() => {
+                    // Radios cannot be unchecked natively: clicking the
+                    // already-active radio disables scan login for it, so the
+                    // operator can turn the active account off.
+                    if (active) {
+                      toggleQrLogin(account, false);
+                    }
+                  }}
+                  type="radio"
                 />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--sdk-color-border-default)] bg-[var(--sdk-color-surface-panel)] text-[var(--sdk-color-text-secondary)]">
+                  <MessageCircle aria-hidden="true" className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1 space-y-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-[var(--sdk-color-text-primary)]">
+                      {account.displayName}
+                    </span>
+                    {active ? (
+                      <StatusBadge
+                        label={copy.currentActiveBadge}
+                        showIcon
+                        status="enabled"
+                      />
+                    ) : null}
+                    {account.appId ? (
+                      <code className="text-xs text-[var(--sdk-color-text-muted)]">{account.appId}</code>
+                    ) : null}
+                  </span>
+                  <span className="flex flex-wrap items-center gap-2 text-xs text-[var(--sdk-color-text-muted)]">
+                    <StatusBadge
+                      label={webhookReady ? copy.accounts.webhookReady : copy.accounts.webhookMissing}
+                      showIcon
+                      status={webhookReady ? "enabled" : "disabled"}
+                    />
+                    {account.webhook?.callbackUrl ? (
+                      <code className="break-all">{account.webhook.callbackUrl}</code>
+                    ) : null}
+                  </span>
+                </span>
+              </span>
+              <span className="flex flex-wrap items-center gap-3">
+                {active ? (
+                  <Button
+                    disabled={busy}
+                    onClick={() => toggleQrLogin(account, false)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    {copy.accounts.stopLogin}
+                  </Button>
+                ) : null}
                 <Button
                   disabled={busy || !account.enabled}
                   loading={generating === account.accountId}
                   onClick={() => generatePreview(account.accountId)}
                   size="sm"
                   type="button"
+                  variant={active ? "primary" : "outline"}
                 >
                   {copy.accounts.generateLabel}
                 </Button>
-              </div>
-            </div>
+              </span>
+            </label>
           );
         })}
       </div>
+      <p className="text-xs text-[var(--sdk-color-text-muted)]">{copy.accounts.mutualExclusiveHint}</p>
+      <Button onClick={onAddAccount} size="sm" type="button" variant="outline">
+        <Plus aria-hidden="true" className="h-4 w-4" />
+        {copy.accounts.addServiceAccount}
+      </Button>
     </SettingsSection>
   );
 }
 
 /**
- * URL scan-login configuration: the H5 mobile login origin plus an
- * enable switch. The generated QR content is the H5 login page URL.
+ * URL scan-login configuration: the H5 mobile login origin is edited as a
+ * protocol choice (https/http) plus a domain, and the complete login URL is
+ * previewed from the standard `{origin}/auth/login?session_key=...` shape.
+ * Saving writes the assembled origin back to the backend.
  */
 export function OauthUrlScanLoginSection({
   busy,
@@ -162,23 +219,40 @@ export function OauthUrlScanLoginSection({
 }) {
   const messages = useSdkworkIamOauthAdminMessages();
   const copy = messages.scanLogin;
-  const [h5LoginOrigin, setH5LoginOrigin] = useState(settings.urlLogin.h5LoginOrigin);
+  const [protocol, setProtocol] = useState("https");
+  const [domain, setDomain] = useState("");
   const [urlEnabled, setUrlEnabled] = useState(settings.urlLogin.enabled);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
 
-  // Sync local draft when the page reloads settings.
+  // Split the stored origin back into protocol + domain whenever the page
+  // reloads settings from the backend.
   useEffect(() => {
-    setH5LoginOrigin(settings.urlLogin.h5LoginOrigin);
+    const origin = settings.urlLogin.h5LoginOrigin.trim();
+    const match = /^(https?):\/\/([^/]+)/u.exec(origin);
+    if (match) {
+      setProtocol(match[1]);
+      setDomain(match[2]);
+    } else {
+      setProtocol("https");
+      setDomain(origin.replace(/^https?:\/\//u, ""));
+    }
     setUrlEnabled(settings.urlLogin.enabled);
   }, [settings]);
+
+  const origin = `${protocol}://${domain.trim()}`;
+  // The preview shows the exact URL the login page encodes into the QR
+  // (mirrors the backend url-mode generation).
+  const loginUrl = domain.trim()
+    ? `${origin}/auth/login?session_key=...&purpose=login&scan_source=qr`
+    : "";
 
   const saveUrlSettings = () => {
     setSaving(true);
     void controller.updateScanLoginSettings({
       urlLogin: {
         enabled: urlEnabled,
-        h5LoginOrigin: h5LoginOrigin.trim(),
+        h5LoginOrigin: origin,
       },
     })
       .then((updated) => {
@@ -202,16 +276,61 @@ export function OauthUrlScanLoginSection({
       .finally(() => setGenerating(false));
   };
 
+  const canSave = Boolean(domain.trim() && (protocol === "https" || protocol === "http"));
+  const [copied, setCopied] = useState(false);
+  // The login-path suffix is appended by the login page at QR time; it is
+  // shown read-only on the same row as protocol + domain.
+  const uriSuffix = "/auth/login?session_key=…&purpose=login&scan_source=qr";
+
+  const copyLoginUrl = () => {
+    void navigator.clipboard?.writeText(loginUrl)
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => undefined);
+  };
+
   return (
     <SettingsSection description={copy.url.titleHint} title={copy.url.title}>
       <div className="space-y-3">
-        <OauthAdminField
-          label={copy.url.h5LoginOrigin}
-          onChange={setH5LoginOrigin}
-          placeholder={copy.url.h5LoginOriginPlaceholder}
-          type="url"
-          value={h5LoginOrigin}
-        />
+        <div className="flex items-stretch overflow-hidden rounded-[0.75rem] border border-[var(--sdk-color-border-default)] focus-within:border-[var(--sdk-color-brand-primary)]">
+          <select
+            aria-label={copy.url.protocolLabel}
+            className="shrink-0 border-r border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm outline-none"
+            onChange={(event) => setProtocol(event.target.value)}
+            value={protocol}
+          >
+            <option value="https">https</option>
+            <option value="http">http</option>
+          </select>
+          <span className="flex items-center px-1 text-sm text-[var(--sdk-color-text-muted)]">://</span>
+          <input
+            aria-label={copy.url.domainLabel}
+            className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm outline-none placeholder:text-[var(--sdk-color-text-muted)]"
+            onChange={(event) => setDomain(event.target.value)}
+            placeholder={copy.url.domainPlaceholder}
+            value={domain}
+          />
+          <span className="flex shrink-0 items-center border-l border-[var(--sdk-color-border-default)] bg-[var(--sdk-color-surface-muted)] px-3 text-xs text-[var(--sdk-color-text-muted)]">
+            {uriSuffix}
+          </span>
+        </div>
+        {loginUrl ? (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-[var(--sdk-color-text-secondary)]">
+              {copy.url.loginUrlPreview}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-[var(--sdk-color-border-default)] bg-[var(--sdk-color-surface-muted)] px-3 py-2">
+              <code className="min-w-0 flex-1 break-all text-xs text-[var(--sdk-color-text-primary)]">
+                {loginUrl}
+              </code>
+              <Button disabled={!loginUrl} onClick={copyLoginUrl} size="sm" type="button" variant="outline">
+                {copied ? copy.preview.copied : copy.preview.copy}
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <p className="text-xs text-[var(--sdk-color-text-muted)]">{copy.url.h5LoginOriginHint}</p>
         <label className="flex items-center gap-2 text-sm" htmlFor="oauth-scan-login-url-enabled">
           <Switch
@@ -225,7 +344,7 @@ export function OauthUrlScanLoginSection({
         </label>
         <div className="flex flex-wrap gap-2">
           <Button
-            disabled={busy || saving}
+            disabled={busy || saving || !canSave}
             loading={saving}
             onClick={saveUrlSettings}
             size="sm"
@@ -234,7 +353,7 @@ export function OauthUrlScanLoginSection({
             {copy.url.save}
           </Button>
           <Button
-            disabled={busy || generating || !h5LoginOrigin.trim()}
+            disabled={busy || generating || !canSave}
             loading={generating}
             onClick={generatePreview}
             size="sm"
@@ -334,319 +453,6 @@ function QrCodeCanvasSvg({ content }: { content: string }) {
     );
   }
   return <img alt="Scan login URL QR" className="h-52 w-52 rounded border object-contain" src={dataUrl} />;
-}
-
-type AddModeKind = "official_account" | "url" | "provider" | "";
-
-/**
- * Scan-login mode registry management: ordered, enable/disable, add and
- * remove modes (official account follow login, H5 URL, third-party OAuth
- * provider). The login page shows the first enabled mode by default and
- * lets users rotate through the rest.
- */
-export function OauthScanLoginModesSection({
-  busy,
-  controller,
-  modes,
-  onChanged,
-  onError,
-  onNotice,
-  onPreview,
-  providerCatalog,
-}: {
-  busy: boolean;
-  controller: SdkworkIamOauthAdminController;
-  modes: SdkworkIamOauthScanLoginModeEntry[];
-  onChanged: (settings: SdkworkIamOauthScanLoginSettings) => void;
-  onError: (message: string) => void;
-  onNotice: OauthScanLoginNoticeHandler;
-  onPreview: OauthScanLoginPreviewHandler;
-  providerCatalog: unknown[];
-}) {
-  const messages = useSdkworkIamOauthAdminMessages();
-  const copy = messages.scanLogin.modes;
-  const [addKind, setAddKind] = useState<AddModeKind>("");
-  const [providerCode, setProviderCode] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | undefined>();
-  const [generating, setGenerating] = useState<string | undefined>();
-
-  const providerOptions = useMemo(() => providerCatalog
-    .map((item) => {
-      const record = toRecord(item);
-      return {
-        code: optionalString(record.providerCode) || "",
-        name: optionalString(record.displayName) || optionalString(record.providerCode) || "",
-      };
-    })
-    .filter((option) => Boolean(option.code))
-    .sort((left, right) => left.code.localeCompare(right.code)), [providerCatalog]);
-
-  const saveModes = (next: SdkworkIamOauthScanLoginModeEntry[]) => {
-    setSaving(true);
-    void controller.updateScanLoginSettings({ modes: next })
-      .then((updated) => {
-        onChanged(updated);
-        onError("");
-        onNotice(messages.scanLogin.common.saveSuccess);
-      })
-      .catch((error) => {
-        onError(error instanceof Error ? error.message : "Failed to update scan login modes");
-      })
-      .finally(() => setSaving(false));
-  };
-
-  const move = (index: number, delta: number) => {
-    const next = [...modes];
-    const target = index + delta;
-    if (target < 0 || target >= next.length) {
-      return;
-    }
-    const [entry] = next.splice(index, 1);
-    next.splice(target, 0, entry);
-    saveModes(next);
-  };
-
-  const toggleEnabled = (index: number) => {
-    const next = modes.map((mode, modeIndex) => (
-      modeIndex === index ? { ...mode, enabled: !mode.enabled } : mode
-    ));
-    saveModes(next);
-  };
-
-  const remove = (index: number) => {
-    const next = modes.filter((_, modeIndex) => modeIndex !== index);
-    saveModes(next);
-  };
-
-  const addMode = (mode: SdkworkIamOauthScanLoginModeEntry) => {
-    const nextSortOrder = modes.reduce((max, entry) => Math.max(max, entry.sortOrder), 0) + 10;
-    saveModes([...modes, { ...mode, sortOrder: nextSortOrder }]);
-  };
-
-  const addSelectedKind = () => {
-    if (addKind === "official_account") {
-      addMode({
-        displayName: undefined,
-        enabled: true,
-        mode: "official_account",
-        providerCode: undefined,
-        qrMode: "official_account",
-        sortOrder: 999,
-      });
-    } else if (addKind === "url") {
-      addMode({
-        displayName: undefined,
-        enabled: true,
-        mode: "url",
-        providerCode: undefined,
-        qrMode: "url",
-        sortOrder: 999,
-      });
-    } else if (addKind === "provider") {
-      const code = providerCode.trim();
-      if (!code) {
-        return;
-      }
-      addMode({
-        displayName: undefined,
-        enabled: true,
-        mode: "provider",
-        providerCode: code,
-        qrMode: `provider:${code}`,
-        sortOrder: 999,
-      });
-      setProviderCode("");
-    } else {
-      return;
-    }
-    setAddKind("");
-  };
-
-  const addProviderMode = (option: { code: string; name: string }) => {
-    addMode({
-      displayName: option.name,
-      enabled: true,
-      mode: "provider",
-      providerCode: option.code,
-      qrMode: `provider:${option.code}`,
-      sortOrder: 999,
-    });
-  };
-
-  const generatePreview = (qrMode: string) => {
-    setGenerating(qrMode);
-    void controller.generateScanLoginPreview(qrMode)
-      .then((preview) => onPreview(preview, previewHint(qrMode)))
-      .catch((error) => {
-        onError(error instanceof Error ? error.message : "Failed to generate QR code");
-      })
-      .finally(() => setGenerating(undefined));
-  };
-
-  const modeLabel = (entry: SdkworkIamOauthScanLoginModeEntry): string => {
-    if (entry.displayName) {
-      return entry.displayName;
-    }
-    if (entry.mode === "official_account") {
-      return messages.scanLogin.accounts.title;
-    }
-    if (entry.mode === "provider") {
-      return entry.providerCode ? `${copy.providerModeLabel} · ${entry.providerCode}` : copy.providerModeLabel;
-    }
-    return messages.scanLogin.url.title;
-  };
-
-  const previewHint = (qrMode: string): string => {
-    if (qrMode === "provider" || qrMode.startsWith("provider:")) {
-      return messages.scanLogin.preview.urlHint;
-    }
-    if (qrMode === "official_account") {
-      return messages.scanLogin.preview.officialAccountHint;
-    }
-    return messages.scanLogin.preview.urlHint;
-  };
-
-  const addDisabled = busy || saving || addKind === "" || (addKind === "provider" && !providerCode.trim());
-
-  return (
-    <SettingsSection description={copy.defaultHint} title={copy.title}>
-      {modes.length === 0 ? (
-        <StatusNotice tone="default">{copy.emptyHint}</StatusNotice>
-      ) : (
-        <div className="space-y-2">
-          {modes.map((entry, index) => (
-            <div
-              className="flex flex-wrap items-center justify-between gap-2 rounded border p-2"
-              key={`${entry.qrMode}-${index}`}
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="text-xs text-[var(--sdk-color-text-muted)]">{index + 1}</span>
-                <span className="min-w-0 flex-1 truncate text-sm">{modeLabel(entry)}</span>
-                {entry.mode === "provider" && entry.providerCode ? (
-                  <code className="text-xs text-[var(--sdk-color-text-muted)]">{entry.providerCode}</code>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap items-center gap-1">
-                <IconButton
-                  aria-label={copy.moveUp}
-                  disabled={busy || saving || index === 0}
-                  onClick={() => move(index, -1)}
-                  title={copy.moveUp}
-                  type="button"
-                  variant="outline"
-                >
-                  <ArrowUp aria-hidden="true" className="h-3.5 w-3.5" />
-                </IconButton>
-                <IconButton
-                  aria-label={copy.moveDown}
-                  disabled={busy || saving || index === modes.length - 1}
-                  onClick={() => move(index, 1)}
-                  title={copy.moveDown}
-                  type="button"
-                  variant="outline"
-                >
-                  <ArrowDown aria-hidden="true" className="h-3.5 w-3.5" />
-                </IconButton>
-                <IconButton
-                  aria-label={messages.scanLogin.accounts.generateLabel}
-                  disabled={busy || saving}
-                  loading={generating === entry.qrMode}
-                  onClick={() => generatePreview(entry.qrMode)}
-                  title={messages.scanLogin.accounts.generateLabel}
-                  type="button"
-                >
-                  <QrCode aria-hidden="true" className="h-3.5 w-3.5" />
-                </IconButton>
-                <IconButton
-                  aria-label={copy.remove}
-                  disabled={busy || saving}
-                  onClick={() => setPendingRemoveIndex(index)}
-                  title={copy.remove}
-                  type="button"
-                  variant="outline"
-                >
-                  <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
-                </IconButton>
-                <Switch
-                  aria-label={entry.enabled ? copy.disable : copy.enable}
-                  checked={entry.enabled}
-                  disabled={busy || saving}
-                  onCheckedChange={() => toggleEnabled(index)}
-                  title={entry.enabled ? copy.disable : copy.enable}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="w-56">
-          <OauthAdminSelectField
-            label={copy.addKindLabel}
-            onChange={(value) => setAddKind(value as AddModeKind)}
-            options={[
-              { label: copy.addKindPlaceholder, value: "" },
-              { label: copy.addKindOfficialAccount, value: "official_account" },
-              { label: copy.addKindUrl, value: "url" },
-              { label: copy.addKindProvider, value: "provider" },
-            ]}
-            value={addKind}
-          />
-        </div>
-        {addKind === "provider" ? (
-          <div className="w-72">
-            <OauthAdminField
-              label={copy.addProvider}
-              onChange={setProviderCode}
-              placeholder={copy.addProviderPlaceholder}
-              value={providerCode}
-            />
-          </div>
-        ) : null}
-        <Button disabled={addDisabled} loading={saving} onClick={addSelectedKind} size="sm" type="button">
-          {copy.add}
-        </Button>
-      </div>
-      {addKind === "provider" && providerOptions.length > 0 ? (
-        <div className="flex flex-wrap gap-1">
-          {providerOptions.map((option) => (
-            <Button
-              disabled={busy || saving || modes.some((mode) => mode.providerCode === option.code)}
-              key={option.code}
-              onClick={() => addProviderMode(option)}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {option.name}
-            </Button>
-          ))}
-        </div>
-      ) : null}
-      <ConfirmDialog
-        closeOnConfirm={false}
-        confirmLabel={copy.removeConfirm}
-        confirmLoading={saving}
-        description={pendingRemoveIndex === undefined ? undefined : copy.removeDescriptionTemplate.replace("{name}", modeLabel(modes[pendingRemoveIndex]))}
-        onConfirm={() => {
-          if (pendingRemoveIndex === undefined) {
-            return;
-          }
-          remove(pendingRemoveIndex);
-          setPendingRemoveIndex(undefined);
-        }}
-        onOpenChange={(open) => {
-          if (!open && !saving) {
-            setPendingRemoveIndex(undefined);
-          }
-        }}
-        open={pendingRemoveIndex !== undefined}
-        title={copy.removeTitle}
-        tone="danger"
-      />
-    </SettingsSection>
-  );
 }
 
 function toRecord(value: unknown): Record<string, unknown> {

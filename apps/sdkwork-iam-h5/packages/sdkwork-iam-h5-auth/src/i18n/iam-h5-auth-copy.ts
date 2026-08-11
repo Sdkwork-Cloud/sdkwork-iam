@@ -48,6 +48,14 @@ export interface SdkworkIamH5AuthMessages {
     register: string;
     forgot: string;
   };
+  oauth: {
+    authorizeWithWechat: string;
+    explicitFailedHint: string;
+    signingIn: string;
+    silentFailedHint: string;
+    silentSigningIn: string;
+    wechatBrowserRequired: string;
+  };
   links: {
     backToLogin: string;
     forgotPassword: string;
@@ -130,6 +138,14 @@ const EN_US_MESSAGES: SdkworkIamH5AuthMessages = {
     register: "Register with phone",
     forgot: "Reset password",
   },
+  oauth: {
+    authorizeWithWechat: "Authorize with WeChat",
+    explicitFailedHint: "Authorization didn't complete. Please try again or sign in another way.",
+    signingIn: "Authorizing WeChat login...",
+    silentFailedHint: "Silent sign-in didn't complete. Tap the button below to authorize with WeChat.",
+    silentSigningIn: "Signing in silently with WeChat...",
+    wechatBrowserRequired: "WeChat sign-in only works inside the WeChat browser. Open this page in WeChat and try again.",
+  },
   links: {
     backToLogin: "Back to sign in",
     forgotPassword: "Forgot password",
@@ -211,6 +227,14 @@ const ZH_CN_MESSAGES: SdkworkIamH5AuthMessages = {
     loginPwd: "密码登录",
     register: "手机号注册",
     forgot: "找回密码",
+  },
+  oauth: {
+    authorizeWithWechat: "微信授权登录",
+    explicitFailedHint: "授权未完成，请重试或使用其他方式登录。",
+    signingIn: "正在授权微信登录...",
+    silentFailedHint: "静默登录未完成，请点击下方按钮授权微信登录。",
+    silentSigningIn: "正在使用微信静默登录...",
+    wechatBrowserRequired: "微信登录仅支持在微信中打开页面后使用，请复制链接到微信中访问。",
   },
   links: {
     backToLogin: "返回登录",

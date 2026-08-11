@@ -139,3 +139,7 @@ export interface SdkworkIamTenantAdminWorkspaceProps {
     };
   };
 }
+
+export interface SdkworkIamTenantApplicationsAdminWorkspaceProps {
+  controller: SdkworkIamTenantController;
+}

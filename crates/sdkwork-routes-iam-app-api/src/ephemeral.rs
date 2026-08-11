@@ -535,6 +535,10 @@ pub(crate) struct OAuthStateRecord {
     pub(crate) state: String,
     pub(crate) tenant_id: String,
     pub(crate) runtime_app_id: String,
+    /// OAuth scope requested at authorization time (WeChat
+    /// `snsapi_base`/`snsapi_userinfo`). Carried into the code exchange so
+    /// the exchange can skip userinfo for silent authorization.
+    pub(crate) scope: Option<String>,
 }
 
 /// Registers an OAuth state artifact. Returns `Ok(false)` when the state
@@ -554,6 +558,7 @@ pub(crate) async fn upsert_oauth_state(
         "state": record.state,
         "tenantId": record.tenant_id,
         "runtimeAppId": record.runtime_app_id,
+        "scope": record.scope,
     });
     let expires_at = millis_to_timestamp(current_millis() + OAUTH_STATE_TTL_MILLIS);
     let timestamp = current_timestamp_utc();
@@ -659,10 +664,18 @@ pub(crate) async fn take_oauth_state(
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(str::to_string);
+    let scope = payload
+        .0
+        .get("scope")
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string);
     Ok(Some(OAuthStateRecord {
         pkce_verifier,
         provider,
         redirect_uri,
+        scope,
         state: state.to_string(),
         tenant_id,
         runtime_app_id,

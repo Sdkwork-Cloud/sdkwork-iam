@@ -5,12 +5,14 @@ import type {
   SdkworkIamH5AuthController,
   SdkworkIamH5AuthMode,
   SdkworkIamH5AuthSession,
+  SdkworkIamH5OAuthFlowMode,
   SdkworkIamH5ScanLoginContext,
 } from "../types/auth-h5-types";
 import { IAM_H5_AUTH_ROUTES } from "../types/auth-h5-types";
 import {
   buildScanLoginOAuthState,
   clearScanLoginUrlContext,
+  isWechatAutoAuthorizationBlocked,
   resolveSdkworkIamH5VerifyType,
   SDKWORK_IAM_H5_AUTH_VERIFICATION_UNAVAILABLE_MESSAGE,
 } from "../services/auth-h5-controller";
@@ -80,7 +82,9 @@ export function SdkworkIamH5AuthLoginScreen({
     setError(message);
   }, []);
 
-  const redirectToWechatAuthorization = useCallback(async () => {
+  const redirectToWechatAuthorization = useCallback(async (
+    mode: SdkworkIamH5OAuthFlowMode = "silent",
+  ) => {
     if (typeof window === "undefined") {
       return;
     }
@@ -89,12 +93,12 @@ export function SdkworkIamH5AuthLoginScreen({
     const redirectUri = `${window.location.origin}${IAM_H5_AUTH_ROUTES.callbackPath}`;
     const state = scanContext ? buildScanLoginOAuthState(scanContext.sessionKey) : undefined;
     try {
-      const authUrl = await controller.createOAuthAuthorizationUrl({
+      await controller.beginOAuthAuthorization({
+        mode,
         provider: WECHAT_PROVIDER,
         redirectUri,
         state,
       });
-      window.location.assign(authUrl);
     } catch (redirectError) {
       setWechatRedirecting(false);
       showError(
@@ -107,15 +111,22 @@ export function SdkworkIamH5AuthLoginScreen({
 
   // Auto-redirect when the page is opened inside the WeChat in-app browser
   // and the WeChat provider is enabled for this tenant. The attempt is
-  // tracked in a ref so a failed redirect (provider disabled / network error)
-  // does not re-trigger the effect and cause an infinite redirect loop.
+  // silent (`snsapi_base`): followers are logged in without any consent
+  // page; non-followers still see WeChat's simple authorize page and, on
+  // failure, the callback screen offers the explicit consent flow. The
+  // attempt is tracked in a ref so a failed redirect (provider disabled /
+  // network error) does not re-trigger the effect and cause an infinite
+  // redirect loop — and a previous failure block (see
+  // `blockWechatAutoAuthorization`) keeps a user who denied the page from
+  // being re-sent to WeChat on every page load.
   const autoRedirectAttemptedRef = useRef(false);
   useEffect(() => {
     let cancelled = false;
     if (
       !isWechatBrowser() ||
       wechatRedirecting ||
-      autoRedirectAttemptedRef.current
+      autoRedirectAttemptedRef.current ||
+      isWechatAutoAuthorizationBlocked()
     ) {
       return undefined;
     }
@@ -126,7 +137,7 @@ export function SdkworkIamH5AuthLoginScreen({
           return;
         }
         if (providers.some((provider) => provider.providerCode === WECHAT_PROVIDER)) {
-          void redirectToWechatAuthorization();
+          void redirectToWechatAuthorization("silent");
         }
       })
       .catch(() => {
@@ -278,8 +289,21 @@ export function SdkworkIamH5AuthLoginScreen({
       onThirdPartyLogin(platform);
       return;
     }
+    if (platform === WECHAT_PROVIDER || platform === messages.thirdParty.wechat) {
+      if (!isWechatBrowser()) {
+        // WeChat official-account web authorization only runs inside the
+        // WeChat in-app browser; sending the user to open.weixin.qq.com from
+        // Safari/Chrome would dead-end on "请在微信客户端打开".
+        showError(messages.oauth.wechatBrowserRequired);
+        return;
+      }
+      // Host did not take over the entry: start the explicit WeChat consent
+      // flow (`snsapi_userinfo`, 点击授权) so the icon stays functional.
+      void redirectToWechatAuthorization("explicit");
+      return;
+    }
     showError(`${platform}${messages.thirdParty.unavailableHint}`);
-  }, [agreed, messages, onThirdPartyLogin, showError]);
+  }, [agreed, messages, onThirdPartyLogin, redirectToWechatAuthorization, showError]);
 
   const changeMode = useCallback((nextMode: SdkworkIamH5AuthMode) => {
     setMode(nextMode);

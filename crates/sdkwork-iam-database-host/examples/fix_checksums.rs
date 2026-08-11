@@ -14,7 +14,9 @@ async fn main() {
         panic!("expected postgres");
     };
     for (key, checksum) in &map {
-        let Some((module, version)) = key.split_once('|') else { continue };
+        let Some((module, version)) = key.split_once('|') else {
+            continue;
+        };
         let checksum = checksum.as_str().expect("checksum string");
         let before: Option<String> = sqlx::query_scalar(
             "SELECT checksum FROM ops_schema_migration_history \

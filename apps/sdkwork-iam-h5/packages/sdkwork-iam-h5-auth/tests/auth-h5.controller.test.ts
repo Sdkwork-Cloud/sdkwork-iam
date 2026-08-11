@@ -2,9 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   assertSdkworkIamH5AuthI18nCatalogParity,
+  blockWechatAutoAuthorization,
+  clearOAuthFlowContext,
+  clearWechatAutoAuthorizationBlock,
   createSdkworkIamH5AuthController,
   createSdkworkIamH5AuthMessages,
+  isWechatAutoAuthorizationBlocked,
+  readOAuthFlowContext,
   resolveSdkworkIamH5VerifyType,
+  storeOAuthFlowContext,
 } from "../src/index";
 
 describe("@sdkwork/iam-h5-auth", () => {
@@ -311,5 +317,178 @@ describe("@sdkwork/iam-h5-auth", () => {
     expect(en.modes.loginPwd).toBe("Password sign in");
     expect(en.actions.agreeAndLogin).toBe("Agree & Sign in");
     expect(Object.keys(zh).sort()).toEqual(Object.keys(en).sort());
+    expect(zh.oauth.authorizeWithWechat).toBe("微信授权登录");
+    expect(en.oauth.authorizeWithWechat).toBe("Authorize with WeChat");
+    expect(zh.oauth.silentSigningIn).toContain("静默");
+    expect(en.oauth.silentSigningIn).toContain("silent");
+  });
+
+  it("forwards the WeChat OAuth scope to authorizationUrls.create", async () => {
+    const service = {
+      oauth: {
+        authorizationUrls: {
+          create: vi.fn().mockResolvedValue({ authUrl: "https://open.weixin.qq.com/auth" }),
+        },
+      },
+    };
+    const controller = createSdkworkIamH5AuthController({ service: service as never });
+
+    await expect(controller.createOAuthAuthorizationUrl({
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+      scope: "snsapi_base",
+      state: "scan:qr-1",
+    })).resolves.toBe("https://open.weixin.qq.com/auth");
+
+    expect(service.oauth.authorizationUrls.create).toHaveBeenCalledWith({
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+      scope: "snsapi_base",
+      state: "scan:qr-1",
+    });
+  });
+
+  it("begins a silent WeChat authorization: snsapi_base scope and stored flow context", async () => {
+    const service = {
+      oauth: {
+        authorizationUrls: {
+          create: vi.fn().mockResolvedValue({ authUrl: "https://open.weixin.qq.com/auth" }),
+        },
+      },
+    };
+    const controller = createSdkworkIamH5AuthController({ service: service as never });
+
+    await expect(controller.beginOAuthAuthorization({
+      mode: "silent",
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+    })).resolves.toBeUndefined();
+
+    expect(service.oauth.authorizationUrls.create).toHaveBeenCalledWith({
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+      scope: "snsapi_base",
+    });
+    // Navigation to the provider page never completes inside jsdom, so the
+    // flow stays pending with the context stored for the callback screen.
+    expect(controller.getState().status).toBe("loading");
+    expect(readOAuthFlowContext()).toEqual({
+      mode: "silent",
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+    });
+    clearOAuthFlowContext();
+  });
+
+  it("begins an explicit WeChat authorization with snsapi_userinfo (点击授权)", async () => {
+    const service = {
+      oauth: {
+        authorizationUrls: {
+          create: vi.fn().mockResolvedValue({ url: "https://open.weixin.qq.com/consent" }),
+        },
+      },
+    };
+    const controller = createSdkworkIamH5AuthController({ service: service as never });
+
+    await expect(controller.beginOAuthAuthorization({
+      mode: "explicit",
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+      state: "scan:qr-1",
+    })).resolves.toBeUndefined();
+
+    expect(service.oauth.authorizationUrls.create).toHaveBeenCalledWith({
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+      scope: "snsapi_userinfo",
+      state: "scan:qr-1",
+    });
+    expect(readOAuthFlowContext()?.mode).toBe("explicit");
+    clearOAuthFlowContext();
+  });
+
+  it("clears the stored flow context when beginning authorization fails", async () => {
+    storeOAuthFlowContext({
+      mode: "explicit",
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+    });
+    const service = {
+      oauth: {
+        authorizationUrls: {
+          create: vi.fn().mockRejectedValue(new Error("provider is not configured")),
+        },
+      },
+    };
+    const controller = createSdkworkIamH5AuthController({ service: service as never });
+
+    await expect(controller.beginOAuthAuthorization({
+      mode: "silent",
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+    })).rejects.toThrow("provider is not configured");
+
+    expect(controller.getState().status).toBe("error");
+    expect(readOAuthFlowContext()).toBeUndefined();
+  });
+
+  it("round-trips the OAuth flow context through sessionStorage", () => {
+    expect(readOAuthFlowContext()).toBeUndefined();
+    storeOAuthFlowContext({
+      mode: "silent",
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+    });
+    expect(readOAuthFlowContext()).toEqual({
+      mode: "silent",
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+    });
+    clearOAuthFlowContext();
+    expect(readOAuthFlowContext()).toBeUndefined();
+
+    // Invalid or partial records are rejected instead of half-read.
+    storeOAuthFlowContext({
+      mode: "silent",
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+    });
+    window.sessionStorage.setItem(
+      "sdkwork.iam.h5.oauthFlow",
+      JSON.stringify({ mode: "mystery", provider: "wechat", redirectUri: "x" }),
+    );
+    expect(readOAuthFlowContext()).toBeUndefined();
+    clearOAuthFlowContext();
+  });
+
+  it("round-trips the WeChat auto-authorization block", () => {
+    expect(isWechatAutoAuthorizationBlocked()).toBe(false);
+    blockWechatAutoAuthorization();
+    expect(isWechatAutoAuthorizationBlocked()).toBe(true);
+    clearWechatAutoAuthorizationBlock();
+    expect(isWechatAutoAuthorizationBlocked()).toBe(false);
+  });
+
+  it("clears the WeChat auto-authorization block when an authorization begins", async () => {
+    blockWechatAutoAuthorization();
+    const service = {
+      oauth: {
+        authorizationUrls: {
+          create: vi.fn().mockResolvedValue({ authUrl: "https://open.weixin.qq.com/auth" }),
+        },
+      },
+    };
+    const controller = createSdkworkIamH5AuthController({ service: service as never });
+
+    await controller.beginOAuthAuthorization({
+      mode: "explicit",
+      provider: "wechat",
+      redirectUri: "https://example.com/auth/oauth/callback",
+    });
+
+    // Beginning an authorization is explicit user intent; the deny-loop
+    // guard no longer applies.
+    expect(isWechatAutoAuthorizationBlocked()).toBe(false);
+    clearOAuthFlowContext();
   });
 });

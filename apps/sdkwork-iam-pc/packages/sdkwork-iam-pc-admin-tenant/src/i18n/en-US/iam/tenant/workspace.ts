@@ -38,6 +38,7 @@ export const sdkworkIamTenantAdminMessages: SdkworkIamTenantAdminMessages = {
       copyFailed: "The application ID could not be copied.",
       copied: "Application ID copied.",
       loadError: "Applications could not be loaded.",
+      loading: "Loading applications…",
       provisionError: "The application could not be registered.",
       provisionSuccess: "Application registered.",
       statusError: "The application status could not be changed.",
@@ -57,7 +58,10 @@ export const sdkworkIamTenantAdminMessages: SdkworkIamTenantAdminMessages = {
     statuses: { disabled: "Disabled", enabled: "Enabled", pendingConfig: "Pending configuration", unknown: "Unknown" },
     summary: { disabled: "Disabled", enabled: "Enabled", pending: "Pending", total: "Applications" },
     table: { appId: "App ID", application: "Application", domain: "Primary domain", environment: "Environment", status: "Status" },
+    tenantSelectorEmpty: "No tenants available",
+    tenantSelectorLabel: "Select tenant",
     title: "Tenant applications",
+    standaloneTitle: "Applications",
   },
   common: { cancel: "Cancel", close: "Close", edit: "Edit", save: "Save changes" },
   members: {

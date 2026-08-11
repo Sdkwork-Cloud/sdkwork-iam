@@ -50,7 +50,10 @@ import {
   normalizeSdkworkAuthOAuthProvider,
   type SdkworkAuthResolvedVerificationPolicy,
 } from "./auth-runtime-config.ts";
-import { readSdkworkMediaResource } from "@sdkwork/runtime-bootstrap";
+import {
+  readSdkworkMediaResource,
+  type SdkworkMediaResource,
+} from "@sdkwork/runtime-bootstrap";
 
 export interface SdkworkIamRuntimeAuthStoredSessionLike {
   accessToken?: string;
@@ -1171,7 +1174,8 @@ function toPlatformLoginQrCode(value: unknown): SdkworkAuthLoginQrCode {
     description: normalizeOptionalScalar(record.description),
     expireTime: resolveQrExpireTime(record),
     pollSecret: normalizeOptionalScalar(record.pollSecret),
-    qrCode: readSdkworkMediaResource(record.qrCode),
+    qrCode: readSdkworkMediaResource(record.qrCode)
+      || readSdkworkQrImageUrlResource(record.qrCode),
     qrContent: resolvePlatformQrContent(record),
     sessionKey,
     title: normalizeOptionalScalar(record.title),
@@ -1222,6 +1226,24 @@ function resolvePlatformQrContentMode(record: Record<string, unknown>): string |
 
   return normalizeOptionalScalar(toRecord(qrContent).mode)
     || normalizeOptionalScalar(record.type);
+}
+
+/**
+ * Official-account scan login returns the QR code as a plain image URL
+ * string in `qrCode` (the WeChat temp-QR image). Keep it as an image media
+ * resource so the login page renders the image directly instead of
+ * re-encoding the URL as QR content.
+ */
+function readSdkworkQrImageUrlResource(value: unknown): SdkworkMediaResource | undefined {
+  const url = normalizeOptionalScalar(value);
+  return url
+    ? {
+        kind: "image",
+        publicUrl: url,
+        source: "external_url",
+        url,
+      }
+    : undefined;
 }
 
 function resolveQrExpireTime(record: Record<string, unknown>): number | undefined {

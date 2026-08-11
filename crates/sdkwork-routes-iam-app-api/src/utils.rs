@@ -199,8 +199,7 @@ pub(crate) fn optional_string(value: Option<&Value>) -> Option<String> {
 /// (`"password"`, `"phone_code"`, `"email_code"`), mirroring
 /// `is_password_grant`'s field precedence.
 pub(crate) fn resolve_login_grant_type(body: &Value) -> Option<String> {
-    optional_string(body.get("grantType"))
-        .or_else(|| optional_string(body.get("grant_type")))
+    optional_string(body.get("grantType")).or_else(|| optional_string(body.get("grant_type")))
 }
 
 /// Resolves the credential account for a code-login grant: the dedicated
@@ -226,16 +225,18 @@ pub(crate) fn code_login_contact_verified(
 ) -> bool {
     let account_key = canonical_identity(account);
     match grant_type {
-        "phone_code" => user
-            .phone
-            .as_deref()
-            .is_some_and(|phone| canonical_identity(phone) == account_key)
-            && user.phone_verified,
-        "email_code" => user
-            .email
-            .as_deref()
-            .is_some_and(|email| canonical_identity(email) == account_key)
-            && user.email_verified,
+        "phone_code" => {
+            user.phone
+                .as_deref()
+                .is_some_and(|phone| canonical_identity(phone) == account_key)
+                && user.phone_verified
+        }
+        "email_code" => {
+            user.email
+                .as_deref()
+                .is_some_and(|email| canonical_identity(email) == account_key)
+                && user.email_verified
+        }
         _ => false,
     }
 }

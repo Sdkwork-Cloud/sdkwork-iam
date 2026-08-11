@@ -306,7 +306,9 @@ pub async fn resolve_deployment_bootstrap_access_token(
     }
 
     let Some(pool) = resolve_iam_database_pool_from_env().await else {
-        tracing::debug!("IAM database pool unavailable; bootstrap token resolution deferred to caller fallback");
+        tracing::debug!(
+            "IAM database pool unavailable; bootstrap token resolution deferred to caller fallback"
+        );
         return Ok(None);
     };
     let Some(pg) = pool.as_postgres() else {
@@ -352,7 +354,8 @@ pub async fn resolve_deployment_bootstrap_access_token(
 /// `find_iam_context_from_access_token` joins `iam_user` and requires an
 /// active row, so the bootstrap session needs this user to resolve through
 /// the verified database path.
-async fn ensure_bootstrap_system_user(pg: &PgPool, tenant_id: &str) -> Result<(), String> {    let now = chrono::Utc::now().to_rfc3339();
+async fn ensure_bootstrap_system_user(pg: &PgPool, tenant_id: &str) -> Result<(), String> {
+    let now = chrono::Utc::now().to_rfc3339();
     sqlx::query(
         "INSERT INTO iam_user \
          (id, tenant_id, username, display_name, email, status, created_at, updated_at, \
@@ -539,13 +542,6 @@ pub(crate) fn sign_local_session_token_with_ttl(
         "organization_id": organization_id,
         "permission_scope": context.permission_scope,
         "session_id": context.session_id,
-        "sid": context.session_id,
-        "sub": context.user_id,
-        "principal_kind": match context.principal_kind {
-            sdkwork_iam_context_service::IamPrincipalKind::User => "user",
-            sdkwork_iam_context_service::IamPrincipalKind::ServiceAccount => "service_account",
-        },
-        "principal_id": context.principal_id,
         "tenant_id": context.tenant_id,
         "token_type": token_type,
         "token_version": stamp_token_version(),
@@ -654,5 +650,70 @@ mod tests {
             &["iam.users.read".to_owned()],
             IAM_ACCESS_CREDENTIALS_CREATE_PERMISSION
         ));
+    }
+
+    #[test]
+    fn sign_local_session_token_payload_keeps_primary_claims_without_redundant_aliases() {
+        let context = IamAppContext::new(
+            "100001".to_owned(),
+            Some("org-1"),
+            "user-1".to_owned(),
+            "session-1".to_owned(),
+            "sdkwork-cloudrouter".to_owned(),
+            Environment::Prod,
+            DeploymentMode::Private,
+            AuthLevel::System,
+            vec!["tenant:100001".to_owned()],
+            vec!["iam:self".to_owned()],
+        );
+        let signing_key = TenantSigningKey {
+            kid: "kid-1".to_owned(),
+            secret: b"0123456789abcdef0123456789abcdef".to_vec(),
+        };
+        let token = sign_local_session_token_with_ttl(
+            &signing_key,
+            "access",
+            &context,
+            LOCAL_TOKEN_TTL_SECONDS,
+        );
+        let parts: Vec<&str> = token.split('.').collect();
+        assert_eq!(parts.len(), 3);
+        let payload: Value = serde_json::from_slice(
+            &URL_SAFE_NO_PAD
+                .decode(parts[1])
+                .expect("payload should decode"),
+        )
+        .expect("payload should parse");
+
+        for key in [
+            "app_id",
+            "aud",
+            "auth_level",
+            "data_scope",
+            "deployment_mode",
+            "environment",
+            "exp",
+            "iat",
+            "iss",
+            "login_scope",
+            "organization_id",
+            "permission_scope",
+            "session_id",
+            "tenant_id",
+            "token_type",
+            "token_version",
+            "user_id",
+        ] {
+            assert!(payload.get(key).is_some(), "claim {key} should be present");
+        }
+        for key in ["sid", "sub", "principal_id", "principal_kind"] {
+            assert!(
+                payload.get(key).is_none(),
+                "redundant claim {key} should be absent"
+            );
+        }
+        assert_eq!(payload["user_id"], "user-1");
+        assert_eq!(payload["session_id"], "session-1");
+        assert_eq!(payload["token_type"], "access");
     }
 }

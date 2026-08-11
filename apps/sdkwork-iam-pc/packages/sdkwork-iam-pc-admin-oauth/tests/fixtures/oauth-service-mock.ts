@@ -64,6 +64,7 @@ export function createOauthServiceMock() {
           authorizationRefreshes: { create: vi.fn() },
           miniProgramLoginChecks: { create: vi.fn() },
           followQrCodes: { create: vi.fn() },
+          customMenus: { publish: vi.fn() },
         },
         resourceAuthorizations: { list: vi.fn().mockResolvedValue({ items: [] }), create: vi.fn(), update: vi.fn() },
         operationalResources: {

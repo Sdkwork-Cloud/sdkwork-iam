@@ -1110,8 +1110,6 @@ pub(crate) fn sign_local_session_token(
         "organization_id": organization_id,
         "permission_scope": context.permission_scope,
         "session_id": context.session_id,
-        "sid": context.session_id,
-        "sub": context.user_id,
         "tenant_id": context.tenant_id,
         "token_type": token_type,
         "token_version": stamp_token_version(),
@@ -1253,8 +1251,8 @@ fn claim_string_value(claims: &Value, keys: &[&str]) -> Option<String> {
 fn session_token_claims_match(auth_claims: &Value, access_claims: &Value) -> bool {
     for keys in [
         &["tenant_id"][..],
-        &["user_id", "sub"][..],
-        &["session_id", "sid"][..],
+        &["user_id"][..],
+        &["session_id"][..],
         &["organization_id"][..],
         &["login_scope"][..],
         &["app_id"][..],
@@ -1273,8 +1271,8 @@ fn session_claims_match_context(claims: &Value, context: &IamAppContext) -> bool
         .filter(|value| !crate::is_blank(Some(value)))
         .unwrap_or("0");
     claim_string_value(claims, &["tenant_id"]) == Some(context.tenant_id.clone())
-        && claim_string_value(claims, &["user_id", "sub"]) == Some(context.user_id.clone())
-        && claim_string_value(claims, &["session_id", "sid"]) == Some(context.session_id.clone())
+        && claim_string_value(claims, &["user_id"]) == Some(context.user_id.clone())
+        && claim_string_value(claims, &["session_id"]) == Some(context.session_id.clone())
         && claim_string_value(claims, &["app_id"]) == Some(context.app_id.clone())
         && claim_string_value(claims, &["login_scope"])
             == Some(login_scope_to_string(&context.login_scope).to_string())

@@ -329,7 +329,9 @@ async fn backend_postgres_oauth_lists_succeed_with_and_without_search_query() {
             .expect("oauth list must return page items");
         if path.starts_with("/backend/v3/api/iam/oauth/integrations") {
             assert!(
-                items.iter().any(|item| item["id"].as_str() == Some(integration_id.as_str())),
+                items
+                    .iter()
+                    .any(|item| item["id"].as_str() == Some(integration_id.as_str())),
                 "integrations list must include the seeded row: {body_text}"
             );
         }

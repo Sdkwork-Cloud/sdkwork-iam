@@ -60,6 +60,40 @@ export interface SdkworkIamH5OAuthLoginInput {
   state: string;
 }
 
+/**
+ * WeChat official-account web authorization scope:
+ * - `snsapi_base` — silent authorization: the follower is redirected back
+ *   without a consent page and only the openid (plus unionid when the account
+ *   is bound to the open platform) is granted;
+ * - `snsapi_userinfo` — explicit consent page granting nickname/avatar.
+ */
+export type SdkworkIamH5OAuthScope = "snsapi_base" | "snsapi_userinfo";
+
+/** OAuth flow mode carried across the provider authorization redirect. */
+export type SdkworkIamH5OAuthFlowMode = "silent" | "explicit";
+
+/**
+ * OAuth flow context kept in `sessionStorage` across the provider
+ * authorization redirect so the callback screen can recover the flow mode:
+ * a failed silent attempt escalates to the explicit consent flow instead of
+ * dropping the user on a dead error page.
+ */
+export interface SdkworkIamH5OAuthFlowContext {
+  mode: SdkworkIamH5OAuthFlowMode;
+  provider: string;
+  redirectUri: string;
+}
+
+export interface SdkworkIamH5BeginOAuthAuthorizationInput {
+  /** `silent` maps to `snsapi_base`, `explicit` maps to `snsapi_userinfo`. */
+  mode: SdkworkIamH5OAuthFlowMode;
+  /** Provider code; defaults to `wechat`. */
+  provider?: string;
+  redirectUri: string;
+  /** OAuth `state` (e.g. a scan-login QR session key); server-generated when omitted. */
+  state?: string;
+}
+
 export interface SdkworkIamH5MiniProgramLoginInput {
   jsCode: string;
   surfaceCode?: string;
@@ -120,11 +154,17 @@ export interface CreateSdkworkIamH5AuthControllerInput {
 }
 
 export interface SdkworkIamH5AuthController {
+  beginOAuthAuthorization(input: SdkworkIamH5BeginOAuthAuthorizationInput): Promise<void>;
   completeScanLogin(input: {
     pollSecret: string;
     sessionKey: string;
   }): Promise<void>;
-  createOAuthAuthorizationUrl(input: { provider: string; redirectUri: string; state?: string }): Promise<string>;
+  createOAuthAuthorizationUrl(input: {
+    provider: string;
+    redirectUri: string;
+    scope?: SdkworkIamH5OAuthScope;
+    state?: string;
+  }): Promise<string>;
   getState(): SdkworkIamH5AuthState;
   listOAuthProviders(): Promise<SdkworkIamH5OAuthProvider[]>;
   login(credentials: SdkworkIamH5LoginCredentials): Promise<SdkworkIamH5LoginResult>;

@@ -503,9 +503,7 @@ async fn create_password_login_session(
         };
     }
     let Ok(pg) = postgres_pool_or_error(state) else {
-        return postgres_pool_or_error(state)
-            .err()
-            .expect("error response");
+        return postgres_pool_or_error(state).err().expect("error response");
     };
     let runtime_app_id = match resolve_credential_entry_runtime_app(pg, ctx, tenant_id).await {
         Ok(app_id) => app_id,
@@ -639,9 +637,7 @@ async fn create_code_login_session(
         };
     }
     let Ok(pg) = postgres_pool_or_error(state) else {
-        return postgres_pool_or_error(state)
-            .err()
-            .expect("error response");
+        return postgres_pool_or_error(state).err().expect("error response");
     };
     let runtime_app_id = match resolve_credential_entry_runtime_app(pg, ctx, tenant_id).await {
         Ok(app_id) => app_id,
@@ -1626,8 +1622,8 @@ async fn create_verification_code_request(
     if let Some(response) = reject_login_credential_headers(&headers) {
         return response;
     }
-    let Some(target) = optional_string(body.get("target"))
-        .or_else(|| optional_string(body.get("account")))
+    let Some(target) =
+        optional_string(body.get("target")).or_else(|| optional_string(body.get("account")))
     else {
         return appbase_error(
             StatusCode::BAD_REQUEST,
@@ -1672,20 +1668,24 @@ async fn create_verification_code_request(
                 username: user.username.clone(),
             };
             let result = match scene.as_str() {
-                "LOGIN" => crate::ephemeral::upsert_code_login_request(
-                    pg,
-                    &user.tenant_id,
-                    &canonical_identity(&target),
-                    &request,
-                )
-                .await,
-                _ => crate::ephemeral::upsert_password_reset_request(
-                    pg,
-                    &user.tenant_id,
-                    &canonical_identity(&user.username),
-                    &request,
-                )
-                .await,
+                "LOGIN" => {
+                    crate::ephemeral::upsert_code_login_request(
+                        pg,
+                        &user.tenant_id,
+                        &canonical_identity(&target),
+                        &request,
+                    )
+                    .await
+                }
+                _ => {
+                    crate::ephemeral::upsert_password_reset_request(
+                        pg,
+                        &user.tenant_id,
+                        &canonical_identity(&user.username),
+                        &request,
+                    )
+                    .await
+                }
             };
             if let Err(error) = result {
                 return appbase_error(
@@ -2012,6 +2012,12 @@ async fn create_oauth_authorization_url(
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty() && value.len() <= 256)
         .unwrap_or_else(|| crate::tokens::generate_opaque_token("oauthstate"));
+    // Optional WeChat official-account web scope (`snsapi_base` silent /
+    // `snsapi_userinfo` consent). The URL builder validates it; it rides the
+    // state record so the code exchange can skip userinfo for silent codes.
+    let oauth_scope = optional_string(body.get("scope"))
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
     let (pkce_verifier, pkce_challenge) = crate::oauth_login::create_oauth_pkce(&provider)
         .map(|(verifier, challenge)| (Some(verifier), Some(challenge)))
         .unwrap_or((None, None));
@@ -2022,6 +2028,7 @@ async fn create_oauth_authorization_url(
             pkce_verifier,
             provider: provider.clone(),
             redirect_uri: redirect_uri.clone(),
+            scope: oauth_scope.clone(),
             state: oauth_state.clone(),
             tenant_id: tenant_id.to_owned(),
             runtime_app_id: runtime_app_id.clone(),
@@ -2057,6 +2064,7 @@ async fn create_oauth_authorization_url(
         &redirect_uri,
         Some(oauth_state.as_str()),
         pkce_challenge.as_deref(),
+        oauth_scope.as_deref(),
     )
     .await
     {
@@ -2221,6 +2229,7 @@ async fn create_oauth_session(
         &code,
         Some(redirect_uri.as_str()),
         stored_state.pkce_verifier.as_deref(),
+        stored_state.scope.as_deref(),
     )
     .await
     {
@@ -3431,6 +3440,7 @@ async fn create_provider_scan_login(
             pkce_verifier: None,
             provider: normalized.clone(),
             redirect_uri: redirect_uri.clone(),
+            scope: None,
             state: oauth_state.clone(),
             tenant_id: integration_tenant.clone(),
             runtime_app_id: sdkwork_iam_web_adapter::platform_runtime_app_id_for_tenant(
@@ -3460,6 +3470,7 @@ async fn create_provider_scan_login(
         &normalized,
         &redirect_uri,
         Some(&oauth_state),
+        None,
         None,
     )
     .await?;
@@ -3504,6 +3515,10 @@ async fn create_official_account_qr_login(
          FROM iam_oauth_resource_account ra \
          WHERE ra.provider_code = 'wechat' \
            AND ra.resource_account_kind = 'official_account' \
+           -- Scan login renders a WeChat parameterized QR (qrcode/create),
+           -- which WeChat only grants to certified service accounts, so the
+           -- login page must never select a subscription account.
+           AND ra.provider_account_type = 'service' \
            AND ra.enabled = 1 AND ra.status = 'active' \
            AND ra.qr_default_enabled = 1 \
            AND ($1::text IS NULL OR ra.id = $1) \

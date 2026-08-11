@@ -255,7 +255,7 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
       <ApplicationSummary messages={messages.applications.summary} summary={summary} />
 
       <form
-        className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_11rem_11rem_auto] xl:items-end"
+        className="grid grid-cols-[minmax(0,1fr)_11rem_11rem_auto] items-end gap-3"
         onSubmit={applyFilters}
       >
         <label className="min-w-0 flex-1 space-y-1.5 text-sm">

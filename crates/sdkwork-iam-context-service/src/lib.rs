@@ -195,8 +195,19 @@ impl IamAppContext {
         has_permission_in_scope(&self.permission_scope, required)
     }
 
+    /// Backend API surface access.
+    ///
+    /// Organization sessions still require an active organization
+    /// membership. Tenant sessions (`organization_id` empty or `"0"`) are
+    /// accepted when the principal is an active tenant member: the backend
+    /// query layers scope tenant sessions to tenant-level rows
+    /// (`organization_id IS NULL` / `'0'`), so rejecting them would make
+    /// every default tenant login unable to reach backend surfaces at all.
     pub fn can_access_backend_api(&self) -> bool {
-        self.user_surface.can_access_backend_api()
+        match self.login_scope {
+            LoginScope::Organization => self.user_surface.organization_member,
+            LoginScope::Tenant => self.user_surface.app,
+        }
     }
 }
 
@@ -274,4 +285,63 @@ fn normalize_organization_id(organization_id: Option<&str>) -> Option<String> {
             Some(trimmed.to_owned())
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn base_context(organization_id: Option<&str>) -> IamAppContext {
+        IamAppContext::new(
+            "100001",
+            organization_id,
+            "1",
+            "session-1",
+            "sdkwork-test",
+            Environment::Dev,
+            DeploymentMode::Saas,
+            AuthLevel::Password,
+            vec!["tenant:100001".to_owned()],
+            vec!["test.read".to_owned()],
+        )
+    }
+
+    #[test]
+    fn tenant_session_with_tenant_member_accesses_backend_api() {
+        let context = base_context(None);
+        assert_eq!(context.login_scope, LoginScope::Tenant);
+        assert!(context.user_surface.app);
+        assert!(context.can_access_backend_api());
+    }
+
+    #[test]
+    fn tenant_session_without_tenant_member_cannot_access_backend_api() {
+        let mut context = base_context(None);
+        context.user_surface = IamUserSurface {
+            app: false,
+            organization_member: false,
+        };
+        assert!(!context.can_access_backend_api());
+    }
+
+    #[test]
+    fn organization_session_requires_organization_membership() {
+        let mut context = base_context(Some("100002"));
+        assert_eq!(context.login_scope, LoginScope::Organization);
+        assert!(context.user_surface.organization_member);
+        assert!(context.can_access_backend_api());
+
+        context.user_surface = IamUserSurface {
+            app: true,
+            organization_member: false,
+        };
+        assert!(!context.can_access_backend_api());
+    }
+
+    #[test]
+    fn platform_organization_id_normalizes_to_tenant_scope() {
+        let context = base_context(Some("0"));
+        assert_eq!(context.login_scope, LoginScope::Tenant);
+        assert_eq!(context.organization_id, None);
+    }
 }

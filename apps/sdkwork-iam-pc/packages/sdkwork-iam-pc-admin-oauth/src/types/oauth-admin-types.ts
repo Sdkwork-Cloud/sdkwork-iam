@@ -200,6 +200,12 @@ export interface SdkworkIamOauthAccountConfig {
   verifyFile?: SdkworkIamOauthAccountVerifyFileConfig;
   verifyFiles?: SdkworkIamOauthAccountDomainVerifyFile[];
   webDomain?: string;
+  /**
+   * Official account custom menu draft. Persisted inside the account's
+   * `provider_config_json` document so the same menu design is shared by the
+   * admin and console surfaces; publishing to WeChat is a backend concern.
+   */
+  customMenu?: SdkworkIamOauthCustomMenuDraft;
 }
 
 /**
@@ -343,6 +349,68 @@ export interface SdkworkIamOauthAccountFollowQrCode {
   ticket: string;
 }
 
+/**
+ * Action kinds supported for official account custom menu buttons, aligned
+ * with the WeChat custom menu API button types: `click` (reply a text
+ * message), `view` (jump to a web URL) and `miniprogram` (jump into a mini
+ * program). Sub-menus cannot carry actions of their own on WeChat, so every
+ * nested button stores its action on the leaf.
+ */
+export type SdkworkIamOauthCustomMenuActionKind = "click" | "view" | "miniprogram";
+
+/**
+ * One button of the official account custom menu tree. Top-level buttons may
+ * carry up to five `subButtons`; a button that has sub-menus is display-only
+ * (it never carries an action itself, mirroring the WeChat editor).
+ */
+export interface SdkworkIamOauthCustomMenuButton {
+  /** Stable id so React keys and selection survive renames/reorders. */
+  key: string;
+  name: string;
+  type?: SdkworkIamOauthCustomMenuActionKind;
+  /** `view`: destination web URL. */
+  url?: string;
+  /** `miniprogram`: target mini program AppID. */
+  appId?: string;
+  /** `miniprogram`: path inside the mini program (empty means the home page). */
+  pagePath?: string;
+  /** `click`: text message content replied on tap. */
+  message?: string;
+  subButtons?: SdkworkIamOauthCustomMenuButton[];
+}
+
+/**
+ * The editable custom menu design of one official account. `buttons` holds the
+ * top-level menus (1-3); each may expand into up to five sub-menus.
+ */
+export interface SdkworkIamOauthCustomMenuDraft {
+  buttons: SdkworkIamOauthCustomMenuButton[];
+  updatedAt?: string;
+}
+
+/**
+ * Account context plus the current custom menu draft, loaded together so the
+ * menu management page can render the phone preview header without coupling
+ * to any host surface.
+ */
+export interface SdkworkIamOauthCustomMenuContext {
+  displayName: string;
+  logoUrl?: string;
+  draft: SdkworkIamOauthCustomMenuDraft;
+}
+
+/**
+ * Structured result of a publish attempt: the draft is always saved first;
+ * `published` is false when the backend publish capability is not (yet)
+ * wired, with `reason` telling the UI which notice to render.
+ */
+export interface SdkworkIamOauthCustomMenuPublishResult {
+  saved: boolean;
+  published: boolean;
+  reason?: "backend_unavailable" | "publish_failed";
+  errorMessage?: string;
+}
+
 export interface SdkworkIamOauthAdminController {
   getState(): SdkworkIamOauthAdminState;
   load(
@@ -443,6 +511,15 @@ export interface SdkworkIamOauthAdminController {
   createAccountFollowQrCode(
     resourceAccountId: string,
   ): Promise<SdkworkIamOauthAccountFollowQrCode>;
+  loadAccountCustomMenu(resourceAccountId: string): Promise<SdkworkIamOauthCustomMenuContext>;
+  saveAccountCustomMenu(
+    resourceAccountId: string,
+    draft: SdkworkIamOauthCustomMenuDraft,
+  ): Promise<unknown>;
+  publishAccountCustomMenu(
+    resourceAccountId: string,
+    draft: SdkworkIamOauthCustomMenuDraft,
+  ): Promise<SdkworkIamOauthCustomMenuPublishResult>;
   setResourceAccountQrLogin(resourceAccountId: string, enabled: boolean): Promise<unknown>;
 }
 

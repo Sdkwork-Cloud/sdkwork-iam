@@ -74,6 +74,9 @@ export interface IamBackendOAuthResourceClient {
       create?: IamSdkMethod;
     };
     create?: IamSdkMethod;
+    customMenus?: {
+      publish?: IamSdkMethod;
+    };
     followQrCodes?: {
       create?: IamSdkMethod;
     };

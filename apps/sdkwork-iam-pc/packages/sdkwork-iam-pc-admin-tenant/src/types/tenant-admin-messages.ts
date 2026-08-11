@@ -45,6 +45,7 @@ export interface SdkworkIamTenantAdminMessages {
       copyFailed: string;
       copied: string;
       loadError: string;
+      loading: string;
       provisionError: string;
       provisionSuccess: string;
       statusError: string;
@@ -80,7 +81,10 @@ export interface SdkworkIamTenantAdminMessages {
       environment: string;
       status: string;
     };
+    tenantSelectorEmpty: string;
+    tenantSelectorLabel: string;
     title: string;
+    standaloneTitle: string;
   };
   common: {
     cancel: string;

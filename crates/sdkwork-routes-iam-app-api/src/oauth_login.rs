@@ -123,6 +123,7 @@ pub(crate) async fn create_oauth_authorization_url(
     redirect_uri: &str,
     state: Option<&str>,
     pkce_challenge: Option<&str>,
+    scope: Option<&str>,
 ) -> Result<String, String> {
     let normalized = normalize_oauth_provider_code(provider)
         .ok_or_else(|| "OAuth provider is invalid".to_string())?;
@@ -157,6 +158,7 @@ pub(crate) async fn create_oauth_authorization_url(
                 redirect_uri,
                 state,
                 pkce_challenge,
+                scope,
             )
             .await?
             {
@@ -179,6 +181,7 @@ pub(crate) async fn resolve_oauth_login_user(
     code: &str,
     redirect_uri: Option<&str>,
     pkce_verifier: Option<&str>,
+    scope: Option<&str>,
 ) -> Result<LocalIamUser, String> {
     let normalized = normalize_oauth_provider_code(provider)
         .ok_or_else(|| "OAuth provider is invalid".to_string())?;
@@ -216,7 +219,8 @@ pub(crate) async fn resolve_oauth_login_user(
                 "OAuth redirectUri is required for configured provider integrations".to_string()
             })?;
         let profile =
-            exchange_oauth_authorization_code(&ctx, code, redirect_uri, pkce_verifier).await?;
+            exchange_oauth_authorization_code(&ctx, code, redirect_uri, pkce_verifier, scope)
+                .await?;
         (profile, ctx.integration_id.clone())
     } else {
         return Err(
@@ -280,6 +284,7 @@ async fn build_integration_authorization_url(
     redirect_uri: &str,
     state: Option<&str>,
     pkce_challenge: Option<&str>,
+    scope: Option<&str>,
 ) -> Result<Option<String>, String> {
     let row = sqlx::query(
         "SELECT c.provider_client_id, \
@@ -317,9 +322,12 @@ async fn build_integration_authorization_url(
             format!("OAuth provider {provider_code} is missing authorization endpoint")
         })?;
 
-    let scope = serde_json::from_str::<Vec<String>>(&default_scopes_json)
-        .unwrap_or_else(|_| sdkwork_iam_web_adapter::builtin_default_scopes(provider_code))
-        .join(" ");
+    let requested_scope = resolve_wechat_mp_scope(provider_code, scope)?;
+    let scope = requested_scope.unwrap_or_else(|| {
+        serde_json::from_str::<Vec<String>>(&default_scopes_json)
+            .unwrap_or_else(|_| sdkwork_iam_web_adapter::builtin_default_scopes(provider_code))
+            .join(" ")
+    });
     let client_id_parameter = match provider_code {
         "wechat" | "wechat_open" => "appid",
         "douyin" | "tiktok" => "client_key",
@@ -359,6 +367,31 @@ pub(crate) fn create_oauth_pkce(provider: &str) -> Option<(String, String)> {
     let verifier = crate::tokens::generate_opaque_token("oauthpkce");
     let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
     Some((verifier, challenge))
+}
+
+/// Resolves the authorization scope for WeChat official-account web
+/// authorization.
+///
+/// Only `snsapi_base` (silent authorization: openid only) and
+/// `snsapi_userinfo` (explicit consent page: nickname/avatar) are accepted;
+/// anything else is rejected instead of silently sending an invalid scope to
+/// WeChat. Other providers return `Ok(None)` and keep their catalog default.
+fn resolve_wechat_mp_scope(
+    provider_code: &str,
+    scope: Option<&str>,
+) -> Result<Option<String>, String> {
+    if provider_code != "wechat" {
+        return Ok(None);
+    }
+    let Some(scope) = scope.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    match scope {
+        "snsapi_base" | "snsapi_userinfo" => Ok(Some(scope.to_string())),
+        _ => Err(format!(
+            "WeChat OAuth scope `{scope}` is invalid; use snsapi_base or snsapi_userinfo"
+        )),
+    }
 }
 
 pub(crate) async fn find_active_integration_tenant_for_tenant(
@@ -639,5 +672,35 @@ mod tests {
                 "unexpected PKCE for {provider}"
             );
         }
+    }
+
+    #[test]
+    fn wechat_scope_resolver_accepts_only_base_and_userinfo() {
+        assert_eq!(
+            resolve_wechat_mp_scope("wechat", Some("snsapi_base")),
+            Ok(Some("snsapi_base".to_string()))
+        );
+        assert_eq!(
+            resolve_wechat_mp_scope("wechat", Some("snsapi_userinfo")),
+            Ok(Some("snsapi_userinfo".to_string()))
+        );
+        assert_eq!(
+            resolve_wechat_mp_scope("wechat", Some("  snsapi_base  ")),
+            Ok(Some("snsapi_base".to_string()))
+        );
+        assert_eq!(resolve_wechat_mp_scope("wechat", None), Ok(None));
+        assert_eq!(resolve_wechat_mp_scope("wechat", Some("  ")), Ok(None));
+
+        let error = resolve_wechat_mp_scope("wechat", Some("snsapi_login"))
+            .expect_err("invalid scope must fail");
+        assert!(error.contains("snsapi_base"));
+        assert!(error.contains("snsapi_userinfo"));
+
+        // Other providers keep their catalog default scope.
+        assert_eq!(
+            resolve_wechat_mp_scope("wechat_open", Some("snsapi_base")),
+            Ok(None)
+        );
+        assert_eq!(resolve_wechat_mp_scope("google", Some("email")), Ok(None));
     }
 }

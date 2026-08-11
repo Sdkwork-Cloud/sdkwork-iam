@@ -1157,6 +1157,24 @@ function resolvePlatformQrContentMode(
     : normalizeOptionalString(qrContent?.mode) || normalizeOptionalString(session?.type);
 }
 
+/**
+ * Official-account scan login returns the QR code as a plain image URL
+ * string in `qrCode` (the WeChat temp-QR image). Keep it as an image media
+ * resource so the login page renders the image directly instead of
+ * re-encoding the URL as QR content.
+ */
+function readSdkworkQrImageUrlResource(value: unknown): SdkworkMediaResource | undefined {
+  const url = normalizeOptionalString(value);
+  return url
+    ? {
+        kind: "image",
+        publicUrl: url,
+        source: "external_url",
+        url,
+      }
+    : undefined;
+}
+
 function resolveQrExpireTime(
   qrCode: SdkworkRemoteQrCode | SdkworkRemotePlatformQrAuthSession | undefined | null,
 ): number | undefined {
@@ -1190,7 +1208,8 @@ function toPlatformLoginQrCode(
     description: normalizeOptionalString(session.description),
     expireTime: resolveQrExpireTime(session),
     pollSecret: normalizeOptionalString(session.pollSecret),
-    qrCode: readSdkworkMediaResource(session.qrCode),
+    qrCode: readSdkworkMediaResource(session.qrCode)
+      || readSdkworkQrImageUrlResource(session.qrCode),
     qrContent: resolvePlatformQrContent(session),
     sessionKey,
     title: normalizeOptionalString(session.title),

@@ -527,9 +527,9 @@ async fn oauth_jwt_session_is_active(pg: &PgPool, context: &IamAppContext) -> bo
 
 fn iam_context_from_token_claims(claims: &Value) -> Option<IamAppContext> {
     let tenant_id = claim_string_value(claims, &["tenant_id"])?;
-    let user_id = claim_string_value(claims, &["user_id", "sub"])?;
-    let session_id = claim_string_value(claims, &["session_id", "sid", "jti"])
-        .unwrap_or_else(|| format!("oauth:{user_id}"));
+    let user_id = claim_string_value(claims, &["user_id"])?;
+    let session_id =
+        claim_string_value(claims, &["session_id"]).unwrap_or_else(|| format!("oauth:{user_id}"));
     let app_id = claim_string_value(claims, &["app_id"])?;
     let organization_id = claim_string_value(claims, &["organization_id"]);
     let login_scope = login_scope_from_string(
@@ -580,10 +580,9 @@ fn iam_context_from_token_claims(claims: &Value) -> Option<IamAppContext> {
         tenant_id,
         organization_id: normalized_organization_id.clone(),
         login_scope,
-        user_id,
+        user_id: user_id.clone(),
         principal_kind: IamPrincipalKind::User,
-        principal_id: claim_string_value(claims, &["principal_id", "user_id", "sub"])
-            .unwrap_or_default(),
+        principal_id: user_id,
         session_id,
         app_id,
         environment,
@@ -898,8 +897,8 @@ fn claim_string_value(claims: &Value, keys: &[&str]) -> Option<String> {
 fn session_token_claims_match(auth_claims: &Value, access_claims: &Value) -> bool {
     for keys in [
         &["tenant_id"][..],
-        &["user_id", "sub"][..],
-        &["session_id", "sid"][..],
+        &["user_id"][..],
+        &["session_id"][..],
         &["organization_id"][..],
         &["login_scope"][..],
         &["app_id"][..],
@@ -918,8 +917,8 @@ fn session_claims_match_context(claims: &Value, context: &IamAppContext) -> bool
         .filter(|value| !crate::is_blank(Some(value)))
         .unwrap_or("0");
     claim_string_value(claims, &["tenant_id"]) == Some(context.tenant_id.clone())
-        && claim_string_value(claims, &["user_id", "sub"]) == Some(context.user_id.clone())
-        && claim_string_value(claims, &["session_id", "sid"]) == Some(context.session_id.clone())
+        && claim_string_value(claims, &["user_id"]) == Some(context.user_id.clone())
+        && claim_string_value(claims, &["session_id"]) == Some(context.session_id.clone())
         && claim_string_value(claims, &["app_id"]) == Some(context.app_id.clone())
         && claim_string_value(claims, &["login_scope"])
             == Some(login_scope_to_string(&context.login_scope).to_string())
@@ -957,4 +956,123 @@ fn current_millis() -> u128 {
 
 fn current_timestamp_utc() -> chrono::DateTime<chrono::Utc> {
     chrono::Utc::now()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::access_token_issue::{
+        sign_local_session_token_with_ttl, TenantSigningKey as IssuerSigningKey,
+    };
+    use serde_json::json;
+
+    const TEST_SIGNING_SECRET: &[u8] = b"0123456789abcdef0123456789abcdef";
+
+    fn test_signing_key() -> TenantSigningKey {
+        TenantSigningKey {
+            tenant_id: "100001".to_owned(),
+            kid: "kid-1".to_owned(),
+            secret: TEST_SIGNING_SECRET.to_vec(),
+        }
+    }
+
+    fn test_app_context() -> IamAppContext {
+        IamAppContext::new(
+            "100001".to_owned(),
+            Some("org-1"),
+            "user-1".to_owned(),
+            "session-1".to_owned(),
+            "sdkwork-cloudrouter".to_owned(),
+            Environment::Prod,
+            DeploymentMode::Private,
+            AuthLevel::Password,
+            vec!["tenant:100001".to_owned()],
+            vec!["iam:self".to_owned()],
+        )
+    }
+
+    fn encode_jwt_part(value: &Value) -> String {
+        URL_SAFE_NO_PAD.encode(serde_json::to_vec(value).expect("JWT JSON should serialize"))
+    }
+
+    /// Signs an arbitrary payload with the test secret so legacy and tampered
+    /// tokens can be constructed without going through the production issuer.
+    fn sign_payload_with_test_secret(payload: &Value) -> String {
+        let header = json!({"alg": "HS256", "kid": "kid-1", "typ": "JWT"});
+        let signing_input = format!("{}.{}", encode_jwt_part(&header), encode_jwt_part(payload));
+        let mut mac =
+            HmacSha256::new_from_slice(TEST_SIGNING_SECRET).expect("HMAC key should construct");
+        mac.update(signing_input.as_bytes());
+        format!(
+            "{signing_input}.{}",
+            URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes())
+        )
+    }
+
+    fn legacy_payload_with_user_id(user_id: &str, now_unix: i64) -> Value {
+        json!({
+            "app_id": "sdkwork-cloudrouter",
+            "aud": "sdkwork-cloudrouter",
+            "auth_level": "password",
+            "data_scope": ["tenant:100001"],
+            "deployment_mode": "private",
+            "environment": "prod",
+            "exp": now_unix + 3600,
+            "iat": now_unix,
+            "iss": LOCAL_SESSION_TOKEN_ISSUER,
+            "login_scope": "ORGANIZATION",
+            "organization_id": "org-1",
+            "permission_scope": ["iam:self"],
+            "principal_id": user_id,
+            "principal_kind": "user",
+            "session_id": "session-1",
+            "sid": "session-1",
+            "sub": user_id,
+            "tenant_id": "100001",
+            "token_type": "auth",
+            "token_version": 1,
+            "user_id": user_id,
+        })
+    }
+
+    #[test]
+    fn cleaned_claims_verify_legacy_tokens_stay_compatible_and_tampering_is_rejected() {
+        let key = test_signing_key();
+        let context = test_app_context();
+        let now_unix = (current_millis() / 1000) as i64;
+
+        // New-format dual tokens: issue -> verify signature -> dual-token
+        // pairing -> context matching.
+        let issue_key = IssuerSigningKey {
+            kid: key.kid.clone(),
+            secret: key.secret.clone(),
+        };
+        let auth_token = sign_local_session_token_with_ttl(&issue_key, "auth", &context, 3600);
+        let access_token = sign_local_session_token_with_ttl(&issue_key, "access", &context, 3600);
+        let auth_claims = verify_local_session_token(&key, &auth_token, "auth", now_unix)
+            .expect("new auth token should verify");
+        let access_claims = verify_local_session_token(&key, &access_token, "access", now_unix)
+            .expect("new access token should verify");
+        assert!(session_token_claims_match(&auth_claims, &access_claims));
+        assert!(session_claims_match_context(&auth_claims, &context));
+        for claim in ["sid", "sub", "principal_id", "principal_kind"] {
+            assert!(auth_claims.get(claim).is_none(), "{claim} must be absent");
+        }
+
+        // Legacy-format token (with sid/sub/principal_id/principal_kind):
+        // signature verification and context matching must still pass.
+        let legacy_token =
+            sign_payload_with_test_secret(&legacy_payload_with_user_id("user-1", now_unix));
+        let legacy_claims = verify_local_session_token(&key, &legacy_token, "auth", now_unix)
+            .expect("legacy token should still verify");
+        assert!(session_claims_match_context(&legacy_claims, &context));
+
+        // Tampered primary claim user_id: signature stays valid but context
+        // matching must reject the token.
+        let tampered_token =
+            sign_payload_with_test_secret(&legacy_payload_with_user_id("user-2", now_unix));
+        let tampered_claims = verify_local_session_token(&key, &tampered_token, "auth", now_unix)
+            .expect("tampered token signature should still verify");
+        assert!(!session_claims_match_context(&tampered_claims, &context));
+    }
 }

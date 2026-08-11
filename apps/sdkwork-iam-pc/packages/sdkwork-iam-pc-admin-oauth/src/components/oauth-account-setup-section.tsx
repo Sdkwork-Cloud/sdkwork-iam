@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, Image as ImageIcon, MessageCircle, Pencil, Plus, QrCode, Trash2, Upload, X } from "lucide-react";
+import { Download, Image as ImageIcon, ListTree, MessageCircle, Pencil, Plus, QrCode, Trash2, Upload, X } from "lucide-react";
 import {
   Button,
   ConfirmDialog,
@@ -139,10 +139,12 @@ export function OauthAccountSetupSection({
   common,
   controller,
   disabled,
+  initialOpen = false,
   kind,
   listPageInfo,
   messages,
   onChanged,
+  onOpenCustomMenu,
   status,
   switchMessages,
 }: {
@@ -150,10 +152,17 @@ export function OauthAccountSetupSection({
   common: CommonCopy;
   controller: SdkworkIamOauthAdminController;
   disabled: boolean;
+  initialOpen?: boolean;
   kind: SdkworkIamOauthAccountKind;
   listPageInfo?: SdkWorkPageInfo;
   messages: AccountCopy;
   onChanged: () => void;
+  /**
+   * Optional navigation into the custom menu management page for official
+   * accounts. The row action only renders when the host provides it, keeping
+   * the section surface-agnostic.
+   */
+  onOpenCustomMenu?: (resourceAccountId: string) => void;
   status: string;
   switchMessages: AccountSwitchCopy;
 }) {
@@ -271,6 +280,14 @@ export function OauthAccountSetupSection({
       },
     },
   ], [common.connectionStatus, common.connectionStatusHint, common.connected, common.logo, common.notConnected, common.status, common.statusHint, messages.fields.appId, messages.fields.displayName, paginationMessages, switchMessages.enabled, switchMessages.notEnabled]);
+
+  // A cross-page jump (e.g. the scan-login settings "add service account"
+  // action) can request the add drawer to open on mount.
+  useEffect(() => {
+    if (initialOpen) {
+      setDrawerOpen(true);
+    }
+  }, [initialOpen]);
 
   const canSubmit = Boolean(
     form.displayName.trim() && form.appId.trim() && form.appSecret.trim()
@@ -459,16 +476,29 @@ export function OauthAccountSetupSection({
                 onCheckedChange={(checked) => toggleEnabled(row, checked)}
                 title={enabled ? common.disable : common.enable}
               />
-              {kind === "official_account" ? (
+              {kind === "official_account" && row.accountType === "service" ? (
                 <IconButton
                   aria-label={paginationMessages.quickSetup.officialAccounts.followQrCode.generate}
-                  // The backend only issues follow QRs for enabled accounts.
-                  disabled={disabled || !row.accountId || row.enabled === false}
+                  // Generating a follow QR needs the parameterized-QR API
+                  // permission, which WeChat only grants to certified service
+                  // accounts; the action stays hidden for subscriptions.
+                  disabled={disabled || !row.accountId}
                   onClick={() => generateFollowQrCode(row)}
                   title={paginationMessages.quickSetup.officialAccounts.followQrCode.generate}
                   variant="ghost"
                 >
                   <QrCode aria-hidden="true" className="h-4 w-4" />
+                </IconButton>
+              ) : null}
+              {kind === "official_account" && onOpenCustomMenu ? (
+                <IconButton
+                  aria-label={paginationMessages.quickSetup.customMenus.openButton}
+                  disabled={disabled || !row.accountId}
+                  onClick={() => onOpenCustomMenu(row.accountId)}
+                  title={paginationMessages.quickSetup.customMenus.openButton}
+                  variant="ghost"
+                >
+                  <ListTree aria-hidden="true" className="h-4 w-4" />
                 </IconButton>
               ) : null}
               <IconButton

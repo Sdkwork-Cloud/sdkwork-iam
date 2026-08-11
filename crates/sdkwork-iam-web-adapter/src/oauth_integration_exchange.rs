@@ -29,10 +29,44 @@ struct OAuthTokenResponse {
     access_token: String,
     open_id: Option<String>,
     union_id: Option<String>,
+    /// The scope the provider actually granted for this token (WeChat echoes
+    /// `snsapi_base` or `snsapi_userinfo`). Missing for providers that do not
+    /// echo a scope; the requested scope is used then.
+    granted_scope: Option<String>,
     #[allow(dead_code)]
     id_token: Option<String>,
     #[allow(dead_code)]
     token_type: Option<String>,
+}
+
+/// Decides whether provider userinfo must be fetched after the token
+/// exchange.
+///
+/// WeChat official-account web authorization grants either `snsapi_base`
+/// (silent: openid only — `/sns/userinfo` rejects a `snsapi_base` access
+/// token with `48001 api unauthorized`) or `snsapi_userinfo` (explicit
+/// consent: nickname/avatar available). The granted scope in the token
+/// response is authoritative; when WeChat does not echo it, the scope
+/// requested at authorization time decides; providers without a scope
+/// concept keep fetching userinfo.
+fn should_fetch_userinfo(
+    provider_code: &str,
+    requested_scope: Option<&str>,
+    granted_scope: Option<&str>,
+) -> bool {
+    if !matches!(provider_code, "wechat" | "wechat_open") {
+        return true;
+    }
+    let scope = granted_scope
+        .or(requested_scope)
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    match scope {
+        Some(scope) => scope
+            .split_whitespace()
+            .any(|part| part == "snsapi_userinfo"),
+        None => true,
+    }
 }
 
 pub async fn load_oauth_integration_exchange_context(
@@ -89,12 +123,15 @@ pub async fn load_oauth_integration_exchange_context_for_app(
     finish_exchange_context(pg, tenant_id, &normalized, row).await
 }
 
-/// Loads the exchange context for one specific integration row.
+/// Loads the exchange context for one integration regardless of the enabled
+/// switch and lifecycle status.
 ///
-/// Used by WeChat official-account scan login where the account (and therefore
-/// its appId/appSecret) is chosen explicitly instead of the first active
-/// integration for the provider.
-pub async fn load_oauth_integration_exchange_context_for_integration(
+/// Used by the follow-QR generator: creating a parameterized QR only needs
+/// valid provider credentials, so a deliberately disabled or non-active
+/// account (whose integration is disabled in sync) must still be able to
+/// produce its QR. Only the active `client_secret` row (a rotated or revoked
+/// secret must never be used) and the provider catalog entry are filtered.
+pub async fn load_oauth_integration_exchange_context_for_integration_any_state(
     pg: &PgPool,
     tenant_id: &str,
     integration_id: &str,
@@ -106,10 +143,11 @@ pub async fn load_oauth_integration_exchange_context_for_integration(
                 COALESCE(i.protocol_family, cat.protocol_family) AS protocol_family, \
                 COALESCE(cat.supports_userinfo, 0) AS supports_userinfo \
          FROM iam_oauth_integration i \
-         JOIN iam_oauth_client c ON c.integration_id = i.id AND c.enabled = 1 AND c.status = 'active' \
+         JOIN iam_oauth_client c ON c.integration_id = i.id \
          LEFT JOIN iam_oauth_provider_catalog cat \
            ON cat.provider_code = i.provider_code AND cat.status = 'active' \
-         WHERE i.tenant_id = $1 AND i.id = $2 AND i.enabled = 1 AND i.status = 'active' \
+         WHERE i.tenant_id = $1 AND i.id = $2 \
+         ORDER BY CASE WHEN c.enabled = 1 THEN 0 ELSE 1 END, c.id \
          LIMIT 1",
     )
     .bind(tenant_id)
@@ -117,6 +155,64 @@ pub async fn load_oauth_integration_exchange_context_for_integration(
     .fetch_optional(pg)
     .await
     .map_err(|error| format!("load oauth integration exchange context failed: {error}"))?;
+
+    let Some(row) = row else {
+        return Ok(None);
+    };
+
+    finish_exchange_context(pg, tenant_id, integration_id, row).await
+}
+
+/// Loads the exchange context for one specific integration row.
+///
+/// Used by WeChat official-account scan login where the account (and therefore
+/// its appId/appSecret) is chosen explicitly instead of the first active
+/// integration for the provider.
+pub async fn load_oauth_integration_exchange_context_for_integration(
+    pg: &PgPool,
+    tenant_id: &str,
+    integration_id: &str,
+) -> Result<Option<OAuthIntegrationExchangeContext>, String> {
+    load_oauth_integration_exchange_context_for_integration_with_state(
+        pg,
+        tenant_id,
+        integration_id,
+        true,
+    )
+    .await
+}
+
+async fn load_oauth_integration_exchange_context_for_integration_with_state(
+    pg: &PgPool,
+    tenant_id: &str,
+    integration_id: &str,
+    require_enabled: bool,
+) -> Result<Option<OAuthIntegrationExchangeContext>, String> {
+    // `enabled` is an operator switch (login entry on/off); the follow-QR
+    // path loads credentials even for deliberately disabled accounts.
+    let enabled_clause = if require_enabled {
+        " AND c.enabled = 1 AND i.enabled = 1 "
+    } else {
+        " "
+    };
+    let sql = format!(
+        "SELECT i.id, c.id, c.provider_client_id, c.provider_tenant_id, c.client_auth_method, \
+                COALESCE(c.token_endpoint_override, cat.token_endpoint) AS token_endpoint, \
+                COALESCE(c.userinfo_endpoint_override, cat.userinfo_endpoint) AS userinfo_endpoint, \
+                COALESCE(i.protocol_family, cat.protocol_family) AS protocol_family, \
+                COALESCE(cat.supports_userinfo, 0) AS supports_userinfo \
+         FROM iam_oauth_integration i \
+         JOIN iam_oauth_client c ON c.integration_id = i.id AND c.status = 'active' \
+         LEFT JOIN iam_oauth_provider_catalog cat \
+           ON cat.provider_code = i.provider_code AND cat.status = 'active' \
+         WHERE i.tenant_id = $1 AND i.id = $2 AND i.status = 'active'{enabled_clause}"
+    );
+    let row = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+        .bind(tenant_id)
+        .bind(integration_id)
+        .fetch_optional(pg)
+        .await
+        .map_err(|error| format!("load oauth integration exchange context failed: {error}"))?;
 
     let Some(row) = row else {
         return Ok(None);
@@ -181,6 +277,7 @@ pub async fn exchange_oauth_authorization_code(
     code: &str,
     redirect_uri: &str,
     pkce_verifier: Option<&str>,
+    requested_scope: Option<&str>,
 ) -> Result<LocalOAuthProviderProfile, String> {
     let code = code.trim();
     if code.is_empty() {
@@ -192,7 +289,7 @@ pub async fn exchange_oauth_authorization_code(
     }
 
     let token = request_oauth_token(ctx, code, redirect_uri, pkce_verifier).await?;
-    let claims = resolve_identity_claims(ctx, &token).await?;
+    let claims = resolve_identity_claims(ctx, &token, requested_scope).await?;
     map_claims_to_profile(
         &ctx.provider_code,
         ctx.provider_union_scope_id.as_deref(),
@@ -465,40 +562,64 @@ async fn request_oauth_token(
 async fn resolve_identity_claims(
     ctx: &OAuthIntegrationExchangeContext,
     token: &OAuthTokenResponse,
+    requested_scope: Option<&str>,
 ) -> Result<Value, String> {
     if ctx.provider_code == "qq" {
         return fetch_qq_userinfo_claims(ctx, token).await;
     }
-    if ctx.supports_userinfo {
-        if let Some(endpoint) = ctx.userinfo_endpoint.as_deref() {
-            let mut claims = fetch_userinfo_claims(
-                endpoint,
-                &token.access_token,
-                &ctx.provider_code,
-                token.open_id.as_deref(),
-            )
-            .await?;
-            if let Some(object) = claims.as_object_mut() {
-                if let Some(open_id) = token.open_id.as_deref() {
-                    object
-                        .entry("openid".to_string())
-                        .or_insert_with(|| Value::String(open_id.to_string()));
+    if should_fetch_userinfo(
+        &ctx.provider_code,
+        requested_scope,
+        token.granted_scope.as_deref(),
+    ) {
+        if ctx.supports_userinfo {
+            if let Some(endpoint) = ctx.userinfo_endpoint.as_deref() {
+                let mut claims = fetch_userinfo_claims(
+                    endpoint,
+                    &token.access_token,
+                    &ctx.provider_code,
+                    token.open_id.as_deref(),
+                )
+                .await?;
+                if let Some(object) = claims.as_object_mut() {
+                    if let Some(open_id) = token.open_id.as_deref() {
+                        object
+                            .entry("openid".to_string())
+                            .or_insert_with(|| Value::String(open_id.to_string()));
+                    }
+                    if let Some(union_id) = token.union_id.as_deref() {
+                        object
+                            .entry("unionid".to_string())
+                            .or_insert_with(|| Value::String(union_id.to_string()));
+                    }
                 }
-                if let Some(union_id) = token.union_id.as_deref() {
-                    object
-                        .entry("unionid".to_string())
-                        .or_insert_with(|| Value::String(union_id.to_string()));
-                }
+                return Ok(claims);
             }
-            return Ok(claims);
         }
+
+        if ctx.protocol_family.eq_ignore_ascii_case("oidc") {
+            return Err(
+                "OAuth provider userinfo is required for OIDC identity resolution".to_string(),
+            );
+        }
+
+        return Err("OAuth provider identity claims are unavailable".to_string());
     }
 
-    if ctx.protocol_family.eq_ignore_ascii_case("oidc") {
-        return Err("OAuth provider userinfo is required for OIDC identity resolution".to_string());
+    // Silent WeChat authorization (`snsapi_base`): no userinfo was granted;
+    // the identity is the openid (plus unionid when the official account is
+    // bound to an open platform account).
+    let mut claims = serde_json::Map::new();
+    if let Some(open_id) = token.open_id.as_deref() {
+        claims.insert("openid".to_string(), Value::String(open_id.to_string()));
     }
-
-    Err("OAuth provider identity claims are unavailable".to_string())
+    if let Some(union_id) = token.union_id.as_deref() {
+        claims.insert("unionid".to_string(), Value::String(union_id.to_string()));
+    }
+    if claims.is_empty() {
+        return Err("OAuth provider identity claims are unavailable".to_string());
+    }
+    Ok(Value::Object(claims))
 }
 
 async fn fetch_userinfo_claims(
@@ -656,17 +777,21 @@ fn parse_token_response(body: &str, provider_code: &str) -> Result<OAuthTokenRes
 
     if provider_code == "github" || body.contains("access_token=") {
         let mut access_token = None;
+        let mut granted_scope = None;
         for segment in body.split('&') {
             let Some((key, value)) = segment.split_once('=') else {
                 continue;
             };
             if key == "access_token" {
                 access_token = Some(value.to_string());
+            } else if key == "scope" {
+                granted_scope = Some(value.to_string());
             }
         }
         if let Some(access_token) = access_token {
             return Ok(OAuthTokenResponse {
                 access_token,
+                granted_scope,
                 open_id: None,
                 union_id: None,
                 id_token: None,
@@ -696,6 +821,10 @@ fn extract_token_response(value: Value) -> Result<OAuthTokenResponse, String> {
 
     Ok(OAuthTokenResponse {
         access_token: access_token.to_string(),
+        granted_scope: value
+            .get("scope")
+            .and_then(Value::as_str)
+            .map(str::to_string),
         open_id: value
             .get("openid")
             .or_else(|| value.get("open_id"))
@@ -1121,6 +1250,71 @@ mod tests {
         )
         .expect("token");
         assert_eq!(token.access_token, "ghs_123");
+        assert_eq!(token.granted_scope.as_deref(), Some("read:user"));
+    }
+
+    #[test]
+    fn parses_wechat_granted_scope_from_token_response() {
+        let silent = parse_token_response(
+            r#"{"access_token":"token-1","openid":"openid-1","scope":"snsapi_base"}"#,
+            "wechat",
+        )
+        .expect("silent token");
+        assert_eq!(silent.granted_scope.as_deref(), Some("snsapi_base"));
+
+        let consent = parse_token_response(
+            r#"{"access_token":"token-2","openid":"openid-1","scope":"snsapi_userinfo"}"#,
+            "wechat",
+        )
+        .expect("consent token");
+        assert_eq!(consent.granted_scope.as_deref(), Some("snsapi_userinfo"));
+
+        let plain = parse_token_response(
+            r#"{"access_token":"token-3","openid":"openid-1"}"#,
+            "wechat",
+        )
+        .expect("scope-less token");
+        assert_eq!(plain.granted_scope, None);
+    }
+
+    #[test]
+    fn wechat_base_scope_skips_userinfo_fetch() {
+        assert!(!should_fetch_userinfo("wechat", Some("snsapi_base"), None));
+        assert!(!should_fetch_userinfo("wechat", None, Some("snsapi_base")));
+        assert!(!should_fetch_userinfo(
+            "wechat",
+            Some("snsapi_base"),
+            Some("snsapi_base")
+        ));
+        // The granted scope is authoritative over the requested one.
+        assert!(should_fetch_userinfo(
+            "wechat",
+            Some("snsapi_base"),
+            Some("snsapi_userinfo")
+        ));
+        assert!(should_fetch_userinfo(
+            "wechat",
+            Some("snsapi_userinfo"),
+            None
+        ));
+        assert!(should_fetch_userinfo(
+            "wechat_open",
+            Some("snsapi_login"),
+            Some("snsapi_userinfo")
+        ));
+        // Providers without the WeChat scope split keep fetching userinfo.
+        assert!(should_fetch_userinfo("google", None, None));
+        assert!(should_fetch_userinfo("qq", None, Some("get_user_info")));
+        // No scope information at all falls back to the historical behavior.
+        assert!(should_fetch_userinfo("wechat", None, None));
+    }
+
+    #[test]
+    fn wechat_token_response_without_scope_uses_requested_scope() {
+        let body = r#"{"access_token":"token-4","openid":"openid-1"}"#;
+        let token = parse_token_response(body, "wechat").expect("token");
+        assert_eq!(token.granted_scope, None);
+        assert!(!should_fetch_userinfo("wechat", Some("snsapi_base"), None));
     }
 
     #[test]

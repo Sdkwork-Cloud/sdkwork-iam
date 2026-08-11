@@ -38,6 +38,7 @@ export const sdkworkIamTenantAdminMessages: SdkworkIamTenantAdminMessages = {
       copyFailed: "无法复制应用 ID。",
       copied: "应用 ID 已复制。",
       loadError: "应用列表加载失败。",
+      loading: "正在加载应用…",
       provisionError: "应用注册失败。",
       provisionSuccess: "应用注册成功。",
       statusError: "应用状态更新失败。",
@@ -57,7 +58,10 @@ export const sdkworkIamTenantAdminMessages: SdkworkIamTenantAdminMessages = {
     statuses: { disabled: "已停用", enabled: "已启用", pendingConfig: "待配置", unknown: "未知" },
     summary: { disabled: "已停用", enabled: "已启用", pending: "待配置", total: "应用总数" },
     table: { appId: "App ID", application: "应用", domain: "主域名", environment: "运行环境", status: "状态" },
+    tenantSelectorEmpty: "暂无可用租户",
+    tenantSelectorLabel: "选择租户",
     title: "租户应用",
+    standaloneTitle: "应用列表",
   },
   common: { cancel: "取消", close: "关闭", edit: "编辑", save: "保存修改" },
   members: {

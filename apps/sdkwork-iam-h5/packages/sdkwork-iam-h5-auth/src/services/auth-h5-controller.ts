@@ -11,10 +11,13 @@ import type {
   SdkworkIamH5AuthController,
   SdkworkIamH5AuthSession,
   SdkworkIamH5AuthState,
+  SdkworkIamH5BeginOAuthAuthorizationInput,
   SdkworkIamH5CodeLoginInput,
   SdkworkIamH5LoginCredentials,
   SdkworkIamH5LoginResult,
+  SdkworkIamH5OAuthFlowContext,
   SdkworkIamH5OAuthLoginInput,
+  SdkworkIamH5OAuthScope,
   SdkworkIamH5MiniProgramLoginInput,
   SdkworkIamH5OAuthProvider,
   SdkworkIamH5RegisterInput,
@@ -27,6 +30,21 @@ import type {
 
 /** Storage key for the scan-login context kept across the WeChat authorization redirect. */
 const SCAN_LOGIN_STORAGE_KEY = "sdkwork.iam.h5.scanLogin";
+
+/** Storage key for the OAuth flow mode kept across the provider authorization redirect. */
+const OAUTH_FLOW_STORAGE_KEY = "sdkwork.iam.h5.oauthFlow";
+
+/**
+ * Storage key for the WeChat auto-authorization block.
+ *
+ * Set when an OAuth attempt ends in error (user denied the page, the code
+ * exchange failed, the scan session could not be completed). It stops the
+ * login screen from re-triggering the automatic silent redirect on the next
+ * full page load — otherwise "deny → back to sign in → auto redirect" would
+ * loop forever. A manual WeChat entry click clears the block (explicit user
+ * intent), as does a successful authentication.
+ */
+const WECHAT_AUTO_BLOCKED_STORAGE_KEY = "sdkwork.iam.h5.wechatAutoBlocked";
 
 /** OAuth `state` prefix used to carry the QR session key through authorization. */
 const SCAN_LOGIN_STATE_PREFIX = "scan:";
@@ -219,18 +237,49 @@ export function createSdkworkIamH5AuthController(
         }))
         .filter((provider) => !isBlank(provider.providerCode));
     },
-    createOAuthAuthorizationUrl: async ({ provider, redirectUri, state: oauthState }) => {
-      const response = await service.oauth.authorizationUrls.create({
+    createOAuthAuthorizationUrl: async ({ provider, redirectUri, scope, state: oauthState }) => {
+      const authUrl = await requestOAuthAuthorizationUrl(service, {
         provider,
         redirectUri,
-        ...(isBlank(oauthState) ? {} : { state: oauthState }),
+        scope,
+        state: oauthState,
       });
-      const record = response && typeof response === "object" ? response as Record<string, unknown> : {};
-      const authUrl = optionalString(record.authUrl) || optionalString(record.url);
-      if (!authUrl) {
-        throw new Error("IAM OAuth authorization URL is missing");
-      }
       return authUrl;
+    },
+    beginOAuthAuthorization: async (input: SdkworkIamH5BeginOAuthAuthorizationInput) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      setState({ challenge: undefined, lastError: undefined, status: "loading" });
+      const provider = input.provider?.trim() || WECHAT_PROVIDER;
+      // Silent authorization (`snsapi_base`) never shows a consent page to
+      // followers; the explicit flow (`snsapi_userinfo`) asks for nickname
+      // and avatar on the WeChat consent page.
+      const scope: SdkworkIamH5OAuthScope =
+        input.mode === "silent" ? "snsapi_base" : "snsapi_userinfo";
+      // Beginning an authorization is explicit user intent (automatic
+      // redirect or a manual entry click), so the previous failure block no
+      // longer applies.
+      clearWechatAutoAuthorizationBlock();
+      storeOAuthFlowContext({
+        mode: input.mode,
+        provider,
+        redirectUri: input.redirectUri,
+      });
+      try {
+        const authUrl = await requestOAuthAuthorizationUrl(service, {
+          provider,
+          redirectUri: input.redirectUri,
+          scope,
+          state: input.state,
+        });
+        window.location.assign(authUrl);
+      } catch (error) {
+        clearOAuthFlowContext();
+        const message = error instanceof Error ? error.message : "OAuth authorization failed";
+        setState({ lastError: message, status: "error" });
+        throw error;
+      }
     },
     completeScanLogin: async ({ pollSecret, sessionKey }) => {
       setState({ lastError: undefined, status: "loading" });
@@ -415,6 +464,111 @@ function clearStoredScanLoginContext(): void {
   } catch {
     // Ignore storage failures on logout/completion.
   }
+}
+
+/**
+ * Stores the OAuth flow context before the provider authorization redirect
+ * (sessionStorage survives the full redirect round trip). The callback screen
+ * reads it to recover the flow mode and escalate silent failures.
+ */
+export function storeOAuthFlowContext(context: SdkworkIamH5OAuthFlowContext): void {
+  try {
+    window.sessionStorage.setItem(OAUTH_FLOW_STORAGE_KEY, JSON.stringify(context));
+  } catch {
+    // Storage may be unavailable (private mode); the callback screen falls
+    // back to the explicit consent flow.
+  }
+}
+
+/** Reads the OAuth flow context stored before the provider redirect. */
+export function readOAuthFlowContext(): SdkworkIamH5OAuthFlowContext | undefined {
+  try {
+    const raw = window.sessionStorage.getItem(OAUTH_FLOW_STORAGE_KEY);
+    if (!raw) {
+      return undefined;
+    }
+    const record = JSON.parse(raw) as Record<string, unknown>;
+    const mode = record.mode;
+    if (mode !== "silent" && mode !== "explicit") {
+      return undefined;
+    }
+    const provider = optionalString(record.provider);
+    const redirectUri = optionalString(record.redirectUri);
+    if (!provider || !redirectUri) {
+      return undefined;
+    }
+    return { mode, provider, redirectUri };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Removes the stored OAuth flow context (single-use; the exchange is one-shot). */
+export function clearOAuthFlowContext(): void {
+  try {
+    window.sessionStorage.removeItem(OAUTH_FLOW_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures on completion.
+  }
+}
+
+/**
+ * Marks the automatic WeChat authorization as blocked. Called when an OAuth
+ * attempt ended in error so the login screen does not re-trigger the silent
+ * redirect on the next page load (deny → back to sign in → auto redirect
+ * would otherwise loop forever).
+ */
+export function blockWechatAutoAuthorization(): void {
+  try {
+    window.sessionStorage.setItem(WECHAT_AUTO_BLOCKED_STORAGE_KEY, "1");
+  } catch {
+    // Storage may be unavailable; the automatic redirect stays enabled.
+  }
+}
+
+/** Clears the WeChat auto-authorization block (manual entry or success). */
+export function clearWechatAutoAuthorizationBlock(): void {
+  try {
+    window.sessionStorage.removeItem(WECHAT_AUTO_BLOCKED_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+/** Returns whether the automatic WeChat authorization is currently blocked. */
+export function isWechatAutoAuthorizationBlocked(): boolean {
+  try {
+    return window.sessionStorage.getItem(WECHAT_AUTO_BLOCKED_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Requests an OAuth authorization URL through the IAM app-api
+ * `oauth.authorizationUrls.create` surface (no raw HTTP).
+ */
+async function requestOAuthAuthorizationUrl(
+  service: SdkworkIamService,
+  input: {
+    provider: string;
+    redirectUri: string;
+    scope?: SdkworkIamH5OAuthScope;
+    state?: string;
+  },
+): Promise<string> {
+  const response = await service.oauth.authorizationUrls.create({
+    provider: input.provider,
+    redirectUri: input.redirectUri,
+    ...(isBlank(input.scope) ? {} : { scope: input.scope }),
+    ...(isBlank(input.state) ? {} : { state: input.state }),
+  });
+  const record = response && typeof response === "object" ? response as Record<string, unknown> : {};
+  const authUrl = optionalString(record.authUrl) || optionalString(record.url);
+  if (!authUrl) {
+    throw new Error("IAM OAuth authorization URL is missing");
+  }
+  return authUrl;
 }
 
 /**

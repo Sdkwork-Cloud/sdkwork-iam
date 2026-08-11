@@ -195,7 +195,9 @@ pub(crate) async fn handle_wechat_payment_oauth_callback(
             Err(_) => return payment_oauth_redirect_response(&redirect, "error", "lookup_failed"),
         };
     let profile =
-        match exchange_oauth_authorization_code(&provider_ctx, &code, &callback_url, None).await {
+        match exchange_oauth_authorization_code(&provider_ctx, &code, &callback_url, None, None)
+            .await
+        {
             Ok(profile) => profile,
             Err(_) => {
                 return payment_oauth_redirect_response(&redirect, "error", "exchange_failed");

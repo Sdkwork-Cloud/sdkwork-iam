@@ -2333,7 +2333,11 @@ async fn local_app_router_rejects_unsupported_grants_and_fails_closed_code_login
     .await;
     assert_eq!(bridge_response.status(), StatusCode::BAD_REQUEST);
     let bridge_body = read_json(bridge_response).await;
-    assert_problem_detail_code(&bridge_body, StatusCode::BAD_REQUEST, "iam_unsupported_grant_type");
+    assert_problem_detail_code(
+        &bridge_body,
+        StatusCode::BAD_REQUEST,
+        "iam_unsupported_grant_type",
+    );
     assert!(bridge_body.get("data").is_none() || bridge_body["data"].is_null());
 }
 
@@ -2718,8 +2722,7 @@ async fn local_app_router_issues_and_consumes_login_verification_codes() {
     );
     assert_eq!(request_body["data"]["accepted"], true);
     assert_eq!(
-        request_body["data"]["devCode"],
-        CONFIGURED_RESET_CODE,
+        request_body["data"]["devCode"], CONFIGURED_RESET_CODE,
         "dev fixed code should be echoed to the host: {request_body}"
     );
 
@@ -2742,7 +2745,11 @@ async fn local_app_router_issues_and_consumes_login_verification_codes() {
 
     assert_eq!(login_response.status(), StatusCode::OK);
     let login_body = read_json(login_response).await;
-    assert_eq!(login_body["code"].as_i64(), Some(0), "code login failed: {login_body}");
+    assert_eq!(
+        login_body["code"].as_i64(),
+        Some(0),
+        "code login failed: {login_body}"
+    );
     assert!(
         login_body["data"]["accessToken"].is_string()
             && login_body["data"]["authToken"].is_string(),
@@ -2886,15 +2893,18 @@ async fn local_app_router_rejects_code_login_for_unverified_or_phone_accounts() 
     // globally (like password reset), so a fixed phone left behind by a
     // previous test run would bind the artifact to a stale user/tenant.
     let phone = format!("139{}", &uuid::Uuid::now_v7().simple().to_string()[..8]);
-    let updated = sqlx::query(
-        "UPDATE iam_user SET phone = $1, phone_verified = 1 WHERE email = $2",
-    )
-    .bind(&phone)
-    .bind(code_login_username.as_str())
-    .execute(&pg)
-    .await
-    .expect("bind phone to code-login user");
-    assert_eq!(updated.rows_affected(), 1, "phone bind must hit the seeded user");
+    let updated =
+        sqlx::query("UPDATE iam_user SET phone = $1, phone_verified = 1 WHERE email = $2")
+            .bind(&phone)
+            .bind(code_login_username.as_str())
+            .execute(&pg)
+            .await
+            .expect("bind phone to code-login user");
+    assert_eq!(
+        updated.rows_affected(),
+        1,
+        "phone bind must hit the seeded user"
+    );
 
     let tenant_access_token = test_bootstrap_access_token_for_tenant(&tenant_id);
 
@@ -2917,8 +2927,7 @@ async fn local_app_router_rejects_code_login_for_unverified_or_phone_accounts() 
     .await;
     let phone_request_body = read_json(phone_request_response).await;
     assert_eq!(
-        phone_request_body["data"]["accepted"],
-        true,
+        phone_request_body["data"]["accepted"], true,
         "phone code request failed: {phone_request_body}"
     );
 

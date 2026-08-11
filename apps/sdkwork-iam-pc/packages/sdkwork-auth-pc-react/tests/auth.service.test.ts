@@ -1298,6 +1298,72 @@ describe("sdkwork-auth-pc-react service", () => {
     });
   });
 
+  it("preserves official-account QR image URLs from IAM runtime responses", async () => {
+    const qrImageUrl = "https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=qr-runtime-official-account-1";
+    const controller = createSdkworkIamRuntimeAuthController({
+      getRuntime: () => ({
+        service: {
+          auth: {
+            passwordResetRequests: {
+              create: vi.fn(),
+            },
+            passwordResets: {
+              create: vi.fn(),
+            },
+            registrations: {
+              create: vi.fn(),
+            },
+            sessions: {
+              create: vi.fn(),
+              current: {
+                delete: vi.fn(),
+                retrieve: vi.fn(),
+              },
+            },
+          },
+          messaging: {
+            verificationCodes: {
+              create: vi.fn(),
+              verify: vi.fn(),
+            },
+          },
+          oauth: {
+            deviceAuthorizations: {
+              create: vi.fn().mockResolvedValue({
+                qrContent: {
+                  content: qrImageUrl,
+                  mode: "official_account_image",
+                },
+                qrCode: qrImageUrl,
+                sessionKey: "qr-runtime-official-account-1",
+              }),
+              retrieve: vi.fn(),
+            },
+          },
+          iam: {
+            users: {
+              current: {
+                retrieve: vi.fn(),
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    await expect(controller.generateLoginQrCode()).resolves.toMatchObject({
+      qrCode: {
+        kind: "image",
+        publicUrl: qrImageUrl,
+        source: "external_url",
+        url: qrImageUrl,
+      },
+      qrContent: qrImageUrl,
+      sessionKey: "qr-runtime-official-account-1",
+      type: "official_account_image",
+    });
+  });
+
   it("keeps text-only IAM runtime QR content separate from QR image resources", async () => {
     const controller = createSdkworkIamRuntimeAuthController({
       getRuntime: () => ({
@@ -3878,6 +3944,47 @@ describe("sdkwork-auth-pc-react service", () => {
       qrContent: "https://mp.weixin.qq.com/s/sdkwork-login",
       sessionKey: "qr-official-account-1",
       type: "official_account_entry",
+    });
+
+    expect(create).toHaveBeenCalledWith({
+      purpose: "login",
+    });
+  });
+
+  it("preserves official-account QR image URLs as MediaResource objects from SDK responses", async () => {
+    const qrImageUrl = "https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=qr-official-account-image-1";
+    const create = vi.fn().mockResolvedValue({
+      data: {
+        qrContent: {
+          content: qrImageUrl,
+          mode: "official_account_image",
+        },
+        qrCode: qrImageUrl,
+        sessionKey: "qr-official-account-image-1",
+      },
+    });
+    const service = createSdkworkAuthService({
+      getClient: () => ({
+        auth: {},
+        oauth: {
+          deviceAuthorizations: {
+              create,
+
+          },
+        },
+      } as unknown as SdkworkAuthClient),
+    });
+
+    await expect(service.generateLoginQrCode()).resolves.toMatchObject({
+      qrCode: {
+        kind: "image",
+        publicUrl: qrImageUrl,
+        source: "external_url",
+        url: qrImageUrl,
+      },
+      qrContent: qrImageUrl,
+      sessionKey: "qr-official-account-image-1",
+      type: "official_account_image",
     });
 
     expect(create).toHaveBeenCalledWith({

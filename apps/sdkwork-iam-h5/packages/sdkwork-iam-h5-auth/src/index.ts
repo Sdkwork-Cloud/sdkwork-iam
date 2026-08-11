@@ -5,14 +5,20 @@ export {
 } from "./types/auth-h5-types";
 export * from "./types/auth-h5-types";
 export {
+  blockWechatAutoAuthorization,
   buildScanLoginOAuthState,
+  clearOAuthFlowContext,
   clearScanLoginUrlContext,
+  clearWechatAutoAuthorizationBlock,
   createSdkworkIamH5AuthController,
+  isWechatAutoAuthorizationBlocked,
+  readOAuthFlowContext,
   readScanLoginPollSecretFromOAuthState,
   readScanLoginProviderFromOAuthState,
   readScanLoginSessionKeyFromOAuthState,
   resolveScanLoginContext,
   resolveSdkworkIamH5VerifyType,
+  storeOAuthFlowContext,
 } from "./services/auth-h5-controller";
 export {
   SDKWORK_IAM_H5_AUTH_I18N_CATALOG,

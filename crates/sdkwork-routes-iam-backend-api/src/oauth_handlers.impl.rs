@@ -565,6 +565,24 @@ async fn tenant_patch(
                     patch_tenant_row_tx(&mut **tx, &tenant_id, &table, &id, &assignments)
                         .await?;
                 if updated {
+                    // Scan login picks the enabled account through
+                    // `qr_default_enabled = 1`; enabling one official account
+                    // clears the flag on every other one in the same
+                    // transaction, so exactly one account is active at a time.
+                    if assignments.iter().any(|(column, value)| {
+                        column == "qr_default_enabled" && matches!(value, PatchValue::Int(1))
+                    }) {
+                        sqlx::query(
+                            "UPDATE iam_oauth_resource_account SET qr_default_enabled = 0, updated_at = $1 \
+                             WHERE tenant_id = $2 AND resource_account_kind = 'official_account' \
+                               AND id <> $3 AND qr_default_enabled = 1",
+                        )
+                        .bind(&now)
+                        .bind(&tenant_id)
+                        .bind(&id)
+                        .execute(&mut **tx)
+                        .await?;
+                    }
                     if let Some(enabled) = cascade_enabled {
                         sqlx::query(
                             "UPDATE iam_oauth_client SET enabled = $1, updated_at = $2 \
@@ -1967,7 +1985,7 @@ async fn create_resource_account_follow_qr_code(
     };
 
     let row = match sqlx::query(
-        "SELECT ra.integration_id, ra.provider_code, ra.resource_account_kind, ra.enabled, ra.status \
+        "SELECT ra.integration_id, ra.provider_code, ra.resource_account_kind \
          FROM iam_oauth_resource_account ra \
          WHERE ra.tenant_id = $1 AND ra.id = $2",
     )
@@ -1991,21 +2009,19 @@ async fn create_resource_account_follow_qr_code(
     let integration_id: String = row.get(0);
     let provider_code: String = row.get(1);
     let resource_account_kind: String = row.get(2);
-    let enabled: i32 = row.get(3);
-    let status: String = row.get(4);
-    if provider_code != "wechat"
-        || resource_account_kind != "official_account"
-        || enabled != 1
-        || status != "active"
-    {
+    if provider_code != "wechat" || resource_account_kind != "official_account" {
         return appbase_error(
             StatusCode::CONFLICT,
             "iam_oauth_follow_qr_code_unavailable",
-            "follow QR codes require an enabled WeChat official account",
+            "follow QR codes are only available for WeChat official accounts",
         );
     }
 
-    let exchange = match sdkwork_iam_web_adapter::load_oauth_integration_exchange_context_for_integration(
+    // Generating a follow QR only needs valid provider credentials; the
+    // account's enabled switch and lifecycle status are deliberately not
+    // checked here — the credentials are loaded even for a disabled or
+    // non-active account, and the WeChat API validates their authenticity.
+    let exchange = match sdkwork_iam_web_adapter::load_oauth_integration_exchange_context_for_integration_any_state(
         pg,
         &tenant_id,
         &integration_id,
@@ -2017,7 +2033,7 @@ async fn create_resource_account_follow_qr_code(
             return appbase_error(
                 StatusCode::CONFLICT,
                 "iam_oauth_follow_qr_code_unavailable",
-                "official account integration is not configured",
+                "official account credentials are not configured; fill in AppID and AppSecret first",
             );
         }
         Err(error) => {
@@ -3396,7 +3412,8 @@ async fn scan_login_settings_json(pg: &PgPool, tenant_id: &str) -> Result<Value,
         }
         None => (String::new(), true, "auto".to_string(), "[]".to_string()),
     };
-    let modes = normalize_scan_login_modes_json(&modes_json);
+    let modes = serde_json::from_str::<Value>(&normalize_scan_login_modes_json(&modes_json))
+        .unwrap_or_else(|_| json!([]));
 
     let accounts = sqlx::query(
         "SELECT ra.id, ra.display_name, ra.enabled, ra.qr_default_enabled, ra.verification_status, \
@@ -3411,6 +3428,10 @@ async fn scan_login_settings_json(pg: &PgPool, tenant_id: &str) -> Result<Value,
            ON w.resource_account_id = ra.id AND w.status = 'active' \
          WHERE ra.tenant_id = $1 AND ra.provider_code = 'wechat' \
            AND ra.resource_account_kind = 'official_account' \
+           -- Scan login renders a WeChat parameterized QR (qrcode/create),
+           -- which WeChat only grants to certified service accounts, so only
+           -- service-type accounts can participate in scan login.
+           AND ra.provider_account_type = 'service' \
          ORDER BY ra.display_name, ra.id",
     )
     .bind(tenant_id)
@@ -3602,6 +3623,9 @@ async fn create_scan_login_preview(
              FROM iam_oauth_resource_account ra \
              WHERE ra.tenant_id = $1 AND ra.provider_code = 'wechat' \
                AND ra.resource_account_kind = 'official_account' \
+               -- Scan login renders a WeChat parameterized QR, which only
+               -- certified service accounts are allowed to create.
+               AND ra.provider_account_type = 'service' \
                AND ra.enabled = 1 AND ra.status = 'active' \
                AND ($2::text IS NULL OR ra.id = $2) \
                AND ($2::text IS NOT NULL OR ra.qr_default_enabled = 1) \

@@ -227,7 +227,15 @@ pub async fn create_wechat_mp_temp_qr_code(
     scene: &str,
     expire_seconds: u64,
 ) -> Result<WechatMpTempQrCode, String> {
-    create_wechat_mp_qr_code(pg, app_id, app_secret, scene, "QR_SCENE", Some(expire_seconds)).await
+    create_wechat_mp_qr_code(
+        pg,
+        app_id,
+        app_secret,
+        scene,
+        "QR_SCENE",
+        Some(expire_seconds),
+    )
+    .await
 }
 
 /// Creates a WeChat permanent parameterized QR (`QR_LIMIT_STR_SCENE`).
@@ -605,7 +613,8 @@ mod tests {
         assert_eq!(qr.ticket, "permanent-ticket-1");
         assert_eq!(qr.expire_seconds, 0);
         assert!(
-            qr.image_url.contains("showqrcode?ticket=permanent-ticket-1"),
+            qr.image_url
+                .contains("showqrcode?ticket=permanent-ticket-1"),
             "unexpected image url: {}",
             qr.image_url
         );

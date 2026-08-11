@@ -79,6 +79,9 @@ export type IamBackendOauthService = {
         create(...args: unknown[]): Promise<unknown>;
       };
       create(...args: unknown[]): Promise<unknown>;
+      customMenus: {
+        publish(...args: unknown[]): Promise<unknown>;
+      };
       delete(...args: unknown[]): Promise<unknown>;
       followQrCodes: {
         create(...args: unknown[]): Promise<unknown>;
@@ -213,6 +216,9 @@ export function createIamBackendOauthService(
           create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts?.authorizationRefreshes, "create", "iam.oauth.resourceAccounts.authorizationRefreshes.create", ...args),
         },
         create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts, "create", "iam.oauth.resourceAccounts.create", ...args),
+        customMenus: {
+          publish: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts?.customMenus, "publish", "iam.oauth.resourceAccounts.customMenus.publish", ...args),
+        },
         delete: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts, "delete", "iam.oauth.resourceAccounts.delete", ...args),
         followQrCodes: {
           create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts?.followQrCodes, "create", "iam.oauth.resourceAccounts.followQrCodes.create", ...args),

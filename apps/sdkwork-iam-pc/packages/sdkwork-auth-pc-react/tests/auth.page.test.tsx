@@ -2980,6 +2980,59 @@ describe("sdkwork-auth-pc-react page", () => {
     expect(toDataUrlMock).not.toHaveBeenCalled();
   });
 
+  it("renders the official-account QR image URL directly instead of encoding it as QR content", async () => {
+    toDataUrlMock.mockClear();
+    const qrImageUrl = "https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=qr-official-account-1";
+    const controller = createSdkworkAuthController({
+      service: {
+        generateLoginQrCode: vi.fn().mockResolvedValue({
+          qrContent: qrImageUrl,
+          qrCode: {
+            kind: "image",
+            publicUrl: qrImageUrl,
+            source: "external_url",
+            url: qrImageUrl,
+          },
+          sessionKey: "qr-official-account-image-1",
+          type: "official_account_image",
+        }),
+        checkLoginQrCodeStatus: vi.fn().mockResolvedValue({
+          status: "pending",
+        }),
+        getCurrentSession: vi.fn().mockResolvedValue(null),
+        getCurrentUser: vi.fn().mockResolvedValue(null),
+      },
+    });
+
+    render(
+      <SdkworkThemeProvider defaultTheme="light">
+        <MemoryRouter initialEntries={["/auth/login"]}>
+          <Routes>
+            <Route
+              path="/auth/login"
+              element={
+                <SdkworkAuthPage
+                  controller={controller}
+                  runtimeConfig={{
+                    loginMethods: ["password"],
+                    oauthProviders: [],
+                    qrLoginEnabled: true,
+                  }}
+                />
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </SdkworkThemeProvider>,
+    );
+
+    expect(await screen.findByAltText(/login qr code/i)).toHaveAttribute(
+      "src",
+      qrImageUrl,
+    );
+    expect(toDataUrlMock).not.toHaveBeenCalled();
+  });
+
   it("reuses the desktop QR login session across React StrictMode effect replay", async () => {
     const generateLoginQrCode = vi.fn().mockResolvedValue({
       qrContent: "sdkwork://auth/strict-mode-qr-login",

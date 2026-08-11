@@ -14,6 +14,7 @@ import type {
 function createFakeController(overrides: Partial<SdkworkIamH5AuthController> = {}) {
   const provider: SdkworkIamH5OAuthProvider[] = [];
   return {
+    beginOAuthAuthorization: vi.fn().mockResolvedValue(undefined),
     completeScanLogin: vi.fn().mockResolvedValue(undefined),
     createOAuthAuthorizationUrl: vi.fn().mockResolvedValue("https://open.weixin.qq.com/auth"),
     getState: () => ({ status: "idle" as const }),
@@ -32,7 +33,6 @@ function createFakeController(overrides: Partial<SdkworkIamH5AuthController> = {
     ...overrides,
   } as unknown as SdkworkIamH5AuthController;
 }
-
 function renderLogin(controller: SdkworkIamH5AuthController) {
   return render(
     <SdkworkI18nProvider catalogs={[SDKWORK_IAM_H5_AUTH_I18N_CATALOG]} locale="zh-CN">
@@ -160,5 +160,57 @@ describe("@sdkwork/iam-h5-auth login screen (design)", () => {
     await vi.waitFor(() => {
       expect(screen.getByText("验证码服务暂不可用，请使用密码登录")).toBeTruthy();
     });
+  });
+
+  it("starts the explicit WeChat consent flow when the WeChat entry is clicked without host takeover", async () => {
+    // WeChat web authorization only runs inside the WeChat in-app browser.
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 " +
+        "(KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49",
+    });
+    const controller = createFakeController({
+      listOAuthProviders: vi.fn().mockResolvedValue([]),
+    });
+    renderLogin(controller);
+
+    // Fallback third-party row renders the WeChat glyph (green #07C160 path).
+    const wechatGlyph = document.querySelector('svg path[fill="#07C160"]');
+    expect(wechatGlyph).not.toBeNull();
+    const iconCell = wechatGlyph?.closest("div.cursor-pointer");
+    expect(iconCell).not.toBeNull();
+
+    fireEvent.click(iconCell as HTMLElement);
+
+    await vi.waitFor(() => {
+      expect(controller.beginOAuthAuthorization).toHaveBeenCalledTimes(1);
+    });
+    // 点击授权：显式 consent flow (snsapi_userinfo)。
+    expect(controller.beginOAuthAuthorization).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: "explicit", provider: "wechat" }),
+    );
+  });
+
+  it("explains the WeChat-only constraint when the entry is clicked outside WeChat", async () => {
+    // Reset the UA to a non-WeChat browser (the previous test stubbed it).
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 " +
+        "(KHTML, like Gecko) Mobile/15E148",
+    });
+    const controller = createFakeController({
+      listOAuthProviders: vi.fn().mockResolvedValue([]),
+    });
+    renderLogin(controller);
+
+    const wechatGlyph = document.querySelector('svg path[fill="#07C160"]');
+    fireEvent.click(wechatGlyph?.closest("div.cursor-pointer") as HTMLElement);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/微信登录仅支持在微信中打开/)).toBeTruthy();
+    });
+    expect(controller.beginOAuthAuthorization).not.toHaveBeenCalled();
   });
 });

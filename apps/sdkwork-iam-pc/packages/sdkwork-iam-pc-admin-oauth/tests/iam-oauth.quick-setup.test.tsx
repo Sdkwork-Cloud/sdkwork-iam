@@ -266,7 +266,12 @@ describe("SDKWork IAM OAuth quick setup pages", () => {
         resourceAccountKind: "official_account",
         displayName: "My official account",
         providerAccountId: "wx-test-oa-001",
-        enabled: true,
+        // Follow QRs require the parameterized-QR API, which WeChat grants to
+        // certified service accounts only.
+        providerAccountType: "service",
+        // Deliberately disabled for login: a follow QR only needs valid
+        // credentials, so the row action stays available.
+        enabled: false,
       }],
     });
     (service.iam.oauth.resourceAccounts.followQrCodes.create as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -285,9 +290,13 @@ describe("SDKWork IAM OAuth quick setup pages", () => {
       </SdkworkI18nProvider>,
     );
 
-    // Row action opens the follow QR dialog and renders the WeChat image.
+    // Row action opens the follow QR dialog even for a disabled account
+    // (generation only needs the configured credentials) and renders the
+    // WeChat image.
     await screen.findByText("My official account");
-    fireEvent.click(await screen.findByTitle("生成带参数二维码"));
+    const qrButton = await screen.findByTitle("生成带参数二维码");
+    expect((qrButton as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(qrButton);
     await screen.findByText("关注二维码");
     const image = await screen.findByAltText("My official account");
     expect(image.getAttribute("src"))
@@ -487,6 +496,9 @@ describe("SDKWork IAM OAuth quick setup pages", () => {
       </SdkworkI18nProvider>,
     );
     await screen.findByText("My official account");
+    // Subscription accounts lack the parameterized-QR API permission, so the
+    // follow-QR row action stays hidden for them.
+    expect(screen.queryByTitle("生成带参数二维码")).toBeNull();
     fireEvent.click(screen.getByTitle("操作"));
 
     // Official accounts keep the server config tab with generate/copy links.
