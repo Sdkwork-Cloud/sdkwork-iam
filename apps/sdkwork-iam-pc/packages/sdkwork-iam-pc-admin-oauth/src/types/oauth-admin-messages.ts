@@ -533,7 +533,6 @@ export interface SdkworkIamOauthAdminMessages {
       back: string;
       phonePreviewTitle: string;
       phoneEmptyHint: string;
-      deviceLabel: string;
       addTopMenu: string;
       addSubMenu: string;
       deleteMenu: string;

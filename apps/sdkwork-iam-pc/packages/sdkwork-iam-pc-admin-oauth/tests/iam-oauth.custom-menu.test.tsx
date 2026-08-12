@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SdkworkI18nProvider } from "@sdkwork/i18n-pc-react";
 
@@ -235,7 +235,9 @@ describe("custom menu management page", () => {
     // Selecting the parent with sub-menus pops its sub-menus and shows the
     // sub-menu list in the editor.
     fireEvent.click(screen.getByText("菜单二"));
-    expect(screen.getAllByText("子菜单一").length).toBeGreaterThan(0);
+    const subMenu = screen.getByTestId("wechat-sub-menu");
+    expect(within(subMenu).getByRole("button", { name: "子菜单一" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "iPhone 15 Pro" })).toBeNull();
   });
 
   it("adds a top-level menu from the simulator and renames it live", async () => {
@@ -310,8 +312,13 @@ describe("official accounts list custom menu action", () => {
     // The full-screen modal renders the custom menu manager for the account.
     expect(await screen.findByText("自定义菜单")).toBeTruthy();
     expect(screen.getAllByText("My official account").length).toBeGreaterThan(0);
+    const modal = screen.getByTestId("custom-menu-modal");
+    expect(modal.parentElement).toBe(document.body);
+    expect(modal.className).toContain("bg-white");
+    expect(modal.style.backgroundColor).toBe("var(--sdk-color-surface-panel, #ffffff)");
+    expect(document.body.querySelector('[data-slot="modal-overlay"]')).toBeTruthy();
 
-    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(document, { key: "Escape" });
 
     expect(screen.queryByText("自定义菜单")).toBeNull();
   });

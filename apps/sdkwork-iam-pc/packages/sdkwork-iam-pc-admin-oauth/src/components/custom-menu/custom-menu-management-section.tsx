@@ -165,16 +165,16 @@ export function SdkworkIamOauthCustomMenuManagementSection({
         };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-4 bg-[var(--sdk-color-surface-panel)]">
       {/* Page header */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {onBack ? (
           <IconButton aria-label={messages.back} onClick={onBack} title={messages.back} variant="ghost">
             <ArrowLeft aria-hidden="true" className="h-4 w-4" />
           </IconButton>
         ) : null}
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-semibold text-[var(--sdk-color-text-primary)]">
+          <h2 id="sdkwork-iam-custom-menu-dialog-title" className="truncate text-lg font-semibold text-[var(--sdk-color-text-primary)]">
             {messages.title}
             {context?.displayName ? <span className="ml-2 text-sm font-normal text-[var(--sdk-color-text-secondary)]">{context.displayName}</span> : null}
           </h2>
@@ -199,15 +199,13 @@ export function SdkworkIamOauthCustomMenuManagementSection({
           {messages.loading}
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 gap-6">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-y-auto lg:grid-cols-[minmax(320px,400px)_minmax(0,1fr)] lg:overflow-hidden">
           {/* Left: phone simulator */}
-          <div className="flex h-full min-h-0 min-w-0 max-w-full justify-center overflow-x-auto">
+          <div className="flex min-h-[560px] min-w-0 justify-center overflow-x-auto">
             <SdkworkIamOauthCustomMenuPhonePreview
               buttons={buttons}
-              deviceLabel={messages.deviceLabel}
               displayName={context?.displayName ?? ""}
               emptyHint={messages.phoneEmptyHint}
-              logoUrl={context?.logoUrl}
               onAddTopMenu={handleAddTopMenu}
               onSelect={setSelectedPath}
               previewTitle={messages.phonePreviewTitle}
@@ -216,7 +214,7 @@ export function SdkworkIamOauthCustomMenuManagementSection({
           </div>
 
           {/* Right: editor */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border border-[var(--sdk-color-border-default)] bg-[var(--sdk-color-surface-base)] p-5">
+          <div className="flex min-h-[28rem] min-w-0 flex-1 flex-col rounded border border-[var(--sdk-color-border-default)] bg-[var(--sdk-color-surface-panel)] p-5 lg:min-h-0">
             {selected ? (
               <SdkworkIamOauthCustomMenuEditor
                 button={selected}
@@ -249,7 +247,7 @@ export function SdkworkIamOauthCustomMenuManagementSection({
 
       {/* Rules footer */}
       {draft ? (
-        <div className="flex items-start gap-2 rounded-xl bg-[var(--sdk-color-surface-panel-muted)] px-3.5 py-2.5 text-xs text-[var(--sdk-color-text-secondary)]">
+        <div className="flex items-start gap-2 rounded bg-[var(--sdk-color-surface-panel-muted)] px-3.5 py-2.5 text-xs text-[var(--sdk-color-text-secondary)]">
           <Info aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <p>
             <span className="font-medium text-[var(--sdk-color-text-primary)]">{messages.rules}：</span>
