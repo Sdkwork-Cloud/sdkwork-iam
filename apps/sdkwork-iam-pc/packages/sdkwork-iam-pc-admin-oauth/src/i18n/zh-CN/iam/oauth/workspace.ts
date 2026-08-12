@@ -529,6 +529,7 @@ export const sdkworkIamOauthAdminMessages: SdkworkIamOauthAdminMessages = {
       back: "返回公众号账号列表",
       phonePreviewTitle: "菜单预览",
       phoneEmptyHint: "点击下方「+」添加一级菜单",
+      deviceLabel: "模拟设备",
       addTopMenu: "添加一级菜单",
       addSubMenu: "添加子菜单",
       deleteMenu: "删除菜单",

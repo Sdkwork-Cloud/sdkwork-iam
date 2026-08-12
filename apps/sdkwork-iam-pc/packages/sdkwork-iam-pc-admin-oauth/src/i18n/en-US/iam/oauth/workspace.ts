@@ -529,6 +529,7 @@ export const sdkworkIamOauthAdminMessages: SdkworkIamOauthAdminMessages = {
       back: "Back to official account list",
       phonePreviewTitle: "Menu preview",
       phoneEmptyHint: "Tap the + button below to add a top-level menu",
+      deviceLabel: "Simulated device",
       addTopMenu: "Add top-level menu",
       addSubMenu: "Add sub-menu",
       deleteMenu: "Delete menu",

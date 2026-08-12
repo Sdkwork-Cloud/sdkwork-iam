@@ -14,8 +14,6 @@ export const SDKWORK_SESSION_AUTH_ERROR_MESSAGES = [
   "invalid or expired iam session",
   "invalid token",
   "not logged in",
-  "not login",
-  "unauthorized",
 ] as const;
 
 function isErrorRecord(error: unknown): error is Record<string, unknown> {

@@ -12,7 +12,7 @@
   "mode": "apply",
   "hasChanges": true,
   "hasDestructiveChanges": false,
-  "changeFingerprint": "bbb6e00fa32549bd63550e766a144ca50f1d26dafa9bcff4f8ae559ff521f907",
+  "changeFingerprint": "0de3a791f4fd187034e0d8a9beacc4e8849366dc3f91ceb5d17883eb89a9422c",
   "changeImpact": {
     "schemaVersion": 1,
     "areas": [
@@ -153,7 +153,7 @@
     "skippedUnchangedGeneratedFiles": 38,
     "deletedGeneratedFiles": 0,
     "changeSummaryPath": ".sdkwork/sdkwork-generator-changes.json",
-    "changeFingerprint": "bbb6e00fa32549bd63550e766a144ca50f1d26dafa9bcff4f8ae559ff521f907",
+    "changeFingerprint": "0de3a791f4fd187034e0d8a9beacc4e8849366dc3f91ceb5d17883eb89a9422c",
     "changes": {
       "createdGeneratedFiles": [],
       "updatedGeneratedFiles": [

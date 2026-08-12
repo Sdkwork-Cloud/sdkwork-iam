@@ -122,8 +122,6 @@ export function createSdkworkAppbasePcAuthRuntime(
   const bootstrapAccessToken = readBootstrapAccessTokenFromProcessEnv();
   if (options.credentialEntry?.prepareTokens) {
     options.credentialEntry.prepareTokens();
-  } else {
-    initializeCredentialEntryTokenManager(tokenManager, () => bootstrapAccessToken);
   }
   const sessionBridge = options.sessionBridge
     ? createSdkworkAppbasePcAuthSessionBridge(options.sessionBridge)
@@ -135,12 +133,16 @@ export function createSdkworkAppbasePcAuthRuntime(
   const clearRuntimeSession = () => {
     void runtimeForSessionAuth?.clearSession();
   };
-  const rawAppbaseApp = (options.createAppbaseAppClient ?? createAppbaseAppClient)({
-    authMode: "dual-token",
-    baseUrl: appSdkBaseUrl,
-    platform,
+  const rawAppbaseApp = wrapCredentialEntryClient(
+    (options.createAppbaseAppClient ?? createAppbaseAppClient)({
+      authMode: "dual-token",
+      baseUrl: appSdkBaseUrl,
+      platform,
+      tokenManager,
+    }),
     tokenManager,
-  });
+    bootstrapAccessToken,
+  );
   const appbaseApp = wrapAppbaseAppClientWithSessionAuth(
     rawAppbaseApp,
     options,
@@ -337,6 +339,25 @@ function resolveSessionAuthIntegrationOptions(
       ?? clearRuntimeSession
       ?? options.sessionBridge?.clearSession,
   };
+}
+
+/**
+ * Wraps a credential-entry IAM app SDK client so its TokenManager is prepared
+ * with the bootstrap Access-Token before any credential-entry method call.
+ *
+ * When no real IAM session exists yet, the bootstrap Access-Token lets
+ * credential-entry routes (login, registration, device authorization) run
+ * without a fully persisted session; the token is never written to storage.
+ */
+export function wrapCredentialEntryClient(
+  client: AppbaseAppSdkClient,
+  tokenManager: AuthTokenManager,
+  bootstrapAccessToken?: string,
+): AppbaseAppSdkClient {
+  if (bootstrapAccessToken) {
+    initializeCredentialEntryTokenManager(tokenManager, () => bootstrapAccessToken);
+  }
+  return client;
 }
 
 function wrapAppbaseAppClientWithSessionAuth(

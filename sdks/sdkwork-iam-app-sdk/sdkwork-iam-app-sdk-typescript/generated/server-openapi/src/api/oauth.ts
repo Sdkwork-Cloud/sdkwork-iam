@@ -16,6 +16,11 @@ export class OauthWechatPaymentOauthApi {
   }
 
 
+/** Wechat Payment Oauth callback. */
+  async callback(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(appApiPath(`/oauth/wechat/payment/callback`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, skipAuth: true, sdkworkUnwrapKind: 'item' });
+  }
+
 /** Wechat Payment Oauth start. */
   async start(params: OauthWechatPaymentOauthStartParams, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
     const query = buildQueryString([

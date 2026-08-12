@@ -158,9 +158,8 @@ export function OauthAccountSetupSection({
   messages: AccountCopy;
   onChanged: () => void;
   /**
-   * Optional navigation into the custom menu management page for official
-   * accounts. The row action only renders when the host provides it, keeping
-   * the section surface-agnostic.
+   * Custom menu manager entry for official accounts: the owner decides whether
+   * to navigate to a dedicated route or open the full-screen modal.
    */
   onOpenCustomMenu?: (resourceAccountId: string) => void;
   status: string;
@@ -490,11 +489,11 @@ export function OauthAccountSetupSection({
                   <QrCode aria-hidden="true" className="h-4 w-4" />
                 </IconButton>
               ) : null}
-              {kind === "official_account" && onOpenCustomMenu ? (
+              {kind === "official_account" ? (
                 <IconButton
                   aria-label={paginationMessages.quickSetup.customMenus.openButton}
                   disabled={disabled || !row.accountId}
-                  onClick={() => onOpenCustomMenu(row.accountId)}
+                  onClick={() => onOpenCustomMenu?.(row.accountId)}
                   title={paginationMessages.quickSetup.customMenus.openButton}
                   variant="ghost"
                 >

@@ -20,6 +20,24 @@ describe("session auth unauthorized integration", () => {
     })).toBe(true);
   });
 
+  it("does not mistake a payment-gateway rejection for a session auth error", () => {
+    // A PSP rejection (41101) legitimately embeds the PSP's own HTTP status
+    // ("HTTP 401 Unauthorized: {...SIGN_ERROR...}") in its detail. The
+    // session boundary must not match that text — the error code (41101) and
+    // HTTP status (400) are business errors, not login failures.
+    expect(isSdkworkSdkSessionAuthError({
+      code: 41101,
+      status: 400,
+      detail: 'payment provider checkout failed: HTTP 401 Unauthorized: {"code":"SIGN_ERROR","message":"签名错误"}; the payment gateway rejected the request signature',
+      title: "Payment gateway rejected the request",
+    })).toBe(false);
+    expect(isSdkworkSdkSessionAuthError({
+      code: 40001,
+      status: 400,
+      detail: "validation failed",
+    })).toBe(false);
+  });
+
   it("resolves modal mode on localhost by default", () => {
     expect(resolveSdkworkSessionAuthUnauthorizedMode({
       hostname: "127.0.0.1",

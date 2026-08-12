@@ -294,4 +294,25 @@ describe("official accounts list custom menu action", () => {
 
     expect(onOpenCustomMenu).toHaveBeenCalledWith("iamora-menu-1");
   });
+
+  it("opens the full-screen modal and closes it on Escape when no host navigation is provided", async () => {
+    const service = serviceWithAccount(createOauthServiceMock(), accountWithMenu({ buttons: [] }));
+    const controller = createSdkworkIamOauthAdminController(service as never);
+    render(
+      <SdkworkI18nProvider locale="zh-CN">
+        <SdkworkIamOauthOfficialAccountsPage controller={controller} />
+      </SdkworkI18nProvider>,
+    );
+
+    const menuAction = await screen.findByTitle("菜单管理");
+    fireEvent.click(menuAction);
+
+    // The full-screen modal renders the custom menu manager for the account.
+    expect(await screen.findByText("自定义菜单")).toBeTruthy();
+    expect(screen.getAllByText("My official account").length).toBeGreaterThan(0);
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    expect(screen.queryByText("自定义菜单")).toBeNull();
+  });
 });

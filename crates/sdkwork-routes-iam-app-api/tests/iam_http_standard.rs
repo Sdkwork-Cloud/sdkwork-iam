@@ -108,6 +108,7 @@ fn iam_app_api_limits_anonymous_operations_to_qr_login_component_requests() {
             "deviceAuthorizations.create",
             "deviceAuthorizations.retrieve",
             "deviceAuthorizations.sessionExchanges.create",
+            "wechatPaymentOauth.callback",
         ]
     );
     let anonymous_operation_ids = app_routes()
@@ -293,6 +294,19 @@ fn mounted_app_api_routes_have_manifest_rows_with_expected_auth() {
             "POST",
             "/app/v3/api/oauth/callbacks/github",
             RouteAuth::CredentialEntryBootstrap,
+        ),
+        // WeChat payment OAuth: the start entry runs in the logged-in cashier
+        // session; the provider redirect callback arrives with `code`/`state`
+        // only and must stay anonymous (no dual-token, no login).
+        (
+            "GET",
+            "/app/v3/api/oauth/wechat/payment/start",
+            RouteAuth::DualToken,
+        ),
+        (
+            "GET",
+            "/app/v3/api/oauth/wechat/payment/callback",
+            RouteAuth::Public,
         ),
         // Access-token-only runtime metadata
         (
@@ -706,6 +720,8 @@ fn app_route_manifest_matches_the_standard_operation_surface() {
         "users.current.retrieve",
         "users.current.update",
         "verificationCodeRequests.create",
+        "wechatPaymentOauth.callback",
+        "wechatPaymentOauth.start",
     ];
     expected_operation_ids.sort();
 

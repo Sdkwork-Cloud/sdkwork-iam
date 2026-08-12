@@ -182,6 +182,16 @@ const IAM_APP_API_ROUTES: &[HttpRoute] = &[
         "oauth",
         "wechatPaymentOauth.start",
     ),
+    // WeChat redirects the payer's browser back here after authorize with
+    // `code` + `state` only — never with platform credentials. The handler
+    // restores tenant scope from its own state cookie, so the callback must
+    // stay anonymous (no dual-token, no login) or WeChat Pay OAuth breaks.
+    HttpRoute::public(
+        HttpMethod::Get,
+        "/app/v3/api/oauth/wechat/payment/callback",
+        "oauth",
+        "wechatPaymentOauth.callback",
+    ),
     HttpRoute::credential_entry_bootstrap(
         HttpMethod::Get,
         "/app/v3/api/system/iam/runtime",
@@ -310,6 +320,7 @@ pub const IAM_ANONYMOUS_OPERATION_IDS: &[&str] = &[
     "deviceAuthorizations.create",
     "deviceAuthorizations.retrieve",
     "deviceAuthorizations.sessionExchanges.create",
+    "wechatPaymentOauth.callback",
 ];
 
 /// Session routes resolved by the framework before handler execution.

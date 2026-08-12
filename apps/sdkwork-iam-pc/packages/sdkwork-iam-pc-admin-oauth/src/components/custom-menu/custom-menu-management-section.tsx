@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Info } from "lucide-react";
 
 import { Button, IconButton, StatusNotice } from "@sdkwork/ui-pc-react";
@@ -55,12 +55,18 @@ export function SdkworkIamOauthCustomMenuManagementSection({
   const [draft, setDraft] = useState<SdkworkIamOauthCustomMenuDraft | undefined>(context?.draft);
   const [selectedPath, setSelectedPath] = useState<MenuPath>("");
   const [validationBanner, setValidationBanner] = useState<string | undefined>();
+  const draftAdopted = useRef(false);
 
   // The draft arrives asynchronously through the page's load; adopt it once,
-  // keeping any edits made while the load was in flight.
+  // keeping any edits made while the load was in flight, and select the first
+  // top-level menu like the MP console does on open.
   useEffect(() => {
-    if (context) {
-      setDraft((previous) => previous ?? context.draft);
+    if (context && !draftAdopted.current) {
+      draftAdopted.current = true;
+      setDraft(context.draft);
+      if (context.draft.buttons.length > 0) {
+        setSelectedPath("0");
+      }
     }
   }, [context]);
 
@@ -113,7 +119,13 @@ export function SdkworkIamOauthCustomMenuManagementSection({
     if (!selectedPath) {
       return;
     }
-    commit(moveAtPath(buttons, selectedPath, direction));
+    const moved = moveAtPath(buttons, selectedPath, direction);
+    commit(moved);
+    // Keep the selection on the moved button; `moveAtPath` returns the same
+    // reference when no swap happened (already at the edge).
+    if (moved !== buttons) {
+      setSelectedPath(shiftSelectionPath(selectedPath, direction));
+    }
   };
 
   const handleSaveDraft = () => {
@@ -129,9 +141,8 @@ export function SdkworkIamOauthCustomMenuManagementSection({
       return;
     }
     if (issues.length > 0) {
-      setValidationBanner(issues[0] && issues[0].path !== ""
-        ? issues[0].kind
-        : "atLeastOneTop");
+      const first = issues[0];
+      setValidationBanner(first.path !== "" ? first.kind : first.kind === "tooManyTop" ? "tooManyTop" : "atLeastOneTop");
       return;
     }
     setValidationBanner(undefined);
@@ -190,9 +201,10 @@ export function SdkworkIamOauthCustomMenuManagementSection({
       ) : (
         <div className="flex min-h-0 flex-1 gap-6">
           {/* Left: phone simulator */}
-          <div className="flex h-full min-h-0 justify-center">
+          <div className="flex h-full min-h-0 min-w-0 max-w-full justify-center overflow-x-auto">
             <SdkworkIamOauthCustomMenuPhonePreview
               buttons={buttons}
+              deviceLabel={messages.deviceLabel}
               displayName={context?.displayName ?? ""}
               emptyHint={messages.phoneEmptyHint}
               logoUrl={context?.logoUrl}
@@ -341,4 +353,14 @@ function isFirstAtLevel(path: MenuPath): boolean {
 function isLastAtLevel(buttons: SdkworkIamOauthCustomMenuButton[], path: MenuPath): boolean {
   const [topIndex, subIndex] = path.split(".").map(Number);
   return subIndex === (buttons[topIndex]?.subButtons?.length ?? 1) - 1;
+}
+
+/**
+ * Path of the button after a successful move: the same button lives one slot
+ * up/down, so the selection follows it instead of pointing at the neighbor.
+ */
+function shiftSelectionPath(path: MenuPath, direction: "up" | "down"): MenuPath {
+  const [topIndex, subIndex] = path.split(".").map(Number);
+  const shift = direction === "up" ? -1 : 1;
+  return subIndex === undefined ? String(topIndex + shift) : `${topIndex}.${subIndex + shift}`;
 }
