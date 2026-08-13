@@ -732,17 +732,19 @@ async fn list_tenant_applications_handler(
     let search_pattern = list_search_pattern(&query);
     let status = normalized_query_filter(&query, "status");
     let environment = normalized_query_filter(&query, "environment");
+    let application_type = normalized_query_filter(&query, "application_type");
     let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
                 instance_key, display_name, environment, status, primary_domain, \
                 access_permissions_json, created_at::text, updated_at::text, \
-                COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
+                application_type, COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_tenant_application \
          WHERE tenant_id = $1 \
            AND ($4::text IS NULL OR LOWER(display_name) LIKE $4 OR LOWER(app_id) LIKE $4 \
                 OR LOWER(instance_key) LIKE $4 OR LOWER(COALESCE(primary_domain, '')) LIKE $4) \
            AND ($5::text IS NULL OR status = $5) \
            AND ($6::text IS NULL OR environment = $6) \
+           AND ($7::text IS NULL OR application_type = $7) \
          ORDER BY updated_at DESC, id \
          LIMIT $2 OFFSET $3"
     )))
@@ -752,6 +754,7 @@ async fn list_tenant_applications_handler(
     .bind(&search_pattern)
     .bind(&status)
     .bind(&environment)
+    .bind(&application_type)
     .fetch_all(pg)
     .await;
 
@@ -980,6 +983,7 @@ fn tenant_application_list_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
     json!({
         "accessPermissions": access_permissions,
         "appId": row.get::<String, _>(1),
+        "applicationType": row.get::<String, _>(14),
         "createdAt": row.get::<String, _>(12),
         "displayName": row.get::<String, _>(7),
         "environment": row.get::<String, _>(8),

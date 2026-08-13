@@ -24,7 +24,7 @@
     },
     {
       "path": "Cargo.toml",
-      "sha256": "494ffc67d18a87286feb8ead7fbac94f5720d337ebbf81b0c30e07e58a8121cb"
+      "sha256": "d2e70761243e09eecaf9859257d25bc4c0caa0a8bae8c6a4757c48445167cc74"
     },
     {
       "path": "CHANGELOG.md",
@@ -36,7 +36,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "74119b360fb3f61cb9c1377f3d34d77ee15565a9833fcdc95395edb367dac7c3"
+      "sha256": "4e1a9486997d2c187ea79082894f332fcdf9932e6358769f582493711793f562"
     },
     {
       "path": "sdkwork-sdk.json",
@@ -48,11 +48,11 @@
     },
     {
       "path": "src/api/iam_oauth.rs",
-      "sha256": "d3cef59080cf9ba8d7e4945593ff47d833b7ec3ac34405b33c1a6ed91bcfd17e"
+      "sha256": "d352d3e8bc8de29daa139ed3fc298b5c91db7333fc8ca35e1029cbfbef56a1ce"
     },
     {
       "path": "src/api/iam.rs",
-      "sha256": "d1fd8c8e8314d66e2fb7cd44e8b79201612f2642373d21697e3fa0295685e49e"
+      "sha256": "be39fde7d740dfc141159f723ae1adbe0d18339d592dc8a326487f953767289e"
     },
     {
       "path": "src/api/mod.rs",
@@ -64,15 +64,15 @@
     },
     {
       "path": "src/client.rs",
-      "sha256": "8412893d5ddf4b29f4ab44b999a433d44b2a27e8fd693d34add80c5a80f872a2"
+      "sha256": "34cf86a5e940c1b7ade613eda0a0300b17927c55c4febb298e797fd83528e5a1"
     },
     {
       "path": "src/http/client.rs",
-      "sha256": "ffd88587750661cd174b1d0bae02a876d24f8537acdccaa67e297a549d0a927e"
+      "sha256": "6744c77f8c5d27ea5f0d35340b928589e8ed15c946174c184f67dd17a98b58ed"
     },
     {
       "path": "src/http/mod.rs",
-      "sha256": "fdf16d487ebd9180fb423d5630d4401ff18180721b86636dec085ad83940bb3d"
+      "sha256": "d09ef1f29c3fa0e631fc4f7287fc93dc7d3cee7e7261ac85091852a09243e90a"
     },
     {
       "path": "src/lib.rs",
@@ -87,16 +87,12 @@
       "sha256": "a984b7359002104b10cc4b99df041887d336a125e04af01ecb4aaad5921e481f"
     },
     {
-      "path": "src/models/appbase_session_create_command.rs",
-      "sha256": "5d3f3f8f27c6270a390200ac06d93547952a36230cf3e625d34d6f290e214e5f"
-    },
-    {
       "path": "src/models/appbase_tenant_application_enable_command.rs",
       "sha256": "9197b64d8bd3603b6c67363adfc45114afa7322ff174c5dd649a84c070edc1b8"
     },
     {
       "path": "src/models/appbase_tenant_application_provision_command.rs",
-      "sha256": "961c1c4b58a3b2c98458173fc18166e9a2f6fe11557df7a703a70ea6ec408383"
+      "sha256": "cf0587364dc52bb83bc58a6efbc2d05f7e80c2f9fc0029609ab4cfbad8b8fb81"
     },
     {
       "path": "src/models/appbase_tenant_application_update_command.rs",
@@ -115,8 +111,20 @@
       "sha256": "4411483fe15f50aa6eddd2ce894aa31848b4bca81ba30ac4fdecf42725c9e934"
     },
     {
+      "path": "src/models/iam_tenant_application_management_provision_command.rs",
+      "sha256": "5ab1b536bfcf4a652ebdc86a78ca56e6aabae0b50f366714c6b20fce2490eaa7"
+    },
+    {
+      "path": "src/models/iam_tenant_application_management_update_command.rs",
+      "sha256": "00d9c8ad4887cf717546720b77ee458549316e1a9135f6cd3dec76810f0b4646"
+    },
+    {
+      "path": "src/models/iam_tenant_application_status_command.rs",
+      "sha256": "50d402fb8f5e24ef8e916e32ae201417a399d1e7400c4a57fffd13bbd7624e1a"
+    },
+    {
       "path": "src/models/mod.rs",
-      "sha256": "90a2c2992f866a2e0d0fe56cbb7fb24485a3281995cbe0f661a9b53293382923"
+      "sha256": "13cd6dfeb0ebfe1064c863d0b6f861957f230f92cb7944969f5ab2fefd3971da"
     },
     {
       "path": "src/models/page_info.rs",
@@ -165,10 +173,6 @@
     {
       "path": "src/models/service_account_token_exchange_command.rs",
       "sha256": "9990e4818a8b670e17bedfd8c1db1ab36863cdf6494fbe99b2798dd06e3d5d57"
-    },
-    {
-      "path": "src/models/wechat_mini_program_session_create_command.rs",
-      "sha256": "1d5cefd84902edf5a0976b3f3539ecd13e117c56d27acb42e9837b60fc713d5c"
     }
   ],
   "scaffoldFiles": [

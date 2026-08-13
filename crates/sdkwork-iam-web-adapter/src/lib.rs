@@ -130,10 +130,11 @@ pub use oauth_integration_exchange::{
     builtin_userinfo_endpoint, exchange_oauth_authorization_code,
     exchange_wechat_mini_program_code, load_oauth_integration_exchange_context,
     load_oauth_integration_exchange_context_for_app,
+    load_oauth_integration_exchange_context_for_client_any_state,
     load_oauth_integration_exchange_context_for_integration,
     load_oauth_integration_exchange_context_for_integration_any_state,
-    probe_wechat_mini_program_configuration, seed_builtin_oauth_provider_catalog,
-    OAuthIntegrationExchangeContext,
+    oauth_integration_exchange_credentials_match, probe_wechat_mini_program_configuration,
+    seed_builtin_oauth_provider_catalog, OAuthIntegrationExchangeContext,
 };
 pub use oauth_login_local::{LocalOAuthAuthority, LocalOAuthProviderProfile};
 pub use oauth_provider_callback::{
@@ -213,6 +214,10 @@ pub use tenant_signing_key_store::{
     tenant_signing_key_store_for_database_config, LegacyGlobalTenantSigningKeyStore,
     PostgresTenantSigningKeyStore, TenantSigningKeyFuture, TenantSigningKeyResolver,
     TenantSigningKeyStore, TenantSigningKeyStoreWebResolver,
+};
+pub use wechat_mp::{
+    normalize_wechat_mp_custom_menu_draft, publish_wechat_mp_custom_menu,
+    retrieve_wechat_mp_custom_menu, validate_wechat_mp_custom_menu,
 };
 
 pub fn iam_app_context_from_web_request(context: &WebRequestContext) -> Option<IamAppContext> {

@@ -4,11 +4,14 @@ import {
   CheckCircle2,
   Clipboard,
   Clock3,
+  Code2,
   Globe2,
+  Monitor,
   Pencil,
   Plus,
   Power,
   Search,
+  Smartphone,
 } from "lucide-react";
 import { CatalogPagination } from "@sdkwork/iam-pc-admin-core";
 import {
@@ -53,6 +56,7 @@ interface TenantApplicationsPanelProps {
 }
 
 interface ApplicationFilters {
+  applicationType: string;
   environment: string;
   q: string;
   status: string;
@@ -63,12 +67,15 @@ interface StatusTransition {
   enabled: boolean;
 }
 
-const EMPTY_FILTERS: ApplicationFilters = { environment: "all", q: "", status: "all" };
+const APPLICATION_TYPE_VALUES = ["api", "h5", "pc", "flutter", "other"] as const;
+
+const EMPTY_FILTERS: ApplicationFilters = { applicationType: "all", environment: "all", q: "", status: "all" };
 
 function emptyApplicationDraft(): SdkworkIamTenantApplicationDraft {
   return {
     accessPermissions: [],
     appKey: "",
+    applicationType: "other",
     displayName: "",
     environment: "production",
     instanceKey: "",
@@ -194,6 +201,16 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
       cell: (application) => <Badge variant="secondary">{formatEnumLabel(messages.applications.environments, application.environment)}</Badge>,
     },
     {
+      id: "applicationType",
+      header: messages.applications.table.applicationType,
+      cell: (application) => (
+        <span className="inline-flex items-center gap-1.5 text-sm">
+          {applicationTypeIcon(application.applicationType, "h-3.5 w-3.5 shrink-0 text-[var(--sdk-color-text-muted)]")}
+          {applicationTypeLabel(application.applicationType, messages.applications.types)}
+        </span>
+      ),
+    },
+    {
       id: "domain",
       header: messages.applications.table.domain,
       cell: (application) => (
@@ -255,7 +272,7 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
       <ApplicationSummary messages={messages.applications.summary} summary={summary} />
 
       <form
-        className="grid grid-cols-[minmax(0,1fr)_11rem_11rem_auto] items-end gap-3"
+        className="grid grid-cols-[minmax(0,1fr)_11rem_11rem_11rem_auto] items-end gap-3"
         onSubmit={applyFilters}
       >
         <label className="min-w-0 flex-1 space-y-1.5 text-sm">
@@ -291,6 +308,15 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
             ["production", messages.applications.environments.production],
           ]}
           value={filters.environment}
+        />
+        <FilterSelect
+          ariaLabel={messages.applications.filters.applicationType}
+          onValueChange={(applicationType) => setFilters((current) => ({ ...current, applicationType }))}
+          options={[
+            ["all", messages.applications.filters.allTypes],
+            ...APPLICATION_TYPE_VALUES.map((value) => [value, applicationTypeLabel(value, messages.applications.types)] as [string, string]),
+          ]}
+          value={filters.applicationType}
         />
         <Button disabled={busy || loading} type="submit" variant="outline">
           <Search className="h-4 w-4" />
@@ -515,6 +541,18 @@ function ApplicationRegisterDrawer({ busy, draft, onDraftChange, onOpenChange, o
               </Select>
             </label>
           </div>
+          <label className="block space-y-1.5 text-sm">
+            <span className="font-medium text-[var(--sdk-color-text-primary)]">{messages.applications.drawer.applicationType}</span>
+            <Select onValueChange={(applicationType) => onDraftChange({ ...draft, applicationType })} value={draft.applicationType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {APPLICATION_TYPE_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>{applicationTypeLabel(value, messages.applications.types)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="block text-xs leading-5 text-[var(--sdk-color-text-muted)]">{messages.applications.drawer.applicationTypeHint}</span>
+          </label>
           <ApplicationField label={messages.applications.drawer.primaryDomain} onChange={(primaryDomain) => onDraftChange({ ...draft, primaryDomain })} placeholder={messages.applications.drawer.primaryDomainPlaceholder} value={draft.primaryDomain} />
           <ApplicationPermissionsField
             helper={messages.applications.drawer.accessPermissionsHint}
@@ -549,6 +587,7 @@ function ApplicationEditDrawer({ application, busy, draft, onDraftChange, onOpen
           {application ? (
             <div className="grid gap-3 border-y border-[var(--sdk-color-border-subtle)] py-4 sm:grid-cols-2">
               <ReadOnlyDatum label={messages.applications.table.appId} value={application.appId} />
+              <ReadOnlyDatum label={messages.applications.table.applicationType} value={applicationTypeLabel(application.applicationType, messages.applications.types)} />
               <ReadOnlyDatum label={messages.applications.drawer.environment} value={formatEnumLabel(messages.applications.environments, application.environment)} />
               <ReadOnlyDatum label={messages.applications.drawer.instanceKey} value={application.instanceKey} />
               <ReadOnlyDatum label={messages.applications.drawer.appKey} value={application.templateId} />
@@ -603,10 +642,32 @@ function ReadOnlyDatum({ label, value }: { label: string; value: string }) {
 
 function applicationFiltersToQuery(filters: ApplicationFilters): Record<string, unknown> {
   return {
+    ...(filters.applicationType !== "all" ? { application_type: filters.applicationType } : {}),
     ...(filters.environment !== "all" ? { environment: filters.environment } : {}),
     ...(filters.q ? { q: filters.q } : {}),
     ...(filters.status !== "all" ? { status: filters.status } : {}),
   };
+}
+
+function applicationTypeLabel(applicationType: string, messages: { api: string; flutter: string; h5: string; other: string; pc: string; unknown: string }) {
+  switch (applicationType.trim().toLowerCase()) {
+    case "api": return messages.api;
+    case "flutter": return messages.flutter;
+    case "h5": return messages.h5;
+    case "pc": return messages.pc;
+    case "other": return messages.other;
+    default: return messages.unknown;
+  }
+}
+
+function applicationTypeIcon(applicationType: string, className: string) {
+  switch (applicationType.trim().toLowerCase()) {
+    case "api": return <Code2 className={className} />;
+    case "h5": return <Globe2 className={className} />;
+    case "flutter": return <Smartphone className={className} />;
+    case "pc": return <Monitor className={className} />;
+    default: return <AppWindow className={className} />;
+  }
 }
 
 function applicationStatusLabel(status: string, messages: { disabled: string; enabled: string; pendingConfig: string; unknown: string }) {

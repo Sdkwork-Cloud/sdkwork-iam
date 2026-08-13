@@ -1,3 +1,37 @@
+const RESOURCE_ACCOUNT_CLIENT_BINDING_CONFLICT: &str =
+    "oauth resource account client binding is missing, ambiguous, or inconsistent";
+const RESOURCE_ACCOUNT_IDENTITY_CONFLICT: &str =
+    "oauth resource account provider identity already exists";
+const INTEGRATION_CREDENTIAL_BINDING_CONFLICT: &str =
+    "oauth integration credentials require exactly one active client";
+
+fn oauth_mutation_error(default_code: &str, error: String) -> Response {
+    if error.contains(RESOURCE_ACCOUNT_CLIENT_BINDING_CONFLICT)
+        || error.contains("OAuth resource account client binding")
+    {
+        return appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_resource_account_client_binding_conflict",
+            "the resource account is not bound to exactly one matching OAuth client; repair the integration before retrying",
+        );
+    }
+    if error.contains(RESOURCE_ACCOUNT_IDENTITY_CONFLICT) {
+        return appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_resource_account_identity_conflict",
+            "a resource account with this provider identity already exists",
+        );
+    }
+    if error.contains(INTEGRATION_CREDENTIAL_BINDING_CONFLICT) {
+        return appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_integration_client_binding_conflict",
+            "integration credentials can only be edited when exactly one active OAuth client is bound",
+        );
+    }
+    internal_handler_error(default_code, error)
+}
+
 fn oauth_list_search_columns(table: &str) -> &'static [&'static str] {
     match table {
         "iam_oauth_integration" => &["provider_code", "integration_code", "display_name"],
@@ -62,9 +96,7 @@ async fn tenant_list(
                 row_to_json_with_aliases(row, spec.columns, spec.id_aliases)
             });
             let enriched = match page.get_mut("items").and_then(Value::as_array_mut) {
-                Some(items) => {
-                    enrich_oauth_list_items(pg, &tenant_id, spec.table, items).await
-                }
+                Some(items) => enrich_oauth_list_items(pg, &tenant_id, spec.table, items).await,
                 None => Ok(()),
             };
             match enriched {
@@ -140,8 +172,241 @@ where
 {
     match directory_create_with_audit(pg, ctx, spec.table, id.to_string(), detail, insert).await {
         Ok(_) => oauth_create_response(state, ctx, id, spec).await,
-        Err(error) => internal_handler_error(spec.create_error, error),
+        Err(error) => oauth_mutation_error(spec.create_error, error),
     }
+}
+
+async fn upsert_oauth_client_secret_tx(
+    connection: &mut sqlx::PgConnection,
+    tenant_id: &str,
+    oauth_client_id: &str,
+    secret_value: &str,
+    now: &str,
+) -> Result<(), sqlx::Error> {
+    let secret_ref = sdkwork_iam_bootstrap::encode_signing_secret_ref(secret_value.as_bytes());
+    let secret_hash = sdkwork_iam_bootstrap::hash_secret_ref(&secret_ref);
+    sqlx::query_scalar::<_, String>(
+        "SELECT id FROM iam_oauth_client WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
+    )
+    .bind(tenant_id)
+    .bind(oauth_client_id)
+    .fetch_one(&mut *connection)
+    .await?;
+    let active_secret_ids = sqlx::query_scalar::<_, String>(
+        "SELECT id FROM iam_oauth_secret \
+         WHERE tenant_id = $1 AND oauth_client_id = $2 \
+           AND secret_kind = 'client_secret' AND status = 'active' \
+         ORDER BY active_from DESC, updated_at DESC, id DESC \
+         FOR UPDATE",
+    )
+    .bind(tenant_id)
+    .bind(oauth_client_id)
+    .fetch_all(&mut *connection)
+    .await?;
+
+    if let Some(secret_id) = active_secret_ids.first() {
+        sqlx::query(
+            "UPDATE iam_oauth_secret SET secret_ref = $1, secret_hash = $2, \
+                    version = version + 1, updated_at = $3 \
+             WHERE tenant_id = $4 AND id = $5",
+        )
+        .bind(&secret_ref)
+        .bind(&secret_hash)
+        .bind(now)
+        .bind(tenant_id)
+        .bind(secret_id)
+        .execute(&mut *connection)
+        .await?;
+        sqlx::query(
+            "UPDATE iam_oauth_secret \
+             SET status = 'rotated', active_until = COALESCE(active_until, $1), \
+                 rotated_at = COALESCE(rotated_at, $1), updated_at = $1, version = version + 1 \
+             WHERE tenant_id = $2 AND oauth_client_id = $3 \
+               AND secret_kind = 'client_secret' AND status = 'active' AND id <> $4",
+        )
+        .bind(now)
+        .bind(tenant_id)
+        .bind(oauth_client_id)
+        .bind(secret_id)
+        .execute(&mut *connection)
+        .await?;
+    } else {
+        let secret_id = format!("iamos-{}", Uuid::new_v4());
+        sqlx::query(
+            "INSERT INTO iam_oauth_secret \
+                (id, uuid, tenant_id, secret_owner_kind, secret_owner_id, oauth_client_id, \
+                 secret_kind, secret_ref, secret_hash, active_from, status, created_at, updated_at) \
+             VALUES ($1, $2, $3, 'oauth_client', $4, $4, 'client_secret', $5, $6, $7, \
+                     'active', $7, $7)",
+        )
+        .bind(secret_id)
+        .bind(Uuid::new_v4().to_string())
+        .bind(tenant_id)
+        .bind(oauth_client_id)
+        .bind(&secret_ref)
+        .bind(&secret_hash)
+        .bind(now)
+        .execute(&mut *connection)
+        .await?;
+    }
+
+    sqlx::query(
+        "UPDATE iam_oauth_client SET secret_config_status = 'configured', updated_at = $1 \
+         WHERE tenant_id = $2 AND id = $3",
+    )
+    .bind(now)
+    .bind(tenant_id)
+    .bind(oauth_client_id)
+    .execute(&mut *connection)
+    .await?;
+    Ok(())
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ResourceAccountClientBinding {
+    Bound { client_id: String, backfill: bool },
+    Conflict,
+}
+
+async fn resolve_resource_account_client_binding_tx(
+    connection: &mut sqlx::PgConnection,
+    tenant_id: &str,
+    integration_id: &str,
+    provider_code: &str,
+    provider_account_id: &str,
+    stored_oauth_client_id: Option<&str>,
+) -> Result<ResourceAccountClientBinding, sqlx::Error> {
+    if let Some(stored_oauth_client_id) = stored_oauth_client_id
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        let matches = sqlx::query_scalar::<_, String>(
+            "SELECT c.id FROM iam_oauth_integration i \
+             JOIN iam_oauth_client c \
+               ON c.tenant_id = i.tenant_id AND c.integration_id = i.id \
+              AND c.provider_code = i.provider_code \
+             WHERE i.tenant_id = $1 AND i.id = $2 AND i.provider_code = $3 \
+               AND c.id = $4 AND c.provider_client_id = $5 \
+             FOR SHARE",
+        )
+        .bind(tenant_id)
+        .bind(integration_id)
+        .bind(provider_code)
+        .bind(stored_oauth_client_id)
+        .bind(provider_account_id)
+        .fetch_optional(&mut *connection)
+        .await?;
+        return Ok(match matches {
+            Some(client_id) => ResourceAccountClientBinding::Bound {
+                client_id,
+                backfill: false,
+            },
+            None => ResourceAccountClientBinding::Conflict,
+        });
+    }
+
+    let matches = sqlx::query_scalar::<_, String>(
+        "SELECT c.id FROM iam_oauth_integration i \
+         JOIN iam_oauth_client c \
+           ON c.tenant_id = i.tenant_id AND c.integration_id = i.id \
+          AND c.provider_code = i.provider_code \
+         WHERE i.tenant_id = $1 AND i.id = $2 AND i.provider_code = $3 \
+           AND c.provider_client_id = $4 \
+         ORDER BY CASE WHEN c.enabled = 1 THEN 0 ELSE 1 END, c.id \
+         LIMIT 2 FOR SHARE",
+    )
+    .bind(tenant_id)
+    .bind(integration_id)
+    .bind(provider_code)
+    .bind(provider_account_id)
+    .fetch_all(&mut *connection)
+    .await?;
+    Ok(match matches.as_slice() {
+        [client_id] => ResourceAccountClientBinding::Bound {
+            client_id: client_id.clone(),
+            backfill: true,
+        },
+        _ => ResourceAccountClientBinding::Conflict,
+    })
+}
+
+async fn load_resource_account_exchange_context(
+    pg: &PgPool,
+    ctx: &WebRequestContext,
+    tenant_id: &str,
+    resource_account_id: &str,
+    integration_id: &str,
+    provider_code: &str,
+    provider_account_id: &str,
+    stored_oauth_client_id: Option<&str>,
+) -> Result<Option<sdkwork_iam_web_adapter::OAuthIntegrationExchangeContext>, String> {
+    let mut tx = pg.begin().await.map_err(|error| error.to_string())?;
+    let binding = resolve_resource_account_client_binding_tx(
+        &mut *tx,
+        tenant_id,
+        integration_id,
+        provider_code,
+        provider_account_id,
+        stored_oauth_client_id,
+    )
+    .await
+    .map_err(|error| error.to_string())?;
+    let ResourceAccountClientBinding::Bound {
+        client_id,
+        backfill,
+    } = binding
+    else {
+        return Err(RESOURCE_ACCOUNT_CLIENT_BINDING_CONFLICT.to_string());
+    };
+    if backfill {
+        let updated = sqlx::query(
+            "UPDATE iam_oauth_resource_account \
+             SET oauth_client_id = $1, updated_at = $2, version = version + 1 \
+             WHERE tenant_id = $3 AND id = $4 AND integration_id = $5 \
+               AND provider_code = $6 AND provider_account_id = $7 AND oauth_client_id IS NULL",
+        )
+        .bind(&client_id)
+        .bind(Utc::now().to_rfc3339())
+        .bind(tenant_id)
+        .bind(resource_account_id)
+        .bind(integration_id)
+        .bind(provider_code)
+        .bind(provider_account_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|error| error.to_string())?;
+        if updated.rows_affected() != 1 {
+            return Err(RESOURCE_ACCOUNT_CLIENT_BINDING_CONFLICT.to_string());
+        }
+        record_backend_mutation_audit_tx(
+            &mut *tx,
+            ctx,
+            "iam.oauth.resourceAccounts.clientBindings.repair",
+            "iam_oauth_resource_account",
+            resource_account_id,
+            json!({ "oauthClientId": client_id }),
+        )
+        .await?;
+    }
+    tx.commit().await.map_err(|error| error.to_string())?;
+
+    sdkwork_iam_web_adapter::load_oauth_integration_exchange_context_for_client_any_state(
+        pg,
+        tenant_id,
+        integration_id,
+        &client_id,
+        provider_code,
+        provider_account_id,
+    )
+    .await
+}
+
+fn resource_account_binding_error(code: &str) -> Response {
+    appbase_error(
+        StatusCode::CONFLICT,
+        code,
+        "the resource account is not bound to exactly one matching OAuth client; repair the integration before retrying",
+    )
 }
 
 async fn tenant_retrieve(
@@ -160,9 +425,13 @@ async fn tenant_retrieve(
     match retrieve_tenant_row(pg, &tenant_id, spec.table, spec.list_select, id).await {
         Ok(Some(row)) => {
             let mut item = row_to_json_with_aliases(&row, spec.columns, spec.id_aliases);
-            let enriched =
-                enrich_oauth_list_items(pg, &tenant_id, spec.table, std::slice::from_mut(&mut item))
-                    .await;
+            let enriched = enrich_oauth_list_items(
+                pg,
+                &tenant_id,
+                spec.table,
+                std::slice::from_mut(&mut item),
+            )
+            .await;
             match enriched {
                 Ok(()) => appbase_ok(item),
                 Err(error) => appbase_error(
@@ -257,13 +526,20 @@ async fn enrich_resource_account_client_secrets(
          FROM iam_oauth_resource_account ra \
          JOIN iam_oauth_client c \
            ON c.tenant_id = ra.tenant_id AND c.integration_id = ra.integration_id \
-          AND c.provider_client_id = ra.provider_account_id AND c.status = 'active' \
+          AND c.id = COALESCE(ra.oauth_client_id, ( \
+              SELECT MIN(c2.id) FROM iam_oauth_client c2 \
+              WHERE c2.tenant_id = ra.tenant_id AND c2.integration_id = ra.integration_id \
+                AND c2.provider_code = ra.provider_code \
+                AND c2.provider_client_id = ra.provider_account_id \
+              HAVING COUNT(*) = 1 \
+          )) \
+          AND c.provider_client_id = ra.provider_account_id AND c.provider_code = ra.provider_code \
          JOIN iam_oauth_secret s \
            ON s.tenant_id = ra.tenant_id AND s.secret_owner_kind = 'oauth_client' \
           AND s.secret_owner_id = c.id AND s.secret_kind = 'client_secret' \
           AND s.status = 'active' \
          WHERE ra.tenant_id = $1 AND ra.id = ANY($2) \
-         ORDER BY ra.id, s.active_from DESC",
+         ORDER BY ra.id, s.active_from DESC, s.updated_at DESC, s.id DESC",
     )
     .bind(tenant_id)
     .bind(&account_ids)
@@ -376,10 +652,7 @@ async fn enrich_integration_client_ids(
             .or_insert(redirect_uri);
     }
     for item in items {
-        let Some(integration_id) = item
-            .get("id")
-            .and_then(Value::as_str)
-            .map(str::to_string)
+        let Some(integration_id) = item.get("id").and_then(Value::as_str).map(str::to_string)
         else {
             continue;
         };
@@ -497,7 +770,10 @@ async fn tenant_patch(
     // connected: the operator has completed the provider setup, so the pending
     // authorization status is promoted to `authorized` exactly once.
     let cascade_authorize = is_resource_account
-        && body.get("config").filter(|value| value.is_object()).is_some();
+        && body
+            .get("config")
+            .filter(|value| value.is_object())
+            .is_some();
     let mut assignments = collect_resource_patch_assignments(body, spec.table);
     assignments.push(("updated_at".to_owned(), PatchValue::Text(now.clone())));
 
@@ -538,14 +814,18 @@ async fn tenant_patch(
                 let table = table_name.clone();
                 let id = id_owned.clone();
                 let assignments = assignments.clone();
-                // Read the pre-update account row so credential cascades match
-                // the linked client by the previous AppID (the account row is
-                // patched right below and would otherwise carry the new value).
-                let account_credentials = if is_resource_account {
-                    sqlx::query(
-                        "SELECT integration_id, provider_account_id, authorization_status \
-                         FROM iam_oauth_resource_account \
-                         WHERE tenant_id = $1 AND id = $2 LIMIT 1",
+                // Resolve the stable client binding before patching the AppID.
+                // Legacy rows without oauth_client_id may be repaired only
+                // when the previous AppID identifies exactly one client.
+                let account_credentials = if is_resource_account
+                    && (cascade_provider_account_id.is_some()
+                        || cascade_provider_client_secret.is_some())
+                {
+                        sqlx::query(
+                            "SELECT ra.integration_id, ra.provider_code, ra.provider_account_id, \
+                                    ra.authorization_status, ra.oauth_client_id \
+                             FROM iam_oauth_resource_account ra \
+                             WHERE ra.tenant_id = $1 AND ra.id = $2 LIMIT 1 FOR UPDATE",
                     )
                     .bind(&tenant_id)
                     .bind(&id)
@@ -556,6 +836,8 @@ async fn tenant_patch(
                             row.get::<String, _>(0),
                             row.get::<String, _>(1),
                             row.get::<String, _>(2),
+                            row.get::<String, _>(3),
+                            row.get::<Option<String>, _>(4),
                         )
                     })
                 } else {
@@ -618,7 +900,7 @@ async fn tenant_patch(
                         .await?;
                     }
                     if let Some(new_client_id) = cascade_integration_client_id {
-                        sqlx::query(
+                        let updated = sqlx::query(
                             "UPDATE iam_oauth_client SET provider_client_id = $1, updated_at = $2 \
                              WHERE tenant_id = $3 AND integration_id = $4 AND status = 'active'",
                         )
@@ -628,50 +910,125 @@ async fn tenant_patch(
                         .bind(&id)
                         .execute(&mut **tx)
                         .await?;
+                        if updated.rows_affected() != 1 {
+                            return Err(sqlx::Error::Protocol(
+                                INTEGRATION_CREDENTIAL_BINDING_CONFLICT.to_string(),
+                            ));
+                        }
                     }
                     if let Some(secret_value) = cascade_integration_client_secret {
-                        let client_id = sqlx::query(
+                        let client_ids = sqlx::query_scalar::<_, String>(
                             "SELECT id FROM iam_oauth_client \
                              WHERE tenant_id = $1 AND integration_id = $2 AND status = 'active' \
-                             LIMIT 1",
+                             ORDER BY id LIMIT 2 FOR SHARE",
                         )
                         .bind(&tenant_id)
                         .bind(&id)
-                        .fetch_optional(&mut **tx)
-                        .await?
-                        .map(|row| row.get::<String, _>(0));
-                        if let Some(client_id) = client_id {
-                            let secret_ref =
-                                sdkwork_iam_bootstrap::encode_signing_secret_ref(
-                                    secret_value.as_bytes(),
-                                );
-                            let secret_hash =
-                                sdkwork_iam_bootstrap::hash_secret_ref(&secret_ref);
+                        .fetch_all(&mut **tx)
+                        .await?;
+                        let [client_id] = client_ids.as_slice() else {
+                            return Err(sqlx::Error::Protocol(
+                                INTEGRATION_CREDENTIAL_BINDING_CONFLICT.to_string(),
+                            ));
+                        };
+                        upsert_oauth_client_secret_tx(
+                            &mut **tx,
+                            &tenant_id,
+                            client_id,
+                            &secret_value,
+                            &now,
+                        )
+                        .await?;
+                    }
+                    if let Some((
+                        integration_id,
+                        provider_code,
+                        previous_app_id,
+                        authorization_status,
+                        stored_oauth_client_id,
+                    )) = account_credentials
+                    {
+                        let client_binding = resolve_resource_account_client_binding_tx(
+                            &mut **tx,
+                            &tenant_id,
+                            &integration_id,
+                            &provider_code,
+                            &previous_app_id,
+                            stored_oauth_client_id.as_deref(),
+                        )
+                        .await?;
+                        let ResourceAccountClientBinding::Bound {
+                            client_id: oauth_client_id,
+                            backfill,
+                        } = client_binding
+                        else {
+                            return Err(sqlx::Error::Protocol(
+                                RESOURCE_ACCOUNT_CLIENT_BINDING_CONFLICT.to_string(),
+                            ));
+                        };
+                        if backfill {
                             sqlx::query(
-                                "UPDATE iam_oauth_secret SET secret_ref = $1, secret_hash = $2, updated_at = $3 \
-                                 WHERE tenant_id = $4 AND secret_owner_kind = 'oauth_client' \
-                                   AND secret_owner_id = $5 AND secret_kind = 'client_secret'",
+                                "UPDATE iam_oauth_resource_account SET oauth_client_id = $1 \
+                                 WHERE tenant_id = $2 AND id = $3 AND oauth_client_id IS NULL",
                             )
-                            .bind(&secret_ref)
-                            .bind(&secret_hash)
-                            .bind(&now)
+                            .bind(&oauth_client_id)
                             .bind(&tenant_id)
-                            .bind(&client_id)
+                            .bind(&id)
                             .execute(&mut **tx)
                             .await?;
                         }
-                    }
-                    if let Some((integration_id, previous_app_id, authorization_status)) = account_credentials {
                         if let Some(new_app_id) = cascade_provider_account_id {
                             sqlx::query(
+                                "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+                            )
+                            .bind(format!(
+                                "iam_oauth_resource_account:{}:{}:{}",
+                                tenant_id, provider_code, new_app_id
+                            ))
+                            .execute(&mut **tx)
+                            .await?;
+                            let duplicate_account = sqlx::query_scalar::<_, String>(
+                                "SELECT id FROM iam_oauth_resource_account \
+                                 WHERE tenant_id = $1 AND provider_code = $2 \
+                                   AND provider_account_id = $3 AND id <> $4 \
+                                 LIMIT 1 FOR SHARE",
+                            )
+                            .bind(&tenant_id)
+                            .bind(&provider_code)
+                            .bind(&new_app_id)
+                            .bind(&id)
+                            .fetch_optional(&mut **tx)
+                            .await?;
+                            if duplicate_account.is_some() {
+                                return Err(sqlx::Error::Protocol(
+                                    RESOURCE_ACCOUNT_IDENTITY_CONFLICT.to_string(),
+                                ));
+                            }
+                            let duplicate_client = sqlx::query_scalar::<_, String>(
+                                "SELECT id FROM iam_oauth_client \
+                                 WHERE tenant_id = $1 AND integration_id = $2 \
+                                   AND provider_client_id = $3 AND id <> $4 \
+                                 LIMIT 1 FOR SHARE",
+                            )
+                            .bind(&tenant_id)
+                            .bind(&integration_id)
+                            .bind(&new_app_id)
+                            .bind(&oauth_client_id)
+                            .fetch_optional(&mut **tx)
+                            .await?;
+                            if duplicate_client.is_some() {
+                                return Err(sqlx::Error::Protocol(
+                                    RESOURCE_ACCOUNT_CLIENT_BINDING_CONFLICT.to_string(),
+                                ));
+                            }
+                            sqlx::query(
                                 "UPDATE iam_oauth_client SET provider_client_id = $1, updated_at = $2 \
-                                 WHERE tenant_id = $3 AND integration_id = $4 AND provider_client_id = $5",
+                                 WHERE tenant_id = $3 AND id = $4",
                             )
                             .bind(&new_app_id)
                             .bind(&now)
                             .bind(&tenant_id)
-                            .bind(&integration_id)
-                            .bind(&previous_app_id)
+                            .bind(&oauth_client_id)
                             .execute(&mut **tx)
                             .await?;
                             // Mirror the rotated AppID onto the mini program
@@ -689,36 +1046,14 @@ async fn tenant_patch(
                             .await?;
                         }
                         if let Some(secret_value) = cascade_provider_client_secret {
-                            let client_id = sqlx::query(
-                                "SELECT id FROM iam_oauth_client \
-                                 WHERE tenant_id = $1 AND integration_id = $2 AND provider_client_id = $3 \
-                                 LIMIT 1",
+                            upsert_oauth_client_secret_tx(
+                                &mut **tx,
+                                &tenant_id,
+                                &oauth_client_id,
+                                &secret_value,
+                                &now,
                             )
-                            .bind(&tenant_id)
-                            .bind(&integration_id)
-                            .bind(&previous_app_id)
-                            .fetch_optional(&mut **tx)
-                            .await?
-                            .map(|row| row.get::<String, _>(0));
-                            if let Some(client_id) = client_id {
-                                let secret_ref = sdkwork_iam_bootstrap::encode_signing_secret_ref(
-                                    secret_value.as_bytes(),
-                                );
-                                let secret_hash =
-                                    sdkwork_iam_bootstrap::hash_secret_ref(&secret_ref);
-                                sqlx::query(
-                                    "UPDATE iam_oauth_secret SET secret_ref = $1, secret_hash = $2, updated_at = $3 \
-                                     WHERE tenant_id = $4 AND secret_owner_kind = 'oauth_client' \
-                                       AND secret_owner_id = $5 AND secret_kind = 'client_secret'",
-                                )
-                                .bind(&secret_ref)
-                                .bind(&secret_hash)
-                                .bind(&now)
-                                .bind(&tenant_id)
-                                .bind(&client_id)
-                                .execute(&mut **tx)
-                                .await?;
-                            }
+                            .await?;
                         }
                         // A completed developer configuration means the account
                         // is connected; promote a pending authorization once.
@@ -774,11 +1109,7 @@ async fn tenant_patch(
             spec.retrieve_error,
             "resource not found",
         ),
-        Err(error) => appbase_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            spec.retrieve_error,
-            &error,
-        ),
+        Err(error) => oauth_mutation_error(spec.retrieve_error, error),
     }
 }
 
@@ -878,33 +1209,57 @@ fn collect_resource_patch_assignments(body: &Value, table: &str) -> Vec<(String,
             ("deployment_mode", &["deploymentMode", "deployment_mode"]),
         ],
         "iam_oauth_client" => &[
-            ("provider_client_id", &["providerClientId", "provider_client_id"]),
+            (
+                "provider_client_id",
+                &["providerClientId", "provider_client_id"],
+            ),
             ("provider_app_id", &["providerAppId", "provider_app_id"]),
-            ("provider_tenant_id", &["providerTenantId", "provider_tenant_id"]),
-            ("provider_account_id", &["providerAccountId", "provider_account_id"]),
+            (
+                "provider_tenant_id",
+                &["providerTenantId", "provider_tenant_id"],
+            ),
+            (
+                "provider_account_id",
+                &["providerAccountId", "provider_account_id"],
+            ),
         ],
         "iam_oauth_surface" => &[
             ("redirect_uri", &["redirectUri", "redirect_uri"]),
             ("callback_path", &["callbackPath", "callback_path"]),
             ("web_domain", &["webDomain", "web_domain"]),
-            ("mini_program_app_id", &["miniProgramAppId", "mini_program_app_id"]),
-            ("mini_program_original_id", &["miniProgramOriginalId", "mini_program_original_id"]),
-            ("mini_program_environment", &["miniProgramEnvironment", "mini_program_environment"]),
-            ("mini_program_release_channel", &["miniProgramReleaseChannel", "mini_program_release_channel"]),
+            (
+                "mini_program_app_id",
+                &["miniProgramAppId", "mini_program_app_id"],
+            ),
+            (
+                "mini_program_original_id",
+                &["miniProgramOriginalId", "mini_program_original_id"],
+            ),
+            (
+                "mini_program_environment",
+                &["miniProgramEnvironment", "mini_program_environment"],
+            ),
+            (
+                "mini_program_release_channel",
+                &["miniProgramReleaseChannel", "mini_program_release_channel"],
+            ),
         ],
         "iam_oauth_resource_account" => &[
-            ("provider_account_id", &["providerAccountId", "provider_account_id"]),
-            ("provider_account_type", &["providerAccountType", "provider_account_type"]),
+            (
+                "provider_account_id",
+                &["providerAccountId", "provider_account_id"],
+            ),
+            (
+                "provider_account_type",
+                &["providerAccountType", "provider_account_type"],
+            ),
             (
                 "provider_account_original_id",
                 &["providerAccountOriginalId", "provider_account_original_id"],
             ),
         ],
         "iam_oauth_webhook_config" => &[
-            (
-                "callback_url",
-                &["callbackUrl", "callback_url"],
-            ),
+            ("callback_url", &["callbackUrl", "callback_url"]),
             (
                 "verification_token_status",
                 &["verificationTokenStatus", "verification_token_status"],
@@ -1452,21 +1807,17 @@ async fn create_integration(
         read_string_field(&body, &["environment"]).unwrap_or_else(|| "dev".to_owned());
     let deployment_mode = read_string_field(&body, &["deploymentMode", "deployment_mode"])
         .unwrap_or_else(|| "saas".to_owned());
-    let app_id = read_string_field(&body, &["appId", "app_id"])
-        .unwrap_or_else(|| "0".to_owned());
+    let app_id = read_string_field(&body, &["appId", "app_id"]).unwrap_or_else(|| "0".to_owned());
     let enabled = read_i32_field(&body, &["enabled"]).unwrap_or(0);
-    let provider_client_id =
-        read_string_field(&body, &["providerClientId", "provider_client_id"]);
+    let provider_client_id = read_string_field(&body, &["providerClientId", "provider_client_id"]);
     let provider_client_secret =
         read_string_field(&body, &["providerClientSecret", "provider_client_secret"]);
-    let provider_tenant_id =
-        read_string_field(&body, &["providerTenantId", "provider_tenant_id"]);
+    let provider_tenant_id = read_string_field(&body, &["providerTenantId", "provider_tenant_id"]);
     let redirect_uri = read_string_field(&body, &["redirectUri", "redirect_uri"]);
     let surface_kind = read_string_field(&body, &["surfaceKind", "surface_kind"])
         .unwrap_or_else(|| "web".to_owned());
-    let has_connection_details = provider_client_id.is_some()
-        || provider_client_secret.is_some()
-        || redirect_uri.is_some();
+    let has_connection_details =
+        provider_client_id.is_some() || provider_client_secret.is_some() || redirect_uri.is_some();
     // WeChat mini programs sign in through `jscode2session` and never go
     // through an OAuth redirect, so the callback URL is optional for them;
     // every other provider connection still requires all three fields.
@@ -1985,7 +2336,8 @@ async fn create_resource_account_follow_qr_code(
     };
 
     let row = match sqlx::query(
-        "SELECT ra.integration_id, ra.provider_code, ra.resource_account_kind \
+        "SELECT ra.integration_id, ra.provider_code, ra.resource_account_kind, \
+                ra.provider_account_id, ra.oauth_client_id \
          FROM iam_oauth_resource_account ra \
          WHERE ra.tenant_id = $1 AND ra.id = $2",
     )
@@ -2016,15 +2368,33 @@ async fn create_resource_account_follow_qr_code(
             "follow QR codes are only available for WeChat official accounts",
         );
     }
+    let provider_account_id: Option<String> = row.get(3);
+    let oauth_client_id: Option<String> = row.get(4);
+    let Some(app_id) = provider_account_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_follow_qr_code_unavailable",
+            "official account credentials are not configured; fill in AppID and AppSecret first",
+        );
+    };
 
     // Generating a follow QR only needs valid provider credentials; the
     // account's enabled switch and lifecycle status are deliberately not
     // checked here — the credentials are loaded even for a disabled or
     // non-active account, and the WeChat API validates their authenticity.
-    let exchange = match sdkwork_iam_web_adapter::load_oauth_integration_exchange_context_for_integration_any_state(
+    let exchange = match load_resource_account_exchange_context(
         pg,
+        &ctx,
         &tenant_id,
+        &resource_account_id,
         &integration_id,
+        &provider_code,
+        app_id,
+        oauth_client_id.as_deref(),
     )
     .await
     {
@@ -2036,9 +2406,7 @@ async fn create_resource_account_follow_qr_code(
                 "official account credentials are not configured; fill in AppID and AppSecret first",
             );
         }
-        Err(error) => {
-            return internal_handler_error("iam_oauth_follow_qr_code_failed", error);
-        }
+        Err(_) => return resource_account_binding_error("iam_oauth_follow_qr_code_unavailable"),
     };
 
     // One stable scene per account keeps the permanent QR constant and under
@@ -2046,7 +2414,7 @@ async fn create_resource_account_follow_qr_code(
     let scene = format!("follow:{resource_account_id}");
     let qr = match sdkwork_iam_web_adapter::create_wechat_mp_permanent_qr_code(
         pg,
-        &exchange.provider_client_id,
+        app_id,
         &exchange.client_secret,
         &scene,
     )
@@ -2066,6 +2434,680 @@ async fn create_resource_account_follow_qr_code(
         "scene": qr.scene,
         "ticket": qr.ticket,
     }))
+}
+
+fn persisted_custom_menu(config: &Value) -> Option<&Value> {
+    config
+        .get("customMenu")
+        .filter(|menu| menu.get("buttons").is_some_and(Value::is_array))
+}
+
+fn persisted_custom_menu_source(menu: &Value) -> &'static str {
+    match menu.get("source").and_then(Value::as_str) {
+        Some("wechat") => "wechat",
+        _ => "database",
+    }
+}
+
+enum InitialCustomMenuMerge {
+    Existing(Value),
+    Imported { config: Value, menu: Value },
+}
+
+fn merge_initial_custom_menu(
+    config_text: &str,
+    synced_menu: Value,
+) -> Result<InitialCustomMenuMerge, String> {
+    let mut config = parse_custom_menu_account_config(config_text)?;
+    if let Some(menu) = persisted_custom_menu(&config).cloned() {
+        return Ok(InitialCustomMenuMerge::Existing(menu));
+    }
+    config["customMenu"] = synced_menu.clone();
+    Ok(InitialCustomMenuMerge::Imported {
+        config,
+        menu: synced_menu,
+    })
+}
+
+enum PublishedCustomMenuMerge {
+    Updated { config: Value, menu: Value },
+    Superseded(Value),
+}
+
+fn merge_published_custom_menu(
+    config_text: &str,
+    published_buttons: &Value,
+    published_at: &str,
+) -> Result<PublishedCustomMenuMerge, String> {
+    let mut config = parse_custom_menu_account_config(config_text)?;
+    let Some(mut latest_menu) = persisted_custom_menu(&config).cloned() else {
+        return Ok(PublishedCustomMenuMerge::Superseded(json!({
+            "buttons": []
+        })));
+    };
+    if latest_menu.get("buttons") != Some(published_buttons) {
+        return Ok(PublishedCustomMenuMerge::Superseded(latest_menu));
+    }
+    latest_menu["publishedAt"] = json!(published_at);
+    latest_menu["source"] = json!("wechat");
+    config["customMenu"] = latest_menu.clone();
+    Ok(PublishedCustomMenuMerge::Updated {
+        config,
+        menu: latest_menu,
+    })
+}
+
+/// Returns the persisted custom menu. If the account has never stored a menu
+/// and has complete WeChat credentials, the provider menu is imported once and
+/// atomically persisted into `provider_config_json` before being returned.
+async fn retrieve_resource_account_custom_menu(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(resource_account_id): Path<String>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
+        return tenant_id_from_context(&ctx).err().expect("error response");
+    };
+    let row = match sqlx::query(
+        "SELECT provider_code, resource_account_kind, display_name, integration_id, \
+                provider_account_id, provider_config_json, oauth_client_id \
+         FROM iam_oauth_resource_account WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(&tenant_id)
+    .bind(&resource_account_id)
+    .fetch_optional(pg)
+    .await
+    {
+        Ok(row) => row,
+        Err(error) => {
+            return internal_handler_error("iam_oauth_custom_menu_retrieve_failed", error)
+        }
+    };
+    let Some(row) = row else {
+        return appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_oauth_resource_account_not_found",
+            "resource account not found",
+        );
+    };
+    let provider_code: String = row.get(0);
+    let resource_account_kind: String = row.get(1);
+    let display_name: String = row.get(2);
+    let integration_id: String = row.get(3);
+    let provider_account_id: Option<String> = row.get(4);
+    let original_config: String = row.get(5);
+    let oauth_client_id: Option<String> = row.get(6);
+    let config = match parse_custom_menu_account_config(&original_config) {
+        Ok(config) => config,
+        Err(error) => {
+            return appbase_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "iam_oauth_custom_menu_retrieve_failed",
+                &error,
+            )
+        }
+    };
+    if let Some(menu) = persisted_custom_menu(&config) {
+        let source = persisted_custom_menu_source(menu);
+        return custom_menu_ok(json!({
+            "displayName": display_name,
+            "menu": menu,
+            "source": source,
+        }));
+    }
+    if provider_code != "wechat" || resource_account_kind != "official_account" {
+        return custom_menu_ok(json!({
+            "displayName": display_name,
+            "menu": { "buttons": [] },
+            "source": "empty",
+        }));
+    }
+    let Some(app_id) = provider_account_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return custom_menu_ok(json!({
+            "displayName": display_name,
+            "menu": { "buttons": [] },
+            "source": "empty",
+        }));
+    };
+    let exchange = match load_resource_account_exchange_context(
+        pg,
+        &ctx,
+        &tenant_id,
+        &resource_account_id,
+        &integration_id,
+        &provider_code,
+        app_id,
+        oauth_client_id.as_deref(),
+    )
+    .await
+    {
+        Ok(value) => value,
+        Err(_) => {
+            return resource_account_binding_error("iam_oauth_custom_menu_sync_unavailable")
+        }
+    };
+    let Some(exchange) = exchange else {
+        return custom_menu_ok(json!({
+            "displayName": display_name,
+            "menu": { "buttons": [] },
+            "source": "empty",
+        }));
+    };
+    let remote_menu = match sdkwork_iam_web_adapter::retrieve_wechat_mp_custom_menu(
+        pg,
+        app_id,
+        &exchange.client_secret,
+    )
+    .await
+    {
+        Ok(menu) => menu,
+        Err(error) => {
+            return appbase_error(
+                StatusCode::BAD_GATEWAY,
+                "iam_oauth_custom_menu_sync_failed",
+                &error,
+            )
+        }
+    };
+    let synced_menu = json!({
+        "buttons": remote_menu.get("buttons").cloned().unwrap_or_else(|| json!([])),
+        "updatedAt": Utc::now().to_rfc3339(),
+        "source": "wechat",
+    });
+    let synced_menu_for_update = synced_menu.clone();
+    let update_tenant_id = tenant_id.clone();
+    let update_resource_account_id = resource_account_id.clone();
+    let expected_provider_code = provider_code.clone();
+    let expected_resource_account_kind = resource_account_kind.clone();
+    let expected_integration_id = integration_id.clone();
+    let expected_app_id = app_id.to_string();
+    let expected_oauth_client_row_id = exchange.oauth_client_row_id.clone();
+    let expected_client_secret_revision = exchange.client_secret_revision.clone();
+    match execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam.oauth.resourceAccounts.customMenus.sync",
+        "iam_oauth_resource_account",
+        resource_account_id.clone(),
+        json!({ "source": "wechat" }),
+        move |tx| {
+            Box::pin(async move {
+                let row = sqlx::query(
+                    "SELECT display_name, provider_config_json, provider_code, \
+                            resource_account_kind, integration_id, provider_account_id, oauth_client_id \
+                     FROM iam_oauth_resource_account \
+                     WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
+                )
+                .bind(&update_tenant_id)
+                .bind(&update_resource_account_id)
+                .fetch_optional(&mut **tx)
+                .await?;
+                let Some(row) = row else {
+                    return Ok(None);
+                };
+                let latest_name: String = row.get(0);
+                let latest_config_text: String = row.get(1);
+                let latest_provider_code: String = row.get(2);
+                let latest_account_kind: String = row.get(3);
+                let latest_integration_id: String = row.get(4);
+                let latest_app_id: Option<String> = row.get(5);
+                let latest_oauth_client_id: Option<String> = row.get(6);
+                let identity_changed = latest_provider_code != expected_provider_code
+                    || latest_account_kind != expected_resource_account_kind
+                    || latest_integration_id != expected_integration_id
+                    || latest_app_id.as_deref().map(str::trim) != Some(expected_app_id.as_str())
+                    || latest_oauth_client_id.as_deref() != Some(expected_oauth_client_row_id.as_str());
+                let credentials_changed = if identity_changed {
+                    true
+                } else {
+                    !sdkwork_iam_web_adapter::oauth_integration_exchange_credentials_match(
+                        &mut **tx,
+                        &update_tenant_id,
+                        &expected_integration_id,
+                        &expected_provider_code,
+                        &expected_app_id,
+                        &expected_oauth_client_row_id,
+                        &expected_client_secret_revision,
+                    )
+                    .await
+                    .map_err(sqlx::Error::Protocol)?
+                };
+                if credentials_changed {
+                    return Ok(Some((latest_name, json!({ "buttons": [] }), false, true)));
+                }
+                match merge_initial_custom_menu(&latest_config_text, synced_menu_for_update)
+                    .map_err(sqlx::Error::Protocol)?
+                {
+                    InitialCustomMenuMerge::Existing(menu) => {
+                        Ok(Some((latest_name, menu, false, false)))
+                    }
+                    InitialCustomMenuMerge::Imported { config, menu } => {
+                        sqlx::query(
+                            "UPDATE iam_oauth_resource_account SET provider_config_json = $1, updated_at = $2 \
+                             WHERE tenant_id = $3 AND id = $4",
+                        )
+                        .bind(config.to_string())
+                        .bind(Utc::now().to_rfc3339())
+                        .bind(&update_tenant_id)
+                        .bind(&update_resource_account_id)
+                        .execute(&mut **tx)
+                        .await?;
+                        Ok(Some((latest_name, menu, true, false)))
+                    }
+                }
+            })
+        },
+        |outcome| outcome.as_ref().is_some_and(|(_, _, imported, _)| *imported),
+    )
+    .await
+    {
+        Ok(Some((_latest_name, _menu, _imported, true))) => appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_custom_menu_sync_superseded",
+            "the official account configuration changed while its WeChat menu was loading; retry the synchronization",
+        ),
+        Ok(Some((latest_name, menu, imported, false))) => custom_menu_ok(json!({
+            "displayName": latest_name,
+            "menu": menu,
+            "source": if imported { "wechat" } else { "database" },
+        })),
+        Ok(None) => appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_oauth_resource_account_not_found",
+            "resource account not found",
+        ),
+        Err(error) => appbase_error(StatusCode::INTERNAL_SERVER_ERROR, "iam_oauth_custom_menu_sync_failed", &error),
+    }
+}
+
+/// Merges one validated custom-menu draft into the latest account config. The
+/// read/modify/write runs under a row lock, so concurrent domain or webhook
+/// edits cannot be lost by a stale frontend snapshot.
+async fn update_resource_account_custom_menu(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(resource_account_id): Path<String>,
+    Json(body): Json<Value>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
+        return tenant_id_from_context(&ctx).err().expect("error response");
+    };
+    if !body.get("buttons").is_some_and(Value::is_array) {
+        return appbase_error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "iam_oauth_custom_menu_invalid",
+            "custom menu buttons are required",
+        );
+    };
+    let normalized = match sdkwork_iam_web_adapter::normalize_wechat_mp_custom_menu_draft(&body) {
+        Ok(menu) => menu,
+        Err(error) => {
+            return appbase_error(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "iam_oauth_custom_menu_invalid",
+                &error,
+            )
+        }
+    };
+    let updated_at = Utc::now().to_rfc3339();
+    let menu = json!({
+        "buttons": normalized.get("buttons").cloned().unwrap_or_else(|| json!([])),
+        "updatedAt": updated_at,
+        "source": "database",
+    });
+    let menu_for_update = menu.clone();
+    let update_tenant_id = tenant_id.clone();
+    let update_resource_account_id = resource_account_id.clone();
+    let update_timestamp = updated_at.clone();
+    let result = execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam.oauth.resourceAccounts.customMenus.update",
+        "iam_oauth_resource_account",
+        resource_account_id.clone(),
+        json!({ "buttonCount": menu.get("buttons").and_then(Value::as_array).map(Vec::len).unwrap_or(0) }),
+        move |tx| {
+            Box::pin(async move {
+                let row = sqlx::query(
+                    "SELECT provider_code, resource_account_kind, display_name, provider_config_json \
+                     FROM iam_oauth_resource_account WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
+                )
+                .bind(&update_tenant_id)
+                .bind(&update_resource_account_id)
+                .fetch_optional(&mut **tx)
+                .await?;
+                let Some(row) = row else {
+                    return Ok(None);
+                };
+                let provider_code: String = row.get(0);
+                let account_kind: String = row.get(1);
+                let display_name: String = row.get(2);
+                if provider_code != "wechat" || account_kind != "official_account" {
+                    return Ok(None);
+                }
+                let config_text: String = row.get(3);
+                let mut config = parse_custom_menu_account_config(&config_text)
+                    .map_err(sqlx::Error::Protocol)?;
+                config["customMenu"] = menu_for_update.clone();
+                sqlx::query(
+                    "UPDATE iam_oauth_resource_account SET provider_config_json = $1, updated_at = $2 \
+                     WHERE tenant_id = $3 AND id = $4",
+                )
+                .bind(config.to_string())
+                .bind(update_timestamp)
+                .bind(update_tenant_id)
+                .bind(update_resource_account_id)
+                .execute(&mut **tx)
+                .await?;
+                Ok(Some(display_name))
+            })
+        },
+        Option::is_some,
+    )
+    .await;
+    match result {
+        Ok(Some(display_name)) => custom_menu_ok(json!({
+            "displayName": display_name,
+            "menu": menu,
+            "source": "database",
+        })),
+        Ok(None) => appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_oauth_resource_account_not_found",
+            "WeChat official account not found",
+        ),
+        Err(error) => appbase_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "iam_oauth_custom_menu_update_failed",
+            &error,
+        ),
+    }
+}
+
+/// Publishes the saved menu through WeChat's `menu/create` endpoint and
+/// returns the latest persisted document. The provider credentials never cross
+/// the HTTP/SDK boundary.
+async fn publish_resource_account_custom_menu(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(resource_account_id): Path<String>,
+    Json(body): Json<Value>,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(&state) else {
+        return postgres_pool_or_error(&state)
+            .err()
+            .expect("error response");
+    };
+    let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
+        return tenant_id_from_context(&ctx).err().expect("error response");
+    };
+    let row = match sqlx::query(
+        "SELECT provider_code, resource_account_kind, integration_id, provider_account_id, \
+                provider_config_json, oauth_client_id \
+         FROM iam_oauth_resource_account WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(&tenant_id)
+    .bind(&resource_account_id)
+    .fetch_optional(pg)
+    .await
+    {
+        Ok(row) => row,
+        Err(error) => return internal_handler_error("iam_oauth_custom_menu_publish_failed", error),
+    };
+    let Some(row) = row else {
+        return appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_oauth_resource_account_not_found",
+            "resource account not found",
+        );
+    };
+    let provider_code: String = row.get(0);
+    let resource_account_kind: String = row.get(1);
+    let integration_id: String = row.get(2);
+    let provider_account_id: Option<String> = row.get(3);
+    if provider_code != "wechat" || resource_account_kind != "official_account" {
+        return appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_custom_menu_publish_unavailable",
+            "custom menu publishing is only available for WeChat official accounts",
+        );
+    }
+    let Some(app_id) = provider_account_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_custom_menu_publish_unavailable",
+            "official account AppID is not configured",
+        );
+    };
+    let oauth_client_id: Option<String> = row.get(5);
+    let exchange = match load_resource_account_exchange_context(
+        pg,
+        &ctx,
+        &tenant_id,
+        &resource_account_id,
+        &integration_id,
+        &provider_code,
+        app_id,
+        oauth_client_id.as_deref(),
+    ).await {
+        Ok(Some(value)) => value,
+        Ok(None) => return appbase_error(StatusCode::CONFLICT, "iam_oauth_custom_menu_publish_unavailable", "official account AppSecret is not configured"),
+        Err(_) => return resource_account_binding_error("iam_oauth_custom_menu_publish_unavailable"),
+    };
+    let existing_config: String = row.get(4);
+    let config = match parse_custom_menu_account_config(&existing_config) {
+        Ok(config) => config,
+        Err(error) => {
+            return appbase_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "iam_oauth_custom_menu_publish_failed",
+                &error,
+            )
+        }
+    };
+    let Some(menu) = persisted_custom_menu(&config).cloned() else {
+        return appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_custom_menu_publish_unavailable",
+            "save the custom menu before publishing",
+        );
+    };
+    let requested_buttons = match body.get("buttons").and_then(Value::as_array) {
+        Some(buttons) => Value::Array(buttons.clone()),
+        None => {
+            return appbase_error(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "iam_oauth_custom_menu_invalid",
+                "published custom menu buttons are required",
+            )
+        }
+    };
+    let normalized_requested = match sdkwork_iam_web_adapter::normalize_wechat_mp_custom_menu_draft(
+        &json!({ "buttons": requested_buttons }),
+    ) {
+        Ok(menu) => menu,
+        Err(error) => {
+            return appbase_error(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "iam_oauth_custom_menu_invalid",
+                &error,
+            )
+        }
+    };
+    if menu.get("buttons") != normalized_requested.get("buttons") {
+        return appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_custom_menu_publish_superseded",
+            "a newer database draft exists; reload and publish the latest menu",
+        );
+    }
+    if let Err(error) = sdkwork_iam_web_adapter::validate_wechat_mp_custom_menu(&menu, true) {
+        return appbase_error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "iam_oauth_custom_menu_invalid",
+            &error,
+        );
+    }
+    if let Err(error) = sdkwork_iam_web_adapter::publish_wechat_mp_custom_menu(
+        pg,
+        app_id,
+        &exchange.client_secret,
+        &menu,
+    )
+    .await
+    {
+        return appbase_error(
+            StatusCode::BAD_GATEWAY,
+            "iam_oauth_custom_menu_publish_failed",
+            &error,
+        );
+    }
+    let published_buttons = menu.get("buttons").cloned().unwrap_or_else(|| json!([]));
+    let published_buttons_for_update = published_buttons.clone();
+    let update_tenant_id = tenant_id.clone();
+    let update_resource_account_id = resource_account_id.clone();
+    let expected_provider_code = provider_code.clone();
+    let expected_resource_account_kind = resource_account_kind.clone();
+    let expected_integration_id = integration_id.clone();
+    let expected_app_id = app_id.to_string();
+    let expected_oauth_client_row_id = exchange.oauth_client_row_id.clone();
+    let expected_client_secret_revision = exchange.client_secret_revision.clone();
+    let result = execute_conditional_mutation_with_audit(
+        pg,
+        &ctx,
+        "iam.oauth.resourceAccounts.customMenus.publish",
+        "iam_oauth_resource_account",
+        resource_account_id.clone(),
+        json!({ "provider": "wechat" }),
+        move |tx| {
+            Box::pin(async move {
+                let row = sqlx::query(
+                    "SELECT display_name, provider_config_json, provider_code, \
+                            resource_account_kind, integration_id, provider_account_id, oauth_client_id \
+                     FROM iam_oauth_resource_account \
+                     WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
+                )
+                .bind(&update_tenant_id)
+                .bind(&update_resource_account_id)
+                .fetch_optional(&mut **tx)
+                .await?;
+                let Some(row) = row else {
+                    return Ok(None);
+                };
+                let latest_name: String = row.get(0);
+                let latest_config_text: String = row.get(1);
+                let latest_provider_code: String = row.get(2);
+                let latest_account_kind: String = row.get(3);
+                let latest_integration_id: String = row.get(4);
+                let latest_app_id: Option<String> = row.get(5);
+                let latest_oauth_client_id: Option<String> = row.get(6);
+                let identity_changed = latest_provider_code != expected_provider_code
+                    || latest_account_kind != expected_resource_account_kind
+                    || latest_integration_id != expected_integration_id
+                    || latest_app_id.as_deref().map(str::trim) != Some(expected_app_id.as_str())
+                    || latest_oauth_client_id.as_deref() != Some(expected_oauth_client_row_id.as_str());
+                let credentials_changed = if identity_changed {
+                    true
+                } else {
+                    !sdkwork_iam_web_adapter::oauth_integration_exchange_credentials_match(
+                        &mut **tx,
+                        &update_tenant_id,
+                        &expected_integration_id,
+                        &expected_provider_code,
+                        &expected_app_id,
+                        &expected_oauth_client_row_id,
+                        &expected_client_secret_revision,
+                    )
+                    .await
+                    .map_err(sqlx::Error::Protocol)?
+                };
+                if credentials_changed {
+                    return Ok(Some((latest_name, json!({ "buttons": [] }), true)));
+                }
+                let published_at = Utc::now().to_rfc3339();
+                match merge_published_custom_menu(
+                    &latest_config_text,
+                    &published_buttons_for_update,
+                    &published_at,
+                )
+                .map_err(sqlx::Error::Protocol)?
+                {
+                    PublishedCustomMenuMerge::Superseded(menu) => {
+                        Ok(Some((latest_name, menu, true)))
+                    }
+                    PublishedCustomMenuMerge::Updated { config, menu } => {
+                        sqlx::query(
+                            "UPDATE iam_oauth_resource_account SET provider_config_json = $1, updated_at = $2 \
+                             WHERE tenant_id = $3 AND id = $4",
+                        )
+                        .bind(config.to_string())
+                        .bind(&published_at)
+                        .bind(&update_tenant_id)
+                        .bind(&update_resource_account_id)
+                        .execute(&mut **tx)
+                        .await?;
+                        Ok(Some((latest_name, menu, false)))
+                    }
+                }
+            })
+        },
+        Option::is_some,
+    )
+    .await;
+    match result {
+        Ok(Some((_latest_name, _latest_menu, true))) => appbase_error(
+            StatusCode::CONFLICT,
+            "iam_oauth_custom_menu_publish_superseded",
+            "the menu was published to WeChat, but a newer database draft now exists; review and publish the latest draft again",
+        ),
+        Ok(Some((latest_name, latest_menu, false))) => custom_menu_ok(json!({
+            "displayName": latest_name,
+            "menu": latest_menu,
+            "published": true,
+            "source": "wechat",
+        })),
+        Ok(None) => appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_oauth_resource_account_not_found",
+            "resource account not found after the menu was published",
+        ),
+        Err(error) => appbase_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "iam_oauth_custom_menu_publish_failed",
+            &error,
+        ),
+    }
+}
+
+fn parse_custom_menu_account_config(text: &str) -> Result<Value, String> {
+    let config = serde_json::from_str::<Value>(text)
+        .map_err(|error| format!("resource account provider config is invalid JSON: {error}"))?;
+    if !config.is_object() {
+        return Err("resource account provider config must be a JSON object".to_string());
+    }
+    Ok(config)
+}
+
+fn custom_menu_ok(item: Value) -> Response {
+    appbase_ok(json!({ "item": item }))
 }
 
 async fn create_webhook_verification(
@@ -2394,6 +3436,116 @@ mod oauth_account_patch_tests {
     use super::*;
 
     #[test]
+    fn custom_menu_requires_a_buttons_array_to_count_as_persisted() {
+        assert!(persisted_custom_menu(&json!({})).is_none());
+        assert!(persisted_custom_menu(&json!({ "customMenu": {} })).is_none());
+        assert!(persisted_custom_menu(&json!({ "customMenu": { "buttons": null } })).is_none());
+        assert!(persisted_custom_menu(&json!({ "customMenu": { "buttons": {} } })).is_none());
+    }
+
+    #[test]
+    fn explicitly_saved_empty_custom_menu_remains_database_authority() {
+        let config = json!({ "customMenu": { "buttons": [], "source": "database" } });
+        let menu = persisted_custom_menu(&config).expect("saved empty menu");
+
+        assert_eq!(menu.get("buttons"), Some(&json!([])));
+    }
+
+    #[test]
+    fn persisted_menu_source_tracks_provider_synchronization_state() {
+        assert_eq!(
+            persisted_custom_menu_source(&json!({ "buttons": [], "source": "wechat" })),
+            "wechat"
+        );
+        assert_eq!(
+            persisted_custom_menu_source(&json!({ "buttons": [], "source": "database" })),
+            "database"
+        );
+        assert_eq!(
+            persisted_custom_menu_source(&json!({ "buttons": [] })),
+            "database"
+        );
+    }
+
+    #[test]
+    fn initial_menu_sync_merges_into_the_latest_account_config() {
+        let synced = json!({ "buttons": [], "source": "wechat" });
+        let InitialCustomMenuMerge::Imported { config, menu } = merge_initial_custom_menu(
+            r#"{"webDomain":"new.example.com","domains":{"request":["api.example.com"]}}"#,
+            synced.clone(),
+        )
+        .expect("valid provider config") else {
+            panic!("missing menu should be imported");
+        };
+
+        assert_eq!(menu, synced);
+        assert_eq!(config["webDomain"], "new.example.com");
+        assert_eq!(config["domains"]["request"][0], "api.example.com");
+    }
+
+    #[test]
+    fn initial_menu_sync_never_overwrites_a_concurrently_saved_draft() {
+        let existing = json!({
+            "buttons": [{ "name": "新草稿", "type": "click", "message": "NEW" }],
+            "source": "database"
+        });
+        let config = json!({ "customMenu": existing, "webDomain": "example.com" }).to_string();
+        let InitialCustomMenuMerge::Existing(menu) =
+            merge_initial_custom_menu(&config, json!({ "buttons": [{ "name": "微信旧菜单" }] }))
+                .expect("valid provider config")
+        else {
+            panic!("saved database menu must remain authoritative");
+        };
+
+        assert_eq!(menu["buttons"][0]["name"], "新草稿");
+    }
+
+    #[test]
+    fn publish_metadata_merge_preserves_unrelated_concurrent_config() {
+        let buttons = json!([{ "name": "菜单", "type": "click", "message": "KEY" }]);
+        let config = json!({
+            "webDomain": "changed.example.com",
+            "customMenu": { "buttons": buttons, "updatedAt": "draft-time", "source": "database" }
+        })
+        .to_string();
+        let PublishedCustomMenuMerge::Updated { config, menu } =
+            merge_published_custom_menu(&config, &buttons, "publish-time")
+                .expect("valid provider config")
+        else {
+            panic!("unchanged buttons should accept publish metadata");
+        };
+
+        assert_eq!(config["webDomain"], "changed.example.com");
+        assert_eq!(menu["updatedAt"], "draft-time");
+        assert_eq!(menu["publishedAt"], "publish-time");
+        assert_eq!(menu["source"], "wechat");
+    }
+
+    #[test]
+    fn publish_metadata_merge_detects_a_newer_concurrent_draft() {
+        let published = json!([{ "name": "旧菜单", "type": "click", "message": "OLD" }]);
+        let latest = json!([{ "name": "新菜单", "type": "click", "message": "NEW" }]);
+        let config =
+            json!({ "customMenu": { "buttons": latest, "source": "database" } }).to_string();
+        let PublishedCustomMenuMerge::Superseded(menu) =
+            merge_published_custom_menu(&config, &published, "publish-time")
+                .expect("valid provider config")
+        else {
+            panic!("newer buttons must supersede publish metadata");
+        };
+
+        assert_eq!(menu["buttons"][0]["name"], "新菜单");
+        assert!(menu.get("publishedAt").is_none());
+    }
+
+    #[test]
+    fn custom_menu_config_parser_rejects_corrupt_or_non_object_documents() {
+        assert!(parse_custom_menu_account_config("not-json").is_err());
+        assert!(parse_custom_menu_account_config("[]").is_err());
+        assert!(parse_custom_menu_account_config("{}").is_ok());
+    }
+
+    #[test]
     fn application_binding_fields_are_allowlisted_for_oauth_integrations() {
         let assignments = collect_resource_patch_assignments(
             &json!({
@@ -2404,9 +3556,18 @@ mod oauth_account_patch_tests {
             "iam_oauth_integration",
         );
 
-        assert!(assignments.contains(&("app_id".to_owned(), PatchValue::Text("runtime-app".to_owned()))));
-        assert!(assignments.contains(&("environment".to_owned(), PatchValue::Text("production".to_owned()))));
-        assert!(assignments.contains(&("deployment_mode".to_owned(), PatchValue::Text("saas".to_owned()))));
+        assert!(assignments.contains(&(
+            "app_id".to_owned(),
+            PatchValue::Text("runtime-app".to_owned())
+        )));
+        assert!(assignments.contains(&(
+            "environment".to_owned(),
+            PatchValue::Text("production".to_owned())
+        )));
+        assert!(assignments.contains(&(
+            "deployment_mode".to_owned(),
+            PatchValue::Text("saas".to_owned())
+        )));
     }
 
     #[test]
@@ -2421,9 +3582,18 @@ mod oauth_account_patch_tests {
             "iam_oauth_surface",
         );
 
-        assert!(assignments.contains(&("mini_program_app_id".to_owned(), PatchValue::Text("wx-app-id".to_owned()))));
-        assert!(assignments.contains(&("mini_program_original_id".to_owned(), PatchValue::Text("gh_demo".to_owned()))));
-        assert!(assignments.contains(&("mini_program_environment".to_owned(), PatchValue::Text("release".to_owned()))));
+        assert!(assignments.contains(&(
+            "mini_program_app_id".to_owned(),
+            PatchValue::Text("wx-app-id".to_owned())
+        )));
+        assert!(assignments.contains(&(
+            "mini_program_original_id".to_owned(),
+            PatchValue::Text("gh_demo".to_owned())
+        )));
+        assert!(assignments.contains(&(
+            "mini_program_environment".to_owned(),
+            PatchValue::Text("release".to_owned())
+        )));
         assert!(!assignments.iter().any(|(field, value)| {
             field.contains("secret")
                 || matches!(value, PatchValue::Text(text) if text.contains("must-not-be-collected"))
@@ -2468,7 +3638,9 @@ mod oauth_account_patch_tests {
         );
 
         assert!(!assignments.iter().any(|(field, _)| field == "enabled"));
-        assert!(assignments.contains(&("status".to_owned(), PatchValue::Text("inactive".to_owned()))));
+        assert!(
+            assignments.contains(&("status".to_owned(), PatchValue::Text("inactive".to_owned())))
+        );
     }
 
     #[test]
@@ -2486,6 +3658,13 @@ mod oauth_account_patch_tests {
             .iter()
             .any(|(field, _)| field == "authorization_status" || field == "verification_status"));
         assert!(assignments.contains(&("enabled".to_owned(), PatchValue::Int(1))));
+    }
+
+    #[test]
+    fn resource_account_binding_conflicts_are_machine_distinguishable() {
+        assert!(RESOURCE_ACCOUNT_CLIENT_BINDING_CONFLICT.contains("missing"));
+        assert!(RESOURCE_ACCOUNT_IDENTITY_CONFLICT.contains("already exists"));
+        assert!(INTEGRATION_CREDENTIAL_BINDING_CONFLICT.contains("exactly one"));
     }
 }
 
@@ -2513,8 +3692,10 @@ async fn create_surface(
     let web_domain = read_string_field(&body, &["webDomain", "web_domain"]);
     let mini_program_app_id =
         read_string_field(&body, &["miniProgramAppId", "mini_program_app_id"]);
-    let mini_program_original_id =
-        read_string_field(&body, &["miniProgramOriginalId", "mini_program_original_id"]);
+    let mini_program_original_id = read_string_field(
+        &body,
+        &["miniProgramOriginalId", "mini_program_original_id"],
+    );
     let mini_program_environment = read_string_field(
         &body,
         &["miniProgramEnvironment", "mini_program_environment"],
@@ -2939,8 +4120,10 @@ async fn create_resource_account(
         read_string_field(&body, &["providerAccountId", "provider_account_id"]);
     let access_mode = read_string_field(&body, &["accessMode", "access_mode"]);
     let account_type = read_string_field(&body, &["providerAccountType", "provider_account_type"]);
-    let original_id =
-        read_string_field(&body, &["providerAccountOriginalId", "provider_account_original_id"]);
+    let original_id = read_string_field(
+        &body,
+        &["providerAccountOriginalId", "provider_account_original_id"],
+    );
     let config = body.get("config").filter(|value| value.is_object());
     if integration_id.as_deref().unwrap_or("").is_empty()
         || provider_code.as_deref().unwrap_or("").is_empty()
@@ -2971,7 +4154,9 @@ async fn create_resource_account(
     let access_mode_value = access_mode.as_ref().expect("validated").clone();
     let display_name_value = display_name.as_ref().expect("validated").clone();
     let provider_account_id_value = provider_account_id.as_ref().expect("validated").clone();
-    let config_value = config.map(|value| value.to_string()).unwrap_or_else(|| "{}".to_owned());
+    let config_value = config
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "{}".to_owned());
     let tenant_id_insert = tenant_id.clone();
 
     oauth_commit_create(
@@ -2996,20 +4181,81 @@ async fn create_resource_account(
             let enabled_value = enabled;
             let account_type_value = account_type.clone();
             let original_id_value = original_id.clone();
-            
+
+                sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+                    .bind(format!(
+                        "iam_oauth_resource_account:{tenant_id}:{provider_code_value}:{provider_account_id_value}"
+                    ))
+                    .execute(&mut **tx)
+                    .await?;
+
+                let integration = sqlx::query(
+                    "SELECT provider_code FROM iam_oauth_integration \
+                     WHERE tenant_id = $1 AND id = $2 FOR SHARE",
+                )
+                .bind(&tenant_id)
+                .bind(&integration_id_value)
+                .fetch_optional(&mut **tx)
+                .await?;
+                let Some(integration) = integration else {
+                    return Err(sqlx::Error::Protocol(
+                        RESOURCE_ACCOUNT_CLIENT_BINDING_CONFLICT.to_string(),
+                    ));
+                };
+                if integration.get::<String, _>(0) != provider_code_value {
+                    return Err(sqlx::Error::Protocol(
+                        RESOURCE_ACCOUNT_CLIENT_BINDING_CONFLICT.to_string(),
+                    ));
+                }
+                let client_binding = resolve_resource_account_client_binding_tx(
+                    &mut **tx,
+                    &tenant_id,
+                    &integration_id_value,
+                    &provider_code_value,
+                    &provider_account_id_value,
+                    None,
+                )
+                .await?;
+                let ResourceAccountClientBinding::Bound {
+                    client_id: oauth_client_id,
+                    ..
+                } = client_binding
+                else {
+                    return Err(sqlx::Error::Protocol(
+                        RESOURCE_ACCOUNT_CLIENT_BINDING_CONFLICT.to_string(),
+                    ));
+                };
+                let duplicate_exists = sqlx::query_scalar::<_, String>(
+                    "SELECT id FROM iam_oauth_resource_account \
+                     WHERE tenant_id = $1 AND provider_code = $2 AND provider_account_id = $3 \
+                     LIMIT 1 FOR SHARE",
+                )
+                .bind(&tenant_id)
+                .bind(&provider_code_value)
+                .bind(&provider_account_id_value)
+                .fetch_optional(&mut **tx)
+                .await?
+                .is_some();
+                if duplicate_exists {
+                    return Err(sqlx::Error::Protocol(
+                        RESOURCE_ACCOUNT_IDENTITY_CONFLICT.to_string(),
+                    ));
+                }
+
                 sqlx::query(
                     "INSERT INTO iam_oauth_resource_account \
-                        (id, uuid, tenant_id, organization_id, integration_id, provider_code, resource_account_code, resource_account_kind, \
+                        (id, uuid, tenant_id, organization_id, integration_id, oauth_client_id, provider_code, resource_account_code, resource_account_kind, \
                          access_mode, display_name, provider_account_id, provider_account_type, provider_account_original_id, verification_status, \
                          authorization_status, self_managed_config_status, operator_authorization_status, webhook_verify_status, domain_verify_status, \
                          provider_config_json, enabled, status, created_at, updated_at) \
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending', 'pending', 'missing', 'pending', 'pending', 'pending', $14, $15, 'active', $16, $16)",
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'pending', 'pending', 'missing', 'pending', 'pending', 'pending', $15, $16, 'active', $17, $17)",
                 )
                 .bind(&insert_id)
                 .bind(Uuid::new_v4().to_string())
                 .bind(&tenant_id)
                 .bind(&organization_id)
                 .bind(&integration_id_value)
+                .bind(&oauth_client_id)
                 .bind(&provider_code_value)
                 .bind(&resource_account_code_value)
                 .bind(&resource_account_kind_value)
@@ -3085,11 +4331,9 @@ async fn create_webhook_config(
         &["verificationTokenStatus", "verification_token_status"],
     )
     .unwrap_or_else(|| "missing".to_owned());
-    let encoding_aes_key_status = read_string_field(
-        &body,
-        &["encodingAesKeyStatus", "encoding_aes_key_status"],
-    )
-    .unwrap_or_else(|| "missing".to_owned());
+    let encoding_aes_key_status =
+        read_string_field(&body, &["encodingAesKeyStatus", "encoding_aes_key_status"])
+            .unwrap_or_else(|| "missing".to_owned());
     if integration_id.as_deref().unwrap_or("").is_empty()
         || provider_code.as_deref().unwrap_or("").is_empty()
         || webhook_code.as_deref().unwrap_or("").is_empty()
@@ -3423,7 +4667,10 @@ async fn scan_login_settings_json(pg: &PgPool, tenant_id: &str) -> Result<Value,
                 w.enabled AS webhook_enabled, w.callback_public_id \
          FROM iam_oauth_resource_account ra \
          LEFT JOIN iam_oauth_client c \
-           ON c.integration_id = ra.integration_id AND c.enabled = 1 AND c.status = 'active' \
+           ON c.tenant_id = ra.tenant_id AND c.integration_id = ra.integration_id \
+          AND c.id = ra.oauth_client_id AND c.provider_code = ra.provider_code \
+          AND c.provider_client_id = ra.provider_account_id \
+          AND c.enabled = 1 AND c.status = 'active' \
          LEFT JOIN iam_oauth_webhook_config w \
            ON w.resource_account_id = ra.id AND w.status = 'active' \
          WHERE ra.tenant_id = $1 AND ra.provider_code = 'wechat' \
@@ -3498,7 +4745,9 @@ async fn retrieve_scan_login_settings(
     };
     match scan_login_settings_json(pg, &tenant_id).await {
         Ok(settings) => appbase_ok(settings),
-        Err(error) => internal_handler_error("iam_oauth_scan_login_settings_retrieve_failed", error),
+        Err(error) => {
+            internal_handler_error("iam_oauth_scan_login_settings_retrieve_failed", error)
+        }
     }
 }
 
@@ -3619,7 +4868,7 @@ async fn create_scan_login_preview(
     if qr_mode == "official_account" {
         let account_id = read_string_field(&body, &["accountId", "account_id"]);
         let row = match sqlx::query(
-            "SELECT ra.integration_id \
+            "SELECT ra.id, ra.integration_id, ra.oauth_client_id, ra.provider_account_id \
              FROM iam_oauth_resource_account ra \
              WHERE ra.tenant_id = $1 AND ra.provider_code = 'wechat' \
                AND ra.resource_account_kind = 'official_account' \
@@ -3648,26 +4897,35 @@ async fn create_scan_login_preview(
                 "official account scan login is not configured; enable an official account first",
             );
         };
-        let integration_id: String = row.get(0);
-        let exchange = match sdkwork_iam_web_adapter::load_oauth_integration_exchange_context_for_integration(
-            pg,
-            &tenant_id,
-            &integration_id,
-        )
-        .await
-        {
-            Ok(Some(exchange)) => exchange,
-            Ok(None) => {
-                return appbase_error(
-                    StatusCode::CONFLICT,
-                    "iam_oauth_official_account_qr_unavailable",
-                    "official account integration is not configured",
-                );
-            }
-            Err(error) => {
-                return internal_handler_error("iam_oauth_scan_login_preview_failed", error);
-            }
-        };
+        let selected_account_id: String = row.get(0);
+        let integration_id: String = row.get(1);
+        let oauth_client_id: Option<String> = row.get(2);
+        let provider_account_id: String = row.get(3);
+        let exchange =
+            match load_resource_account_exchange_context(
+                pg,
+                &ctx,
+                &tenant_id,
+                &selected_account_id,
+                &integration_id,
+                "wechat",
+                &provider_account_id,
+                oauth_client_id.as_deref(),
+            )
+            .await
+            {
+                Ok(Some(exchange)) => exchange,
+                Ok(None) => {
+                    return appbase_error(
+                        StatusCode::CONFLICT,
+                        "iam_oauth_official_account_qr_unavailable",
+                        "official account integration is not configured",
+                    );
+                }
+                Err(error) => {
+                    return internal_handler_error("iam_oauth_scan_login_preview_failed", error);
+                }
+            };
         let scene = sdkwork_iam_web_adapter::generate_wechat_mp_scene("qrpreview");
         let qr = match sdkwork_iam_web_adapter::create_wechat_mp_temp_qr_code(
             pg,
@@ -3752,9 +5010,7 @@ async fn create_scan_login_preview(
             );
         };
         let scope = serde_json::from_str::<Vec<String>>(&default_scopes_json)
-            .unwrap_or_else(|_| {
-                sdkwork_iam_web_adapter::builtin_default_scopes(&normalized)
-            })
+            .unwrap_or_else(|_| sdkwork_iam_web_adapter::builtin_default_scopes(&normalized))
             .join(" ");
 
         let h5_login_origin = match resolve_h5_login_origin(pg, &tenant_id).await {
@@ -3810,10 +5066,7 @@ async fn create_scan_login_preview(
 
 /// Resolves the H5 login origin for scan-login previews: tenant config row,
 /// env override, or an error response when unconfigured.
-async fn resolve_h5_login_origin(
-    pg: &PgPool,
-    tenant_id: &str,
-) -> Result<String, Response> {
+async fn resolve_h5_login_origin(pg: &PgPool, tenant_id: &str) -> Result<String, Response> {
     let config_row = match sqlx::query(
         "SELECT h5_login_origin FROM iam_oauth_scan_login_config WHERE tenant_id = $1",
     )

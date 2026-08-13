@@ -59,15 +59,8 @@ println!("{result:?}");
 ### iam_oauth
 
 ```rust
-use std::collections::HashMap;
-// Iam oauth account Links list.
-let mut query = HashMap::new();
-query.insert("page".to_string(), serde_json::json!(1));
-query.insert("page_size".to_string(), serde_json::json!(2));
-query.insert("cursor".to_string(), serde_json::json!("cursor"));
-query.insert("sort".to_string(), serde_json::json!("sort"));
-query.insert("q".to_string(), serde_json::json!("q"));
-let result = client.iam_oauth().account_links_list(Some(&query)).await?;
+// Iam oauth scan Login Settings retrieve.
+let result = client.iam_oauth().scan_login_settings_retrieve().await?;
 println!("{result:?}");
 ```
 

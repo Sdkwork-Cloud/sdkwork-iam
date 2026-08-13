@@ -45,6 +45,7 @@ pub struct TenantApplicationProvisionCommand {
     pub instance_key: String,
     pub display_name: String,
     pub environment: String,
+    pub application_type: Option<String>,
     pub primary_domain: Option<String>,
     pub access_permissions: Vec<String>,
     pub runtime_config: Value,
@@ -77,6 +78,7 @@ pub struct RegisteredApplicationTemplate {
     pub app_key: String,
     pub name: String,
     pub package_name: Option<String>,
+    pub app_type: String,
     pub version: String,
     pub default_access_permissions: Vec<String>,
 }
@@ -92,6 +94,7 @@ pub struct TenantApplication {
     pub instance_key: String,
     pub display_name: String,
     pub environment: String,
+    pub application_type: String,
     pub status: String,
     pub primary_domain: Option<String>,
     pub access_permissions: Vec<String>,
@@ -182,10 +185,10 @@ pub async fn ensure_platform_tenant_application(
     .await?;
     sqlx::query(
         "INSERT INTO iam_tenant_application (id, app_id, tenant_id, organization_id, template_id, \
-         template_version, instance_key, display_name, environment, status, primary_domain, \
-         domain_config_json, access_permissions_json, runtime_config_json, provisioned_at, activated_at, \
-         created_at, updated_at) \
-         VALUES ($1, $2, $3, '0', $4, '1.0.0', 'default', 'SDKWork Platform', 'prod', 'enabled', $5, \
+         template_version, instance_key, display_name, environment, application_type, status, \
+         primary_domain, domain_config_json, access_permissions_json, runtime_config_json, \
+         provisioned_at, activated_at, created_at, updated_at) \
+         VALUES ($1, $2, $3, '0', $4, '1.0.0', 'default', 'SDKWork Platform', 'prod', 'pc', 'enabled', $5, \
          '{}'::jsonb, '[\"iam:self\"]'::jsonb, '{}'::jsonb, $6, $6, $6, $6) \
          ON CONFLICT (id) DO UPDATE SET app_id = EXCLUDED.app_id, status = 'enabled', primary_domain = EXCLUDED.primary_domain, \
          access_permissions_json = EXCLUDED.access_permissions_json, activated_at = EXCLUDED.activated_at, updated_at = EXCLUDED.updated_at",
@@ -293,6 +296,7 @@ pub fn parse_tenant_application_provision_command(
     let display_name = read_optional_string(body, &["displayName", "display_name"])
         .unwrap_or_else(|| instance_key.clone());
     let environment = read_required_string(body, &["environment", "env"])?;
+    let application_type = read_optional_string(body, &["applicationType", "application_type"]);
     let primary_domain = read_optional_string(body, &["primaryDomain", "primary_domain", "domain"]);
     let access_permissions = read_string_array(
         body,
@@ -319,6 +323,7 @@ pub fn parse_tenant_application_provision_command(
         instance_key,
         display_name,
         environment,
+        application_type,
         primary_domain,
         access_permissions,
         runtime_config,
@@ -433,6 +438,29 @@ pub async fn register_application_template(
         .ok_or_else(|| "application template register completed but lookup failed".to_string())
 }
 
+/// Product-semantic application type value domain shared by tenant
+/// application instances: `api`, `h5`, `pc`, `flutter`, and `other`.
+fn normalize_application_type(value: &str) -> String {
+    let normalized = value.trim().to_ascii_lowercase();
+    match normalized.as_str() {
+        "api" | "h5" | "pc" | "flutter" => normalized,
+        _ => "other".to_owned(),
+    }
+}
+
+/// Maps the platform template app_type (PlusProjectType) onto the
+/// product-semantic application type used by tenant application instances.
+fn map_template_app_type_to_application_type(template_app_type: &str) -> String {
+    match template_app_type.trim().to_ascii_uppercase().as_str() {
+        "APP_HTML" | "APP_H5" | "H5" => "h5",
+        "APP_FLUTTER" | "FLUTTER" => "flutter",
+        "APP_REACT" | "APP_VUE" | "APP_PC" | "PC" | "WEB" | "DESKTOP" => "pc",
+        "APP_API" | "API" | "SDK" => "api",
+        _ => "other",
+    }
+    .to_owned()
+}
+
 pub async fn provision_tenant_application(
     pg: &PgPool,
     command: &TenantApplicationProvisionCommand,
@@ -444,6 +472,11 @@ pub async fn provision_tenant_application(
     )
     .await?
     .ok_or_else(|| "registered application template was not found".to_string())?;
+
+    let application_type = match command.application_type.as_deref() {
+        Some(value) if !value.trim().is_empty() => normalize_application_type(value),
+        _ => map_template_app_type_to_application_type(&template.app_type),
+    };
 
     let access_permissions = if command.access_permissions.is_empty() {
         template.default_access_permissions.clone()
@@ -477,9 +510,9 @@ pub async fn provision_tenant_application(
     if existing.is_some() {
         sqlx::query(
             "UPDATE iam_tenant_application SET organization_id = $2, template_id = $3, \
-             template_version = $4, display_name = $5, environment = $6, primary_domain = $7, \
-             access_permissions_json = $8, runtime_config_json = $9, last_synced_at = $10, \
-             updated_at = $11 \
+             template_version = $4, display_name = $5, environment = $6, application_type = $7, \
+             primary_domain = $8, access_permissions_json = $9, runtime_config_json = $10, \
+             last_synced_at = $11, updated_at = $12 \
              WHERE id = $1",
         )
         .bind(&tenant_application_id)
@@ -488,6 +521,7 @@ pub async fn provision_tenant_application(
         .bind(&template.version)
         .bind(&command.display_name)
         .bind(&command.environment)
+        .bind(&application_type)
         .bind(&command.primary_domain)
         .bind(Json(&access_permissions))
         .bind(Json(&command.runtime_config))
@@ -499,10 +533,10 @@ pub async fn provision_tenant_application(
     } else {
         sqlx::query(
             "INSERT INTO iam_tenant_application (id, app_id, tenant_id, organization_id, template_id, \
-             template_version, instance_key, display_name, environment, status, primary_domain, \
-             domain_config_json, access_permissions_json, runtime_config_json, provisioned_at, \
-             last_synced_at, created_at, updated_at) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending_config', $10, '{}'::jsonb, $11, $12, $13, $14, $15, $16)",
+             template_version, instance_key, display_name, environment, application_type, status, \
+             primary_domain, domain_config_json, access_permissions_json, runtime_config_json, \
+             provisioned_at, last_synced_at, created_at, updated_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending_config', $11, '{}'::jsonb, $12, $13, $14, $15, $16, $17)",
         )
         .bind(&tenant_application_id)
         .bind(&runtime_app_id)
@@ -513,6 +547,7 @@ pub async fn provision_tenant_application(
         .bind(&command.instance_key)
         .bind(&command.display_name)
         .bind(&command.environment)
+        .bind(&application_type)
         .bind(&command.primary_domain)
         .bind(Json(&access_permissions))
         .bind(Json(&command.runtime_config))
@@ -942,13 +977,14 @@ async fn upsert_tenant_application_row(
     )
     .await?;
     let now = chrono::Utc::now();
+    let application_type = map_template_app_type_to_application_type(&command.app_type);
 
     sqlx::query(
         "INSERT INTO iam_tenant_application (id, app_id, tenant_id, organization_id, template_id, \
-         template_version, instance_key, display_name, environment, status, primary_domain, \
-         domain_config_json, access_permissions_json, runtime_config_json, provisioned_at, \
-         last_synced_at, created_at, updated_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending_config', $10, '{}'::jsonb, $11, '{}'::jsonb, $12, $13, $14, $15) \
+         template_version, instance_key, display_name, environment, application_type, status, \
+         primary_domain, domain_config_json, access_permissions_json, runtime_config_json, \
+         provisioned_at, last_synced_at, created_at, updated_at) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending_config', $11, '{}'::jsonb, $12, '{}'::jsonb, $13, $14, $15, $16) \
          ON CONFLICT (id) DO UPDATE SET \
            app_id = EXCLUDED.app_id, \
            tenant_id = EXCLUDED.tenant_id, \
@@ -958,6 +994,7 @@ async fn upsert_tenant_application_row(
            instance_key = EXCLUDED.instance_key, \
            display_name = EXCLUDED.display_name, \
            environment = EXCLUDED.environment, \
+           application_type = EXCLUDED.application_type, \
            primary_domain = EXCLUDED.primary_domain, \
            access_permissions_json = EXCLUDED.access_permissions_json, \
            last_synced_at = EXCLUDED.last_synced_at, \
@@ -972,6 +1009,7 @@ async fn upsert_tenant_application_row(
     .bind(&command.instance_key)
     .bind(&command.display_name)
     .bind(&command.environment)
+    .bind(&application_type)
     .bind(&primary_domain)
     .bind(Json(&command.default_access_permissions))
     .bind(now)
@@ -1154,7 +1192,7 @@ pub async fn resolve_tenant_application(
     let row = if let Some(id) = tenant_application_id.filter(|value| !crate::is_blank(Some(value))) {
         sqlx::query(
             "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
-                    instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json \
+                    instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json, application_type \
              FROM iam_tenant_application \
              WHERE tenant_id = $1 AND id = $2 \
              LIMIT 1",
@@ -1166,7 +1204,7 @@ pub async fn resolve_tenant_application(
     } else if let Some(app_id) = runtime_app_id.filter(|value| !crate::is_blank(Some(value))) {
         sqlx::query(
             "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
-                    instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json \
+                    instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json, application_type \
              FROM iam_tenant_application \
              WHERE tenant_id = $1 AND app_id = $2 \
              LIMIT 1",
@@ -1178,7 +1216,7 @@ pub async fn resolve_tenant_application(
     } else if let Some(key) = instance_key.filter(|value| !crate::is_blank(Some(value))) {
         sqlx::query(
             "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
-                    instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json \
+                    instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json, application_type \
              FROM iam_tenant_application \
              WHERE tenant_id = $1 AND instance_key = $2 \
              LIMIT 1",
@@ -1246,6 +1284,7 @@ pub fn tenant_application_to_json(app: &TenantApplication) -> Value {
         "instanceKey": app.instance_key,
         "displayName": app.display_name,
         "environment": app.environment,
+        "applicationType": app.application_type,
         "status": app.status,
         "primaryDomain": app.primary_domain,
         "accessPermissions": app.access_permissions,
@@ -1272,7 +1311,7 @@ async fn resolve_template_reference(
 ) -> Result<Option<RegisteredApplicationTemplate>, String> {
     if let Some(template_id) = template_id.filter(|value| !crate::is_blank(Some(value))) {
         let row = sqlx::query(
-            "SELECT id, app_key, name, package_name, version, default_access_permissions_json \
+            "SELECT id, app_key, name, package_name, app_type, version, default_access_permissions_json \
              FROM iam_application_template WHERE id = $1 AND status = 'active' LIMIT 1",
         )
         .bind(template_id)
@@ -1294,7 +1333,7 @@ async fn find_template_by_app_key(
     app_key: &str,
 ) -> Result<Option<RegisteredApplicationTemplate>, String> {
     let row = sqlx::query(
-        "SELECT id, app_key, name, package_name, version, default_access_permissions_json \
+        "SELECT id, app_key, name, package_name, app_type, version, default_access_permissions_json \
          FROM iam_application_template WHERE app_key = $1 AND status = 'active' LIMIT 1",
     )
     .bind(app_key)
@@ -1309,7 +1348,7 @@ async fn find_template_by_app_key_any_status(
     app_key: &str,
 ) -> Result<Option<RegisteredApplicationTemplate>, String> {
     let row = sqlx::query(
-        "SELECT id, app_key, name, package_name, version, default_access_permissions_json \
+        "SELECT id, app_key, name, package_name, app_type, version, default_access_permissions_json \
          FROM iam_application_template WHERE app_key = $1 LIMIT 1",
     )
     .bind(app_key)
@@ -1334,7 +1373,7 @@ async fn find_tenant_application_by_runtime_app_id(
 ) -> Result<Option<TenantApplication>, String> {
     let row = sqlx::query(
         "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
-                instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json \
+                instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json, application_type \
          FROM iam_tenant_application \
          WHERE tenant_id = $1 AND app_id = $2 \
          ORDER BY updated_at DESC NULLS LAST, id ASC \
@@ -1356,7 +1395,7 @@ async fn find_tenant_application_by_organization_template(
 ) -> Result<Option<TenantApplication>, String> {
     let row = sqlx::query(
         "SELECT id, app_id, tenant_id, organization_id, template_id, template_version, \
-                instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json \
+                instance_key, display_name, environment, status, primary_domain, access_permissions_json, runtime_config_json, application_type \
          FROM iam_tenant_application \
          WHERE tenant_id = $1 AND organization_id = $2 AND template_id = $3 \
          ORDER BY \
@@ -1556,8 +1595,9 @@ fn map_template_row(row: sqlx::postgres::PgRow) -> RegisteredApplicationTemplate
         app_key: row.get(1),
         name: row.get(2),
         package_name: row.get(3),
-        version: row.get(4),
-        default_access_permissions: json_string_vec_from_row(&row, 5),
+        app_type: row.get(4),
+        version: row.get(5),
+        default_access_permissions: json_string_vec_from_row(&row, 6),
     }
 }
 
@@ -1576,6 +1616,7 @@ fn map_tenant_application_row(row: sqlx::postgres::PgRow) -> TenantApplication {
         primary_domain: row.get(10),
         access_permissions: json_string_vec_from_row(&row, 11),
         runtime_config: json_value_from_row(&row, 12),
+        application_type: row.get(13),
     }
 }
 

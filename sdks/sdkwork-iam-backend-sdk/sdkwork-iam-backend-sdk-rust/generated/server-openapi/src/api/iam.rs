@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
+use reqwest::Method;
+
 use crate::api::paths::backend_path;
 use crate::api::paths::append_query_string;
 use crate::http::{SdkworkError, SdkworkHttpClient};
-use crate::models::{AppbaseAccessCredentialCreateCommand, AppbaseApplicationRegisterCommand, AppbaseTenantApplicationEnableCommand, AppbaseTenantApplicationProvisionCommand, AppbaseTenantApplicationUpdateCommand, SdkWorkCommandResponse, SdkWorkListResponse, SdkWorkResourceResponse, ServiceAccountCredentialCreateCommand, ServiceAccountCredentialRevokeCommand, ServiceAccountTokenExchangeCommand};
+use crate::models::{AppbaseAccessCredentialCreateCommand, AppbaseApplicationRegisterCommand, AppbaseTenantApplicationEnableCommand, AppbaseTenantApplicationProvisionCommand, AppbaseTenantApplicationUpdateCommand, IamTenantApplicationManagementProvisionCommand, IamTenantApplicationManagementUpdateCommand, IamTenantApplicationStatusCommand, SdkWorkCommandData, SdkWorkPageData, ServiceAccountCredentialCreateCommand, ServiceAccountCredentialRevokeCommand, ServiceAccountTokenExchangeCommand};
 
 #[derive(Clone)]
 pub struct IamApi {
@@ -16,25 +18,25 @@ impl IamApi {
     }
 
     /// Access Credentials create.
-    pub async fn access_credentials_create(&self, body: &AppbaseAccessCredentialCreateCommand) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn access_credentials_create(&self, body: &AppbaseAccessCredentialCreateCommand) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/access_credentials".to_string());
-        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true, false).await
     }
 
     /// Account Binding Policy retrieve.
-    pub async fn account_binding_policy_retrieve(&self) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn account_binding_policy_retrieve(&self) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/account_binding_policy".to_string());
         self.client.get(&path, None, None).await
     }
 
     /// Account Binding Policy update.
-    pub async fn account_binding_policy_update(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn account_binding_policy_update(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/account_binding_policy".to_string());
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Api Keys list.
-    pub async fn api_keys_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn api_keys_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -47,19 +49,19 @@ impl IamApi {
     }
 
     /// Api Keys revoke.
-    pub async fn api_keys_revoke(&self, api_key_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkCommandResponse, SdkworkError> {
+    pub async fn api_keys_revoke(&self, api_key_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkCommandData, SdkworkError> {
         let path = backend_path(&format!("/iam/api_keys/{}/revoke", serialize_path_parameter(api_key_id, PathParameterSpec::new("apiKeyId", "simple", false))));
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Applications register.
-    pub async fn applications_register(&self, body: &AppbaseApplicationRegisterCommand) -> Result<SdkWorkCommandResponse, SdkworkError> {
+    pub async fn applications_register(&self, body: &AppbaseApplicationRegisterCommand) -> Result<SdkWorkCommandData, SdkworkError> {
         let path = backend_path(&"/iam/applications/register".to_string());
-        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true, false).await
     }
 
     /// Audit Events list.
-    pub async fn audit_events_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn audit_events_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -72,13 +74,13 @@ impl IamApi {
     }
 
     /// Audit Events retrieve.
-    pub async fn audit_events_retrieve(&self, audit_event_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn audit_events_retrieve(&self, audit_event_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/audit_events/{}", serialize_path_parameter(audit_event_id, PathParameterSpec::new("auditEventId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Department Assignments list.
-    pub async fn department_assignments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn department_assignments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -91,19 +93,19 @@ impl IamApi {
     }
 
     /// Department Assignments create.
-    pub async fn department_assignments_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn department_assignments_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/department_assignments".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Department Assignments update.
-    pub async fn department_assignments_update(&self, assignment_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn department_assignments_update(&self, assignment_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/department_assignments/{}", serialize_path_parameter(assignment_id, PathParameterSpec::new("assignmentId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Departments list.
-    pub async fn departments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn departments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -116,7 +118,7 @@ impl IamApi {
     }
 
     /// Departments create.
-    pub async fn departments_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn departments_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/departments".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -128,25 +130,25 @@ impl IamApi {
     }
 
     /// Departments retrieve.
-    pub async fn departments_retrieve(&self, department_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn departments_retrieve(&self, department_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/departments/{}", serialize_path_parameter(department_id, PathParameterSpec::new("departmentId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Departments update.
-    pub async fn departments_update(&self, department_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn departments_update(&self, department_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/departments/{}", serialize_path_parameter(department_id, PathParameterSpec::new("departmentId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Departments tree retrieve.
-    pub async fn departments_tree_retrieve(&self) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn departments_tree_retrieve(&self) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/departments/tree".to_string());
         self.client.get(&path, None, None).await
     }
 
     /// Groups list.
-    pub async fn groups_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn groups_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -159,7 +161,7 @@ impl IamApi {
     }
 
     /// Groups create.
-    pub async fn groups_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn groups_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/groups".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -171,19 +173,19 @@ impl IamApi {
     }
 
     /// Groups retrieve.
-    pub async fn groups_retrieve(&self, group_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn groups_retrieve(&self, group_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/groups/{}", serialize_path_parameter(group_id, PathParameterSpec::new("groupId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Groups update.
-    pub async fn groups_update(&self, group_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn groups_update(&self, group_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/groups/{}", serialize_path_parameter(group_id, PathParameterSpec::new("groupId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Groups members list.
-    pub async fn groups_members_list(&self, group_id: &str, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn groups_members_list(&self, group_id: &str, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -196,7 +198,7 @@ impl IamApi {
     }
 
     /// Groups members create.
-    pub async fn groups_members_create(&self, group_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn groups_members_create(&self, group_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/groups/{}/members", serialize_path_parameter(group_id, PathParameterSpec::new("groupId", "simple", false))));
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -208,7 +210,7 @@ impl IamApi {
     }
 
     /// Organization Memberships list.
-    pub async fn organization_memberships_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn organization_memberships_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -221,19 +223,19 @@ impl IamApi {
     }
 
     /// Organization Memberships create.
-    pub async fn organization_memberships_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn organization_memberships_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/organization_memberships".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Organization Memberships update.
-    pub async fn organization_memberships_update(&self, membership_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn organization_memberships_update(&self, membership_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/organization_memberships/{}", serialize_path_parameter(membership_id, PathParameterSpec::new("membershipId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Organizations list.
-    pub async fn organizations_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn organizations_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -246,7 +248,7 @@ impl IamApi {
     }
 
     /// Organizations create.
-    pub async fn organizations_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn organizations_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/organizations".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -258,25 +260,25 @@ impl IamApi {
     }
 
     /// Organizations retrieve.
-    pub async fn organizations_retrieve(&self, organization_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn organizations_retrieve(&self, organization_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/organizations/{}", serialize_path_parameter(organization_id, PathParameterSpec::new("organizationId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Organizations update.
-    pub async fn organizations_update(&self, organization_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn organizations_update(&self, organization_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/organizations/{}", serialize_path_parameter(organization_id, PathParameterSpec::new("organizationId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Organizations tree retrieve.
-    pub async fn organizations_tree_retrieve(&self) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn organizations_tree_retrieve(&self) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/organizations/tree".to_string());
         self.client.get(&path, None, None).await
     }
 
     /// Permissions list.
-    pub async fn permissions_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn permissions_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -289,7 +291,7 @@ impl IamApi {
     }
 
     /// Permissions create.
-    pub async fn permissions_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn permissions_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/permissions".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -301,19 +303,19 @@ impl IamApi {
     }
 
     /// Permissions retrieve.
-    pub async fn permissions_retrieve(&self, permission_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn permissions_retrieve(&self, permission_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/permissions/{}", serialize_path_parameter(permission_id, PathParameterSpec::new("permissionId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Permissions update.
-    pub async fn permissions_update(&self, permission_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn permissions_update(&self, permission_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/permissions/{}", serialize_path_parameter(permission_id, PathParameterSpec::new("permissionId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Policies list.
-    pub async fn policies_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn policies_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -326,7 +328,7 @@ impl IamApi {
     }
 
     /// Policies create.
-    pub async fn policies_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn policies_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/policies".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -338,19 +340,19 @@ impl IamApi {
     }
 
     /// Policies retrieve.
-    pub async fn policies_retrieve(&self, policy_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn policies_retrieve(&self, policy_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/policies/{}", serialize_path_parameter(policy_id, PathParameterSpec::new("policyId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Policies update.
-    pub async fn policies_update(&self, policy_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn policies_update(&self, policy_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/policies/{}", serialize_path_parameter(policy_id, PathParameterSpec::new("policyId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Position Assignments list.
-    pub async fn position_assignments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn position_assignments_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -363,19 +365,19 @@ impl IamApi {
     }
 
     /// Position Assignments create.
-    pub async fn position_assignments_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn position_assignments_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/position_assignments".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Position Assignments update.
-    pub async fn position_assignments_update(&self, assignment_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn position_assignments_update(&self, assignment_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/position_assignments/{}", serialize_path_parameter(assignment_id, PathParameterSpec::new("assignmentId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Positions list.
-    pub async fn positions_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn positions_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -388,7 +390,7 @@ impl IamApi {
     }
 
     /// Positions create.
-    pub async fn positions_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn positions_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/positions".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -400,26 +402,31 @@ impl IamApi {
     }
 
     /// Positions update.
-    pub async fn positions_update(&self, position_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn positions_update(&self, position_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/positions/{}", serialize_path_parameter(position_id, PathParameterSpec::new("positionId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Role Bindings list.
-    pub async fn role_bindings_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn role_bindings_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>, role_id: Option<&str>, principal_kind: Option<&str>, principal_id: Option<&str>, scope_kind: Option<&str>, scope_id: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
             QueryParameterSpec::new("cursor", cursor, "form", true, false, None),
             QueryParameterSpec::new("sort", sort, "form", true, false, None),
             QueryParameterSpec::new("q", q, "form", true, false, None),
+            QueryParameterSpec::new("roleId", role_id, "form", true, false, None),
+            QueryParameterSpec::new("principalKind", principal_kind, "form", true, false, None),
+            QueryParameterSpec::new("principalId", principal_id, "form", true, false, None),
+            QueryParameterSpec::new("scopeKind", scope_kind, "form", true, false, None),
+            QueryParameterSpec::new("scopeId", scope_id, "form", true, false, None),
         ]);
         let path = append_query_string(backend_path(&"/iam/role_bindings".to_string()), &query);
         self.client.get(&path, None, None).await
     }
 
     /// Role Bindings create.
-    pub async fn role_bindings_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn role_bindings_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/role_bindings".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -431,7 +438,7 @@ impl IamApi {
     }
 
     /// Roles list.
-    pub async fn roles_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn roles_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -444,7 +451,7 @@ impl IamApi {
     }
 
     /// Roles create.
-    pub async fn roles_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn roles_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/roles".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -456,19 +463,19 @@ impl IamApi {
     }
 
     /// Roles retrieve.
-    pub async fn roles_retrieve(&self, role_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn roles_retrieve(&self, role_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/roles/{}", serialize_path_parameter(role_id, PathParameterSpec::new("roleId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Roles update.
-    pub async fn roles_update(&self, role_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn roles_update(&self, role_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/roles/{}", serialize_path_parameter(role_id, PathParameterSpec::new("roleId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Roles permissions list.
-    pub async fn roles_permissions_list(&self, role_id: &str, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn roles_permissions_list(&self, role_id: &str, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -481,7 +488,7 @@ impl IamApi {
     }
 
     /// Roles permissions create.
-    pub async fn roles_permissions_create(&self, role_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn roles_permissions_create(&self, role_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/roles/{}/permissions", serialize_path_parameter(role_id, PathParameterSpec::new("roleId", "simple", false))));
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -493,7 +500,7 @@ impl IamApi {
     }
 
     /// Security Events list.
-    pub async fn security_events_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn security_events_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -506,25 +513,25 @@ impl IamApi {
     }
 
     /// Security Events retrieve.
-    pub async fn security_events_retrieve(&self, security_event_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn security_events_retrieve(&self, security_event_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/security_events/{}", serialize_path_parameter(security_event_id, PathParameterSpec::new("securityEventId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Service Account Credentials revoke.
-    pub async fn service_account_credentials_revoke(&self, credential_id: &str, body: &ServiceAccountCredentialRevokeCommand) -> Result<SdkWorkCommandResponse, SdkworkError> {
+    pub async fn service_account_credentials_revoke(&self, credential_id: &str, body: &ServiceAccountCredentialRevokeCommand) -> Result<SdkWorkCommandData, SdkworkError> {
         let path = backend_path(&format!("/iam/service_account_credentials/{}/revoke", serialize_path_parameter(credential_id, PathParameterSpec::new("credentialId", "simple", false))));
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Service Account Tokens create.
-    pub async fn service_account_tokens_create(&self, body: &ServiceAccountTokenExchangeCommand) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn service_account_tokens_create(&self, body: &ServiceAccountTokenExchangeCommand) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/service_account_tokens".to_string());
-        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true, false).await
     }
 
     /// Service Accounts list.
-    pub async fn service_accounts_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn service_accounts_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -537,7 +544,7 @@ impl IamApi {
     }
 
     /// Service Accounts create.
-    pub async fn service_accounts_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn service_accounts_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/service_accounts".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -549,49 +556,49 @@ impl IamApi {
     }
 
     /// Service Accounts retrieve.
-    pub async fn service_accounts_retrieve(&self, service_account_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn service_accounts_retrieve(&self, service_account_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/service_accounts/{}", serialize_path_parameter(service_account_id, PathParameterSpec::new("serviceAccountId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Service Accounts update.
-    pub async fn service_accounts_update(&self, service_account_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn service_accounts_update(&self, service_account_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/service_accounts/{}", serialize_path_parameter(service_account_id, PathParameterSpec::new("serviceAccountId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Service Accounts credentials create.
-    pub async fn service_accounts_credentials_create(&self, service_account_id: &str, body: &ServiceAccountCredentialCreateCommand) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn service_accounts_credentials_create(&self, service_account_id: &str, body: &ServiceAccountCredentialCreateCommand) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/service_accounts/{}/credentials", serialize_path_parameter(service_account_id, PathParameterSpec::new("serviceAccountId", "simple", false))));
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Tenant Applications create.
-    pub async fn tenant_applications_create(&self, body: &AppbaseTenantApplicationProvisionCommand) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn tenant_applications_create(&self, body: &AppbaseTenantApplicationProvisionCommand) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/tenant_applications".to_string());
-        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true, false).await
     }
 
     /// Tenant Applications retrieve.
-    pub async fn tenant_applications_retrieve(&self, tenant_application_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn tenant_applications_retrieve(&self, tenant_application_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/tenant_applications/{}", serialize_path_parameter(tenant_application_id, PathParameterSpec::new("tenantApplicationId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Tenant Applications update.
-    pub async fn tenant_applications_update(&self, tenant_application_id: &str, body: &AppbaseTenantApplicationUpdateCommand) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn tenant_applications_update(&self, tenant_application_id: &str, body: &AppbaseTenantApplicationUpdateCommand) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/tenant_applications/{}", serialize_path_parameter(tenant_application_id, PathParameterSpec::new("tenantApplicationId", "simple", false))));
-        self.client.patch(&path, Some(body), None, None, Some("application/json")).await
+        self.client.request_method(Method::PATCH, &path, Some(body), None, None, Some("application/json"), true, false).await
     }
 
     /// Tenant Applications enable.
-    pub async fn tenant_applications_enable(&self, tenant_application_id: &str, body: &AppbaseTenantApplicationEnableCommand) -> Result<SdkWorkCommandResponse, SdkworkError> {
+    pub async fn tenant_applications_enable(&self, tenant_application_id: &str, body: &AppbaseTenantApplicationEnableCommand) -> Result<SdkWorkCommandData, SdkworkError> {
         let path = backend_path(&format!("/iam/tenant_applications/{}/enable", serialize_path_parameter(tenant_application_id, PathParameterSpec::new("tenantApplicationId", "simple", false))));
-        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+        self.client.request_method(Method::POST, &path, Some(body), None, None, Some("application/json"), true, false).await
     }
 
     /// Tenants list.
-    pub async fn tenants_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn tenants_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -604,7 +611,7 @@ impl IamApi {
     }
 
     /// Tenants create.
-    pub async fn tenants_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn tenants_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/tenants".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -616,19 +623,65 @@ impl IamApi {
     }
 
     /// Tenants retrieve.
-    pub async fn tenants_retrieve(&self, tenant_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn tenants_retrieve(&self, tenant_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/tenants/{}", serialize_path_parameter(tenant_id, PathParameterSpec::new("tenantId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Tenants update.
-    pub async fn tenants_update(&self, tenant_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn tenants_update(&self, tenant_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/tenants/{}", serialize_path_parameter(tenant_id, PathParameterSpec::new("tenantId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
+    /// Tenant Applications list.
+    pub async fn tenant_applications_list(&self, tenant_id: &str, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>, status: Option<&str>, environment: Option<&str>, application_type: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
+        let query = build_query_string(&[
+            QueryParameterSpec::new("page", page, "form", true, false, None),
+            QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
+            QueryParameterSpec::new("cursor", cursor, "form", true, false, None),
+            QueryParameterSpec::new("sort", sort, "form", true, false, None),
+            QueryParameterSpec::new("q", q, "form", true, false, None),
+            QueryParameterSpec::new("status", status, "form", true, false, None),
+            QueryParameterSpec::new("environment", environment, "form", true, false, None),
+            QueryParameterSpec::new("application_type", application_type, "form", true, false, None),
+        ]);
+        let path = append_query_string(backend_path(&format!("/iam/tenants/{}/applications", serialize_path_parameter(tenant_id, PathParameterSpec::new("tenantId", "simple", false)))), &query);
+        self.client.get(&path, None, None).await
+    }
+
+    /// Tenant Applications management create.
+    pub async fn tenant_applications_management_create(&self, tenant_id: &str, body: &IamTenantApplicationManagementProvisionCommand) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
+        let path = backend_path(&format!("/iam/tenants/{}/applications", serialize_path_parameter(tenant_id, PathParameterSpec::new("tenantId", "simple", false))));
+        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+    }
+
+    /// Tenant Applications management update.
+    pub async fn tenant_applications_management_update(&self, tenant_id: &str, tenant_application_id: &str, body: &IamTenantApplicationManagementUpdateCommand) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
+        let path = backend_path(&format!("/iam/tenants/{}/applications/{}", serialize_path_parameter(tenant_id, PathParameterSpec::new("tenantId", "simple", false)), serialize_path_parameter(tenant_application_id, PathParameterSpec::new("tenantApplicationId", "simple", false))));
+        self.client.patch(&path, Some(body), None, None, Some("application/json")).await
+    }
+
+    /// Tenant Applications management disable.
+    pub async fn tenant_applications_management_disable(&self, tenant_id: &str, tenant_application_id: &str, body: &IamTenantApplicationStatusCommand) -> Result<SdkWorkCommandData, SdkworkError> {
+        let path = backend_path(&format!("/iam/tenants/{}/applications/{}/disable", serialize_path_parameter(tenant_id, PathParameterSpec::new("tenantId", "simple", false)), serialize_path_parameter(tenant_application_id, PathParameterSpec::new("tenantApplicationId", "simple", false))));
+        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+    }
+
+    /// Tenant Applications management enable.
+    pub async fn tenant_applications_management_enable(&self, tenant_id: &str, tenant_application_id: &str, body: &IamTenantApplicationStatusCommand) -> Result<SdkWorkCommandData, SdkworkError> {
+        let path = backend_path(&format!("/iam/tenants/{}/applications/{}/enable", serialize_path_parameter(tenant_id, PathParameterSpec::new("tenantId", "simple", false)), serialize_path_parameter(tenant_application_id, PathParameterSpec::new("tenantApplicationId", "simple", false))));
+        self.client.post(&path, Some(body), None, None, Some("application/json")).await
+    }
+
+    /// Tenant Applications summary retrieve.
+    pub async fn tenant_applications_summary_retrieve(&self, tenant_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
+        let path = backend_path(&format!("/iam/tenants/{}/applications/summary", serialize_path_parameter(tenant_id, PathParameterSpec::new("tenantId", "simple", false))));
+        self.client.get(&path, None, None).await
+    }
+
     /// Tenants members list.
-    pub async fn tenants_members_list(&self, tenant_id: &str, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn tenants_members_list(&self, tenant_id: &str, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -641,7 +694,7 @@ impl IamApi {
     }
 
     /// Tenants members create.
-    pub async fn tenants_members_create(&self, tenant_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn tenants_members_create(&self, tenant_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/tenants/{}/members", serialize_path_parameter(tenant_id, PathParameterSpec::new("tenantId", "simple", false))));
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -653,13 +706,13 @@ impl IamApi {
     }
 
     /// Tenants members update.
-    pub async fn tenants_members_update(&self, tenant_id: &str, user_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn tenants_members_update(&self, tenant_id: &str, user_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/tenants/{}/members/{}", serialize_path_parameter(tenant_id, PathParameterSpec::new("tenantId", "simple", false)), serialize_path_parameter(user_id, PathParameterSpec::new("userId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }
 
     /// Users list.
-    pub async fn users_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkListResponse, SdkworkError> {
+    pub async fn users_list(&self, page: Option<i64>, page_size: Option<i64>, cursor: Option<&str>, sort: Option<&str>, q: Option<&str>) -> Result<SdkWorkPageData, SdkworkError> {
         let query = build_query_string(&[
             QueryParameterSpec::new("page", page, "form", true, false, None),
             QueryParameterSpec::new("page_size", page_size, "form", true, false, None),
@@ -672,7 +725,7 @@ impl IamApi {
     }
 
     /// Users create.
-    pub async fn users_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn users_create(&self, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&"/iam/users".to_string());
         self.client.post(&path, Some(body), None, None, Some("application/json")).await
     }
@@ -684,13 +737,13 @@ impl IamApi {
     }
 
     /// Users retrieve.
-    pub async fn users_retrieve(&self, user_id: &str) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn users_retrieve(&self, user_id: &str) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/users/{}", serialize_path_parameter(user_id, PathParameterSpec::new("userId", "simple", false))));
         self.client.get(&path, None, None).await
     }
 
     /// Users update.
-    pub async fn users_update(&self, user_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<SdkWorkResourceResponse, SdkworkError> {
+    pub async fn users_update(&self, user_id: &str, body: &std::collections::HashMap<String, serde_json::Value>) -> Result<std::collections::HashMap<String, serde_json::Value>, SdkworkError> {
         let path = backend_path(&format!("/iam/users/{}", serialize_path_parameter(user_id, PathParameterSpec::new("userId", "simple", false))));
         self.client.patch(&path, Some(body), None, None, Some("application/json")).await
     }

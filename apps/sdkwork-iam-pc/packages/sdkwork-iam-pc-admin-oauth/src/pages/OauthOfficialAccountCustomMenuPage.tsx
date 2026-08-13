@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { StatusNotice } from "@sdkwork/ui-pc-react";
 
@@ -16,6 +16,8 @@ interface CustomMenuNotice {
   tone: "success" | "warning" | "danger" | "default";
 }
 
+type CustomMenuPendingAction = "saving" | "publishing";
+
 /**
  * Standalone custom menu management page for one official account.
  *
@@ -28,18 +30,23 @@ interface CustomMenuNotice {
  */
 export function SdkworkIamOauthOfficialAccountCustomMenuPage({
   controller,
-  onBack,
+  onBusyChange,
+  onDirtyChange,
+  onClose,
   resourceAccountId,
 }: {
   controller: SdkworkIamOauthAdminController;
-  onBack?: () => void;
+  onBusyChange?: (busy: boolean) => void;
+  onDirtyChange?: (dirty: boolean) => void;
+  onClose?: () => void;
   resourceAccountId: string;
 }) {
   const messages = useSdkworkIamOauthAdminMessages();
   const [context, setContext] = useState<SdkworkIamOauthCustomMenuContext | undefined>();
   const [loadError, setLoadError] = useState<string | undefined>();
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<CustomMenuPendingAction | undefined>();
   const [notice, setNotice] = useState<CustomMenuNotice | undefined>();
+  const actionInFlight = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,8 +68,16 @@ export function SdkworkIamOauthOfficialAccountCustomMenuPage({
     };
   }, [controller, messages.quickSetup.customMenus.loadFailed, resourceAccountId]);
 
-  const runSaving = useCallback(async (action: () => Promise<unknown>): Promise<boolean> => {
-    setBusy(true);
+  const runSaving = useCallback(async (
+    pendingAction: CustomMenuPendingAction,
+    action: () => Promise<unknown>,
+  ): Promise<boolean> => {
+    if (actionInFlight.current) {
+      return false;
+    }
+    actionInFlight.current = true;
+    setBusy(pendingAction);
+    onBusyChange?.(true);
     setNotice(undefined);
     try {
       await action();
@@ -74,48 +89,79 @@ export function SdkworkIamOauthOfficialAccountCustomMenuPage({
       });
       return false;
     } finally {
-      setBusy(false);
+      actionInFlight.current = false;
+      setBusy(undefined);
+      onBusyChange?.(false);
     }
-  }, [messages.quickSetup.customMenus.loadFailed]);
+  }, [messages.quickSetup.customMenus.loadFailed, onBusyChange]);
 
-  const handleSaveDraft = useCallback((draft: SdkworkIamOauthCustomMenuDraft) => {
-    void runSaving(() => controller.saveAccountCustomMenu(resourceAccountId, draft))
-      .then((ok) => {
-        if (ok) {
-          setNotice({ tone: "success", text: messages.quickSetup.customMenus.saved });
-        }
-      });
+  const handleSaveDraft = useCallback(async (
+    draft: SdkworkIamOauthCustomMenuDraft,
+  ): Promise<SdkworkIamOauthCustomMenuDraft | undefined> => {
+    let refreshed: SdkworkIamOauthCustomMenuContext | undefined;
+    const ok = await runSaving("saving", async () => {
+      refreshed = await controller.saveAccountCustomMenu(resourceAccountId, draft);
+    });
+    if (ok) {
+      setNotice({ tone: "success", text: messages.quickSetup.customMenus.saved });
+    }
+    return ok ? refreshed?.draft : undefined;
   }, [controller, messages.quickSetup.customMenus.saved, resourceAccountId, runSaving]);
 
-  const handlePublish = useCallback(async (draft: SdkworkIamOauthCustomMenuDraft) => {
-    setBusy(true);
+  const handlePublish = useCallback(async (
+    draft: SdkworkIamOauthCustomMenuDraft,
+  ): Promise<SdkworkIamOauthCustomMenuDraft | undefined> => {
+    if (actionInFlight.current) {
+      return undefined;
+    }
+    actionInFlight.current = true;
+    setBusy("publishing");
+    onBusyChange?.(true);
     setNotice(undefined);
-    const result = await controller.publishAccountCustomMenu(resourceAccountId, draft);
-    setBusy(false);
-    if (result.published) {
-      setNotice({ tone: "success", text: messages.quickSetup.customMenus.publishSuccess });
-    } else if (result.reason === "backend_unavailable") {
-      setNotice({ tone: "default", text: messages.quickSetup.customMenus.publishUnavailable });
-    } else {
+    try {
+      const result = await controller.publishAccountCustomMenu(resourceAccountId, draft);
+      if (result.published) {
+        setNotice({ tone: "success", text: messages.quickSetup.customMenus.publishSuccess });
+      } else if (result.reason === "backend_unavailable") {
+        setNotice({ tone: "default", text: messages.quickSetup.customMenus.publishUnavailable });
+      } else {
+        setNotice({
+          tone: "danger",
+          text: templateMessage(messages.quickSetup.customMenus.publishFailedTemplate, {
+            message: result.errorMessage ?? "",
+          }),
+        });
+      }
+      return result.saved ? result.context?.draft ?? draft : undefined;
+    } catch (error) {
       setNotice({
         tone: "danger",
-        text: templateMessage(messages.quickSetup.customMenus.publishFailedTemplate, {
-          message: result.errorMessage ?? "",
-        }),
+        text: error instanceof Error ? error.message : messages.quickSetup.customMenus.loadFailed,
       });
+      return undefined;
+    } finally {
+      actionInFlight.current = false;
+      setBusy(undefined);
+      onBusyChange?.(false);
     }
-  }, [controller, messages.quickSetup.customMenus, resourceAccountId]);
+  }, [controller, messages.quickSetup.customMenus, onBusyChange, resourceAccountId]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
-      {loadError ? <StatusNotice tone="danger">{loadError}</StatusNotice> : null}
-      {notice ? <StatusNotice tone={notice.tone}>{notice.text}</StatusNotice> : null}
+    <div className="relative flex h-full min-h-0 flex-col">
+      {loadError || notice ? (
+        <div className="pointer-events-none absolute left-1/2 top-[5.5rem] z-40 w-[min(90%,38rem)] -translate-x-1/2 shadow-lg">
+          {loadError ? <StatusNotice tone="danger">{loadError}</StatusNotice> : null}
+          {notice ? <StatusNotice tone={notice.tone}>{notice.text}</StatusNotice> : null}
+        </div>
+      ) : null}
       <SdkworkIamOauthCustomMenuManagementSection
+        key={resourceAccountId}
         busy={busy}
         context={context}
         messages={messages.quickSetup.customMenus}
-        onBack={onBack}
-        onPublish={(draft) => { void handlePublish(draft); }}
+        onDirtyChange={onDirtyChange}
+        onClose={onClose}
+        onPublish={handlePublish}
         onSaveDraft={handleSaveDraft}
       />
     </div>

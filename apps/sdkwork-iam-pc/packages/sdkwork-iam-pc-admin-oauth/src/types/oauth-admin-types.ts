@@ -351,10 +351,11 @@ export interface SdkworkIamOauthAccountFollowQrCode {
 
 /**
  * Action kinds supported for official account custom menu buttons, aligned
- * with the WeChat custom menu API button types: `click` (reply a text
- * message), `view` (jump to a web URL) and `miniprogram` (jump into a mini
- * program). Sub-menus cannot carry actions of their own on WeChat, so every
- * nested button stores its action on the leaf.
+ * with the editable WeChat custom menu API button types: `click` (push an
+ * EventKey to the configured server callback), `view` (jump to a web URL)
+ * and `miniprogram` (jump into a mini program). Sub-menus cannot carry
+ * actions of their own on WeChat, so every nested button stores its action
+ * on the leaf.
  */
 export type SdkworkIamOauthCustomMenuActionKind = "click" | "view" | "miniprogram";
 
@@ -372,10 +373,14 @@ export interface SdkworkIamOauthCustomMenuButton {
   url?: string;
   /** `miniprogram`: target mini program AppID. */
   appId?: string;
-  /** `miniprogram`: path inside the mini program (empty means the home page). */
+  /** `miniprogram`: required path inside the target mini program. */
   pagePath?: string;
-  /** `click`: text message content replied on tap. */
+  /** `click`: provider EventKey pushed to the server callback. */
   message?: string;
+  /** Imported WeChat action that this editor cannot publish losslessly yet. */
+  unsupportedType?: string;
+  /** Original provider payload retained until the operator converts it. */
+  providerAction?: Record<string, unknown>;
   subButtons?: SdkworkIamOauthCustomMenuButton[];
 }
 
@@ -397,6 +402,7 @@ export interface SdkworkIamOauthCustomMenuContext {
   displayName: string;
   logoUrl?: string;
   draft: SdkworkIamOauthCustomMenuDraft;
+  source?: "database" | "wechat" | "empty";
 }
 
 /**
@@ -405,6 +411,7 @@ export interface SdkworkIamOauthCustomMenuContext {
  * wired, with `reason` telling the UI which notice to render.
  */
 export interface SdkworkIamOauthCustomMenuPublishResult {
+  context?: SdkworkIamOauthCustomMenuContext;
   saved: boolean;
   published: boolean;
   reason?: "backend_unavailable" | "publish_failed";
@@ -515,7 +522,7 @@ export interface SdkworkIamOauthAdminController {
   saveAccountCustomMenu(
     resourceAccountId: string,
     draft: SdkworkIamOauthCustomMenuDraft,
-  ): Promise<unknown>;
+  ): Promise<SdkworkIamOauthCustomMenuContext>;
   publishAccountCustomMenu(
     resourceAccountId: string,
     draft: SdkworkIamOauthCustomMenuDraft,

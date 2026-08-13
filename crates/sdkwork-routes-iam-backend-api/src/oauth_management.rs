@@ -15,7 +15,10 @@ use serde_json::{json, Value};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use crate::backend_audit::{directory_create_with_audit, execute_conditional_mutation_with_audit};
+use crate::backend_audit::{
+    directory_create_with_audit, execute_conditional_mutation_with_audit,
+    record_backend_mutation_audit_tx,
+};
 use crate::backend_sql::{
     internal_handler_error, list_page_params_or_error, list_search_pattern, list_tenant_rows,
     page_json_from_rows, patch_tenant_row_tx, read_i32_field, read_string_field,
@@ -277,7 +280,7 @@ const OPERATOR_PLATFORMS: TenantResourceSpec = TenantResourceSpec {
 
 const RESOURCE_ACCOUNTS: TenantResourceSpec = TenantResourceSpec {
     table: "iam_oauth_resource_account",
-    list_select: "id, tenant_id, integration_id, provider_code, resource_account_code, resource_account_kind, display_name, provider_account_id, provider_account_type, provider_account_original_id, provider_union_scope_id, verification_status, authorization_status, domain_verify_status, webhook_verify_status, last_verified_at, provider_config_json, qr_default_enabled, status, enabled, created_at, updated_at",
+    list_select: "id, tenant_id, integration_id, oauth_client_id, provider_code, resource_account_code, resource_account_kind, display_name, provider_account_id, provider_account_type, provider_account_original_id, provider_union_scope_id, verification_status, authorization_status, domain_verify_status, webhook_verify_status, last_verified_at, provider_config_json, qr_default_enabled, status, enabled, created_at, updated_at",
     list_order: "display_name, id",
     list_error: "iam_oauth_resource_accounts_list_failed",
     create_error: "iam_oauth_resource_accounts_create_failed",
@@ -286,6 +289,7 @@ const RESOURCE_ACCOUNTS: TenantResourceSpec = TenantResourceSpec {
         "id",
         "tenant_id",
         "integration_id",
+        "oauth_client_id",
         "provider_code",
         "resource_account_code",
         "resource_account_kind",
@@ -567,6 +571,14 @@ pub fn apply_oauth_routes(router: Router<BackendIamState>) -> Router<BackendIamS
         .route(
             "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}",
             patch(update_resource_account).delete(delete_resource_account),
+        )
+        .route(
+            "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/custom_menus",
+            get(retrieve_resource_account_custom_menu).patch(update_resource_account_custom_menu),
+        )
+        .route(
+            "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/custom_menus/publish",
+            post(publish_resource_account_custom_menu),
         )
         .route(
             "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/verifications",

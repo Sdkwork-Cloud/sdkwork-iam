@@ -1370,6 +1370,7 @@ CREATE TABLE IF NOT EXISTS iam_tenant_application (
   instance_key TEXT NOT NULL,
   display_name TEXT NOT NULL,
   environment TEXT NOT NULL,
+  application_type TEXT NOT NULL DEFAULT 'other',
   status TEXT NOT NULL DEFAULT 'pending_config',
   primary_domain TEXT,
   domain_config_json JSONB NOT NULL DEFAULT '{}'::jsonb,

@@ -51,6 +51,7 @@ import {
   splitMultilineList,
   parseRelyingPartyDraftFromTenantApplication,
 } from "../utils/oauth-admin-utils";
+import { validateCustomMenuDraft } from "../utils/custom-menu-rules";
 
 function accountSetupProvider(kind: SdkworkIamOauthAccountKind): {
   providerCode: string;
@@ -1198,22 +1199,21 @@ export function createSdkworkIamOauthAdminController(
         });
     },
     async loadAccountCustomMenu(resourceAccountId) {
-      setState({ status: "saving", lastError: undefined });
+      setState({ status: "loading", lastError: undefined });
       try {
         const normalizedId = resourceAccountId.trim();
-        let row = state.resourceAccounts.find((item) => readResourceAccountId(item) === normalizedId);
-        if (!row) {
-          // The account may sit outside the currently loaded page; refresh the
-          // quick-setup lists once before falling back to an empty draft.
-          await controller.load(QUICK_SETUP_RESOURCE_KEYS);
-          row = state.resourceAccounts.find((item) => readResourceAccountId(item) === normalizedId);
+        const remote = await service.iam.oauth.resourceAccounts.customMenus.retrieve(normalizedId);
+        const remoteRecord = toRecord(remote);
+        const remoteMenu = toRecord(remoteRecord.menu);
+        if (!Array.isArray(remoteMenu.buttons)) {
+          throw new Error("Official account custom menu response is missing buttons");
         }
-        const config = row ? readAccountConfig(row) : undefined;
         setState({ status: "ready" });
         return {
-          displayName: row ? readDisplayName(row) : normalizedId,
-          logoUrl: config?.logoUrl,
-          draft: normalizeCustomMenuDraft(config?.customMenu),
+          displayName: optionalString(remoteRecord.displayName) ?? normalizedId,
+          logoUrl: optionalString(remoteRecord.logoUrl),
+          draft: normalizeCustomMenuDraft(remoteMenu),
+          source: normalizeCustomMenuSource(remoteRecord.source),
         } satisfies SdkworkIamOauthCustomMenuContext;
       } catch (error) {
         setState({
@@ -1229,28 +1229,13 @@ export function createSdkworkIamOauthAdminController(
       setState({ status: "saving", lastError: undefined });
       try {
         const normalizedId = resourceAccountId.trim();
-        let account = state.resourceAccounts.find(
-          (item) => readResourceAccountId(item) === normalizedId,
-        );
-        if (!account) {
-          // Never overwrite the provider config with a partial view: refresh
-          // the quick-setup lists before merging into the stored document.
-          await controller.load(QUICK_SETUP_RESOURCE_KEYS);
-          account = state.resourceAccounts.find(
-            (item) => readResourceAccountId(item) === normalizedId,
-          );
-        }
-        const existing = account ? readAccountConfig(account) : undefined;
-        const config = {
-          ...existing,
-          customMenu: {
-            buttons: draft.buttons.map(cloneMenuButton),
-            updatedAt: new Date().toISOString(),
-          } satisfies SdkworkIamOauthCustomMenuDraft,
-        };
-        await service.iam.oauth.resourceAccounts.update(normalizedId, { config });
-        await controller.load(QUICK_SETUP_RESOURCE_KEYS);
-        return { resourceAccountId: normalizedId };
+        const preparedDraft = prepareCustomMenuDraft(draft);
+        await service.iam.oauth.resourceAccounts.customMenus.update(normalizedId, {
+          buttons: preparedDraft.buttons,
+        });
+        const context = await controller.loadAccountCustomMenu(normalizedId);
+        setState({ status: "ready" });
+        return context;
       } catch (error) {
         setState({
           status: "error",
@@ -1264,20 +1249,41 @@ export function createSdkworkIamOauthAdminController(
     async publishAccountCustomMenu(resourceAccountId, draft) {
       setState({ status: "saving", lastError: undefined });
       const normalizedId = resourceAccountId.trim();
+      const preparedDraft = prepareCustomMenuDraft(draft);
+      const issues = validateCustomMenuDraft(preparedDraft);
+      if (issues.length > 0) {
+        const first = issues[0];
+        const error = new Error(`Invalid official account custom menu: ${first.kind} at ${first.path || "root"}`);
+        setState({ status: "error", lastError: error.message });
+        throw error;
+      }
+      let context: SdkworkIamOauthCustomMenuContext;
       try {
-        await controller.saveAccountCustomMenu(normalizedId, draft);
+        context = await controller.saveAccountCustomMenu(normalizedId, preparedDraft);
       } catch (error) {
         setState({ status: "error", lastError: error instanceof Error ? error.message : "Failed to save custom menu draft" });
         throw error;
       }
       try {
         await service.iam.oauth.resourceAccounts.customMenus.publish(normalizedId, {
-          buttons: draft.buttons.map(cloneMenuButton),
+          buttons: preparedDraft.buttons,
         });
+        // Read back the provider/database canonical representation after
+        // publish. This prevents stale list snapshots from becoming the next
+        // editor baseline when WeChat normalizes the menu payload.
+        context = await controller.loadAccountCustomMenu(normalizedId);
         setState({ status: "ready" });
-        return { saved: true, published: true } satisfies SdkworkIamOauthCustomMenuPublishResult;
+        return { context, saved: true, published: true } satisfies SdkworkIamOauthCustomMenuPublishResult;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to publish custom menu";
+        try {
+          // A concurrent save can supersede the just-published snapshot. The
+          // backend reports that as a conflict; always prefer its latest draft
+          // over the pre-publish context before returning control to the UI.
+          context = await controller.loadAccountCustomMenu(normalizedId);
+        } catch {
+          // Preserve the publish error as the primary operator-facing failure.
+        }
         setState({
           status: "error",
           lastError: message,
@@ -1287,6 +1293,7 @@ export function createSdkworkIamOauthAdminController(
         // the UI why publishing did not run.
         const backendUnavailable = message.includes("Missing SDKWork IAM SDK resource");
         return {
+          context,
           saved: true,
           published: false,
           reason: backendUnavailable ? "backend_unavailable" : "publish_failed",
@@ -1412,20 +1419,31 @@ function normalizeCustomMenuDraft(value: unknown): SdkworkIamOauthCustomMenuDraf
   }
   return {
     buttons: record.buttons
-      .map(normalizeMenuButton)
+      .map((button, index) => normalizeMenuButton(button, String(index)))
       .filter((button) => button !== undefined),
     updatedAt: optionalString(record.updatedAt),
   };
 }
 
-function normalizeMenuButton(value: unknown): SdkworkIamOauthCustomMenuButton | undefined {
+function normalizeCustomMenuSource(value: unknown): SdkworkIamOauthCustomMenuContext["source"] {
+  return value === "database" || value === "wechat" || value === "empty" ? value : undefined;
+}
+
+function normalizeMenuButton(value: unknown, path: string): SdkworkIamOauthCustomMenuButton | undefined {
   const record = toRecord(value);
-  const key = optionalString(record.key);
-  if (!key) {
+  if (!value || typeof value !== "object") {
     return undefined;
   }
+  const key = optionalString(record.key) ?? `imported-menu-${path.replaceAll(".", "-")}`;
   const type = optionalString(record.type);
   const actionType = type === "click" || type === "view" || type === "miniprogram" ? type : undefined;
+  const unsupportedType = optionalString(record.unsupportedType);
+  const providerAction = toRecord(record.providerAction);
+  const subButtons = Array.isArray(record.subButtons)
+    ? record.subButtons
+        .map((button, index) => normalizeMenuButton(button, `${path}.${index}`))
+        .filter((button) => button !== undefined)
+    : [];
   return {
     key,
     name: optionalString(record.name) || "",
@@ -1434,17 +1452,55 @@ function normalizeMenuButton(value: unknown): SdkworkIamOauthCustomMenuButton | 
     appId: optionalString(record.appId),
     pagePath: optionalString(record.pagePath),
     message: optionalString(record.message),
-    subButtons: Array.isArray(record.subButtons)
-      ? record.subButtons.map(normalizeMenuButton).filter((button) => button !== undefined)
+    unsupportedType,
+    providerAction: unsupportedType && Object.keys(providerAction).length > 0
+      ? providerAction
       : undefined,
+    subButtons: subButtons.length > 0 ? subButtons : undefined,
   };
 }
 
-function cloneMenuButton(button: SdkworkIamOauthCustomMenuButton): SdkworkIamOauthCustomMenuButton {
+function prepareCustomMenuDraft(draft: SdkworkIamOauthCustomMenuDraft): SdkworkIamOauthCustomMenuDraft {
   return {
-    ...button,
-    subButtons: button.subButtons ? button.subButtons.map(cloneMenuButton) : undefined,
+    ...draft,
+    buttons: draft.buttons.map(prepareMenuButton),
   };
+}
+
+function prepareMenuButton(button: SdkworkIamOauthCustomMenuButton): SdkworkIamOauthCustomMenuButton {
+  const base = {
+    key: button.key,
+    name: button.name.trim(),
+  };
+  if (button.subButtons?.length) {
+    return {
+      ...base,
+      subButtons: button.subButtons.map(prepareMenuButton),
+    };
+  }
+  if (button.unsupportedType) {
+    return {
+      ...base,
+      unsupportedType: button.unsupportedType,
+      providerAction: button.providerAction,
+    };
+  }
+  switch (button.type) {
+    case "click":
+      return { ...base, type: "click", message: button.message };
+    case "view":
+      return { ...base, type: "view", url: button.url?.trim() };
+    case "miniprogram":
+      return {
+        ...base,
+        type: "miniprogram",
+        appId: button.appId?.trim(),
+        pagePath: button.pagePath?.trim(),
+        url: button.url?.trim(),
+      };
+    default:
+      return base;
+  }
 }
 
 function toRecord(value: unknown): Record<string, unknown> {

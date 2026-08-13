@@ -199,6 +199,7 @@ export interface IamTenantApplicationsListParams {
   q?: string;
   status?: string;
   environment?: string;
+  applicationType?: string;
 }
 
 export class IamTenantApplicationsApi {
@@ -243,6 +244,7 @@ export class IamTenantApplicationsApi {
       { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
       { name: 'status', value: params?.status, style: 'form', explode: true, allowReserved: false },
       { name: 'environment', value: params?.environment, style: 'form', explode: true, allowReserved: false },
+      { name: 'application_type', value: params?.applicationType, style: 'form', explode: true, allowReserved: false },
     ]);
     return this.client.request<SdkWorkPageData>(appendQueryString(backendApiPath(`/iam/tenants/${serializePathParameter(tenantId, { name: 'tenantId', style: 'simple', explode: false })}/applications`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }

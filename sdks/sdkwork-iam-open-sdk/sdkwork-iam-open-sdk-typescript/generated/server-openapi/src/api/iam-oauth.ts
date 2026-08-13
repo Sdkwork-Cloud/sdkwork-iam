@@ -1,5 +1,5 @@
 import { customApiPath } from './paths';
-import type { HttpClient } from '../http/client';
+import type { ApiRequestOptions, HttpClient } from '../http/client';
 
 import type { AppbaseOperationCommand, IamOauthProviderCallbacksCreateRequest, IamOauthProviderCallbacksCreateResponse } from '../types';
 
@@ -13,8 +13,8 @@ export class IamOauthIamOauthOpenidConfigurationApi {
 
 
 /** Iam oauth openid Configuration retrieve. */
-  async retrieve(): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(customApiPath(`/system/oauth/openid_configuration`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/system/oauth/openid_configuration`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, skipAuth: true, sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -27,8 +27,8 @@ export class IamOauthIamOauthAuthorizationServerMetadataApi {
 
 
 /** Iam oauth authorization Server Metadata retrieve. */
-  async retrieve(): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(customApiPath(`/system/oauth/authorization_server_metadata`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/system/oauth/authorization_server_metadata`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, skipAuth: true, sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -41,8 +41,8 @@ export class IamOauthIamOauthUserinfoApi {
 
 
 /** Iam oauth userinfo retrieve. */
-  async retrieve(): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/userinfo`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/userinfo`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -55,8 +55,8 @@ export class IamOauthIamOauthTokenApi {
 
 
 /** Iam oauth token create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/token`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/token`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', skipAuth: true, sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -69,8 +69,8 @@ export class IamOauthIamOauthRevokeApi {
 
 
 /** Iam oauth revoke create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/revoke`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/revoke`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', skipAuth: true, sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -97,25 +97,25 @@ export class IamOauthIamOauthProviderCallbacksApi {
 
 
 /** Iam oauth provider Callbacks retrieve. */
-  async retrieve(callbackPublicId: string, params?: IamOauthIamOauthProviderCallbacksRetrieveParams): Promise<string> {
+  async retrieve(callbackPublicId: string, params?: IamOauthIamOauthProviderCallbacksRetrieveParams, requestOptions?: ApiRequestOptions): Promise<string> {
     const query = buildQueryString([
       { name: 'signature', value: params?.signature, style: 'form', explode: true, allowReserved: false },
       { name: 'timestamp', value: params?.timestamp, style: 'form', explode: true, allowReserved: false },
       { name: 'nonce', value: params?.nonce, style: 'form', explode: true, allowReserved: false },
       { name: 'echostr', value: params?.echostr, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<string>(appendQueryString(customApiPath(`/oauth/provider_callbacks/${serializePathParameter(callbackPublicId, { name: 'callbackPublicId', style: 'simple', explode: false })}`), query), { method: 'GET' as any, skipAuth: true });
+    return this.client.request<string>(appendQueryString(customApiPath(`/oauth/provider_callbacks/${serializePathParameter(callbackPublicId, { name: 'callbackPublicId', style: 'simple', explode: false })}`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'data' });
   }
 
 /** Iam oauth provider Callbacks create. */
-  async create(callbackPublicId: string, body: IamOauthProviderCallbacksCreateRequest, params?: IamOauthIamOauthProviderCallbacksCreateParams): Promise<IamOauthProviderCallbacksCreateResponse> {
+  async create(callbackPublicId: string, body: IamOauthProviderCallbacksCreateRequest, params?: IamOauthIamOauthProviderCallbacksCreateParams, requestOptions?: ApiRequestOptions): Promise<IamOauthProviderCallbacksCreateResponse> {
     const query = buildQueryString([
       { name: 'signature', value: params?.signature, style: 'form', explode: true, allowReserved: false },
       { name: 'msg_signature', value: params?.msgSignature, style: 'form', explode: true, allowReserved: false },
       { name: 'timestamp', value: params?.timestamp, style: 'form', explode: true, allowReserved: false },
       { name: 'nonce', value: params?.nonce, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<IamOauthProviderCallbacksCreateResponse>(appendQueryString(customApiPath(`/oauth/provider_callbacks/${serializePathParameter(callbackPublicId, { name: 'callbackPublicId', style: 'simple', explode: false })}`), query), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+    return this.client.request<IamOauthProviderCallbacksCreateResponse>(appendQueryString(customApiPath(`/oauth/provider_callbacks/${serializePathParameter(callbackPublicId, { name: 'callbackPublicId', style: 'simple', explode: false })}`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'data' });
   }
 }
 
@@ -128,8 +128,8 @@ export class IamOauthIamOauthJwksApi {
 
 
 /** Iam oauth jwks retrieve. */
-  async retrieve(): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/jwks`), { method: 'GET' as any, skipAuth: true });
+  async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/jwks`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, skipAuth: true, sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -142,8 +142,8 @@ export class IamOauthIamOauthIntrospectApi {
 
 
 /** Iam oauth introspect create. */
-  async create(body: AppbaseOperationCommand): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/introspect`), { method: 'POST' as any, body, contentType: 'application/json', skipAuth: true });
+  async create(body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/introspect`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', skipAuth: true, sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -156,8 +156,8 @@ export class IamOauthIamOauthAuthorizeApi {
 
 
 /** Iam oauth authorize handle Get. */
-  async handleGet(): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/authorize`), { method: 'GET' as any, skipAuth: true });
+  async handleGet(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(customApiPath(`/oauth/authorize`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, skipAuth: true, sdkworkUnwrapKind: 'item' });
   }
 }
 

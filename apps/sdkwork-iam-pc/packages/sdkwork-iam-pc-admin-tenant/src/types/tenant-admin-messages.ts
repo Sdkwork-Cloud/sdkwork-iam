@@ -12,6 +12,8 @@ export interface SdkworkIamTenantAdminMessages {
       accessPermissionsPlaceholder: string;
       appKey: string;
       appKeyHint: string;
+      applicationType: string;
+      applicationTypeHint: string;
       displayName: string;
       editDescription: string;
       editTitle: string;
@@ -35,15 +37,26 @@ export interface SdkworkIamTenantAdminMessages {
     filters: {
       allEnvironments: string;
       allStatuses: string;
+      allTypes: string;
+      applicationType: string;
       apply: string;
       environment: string;
       searchLabel: string;
       searchPlaceholder: string;
       status: string;
     };
+    types: {
+      api: string;
+      flutter: string;
+      h5: string;
+      other: string;
+      pc: string;
+      unknown: string;
+    };
     notices: {
       copyFailed: string;
       copied: string;
+      currentTenantUnavailable: string;
       loadError: string;
       loading: string;
       provisionError: string;
@@ -77,6 +90,7 @@ export interface SdkworkIamTenantAdminMessages {
     table: {
       appId: string;
       application: string;
+      applicationType: string;
       domain: string;
       environment: string;
       status: string;

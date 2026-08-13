@@ -818,6 +818,8 @@ export const SDKWORK_IAM_API_ROUTES = {
         },
         create: operation("POST", `${backend}/iam/oauth/resource_accounts`, "iam", "iam.oauth.resourceAccounts.create", "dualToken"),
         customMenus: {
+          retrieve: operation("GET", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}/custom_menus`, "iam", "iam.oauth.resourceAccounts.customMenus.retrieve", "dualToken"),
+          update: operation("PATCH", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}/custom_menus`, "iam", "iam.oauth.resourceAccounts.customMenus.update", "dualToken"),
           publish: operation("POST", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}/custom_menus/publish`, "iam", "iam.oauth.resourceAccounts.customMenus.publish", "dualToken"),
         },
         delete: operation("DELETE", `${backend}/iam/oauth/resource_accounts/{resourceAccountId}`, "iam", "iam.oauth.resourceAccounts.delete", "dualToken"),

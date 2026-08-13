@@ -443,6 +443,7 @@ function applicationDraftToRecord(body: SdkworkIamTenantApplicationDraft): Recor
   return {
     accessPermissions: body.accessPermissions,
     appKey: body.appKey.trim(),
+    applicationType: body.applicationType.trim(),
     displayName: body.displayName.trim(),
     environment: body.environment.trim(),
     instanceKey: body.instanceKey.trim(),
@@ -525,6 +526,7 @@ function toTenantApplication(value: unknown): SdkworkIamTenantApplication | unde
   return {
     accessPermissions: toStringArray(record.accessPermissions ?? record.access_permissions),
     appId,
+    applicationType: optionalString(record.applicationType) ?? optionalString(record.application_type) ?? "other",
     createdAt: optionalString(record.createdAt) || optionalString(record.created_at),
     displayName: optionalString(record.displayName) || optionalString(record.display_name) || appId,
     environment: optionalString(record.environment) || "unknown",

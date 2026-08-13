@@ -43,6 +43,8 @@ pub const OAUTH_QR_FOLLOW_LOGIN_FIELD: &str = "followLogin";
 const KIND_WECHAT_TOKEN: &str = "wechat_mp_token";
 const WECHAT_API_BASE_DEFAULT: &str = "https://api.weixin.qq.com";
 const WECHAT_QR_IMAGE_BASE: &str = "https://mp.weixin.qq.com/cgi-bin/showqrcode";
+const WECHAT_UNSUPPORTED_MENU_ACTION_BYTE_LIMIT: usize = 4096;
+const WECHAT_UNSUPPORTED_MENU_ACTION_DEPTH_LIMIT: usize = 4;
 
 /// A WeChat parameterized temp QR created for a login session.
 #[derive(Clone, Debug)]
@@ -51,6 +53,666 @@ pub struct WechatMpTempQrCode {
     pub image_url: String,
     pub expire_seconds: u64,
     pub scene: String,
+}
+
+/// Retrieves the current default custom menu from a WeChat Official Account
+/// and converts the provider payload into IAM's editable menu document.
+/// WeChat error 46003 means that the account has no menu and is treated as an
+/// empty, successfully synchronized menu.
+pub async fn retrieve_wechat_mp_custom_menu(
+    pg: &PgPool,
+    app_id: &str,
+    app_secret: &str,
+) -> Result<Value, String> {
+    for attempt in 0..2 {
+        let access_token = fetch_wechat_mp_access_token(pg, app_id, app_secret).await?;
+        let response = http_client()?
+            .get(format!(
+                "{}/cgi-bin/menu/get?access_token={}",
+                wechat_mp_api_base(),
+                access_token
+            ))
+            .header(ACCEPT, "application/json")
+            .send()
+            .await
+            .map_err(|error| format!("WeChat custom menu request failed: {error}"))?;
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .map_err(|error| format!("read WeChat custom menu response failed: {error}"))?;
+        if !status.is_success() {
+            return Err(format!(
+                "WeChat custom menu request failed with status {}",
+                status.as_u16()
+            ));
+        }
+        if attempt == 0 && is_wechat_access_token_error(&body) {
+            invalidate_wechat_mp_access_token(pg, app_id, app_secret, &access_token).await?;
+            continue;
+        }
+        return parse_wechat_custom_menu_response(&body);
+    }
+    Err("WeChat custom menu request failed after refreshing access token".to_string())
+}
+
+/// Replaces the WeChat Official Account's default custom menu with the IAM
+/// menu document. The caller persists the draft first, so a successful
+/// provider response always corresponds to a server-side saved version.
+pub async fn publish_wechat_mp_custom_menu(
+    pg: &PgPool,
+    app_id: &str,
+    app_secret: &str,
+    menu: &Value,
+) -> Result<(), String> {
+    let request_body = wechat_custom_menu_create_body(menu)?;
+    for attempt in 0..2 {
+        let access_token = fetch_wechat_mp_access_token(pg, app_id, app_secret).await?;
+        let response = http_client()?
+            .post(format!(
+                "{}/cgi-bin/menu/create?access_token={}",
+                wechat_mp_api_base(),
+                access_token
+            ))
+            .header(ACCEPT, "application/json")
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|error| format!("WeChat custom menu publish failed: {error}"))?;
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .map_err(|error| format!("read WeChat custom menu publish response failed: {error}"))?;
+        if !status.is_success() {
+            return Err(format!(
+                "WeChat custom menu publish failed with status {}",
+                status.as_u16()
+            ));
+        }
+        if attempt == 0 && is_wechat_access_token_error(&body) {
+            invalidate_wechat_mp_access_token(pg, app_id, app_secret, &access_token).await?;
+            continue;
+        }
+        return ensure_wechat_success_response(&body, "custom menu publish");
+    }
+    Err("WeChat custom menu publish failed after refreshing access token".to_string())
+}
+
+fn parse_wechat_custom_menu_response(body: &str) -> Result<Value, String> {
+    let payload: Value = serde_json::from_str(body)
+        .map_err(|error| format!("WeChat custom menu response is invalid: {error}"))?;
+    let object = payload
+        .as_object()
+        .ok_or_else(|| "WeChat custom menu response must be an object".to_string())?;
+    if let Some(error_code) = object.get("errcode") {
+        let error_code = error_code
+            .as_i64()
+            .ok_or_else(|| "WeChat custom menu response errcode must be an integer".to_string())?;
+        if error_code == 46003 {
+            return Ok(json!({ "buttons": [] }));
+        }
+    }
+    ensure_wechat_success_payload(&payload, "custom menu request")?;
+    let menu = payload
+        .get("menu")
+        .and_then(Value::as_object)
+        .ok_or_else(|| "WeChat custom menu response is missing menu".to_string())?;
+    let buttons = menu
+        .get("button")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "WeChat custom menu response menu.button must be an array".to_string())?
+        .iter()
+        .enumerate()
+        .map(|(index, button)| normalize_wechat_menu_button(button, &index.to_string()))
+        .collect::<Result<Vec<_>, _>>()?;
+    let menu = json!({ "buttons": buttons });
+    validate_wechat_mp_custom_menu(&menu, false)
+        .map_err(|error| format!("WeChat custom menu response violates menu limits: {error}"))?;
+    Ok(menu)
+}
+
+fn normalize_wechat_menu_button(button: &Value, path: &str) -> Result<Value, String> {
+    let object = button
+        .as_object()
+        .ok_or_else(|| format!("WeChat custom menu button {path} must be an object"))?;
+    let name = object
+        .get("name")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .ok_or_else(|| format!("WeChat custom menu button {path} is missing name"))?;
+    if name.is_empty() {
+        return Err(format!("WeChat custom menu button {path} is missing name"));
+    }
+    let sub_buttons = match object.get("sub_button") {
+        Some(Value::Array(buttons)) => buttons
+            .iter()
+            .enumerate()
+            .map(|(index, child)| normalize_wechat_menu_button(child, &format!("{path}.{index}")))
+            .collect::<Result<Vec<_>, _>>()?,
+        Some(Value::Null) | None => Vec::new(),
+        Some(_) => {
+            return Err(format!(
+                "WeChat custom menu button {path} sub_button must be an array"
+            ))
+        }
+    };
+    let mut normalized = json!({
+        "key": format!("wechat-menu-{}", path.replace('.', "-")),
+        "name": name,
+    });
+    if !sub_buttons.is_empty() {
+        normalized["subButtons"] = json!(sub_buttons);
+        return Ok(normalized);
+    }
+    let action_type = object
+        .get("type")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| format!("WeChat custom menu button {path} is missing type"))?;
+    match action_type {
+        "click" => {
+            normalized["type"] = json!("click");
+            normalized["message"] = json!(required_wechat_menu_string(object, "key", path)?);
+        }
+        "view" => {
+            normalized["type"] = json!("view");
+            normalized["url"] = json!(required_wechat_menu_string(object, "url", path)?);
+        }
+        "miniprogram" => {
+            normalized["type"] = json!("miniprogram");
+            normalized["appId"] = json!(required_wechat_menu_string(object, "appid", path)?);
+            normalized["pagePath"] = json!(required_wechat_menu_string(object, "pagepath", path)?);
+            normalized["url"] = json!(required_wechat_menu_string(object, "url", path)?);
+        }
+        unsupported_type => {
+            // Keep provider actions that the editor cannot represent yet
+            // explicit and lossless. Treating media/article actions as click
+            // would silently change their behavior on the next publish.
+            validate_unsupported_wechat_menu_action(button, path)?;
+            normalized["unsupportedType"] = json!(unsupported_type);
+            normalized["providerAction"] = button.clone();
+        }
+    }
+    Ok(normalized)
+}
+
+fn required_wechat_menu_string(
+    object: &serde_json::Map<String, Value>,
+    field: &str,
+    path: &str,
+) -> Result<String, String> {
+    object
+        .get(field)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| format!("WeChat custom menu button {path} is missing {field}"))
+}
+
+fn wechat_custom_menu_create_body(menu: &Value) -> Result<Value, String> {
+    validate_wechat_mp_custom_menu(menu, true)?;
+    let buttons = menu
+        .get("buttons")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "custom menu buttons are required".to_string())?;
+    let provider_buttons = buttons
+        .iter()
+        .enumerate()
+        .map(|(index, button)| to_wechat_menu_button(button, &index.to_string()))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(json!({ "button": provider_buttons }))
+}
+
+/// Validates the editable IAM menu document against WeChat's default custom
+/// menu limits. Empty menus are valid drafts, but are never publishable.
+pub fn validate_wechat_mp_custom_menu(
+    menu: &Value,
+    require_publishable: bool,
+) -> Result<(), String> {
+    let buttons = menu
+        .get("buttons")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "custom menu buttons are required".to_string())?;
+    if require_publishable && buttons.is_empty() {
+        return Err("custom menu requires at least one top-level button".to_string());
+    }
+    if buttons.len() > 3 {
+        return Err("custom menu supports at most 3 top-level buttons".to_string());
+    }
+    for (index, button) in buttons.iter().enumerate() {
+        validate_wechat_menu_button(button, &index.to_string(), false, require_publishable)?;
+    }
+    Ok(())
+}
+
+/// Returns a storage-safe draft containing only IAM's editable menu fields.
+/// Validation remains draft-friendly: incomplete leaves are retained, while
+/// structural violations and malformed field types are rejected.
+pub fn normalize_wechat_mp_custom_menu_draft(menu: &Value) -> Result<Value, String> {
+    validate_wechat_mp_custom_menu(menu, false)?;
+    let buttons = menu
+        .get("buttons")
+        .and_then(Value::as_array)
+        .expect("validated custom menu buttons");
+    let buttons = buttons
+        .iter()
+        .map(normalize_wechat_menu_draft_button)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(json!({ "buttons": buttons }))
+}
+
+fn normalize_wechat_menu_draft_button(button: &Value) -> Result<Value, String> {
+    let object = button
+        .as_object()
+        .ok_or_else(|| "custom menu button must be an object".to_string())?;
+    let mut normalized = serde_json::Map::new();
+    if let Some(key) = object
+        .get("key")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        normalized.insert("key".to_string(), json!(key));
+    }
+    normalized.insert(
+        "name".to_string(),
+        json!(object
+            .get("name")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .unwrap_or("")),
+    );
+    if let Some(children) = object
+        .get("subButtons")
+        .and_then(Value::as_array)
+        .filter(|children| !children.is_empty())
+    {
+        let children = children
+            .iter()
+            .map(normalize_wechat_menu_draft_button)
+            .collect::<Result<Vec<_>, _>>()?;
+        normalized.insert("subButtons".to_string(), json!(children));
+        return Ok(Value::Object(normalized));
+    }
+    if let Some(unsupported_type) = object
+        .get("unsupportedType")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        normalized.insert("unsupportedType".to_string(), json!(unsupported_type));
+        if let Some(provider_action) = object.get("providerAction") {
+            normalized.insert("providerAction".to_string(), provider_action.clone());
+        }
+        return Ok(Value::Object(normalized));
+    }
+    let Some(action_type) = object
+        .get("type")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return Ok(Value::Object(normalized));
+    };
+    normalized.insert("type".to_string(), json!(action_type));
+    let action_fields: &[&str] = match action_type {
+        "click" => &["message"],
+        "view" => &["url"],
+        "miniprogram" => &["appId", "pagePath", "url"],
+        _ => &[],
+    };
+    for field in action_fields {
+        if let Some(value) = object.get(*field).and_then(Value::as_str) {
+            normalized.insert((*field).to_string(), json!(value.trim()));
+        }
+    }
+    Ok(Value::Object(normalized))
+}
+
+fn validate_wechat_menu_button(
+    button: &Value,
+    path: &str,
+    is_sub_menu: bool,
+    require_publishable: bool,
+) -> Result<(), String> {
+    let object = button
+        .as_object()
+        .ok_or_else(|| format!("custom menu button {path} must be an object"))?;
+    let name = match object.get("name") {
+        Some(Value::String(name)) => name.trim(),
+        Some(Value::Null) | None if !require_publishable => "",
+        Some(Value::Null) | None => {
+            return Err(format!("custom menu button {path} is missing name"))
+        }
+        Some(_) => {
+            return Err(format!(
+                "custom menu button {path} field name must be a string"
+            ))
+        }
+    };
+    if require_publishable && name.is_empty() {
+        return Err(format!("custom menu button {path} is missing name"));
+    }
+    let name_limit = if is_sub_menu { 14 } else { 8 };
+    if menu_name_unit_length(name) > name_limit {
+        return Err(format!(
+            "custom menu button {path} name exceeds {name_limit} display units"
+        ));
+    }
+
+    let children: &[Value] = match object.get("subButtons") {
+        Some(Value::Array(children)) => children.as_slice(),
+        Some(Value::Null) | None => &[],
+        Some(_) => {
+            return Err(format!(
+                "custom menu button {path} subButtons must be an array"
+            ))
+        }
+    };
+    if !children.is_empty() {
+        if is_sub_menu {
+            return Err(format!(
+                "custom menu button {path} cannot contain third-level buttons"
+            ));
+        }
+        if children.len() > 5 {
+            return Err(format!(
+                "custom menu button {path} supports at most 5 sub-buttons"
+            ));
+        }
+        if action_fields_present(object) {
+            return Err(format!(
+                "custom menu parent button {path} cannot contain an action"
+            ));
+        }
+        for (index, child) in children.iter().enumerate() {
+            validate_wechat_menu_button(
+                child,
+                &format!("{path}.{index}"),
+                true,
+                require_publishable,
+            )?;
+        }
+        return Ok(());
+    }
+
+    if object
+        .get("providerAction")
+        .is_some_and(|value| !value.is_null() && !value.is_object())
+    {
+        return Err(format!(
+            "custom menu button {path} field providerAction must be an object"
+        ));
+    }
+    let unsupported_type = match object.get("unsupportedType") {
+        Some(Value::String(value)) if !value.trim().is_empty() => Some(value.trim()),
+        Some(Value::String(_)) | Some(Value::Null) | None => None,
+        Some(_) => {
+            return Err(format!(
+                "custom menu button {path} field unsupportedType must be a string"
+            ))
+        }
+    };
+    if let Some(unsupported_type) = unsupported_type {
+        let Some(provider_action) = object
+            .get("providerAction")
+            .filter(|value| value.is_object())
+        else {
+            return Err(format!(
+                "custom menu button {path} unsupported action is missing providerAction"
+            ));
+        };
+        validate_unsupported_wechat_menu_action(provider_action, path)?;
+        if require_publishable {
+            return Err(format!(
+                "custom menu button {path} uses unsupported WeChat action {unsupported_type}"
+            ));
+        }
+        return Ok(());
+    }
+    let action_type = match object.get("type") {
+        Some(Value::String(value)) => value.trim(),
+        Some(Value::Null) | None => "",
+        Some(_) => {
+            return Err(format!(
+                "custom menu button {path} field type must be a string"
+            ))
+        }
+    };
+    match action_type {
+        "click" => {
+            reject_menu_fields(object, path, &["url", "appId", "pagePath"])?;
+            let Some(key) = optional_menu_string(button, "message", path, require_publishable)?
+            else {
+                return Ok(());
+            };
+            if key.len() > 128 {
+                return Err(format!(
+                    "custom menu button {path} click key exceeds 128 bytes"
+                ));
+            }
+        }
+        "view" => {
+            reject_menu_fields(object, path, &["message", "appId", "pagePath"])?;
+            if let Some(url) = optional_menu_string(button, "url", path, require_publishable)? {
+                if require_publishable {
+                    validate_menu_http_url(&url, path)?;
+                }
+            }
+        }
+        "miniprogram" => {
+            reject_menu_fields(object, path, &["message"])?;
+            optional_menu_string(button, "appId", path, require_publishable)?;
+            optional_menu_string(button, "pagePath", path, require_publishable)?;
+            if let Some(url) = optional_menu_string(button, "url", path, require_publishable)? {
+                if require_publishable {
+                    validate_menu_http_url(&url, path)?;
+                }
+            }
+        }
+        "" if !require_publishable => return Ok(()),
+        "" => return Err(format!("custom menu button {path} is missing action type")),
+        action_type => {
+            return Err(format!(
+                "custom menu button {path} uses unsupported action type {action_type}"
+            ))
+        }
+    }
+    Ok(())
+}
+
+fn validate_unsupported_wechat_menu_action(action: &Value, path: &str) -> Result<(), String> {
+    if !action.is_object() {
+        return Err(format!(
+            "custom menu button {path} field providerAction must be an object"
+        ));
+    }
+    let serialized = serde_json::to_vec(action)
+        .map_err(|error| format!("custom menu button {path} providerAction is invalid: {error}"))?;
+    if serialized.len() > WECHAT_UNSUPPORTED_MENU_ACTION_BYTE_LIMIT {
+        return Err(format!(
+            "custom menu button {path} providerAction exceeds {WECHAT_UNSUPPORTED_MENU_ACTION_BYTE_LIMIT} bytes"
+        ));
+    }
+    if json_depth(action) > WECHAT_UNSUPPORTED_MENU_ACTION_DEPTH_LIMIT {
+        return Err(format!(
+            "custom menu button {path} providerAction exceeds {WECHAT_UNSUPPORTED_MENU_ACTION_DEPTH_LIMIT} nesting levels"
+        ));
+    }
+    Ok(())
+}
+
+fn json_depth(value: &Value) -> usize {
+    match value {
+        Value::Array(values) => 1 + values.iter().map(json_depth).max().unwrap_or(0),
+        Value::Object(values) => 1 + values.values().map(json_depth).max().unwrap_or(0),
+        _ => 0,
+    }
+}
+
+fn optional_menu_string(
+    button: &Value,
+    field: &str,
+    path: &str,
+    required: bool,
+) -> Result<Option<String>, String> {
+    match button.get(field) {
+        Some(Value::String(value)) if !value.trim().is_empty() => {
+            Ok(Some(value.trim().to_string()))
+        }
+        Some(Value::String(_)) | Some(Value::Null) | None if !required => Ok(None),
+        Some(Value::String(_)) | Some(Value::Null) | None => {
+            Err(format!("custom menu button {path} is missing {field}"))
+        }
+        Some(_) => Err(format!(
+            "custom menu button {path} field {field} must be a string"
+        )),
+    }
+}
+
+fn menu_name_unit_length(name: &str) -> usize {
+    name.chars()
+        .map(|value| if value.is_ascii() { 1 } else { 2 })
+        .sum()
+}
+
+fn action_fields_present(object: &serde_json::Map<String, Value>) -> bool {
+    [
+        "type",
+        "message",
+        "url",
+        "appId",
+        "pagePath",
+        "unsupportedType",
+        "providerAction",
+    ]
+    .iter()
+    .any(|field| object.get(*field).is_some_and(|value| !value.is_null()))
+}
+
+fn reject_menu_fields(
+    object: &serde_json::Map<String, Value>,
+    path: &str,
+    fields: &[&str],
+) -> Result<(), String> {
+    if let Some(field) = fields.iter().find(|field| {
+        object.get(**field).is_some_and(|value| {
+            !value.is_null()
+                && value
+                    .as_str()
+                    .map(|text| !text.trim().is_empty())
+                    .unwrap_or(true)
+        })
+    }) {
+        return Err(format!(
+            "custom menu button {path} field {field} does not belong to its action"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_menu_http_url(value: &str, path: &str) -> Result<(), String> {
+    if value.len() > 1024 {
+        return Err(format!("custom menu button {path} URL exceeds 1024 bytes"));
+    }
+    let parsed = reqwest::Url::parse(value)
+        .map_err(|_| format!("custom menu button {path} URL must be an absolute HTTP URL"))?;
+    if !matches!(parsed.scheme(), "http" | "https") || parsed.host_str().is_none() {
+        return Err(format!(
+            "custom menu button {path} URL must be an absolute HTTP URL"
+        ));
+    }
+    Ok(())
+}
+
+fn to_wechat_menu_button(button: &Value, path: &str) -> Result<Value, String> {
+    let name = button
+        .get("name")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| format!("custom menu button {path} is missing name"))?;
+    if let Some(children) = button.get("subButtons").and_then(Value::as_array) {
+        if !children.is_empty() {
+            let sub_button = children
+                .iter()
+                .enumerate()
+                .map(|(index, child)| to_wechat_menu_button(child, &format!("{path}.{index}")))
+                .collect::<Result<Vec<_>, _>>()?;
+            return Ok(json!({ "name": name, "sub_button": sub_button }));
+        }
+    }
+    match button.get("type").and_then(Value::as_str).unwrap_or("") {
+        "click" => Ok(json!({
+            "type": "click",
+            "name": name,
+            "key": required_menu_string(button, "message", path)?,
+        })),
+        "view" => Ok(json!({
+            "type": "view",
+            "name": name,
+            "url": required_menu_string(button, "url", path)?,
+        })),
+        "miniprogram" => Ok(json!({
+            "type": "miniprogram",
+            "name": name,
+            "appid": required_menu_string(button, "appId", path)?,
+            "pagepath": required_menu_string(button, "pagePath", path)?,
+            "url": required_menu_string(button, "url", path)?,
+        })),
+        _ => Err(format!("custom menu button {path} is missing action type")),
+    }
+}
+
+fn required_menu_string(button: &Value, field: &str, path: &str) -> Result<String, String> {
+    button
+        .get(field)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| format!("custom menu button {path} is missing {field}"))
+}
+
+fn ensure_wechat_success_response(body: &str, operation: &str) -> Result<(), String> {
+    let payload: Value = serde_json::from_str(body)
+        .map_err(|error| format!("WeChat {operation} response is invalid: {error}"))?;
+    let object = payload
+        .as_object()
+        .ok_or_else(|| format!("WeChat {operation} response must be an object"))?;
+    if !object.contains_key("errcode") {
+        return Err(format!("WeChat {operation} response is missing errcode"));
+    }
+    ensure_wechat_success_payload(&payload, operation)
+}
+
+fn ensure_wechat_success_payload(payload: &Value, operation: &str) -> Result<(), String> {
+    if let Some(error_code) = payload.get("errcode") {
+        let error_code = error_code
+            .as_i64()
+            .ok_or_else(|| format!("WeChat {operation} response errcode must be an integer"))?;
+        if error_code != 0 {
+            return Err(format!(
+                "WeChat {operation} failed: {} {}",
+                error_code,
+                payload
+                    .get("errmsg")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown error")
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn is_wechat_access_token_error(body: &str) -> bool {
+    serde_json::from_str::<Value>(body)
+        .ok()
+        .and_then(|payload| payload.get("errcode").and_then(Value::as_i64))
+        .is_some_and(|code| matches!(code, 40001 | 40014 | 42001))
 }
 
 /// The identity and integration context captured from a follow/SCAN event.
@@ -99,6 +761,14 @@ fn ephemeral_artifact_key(kind: &str, key: &str) -> String {
     format!("{OAUTH_QR_SESSION_SCOPE}:{kind}:{key}")
 }
 
+fn wechat_mp_access_token_cache_key(app_id: &str, app_secret: &str) -> String {
+    let secret_fingerprint = sdkwork_iam_bootstrap::hash_secret_ref(app_secret);
+    ephemeral_artifact_key(
+        KIND_WECHAT_TOKEN,
+        &format!("{}:{secret_fingerprint}", app_id.trim()),
+    )
+}
+
 /// Generates a random scene string bound to a QR login session.
 pub fn generate_wechat_mp_scene(kind: &str) -> String {
     let mut bytes = [0u8; 24];
@@ -120,7 +790,7 @@ pub async fn fetch_wechat_mp_access_token(
     app_id: &str,
     app_secret: &str,
 ) -> Result<String, String> {
-    let cache_key = ephemeral_artifact_key(KIND_WECHAT_TOKEN, app_id);
+    let cache_key = wechat_mp_access_token_cache_key(app_id, app_secret);
     let cached = sqlx::query(
         "SELECT payload_json FROM iam_ephemeral_artifact \
          WHERE artifact_key = $1 AND expires_at > $2",
@@ -213,6 +883,24 @@ pub async fn fetch_wechat_mp_access_token(
     .map_err(|error| format!("cache WeChat access token failed: {error}"))?;
 
     Ok(token.to_string())
+}
+
+async fn invalidate_wechat_mp_access_token(
+    pg: &PgPool,
+    app_id: &str,
+    app_secret: &str,
+    failed_access_token: &str,
+) -> Result<(), String> {
+    sqlx::query(
+        "DELETE FROM iam_ephemeral_artifact \
+         WHERE artifact_key = $1 AND payload_json->>'accessToken' = $2",
+    )
+    .bind(wechat_mp_access_token_cache_key(app_id, app_secret))
+    .bind(failed_access_token)
+    .execute(pg)
+    .await
+    .map_err(|error| format!("invalidate WeChat token cache failed: {error}"))?;
+    Ok(())
 }
 
 /// Creates a WeChat parameterized temp QR (`QR_SCENE`) for a login session.
@@ -566,6 +1254,307 @@ mod tests {
             })),
             None
         );
+    }
+
+    #[test]
+    fn normalizes_wechat_custom_menu_actions_and_children() {
+        let menu = parse_wechat_custom_menu_response(
+            &json!({
+                "menu": {
+                    "button": [
+                        { "name": "首页", "type": "view", "url": "https://example.com" },
+                        {
+                            "name": "服务",
+                            "sub_button": [
+                                { "name": "消息", "type": "click", "key": "SERVICE_MESSAGE" },
+                                { "name": "小程序", "type": "miniprogram", "appid": "wx123", "pagepath": "pages/index/index", "url": "https://example.com/fallback" }
+                            ]
+                        }
+                    ]
+                },
+                "errcode": 0
+            })
+            .to_string(),
+        )
+        .expect("valid menu response");
+        assert_eq!(menu["buttons"][0]["type"], "view");
+        assert_eq!(
+            menu["buttons"][1]["subButtons"][0]["message"],
+            "SERVICE_MESSAGE"
+        );
+        assert_eq!(menu["buttons"][1]["subButtons"][1]["appId"], "wx123");
+    }
+
+    #[test]
+    fn preserves_unsupported_wechat_actions_instead_of_changing_them_to_click() {
+        let menu = parse_wechat_custom_menu_response(
+            &json!({
+                "menu": {
+                    "button": [{
+                        "name": "图文",
+                        "type": "media_id",
+                        "media_id": "MEDIA_123"
+                    }]
+                },
+                "errcode": 0
+            })
+            .to_string(),
+        )
+        .expect("valid menu response");
+
+        assert_eq!(menu["buttons"][0]["unsupportedType"], "media_id");
+        assert_eq!(
+            menu["buttons"][0]["providerAction"]["media_id"],
+            "MEDIA_123"
+        );
+        assert!(menu["buttons"][0].get("type").is_none());
+        assert!(validate_wechat_mp_custom_menu(&menu, true)
+            .expect_err("unsupported actions cannot be republished silently")
+            .contains("unsupported WeChat action media_id"));
+    }
+
+    #[test]
+    fn rejects_oversized_or_deep_unsupported_provider_actions() {
+        let oversized = json!({
+            "menu": {
+                "button": [{
+                    "name": "图文",
+                    "type": "media_id",
+                    "media_id": "x".repeat(WECHAT_UNSUPPORTED_MENU_ACTION_BYTE_LIMIT)
+                }]
+            }
+        });
+        assert!(parse_wechat_custom_menu_response(&oversized.to_string())
+            .expect_err("oversized provider actions must not be persisted")
+            .contains("providerAction exceeds"));
+
+        let too_deep = json!({
+            "buttons": [{
+                "name": "图文",
+                "unsupportedType": "future_action",
+                "providerAction": { "type": "future_action", "a": { "b": { "c": { "d": { "e": 1 } } } } }
+            }]
+        });
+        assert!(normalize_wechat_mp_custom_menu_draft(&too_deep)
+            .expect_err("deep provider actions must not be persisted")
+            .contains("nesting levels"));
+    }
+
+    #[test]
+    fn converts_iam_custom_menu_to_wechat_create_payload() {
+        let body = wechat_custom_menu_create_body(&json!({
+            "buttons": [
+                { "name": "首页", "type": "view", "url": "https://example.com" },
+                { "name": "消息", "type": "click", "message": "MESSAGE" }
+            ]
+        }))
+        .expect("valid menu document");
+        assert_eq!(body["button"][0]["type"], "view");
+        assert_eq!(body["button"][1]["key"], "MESSAGE");
+    }
+
+    #[test]
+    fn validates_wechat_menu_limits_hierarchy_actions_and_urls() {
+        assert!(validate_wechat_mp_custom_menu(&json!({ "buttons": [] }), false).is_ok());
+        assert!(
+            validate_wechat_mp_custom_menu(&json!({ "buttons": [] }), true)
+                .expect_err("empty menus cannot be published")
+                .contains("at least one")
+        );
+
+        let four_buttons = json!({
+            "buttons": (0..4)
+                .map(|index| json!({
+                    "name": format!("M{index}"),
+                    "type": "click",
+                    "message": format!("KEY_{index}")
+                }))
+                .collect::<Vec<_>>()
+        });
+        assert!(validate_wechat_mp_custom_menu(&four_buttons, false)
+            .expect_err("top-level count is bounded")
+            .contains("at most 3"));
+
+        let invalid_parent = json!({
+            "buttons": [{
+                "name": "菜单",
+                "type": "view",
+                "url": "https://stale.example.com",
+                "subButtons": [{ "name": "网页", "type": "view", "url": "https://example.com" }]
+            }]
+        });
+        assert!(validate_wechat_mp_custom_menu(&invalid_parent, false)
+            .expect_err("parents are display-only")
+            .contains("cannot contain an action"));
+
+        let third_level = json!({
+            "buttons": [{
+                "name": "菜单",
+                "subButtons": [{
+                    "name": "二级",
+                    "subButtons": [{ "name": "三级", "type": "click", "message": "KEY" }]
+                }]
+            }]
+        });
+        assert!(validate_wechat_mp_custom_menu(&third_level, false)
+            .expect_err("third-level menus are forbidden")
+            .contains("third-level"));
+
+        let invalid_url = json!({
+            "buttons": [{ "name": "网页", "type": "view", "url": "javascript:alert(1)" }]
+        });
+        assert!(validate_wechat_mp_custom_menu(&invalid_url, false).is_ok());
+        assert!(validate_wechat_mp_custom_menu(&invalid_url, true)
+            .expect_err("only HTTP URLs are accepted")
+            .contains("absolute HTTP URL"));
+
+        let incomplete_draft = json!({
+            "buttons": [{ "name": "", "type": "miniprogram", "url": "" }]
+        });
+        assert!(validate_wechat_mp_custom_menu(&incomplete_draft, false).is_ok());
+        assert!(validate_wechat_mp_custom_menu(&incomplete_draft, true)
+            .expect_err("incomplete drafts cannot be published")
+            .contains("missing name"));
+
+        let invalid_field_type = json!({
+            "buttons": [{ "name": 42, "type": "click", "message": "KEY" }]
+        });
+        assert!(validate_wechat_mp_custom_menu(&invalid_field_type, false)
+            .expect_err("typed fields are enforced for drafts")
+            .contains("name must be a string"));
+
+        let invalid_preserved_action = json!({
+            "buttons": [{ "name": "图文", "unsupportedType": "media_id" }]
+        });
+        assert!(
+            validate_wechat_mp_custom_menu(&invalid_preserved_action, false)
+                .expect_err("preserved actions require their provider payload")
+                .contains("missing providerAction")
+        );
+    }
+
+    #[test]
+    fn normalizes_menu_drafts_to_the_supported_storage_shape() {
+        let normalized = normalize_wechat_mp_custom_menu_draft(&json!({
+            "buttons": [{
+                "key": " button-key ",
+                "name": " 菜单 ",
+                "type": "view",
+                "url": " https://example.com/page ",
+                "source": "client-injected",
+                "updatedAt": "client-time"
+            }],
+            "source": "client-root"
+        }))
+        .expect("valid draft");
+
+        assert_eq!(
+            normalized,
+            json!({
+                "buttons": [{
+                    "key": "button-key",
+                    "name": "菜单",
+                    "type": "view",
+                    "url": "https://example.com/page"
+                }]
+            })
+        );
+
+        let preserved = normalize_wechat_mp_custom_menu_draft(&json!({
+            "buttons": [{
+                "key": "media",
+                "name": " 图文 ",
+                "unsupportedType": "media_id",
+                "providerAction": { "name": "图文", "type": "media_id", "media_id": "MEDIA_123" }
+            }]
+        }))
+        .expect("unsupported provider action remains a safe draft");
+        assert_eq!(
+            preserved["buttons"][0]["providerAction"]["media_id"],
+            "MEDIA_123"
+        );
+
+        let conflicting = json!({
+            "buttons": [{
+                "name": "网页",
+                "type": "view",
+                "url": "https://example.com",
+                "message": "must-not-coexist"
+            }]
+        });
+        assert!(normalize_wechat_mp_custom_menu_draft(&conflicting)
+            .expect_err("action fields are mutually exclusive")
+            .contains("does not belong to its action"));
+    }
+
+    #[test]
+    fn treats_wechat_empty_menu_error_as_empty_document() {
+        let menu =
+            parse_wechat_custom_menu_response(r#"{"errcode":46003,"errmsg":"menu no exist"}"#)
+                .expect("empty menu is a valid state");
+        assert_eq!(menu, json!({ "buttons": [] }));
+    }
+
+    #[test]
+    fn token_cache_isolated_by_app_id_and_secret_without_exposing_secret() {
+        let first = wechat_mp_access_token_cache_key(" wx-app ", "first-secret");
+        let rotated = wechat_mp_access_token_cache_key("wx-app", "rotated-secret");
+        let other_app = wechat_mp_access_token_cache_key("wx-other", "first-secret");
+
+        assert_ne!(first, rotated);
+        assert_ne!(first, other_app);
+        assert!(!first.contains("first-secret"));
+        assert!(first.starts_with("__local__:wechat_mp_token:wx-app:"));
+    }
+
+    #[test]
+    fn retries_only_for_official_access_token_errors() {
+        for code in [40001, 40014, 42001] {
+            assert!(is_wechat_access_token_error(
+                &json!({ "errcode": code }).to_string()
+            ));
+        }
+        assert!(!is_wechat_access_token_error(r#"{"errcode":46003}"#));
+        assert!(!is_wechat_access_token_error(r#"{"errcode":0}"#));
+        assert!(!is_wechat_access_token_error("not-json"));
+    }
+
+    #[test]
+    fn rejects_non_integer_success_response_error_codes() {
+        assert!(ensure_wechat_success_response(
+            r#"{"errcode":"0","errmsg":"ok"}"#,
+            "custom menu publish"
+        )
+        .expect_err("malformed provider response must fail")
+        .contains("errcode must be an integer"));
+        assert!(ensure_wechat_success_response("{}", "custom menu publish")
+            .expect_err("ambiguous provider response must fail")
+            .contains("missing errcode"));
+    }
+
+    #[test]
+    fn rejects_malformed_successful_wechat_menu_responses_instead_of_importing_empty_data() {
+        assert!(parse_wechat_custom_menu_response(r#"{}"#)
+            .expect_err("missing menu must not become an empty draft")
+            .contains("missing menu"));
+        assert!(
+            parse_wechat_custom_menu_response(r#"{"menu":{"button":{}}}"#)
+                .expect_err("button must be an array")
+                .contains("must be an array")
+        );
+        assert!(parse_wechat_custom_menu_response(
+            r#"{"menu":{"button":[{"type":"view","url":"https://example.com"}]}}"#,
+        )
+        .expect_err("buttons without names must not be dropped silently")
+        .contains("missing name"));
+        assert!(parse_wechat_custom_menu_response(
+            r#"{"menu":{"button":[{"name":"网页","type":"view"}]}}"#,
+        )
+        .expect_err("incomplete provider actions must not be persisted")
+        .contains("missing url"));
+        assert!(parse_wechat_custom_menu_response(r#"{"errcode":"0"}"#)
+            .expect_err("malformed error codes must be rejected")
+            .contains("errcode must be an integer"));
     }
 
     #[test]

@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::Value;
-use sqlx::{PgPool, Row};
+use sqlx::{PgConnection, PgPool, Row};
 
 use crate::oauth_login_local::LocalOAuthProviderProfile;
 use crate::oauth_provider_catalog::normalize_oauth_provider_code;
@@ -18,10 +18,20 @@ pub struct OAuthIntegrationExchangeContext {
     pub provider_union_scope_id: Option<String>,
     pub client_auth_method: String,
     pub client_secret: String,
+    /// Opaque identity of the credential used to build this context. This is
+    /// safe to compare across an external provider call and must never contain
+    /// the plaintext secret.
+    pub client_secret_revision: String,
     pub token_endpoint: String,
     pub userinfo_endpoint: Option<String>,
     pub protocol_family: String,
     pub supports_userinfo: bool,
+}
+
+#[derive(Clone, Debug)]
+struct ResolvedOAuthClientSecret {
+    value: String,
+    revision: String,
 }
 
 #[derive(Clone, Debug)]
@@ -135,7 +145,11 @@ pub async fn load_oauth_integration_exchange_context_for_integration_any_state(
     pg: &PgPool,
     tenant_id: &str,
     integration_id: &str,
+    provider_code: &str,
+    provider_client_id: &str,
 ) -> Result<Option<OAuthIntegrationExchangeContext>, String> {
+    let normalized = normalize_oauth_provider_code(provider_code)
+        .ok_or_else(|| "OAuth provider is invalid".to_string())?;
     let row = sqlx::query(
         "SELECT i.id, c.id, c.provider_client_id, c.provider_tenant_id, c.client_auth_method, \
                 COALESCE(c.token_endpoint_override, cat.token_endpoint) AS token_endpoint, \
@@ -143,15 +157,17 @@ pub async fn load_oauth_integration_exchange_context_for_integration_any_state(
                 COALESCE(i.protocol_family, cat.protocol_family) AS protocol_family, \
                 COALESCE(cat.supports_userinfo, 0) AS supports_userinfo \
          FROM iam_oauth_integration i \
-         JOIN iam_oauth_client c ON c.integration_id = i.id \
+         JOIN iam_oauth_client c ON c.integration_id = i.id AND c.provider_client_id = $3 \
          LEFT JOIN iam_oauth_provider_catalog cat \
            ON cat.provider_code = i.provider_code AND cat.status = 'active' \
-         WHERE i.tenant_id = $1 AND i.id = $2 \
+         WHERE i.tenant_id = $1 AND i.id = $2 AND i.provider_code = $4 \
          ORDER BY CASE WHEN c.enabled = 1 THEN 0 ELSE 1 END, c.id \
          LIMIT 1",
     )
     .bind(tenant_id)
     .bind(integration_id)
+    .bind(provider_client_id)
+    .bind(&normalized)
     .fetch_optional(pg)
     .await
     .map_err(|error| format!("load oauth integration exchange context failed: {error}"))?;
@@ -160,7 +176,50 @@ pub async fn load_oauth_integration_exchange_context_for_integration_any_state(
         return Ok(None);
     };
 
-    finish_exchange_context(pg, tenant_id, integration_id, row).await
+    finish_exchange_context_if_secret_configured(pg, tenant_id, &normalized, row).await
+}
+
+/// Loads provider credentials for the exact OAuth client bound to a resource
+/// account. Resource-account operations must not select an arbitrary client
+/// when one integration owns multiple provider applications.
+pub async fn load_oauth_integration_exchange_context_for_client_any_state(
+    pg: &PgPool,
+    tenant_id: &str,
+    integration_id: &str,
+    oauth_client_id: &str,
+    provider_code: &str,
+    provider_client_id: &str,
+) -> Result<Option<OAuthIntegrationExchangeContext>, String> {
+    let normalized = normalize_oauth_provider_code(provider_code)
+        .ok_or_else(|| "OAuth provider is invalid".to_string())?;
+    let row = sqlx::query(
+        "SELECT i.id, c.id, c.provider_client_id, c.provider_tenant_id, c.client_auth_method, \
+                COALESCE(c.token_endpoint_override, cat.token_endpoint) AS token_endpoint, \
+                COALESCE(c.userinfo_endpoint_override, cat.userinfo_endpoint) AS userinfo_endpoint, \
+                COALESCE(i.protocol_family, cat.protocol_family) AS protocol_family, \
+                COALESCE(cat.supports_userinfo, 0) AS supports_userinfo \
+         FROM iam_oauth_integration i \
+         JOIN iam_oauth_client c \
+           ON c.tenant_id = i.tenant_id AND c.integration_id = i.id \
+          AND c.id = $3 AND c.provider_client_id = $4 AND c.provider_code = i.provider_code \
+         LEFT JOIN iam_oauth_provider_catalog cat \
+           ON cat.provider_code = i.provider_code AND cat.status = 'active' \
+         WHERE i.tenant_id = $1 AND i.id = $2 AND i.provider_code = $5",
+    )
+    .bind(tenant_id)
+    .bind(integration_id)
+    .bind(oauth_client_id)
+    .bind(provider_client_id)
+    .bind(&normalized)
+    .fetch_optional(pg)
+    .await
+    .map_err(|error| format!("load oauth client exchange context failed: {error}"))?;
+
+    let Some(row) = row else {
+        return Err("OAuth resource account client binding is invalid".to_string());
+    };
+
+    finish_exchange_context_if_secret_configured(pg, tenant_id, &normalized, row).await
 }
 
 /// Loads the exchange context for one specific integration row.
@@ -227,6 +286,25 @@ async fn finish_exchange_context(
     normalized: &str,
     row: sqlx::postgres::PgRow,
 ) -> Result<Option<OAuthIntegrationExchangeContext>, String> {
+    finish_exchange_context_with_secret_policy(pg, tenant_id, normalized, row, false).await
+}
+
+async fn finish_exchange_context_if_secret_configured(
+    pg: &PgPool,
+    tenant_id: &str,
+    normalized: &str,
+    row: sqlx::postgres::PgRow,
+) -> Result<Option<OAuthIntegrationExchangeContext>, String> {
+    finish_exchange_context_with_secret_policy(pg, tenant_id, normalized, row, true).await
+}
+
+async fn finish_exchange_context_with_secret_policy(
+    pg: &PgPool,
+    tenant_id: &str,
+    normalized: &str,
+    row: sqlx::postgres::PgRow,
+    missing_secret_is_unconfigured: bool,
+) -> Result<Option<OAuthIntegrationExchangeContext>, String> {
     let integration_id: String = row.get(0);
     let oauth_client_row_id: String = row.get(1);
     let provider_client_id: String = row.get(2);
@@ -248,7 +326,7 @@ async fn finish_exchange_context(
         .filter(|value| !value.is_empty())
         .or_else(|| builtin_userinfo_endpoint(&normalized).map(str::to_string));
 
-    let client_secret = resolve_oauth_client_secret(
+    let client_secret = resolve_oauth_client_secret_if_configured(
         pg,
         tenant_id,
         &oauth_client_row_id,
@@ -256,6 +334,14 @@ async fn finish_exchange_context(
         &provider_client_id,
     )
     .await?;
+    let Some(client_secret) = client_secret else {
+        if missing_secret_is_unconfigured {
+            return Ok(None);
+        }
+        return Err(format!(
+            "OAuth provider {normalized} is missing client secret configuration"
+        ));
+    };
 
     Ok(Some(OAuthIntegrationExchangeContext {
         integration_id,
@@ -264,7 +350,8 @@ async fn finish_exchange_context(
         provider_client_id,
         provider_union_scope_id,
         client_auth_method,
-        client_secret,
+        client_secret: client_secret.value,
+        client_secret_revision: client_secret.revision,
         token_endpoint,
         userinfo_endpoint,
         protocol_family,
@@ -415,21 +502,21 @@ fn parse_wechat_mini_program_response(
     })
 }
 
-pub(crate) async fn resolve_oauth_client_secret(
+async fn resolve_oauth_client_secret_if_configured(
     pg: &PgPool,
     tenant_id: &str,
     oauth_client_row_id: &str,
     provider_code: &str,
     provider_client_id: &str,
-) -> Result<String, String> {
+) -> Result<Option<ResolvedOAuthClientSecret>, String> {
     if let Some(secret) = read_env_oauth_client_secret(provider_code) {
-        return Ok(secret);
+        return Ok(Some(resolved_environment_secret(secret)));
     }
 
-    let row = sqlx::query_scalar::<_, String>(
-        "SELECT secret_ref FROM iam_oauth_secret \
+    let row = sqlx::query(
+        "SELECT id, secret_ref, secret_hash, version FROM iam_oauth_secret \
          WHERE tenant_id = $1 AND oauth_client_id = $2 AND secret_kind = $3 AND status = 'active' \
-         ORDER BY active_from DESC \
+         ORDER BY active_from DESC, updated_at DESC, id DESC \
          LIMIT 1",
     )
     .bind(tenant_id)
@@ -439,12 +526,19 @@ pub(crate) async fn resolve_oauth_client_secret(
     .await
     .map_err(|error| format!("load oauth client secret failed: {error}"))?;
 
-    if let Some(secret_ref) = row {
+    if let Some(row) = row {
+        let secret_id: String = row.get(0);
+        let secret_ref: String = row.get(1);
+        let secret_hash: String = row.get(2);
+        let version: i32 = row.get(3);
         let decoded = decode_signing_secret_ref(&secret_ref)?;
         let secret = String::from_utf8(decoded)
             .map_err(|error| format!("oauth client secret is not valid utf-8: {error}"))?;
         if !crate::is_blank(Some(secret.as_str())) {
-            return Ok(secret);
+            return Ok(Some(ResolvedOAuthClientSecret {
+                value: secret,
+                revision: database_secret_revision(&secret_id, &secret_hash, version),
+            }));
         }
     }
 
@@ -454,14 +548,114 @@ pub(crate) async fn resolve_oauth_client_secret(
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
         {
-            return Ok(secret);
+            return Ok(Some(resolved_environment_secret(secret)));
         }
     }
 
     let _ = provider_client_id;
-    Err(format!(
-        "OAuth provider {provider_code} is missing client secret configuration"
-    ))
+    Ok(None)
+}
+
+fn resolved_environment_secret(secret: String) -> ResolvedOAuthClientSecret {
+    let fingerprint = sdkwork_iam_bootstrap::hash_secret_ref(&secret);
+    ResolvedOAuthClientSecret {
+        value: secret,
+        revision: format!("env:{fingerprint}"),
+    }
+}
+
+fn database_secret_revision(secret_id: &str, secret_hash: &str, version: i32) -> String {
+    format!("db:{secret_id}:{version}:{secret_hash}")
+}
+
+/// Verifies, under the caller's short database transaction, that the OAuth
+/// client and active secret still match an exchange context captured before an
+/// external provider call. Locking the integration and selected client rows
+/// gives credential writers a deterministic serialization point without
+/// holding a database lock while calling the provider.
+pub async fn oauth_integration_exchange_credentials_match(
+    connection: &mut PgConnection,
+    tenant_id: &str,
+    integration_id: &str,
+    provider_code: &str,
+    provider_client_id: &str,
+    expected_oauth_client_row_id: &str,
+    expected_client_secret_revision: &str,
+) -> Result<bool, String> {
+    let normalized = normalize_oauth_provider_code(provider_code)
+        .ok_or_else(|| "OAuth provider is invalid".to_string())?;
+
+    let integration_exists = sqlx::query_scalar::<_, String>(
+        "SELECT id FROM iam_oauth_integration \
+         WHERE tenant_id = $1 AND id = $2 AND provider_code = $3 \
+         FOR SHARE",
+    )
+    .bind(tenant_id)
+    .bind(integration_id)
+    .bind(&normalized)
+    .fetch_optional(&mut *connection)
+    .await
+    .map_err(|error| format!("lock oauth integration credentials failed: {error}"))?
+    .is_some();
+    if !integration_exists {
+        return Ok(false);
+    }
+
+    let client_matches = sqlx::query_scalar::<_, String>(
+        "SELECT id FROM iam_oauth_client \
+         WHERE tenant_id = $1 AND integration_id = $2 AND provider_client_id = $3 \
+           AND id = $4 AND provider_code = $5 \
+         FOR SHARE",
+    )
+    .bind(tenant_id)
+    .bind(integration_id)
+    .bind(provider_client_id)
+    .bind(expected_oauth_client_row_id)
+    .bind(&normalized)
+    .fetch_optional(&mut *connection)
+    .await
+    .map_err(|error| format!("lock oauth client credentials failed: {error}"))?;
+    if client_matches.is_none() {
+        return Ok(false);
+    }
+
+    if let Some(secret) = read_env_oauth_client_secret(&normalized) {
+        return Ok(resolved_environment_secret(secret).revision == expected_client_secret_revision);
+    }
+
+    let secret = sqlx::query(
+        "SELECT id, secret_hash, version FROM iam_oauth_secret \
+         WHERE tenant_id = $1 AND oauth_client_id = $2 AND secret_kind = $3 AND status = 'active' \
+         ORDER BY active_from DESC, updated_at DESC, id DESC \
+         LIMIT 1 FOR SHARE",
+    )
+    .bind(tenant_id)
+    .bind(expected_oauth_client_row_id)
+    .bind(SECRET_KIND_CLIENT_SECRET)
+    .fetch_optional(&mut *connection)
+    .await
+    .map_err(|error| format!("lock oauth client secret failed: {error}"))?;
+    if let Some(row) = secret {
+        let secret_id: String = row.get(0);
+        let secret_hash: String = row.get(1);
+        let version: i32 = row.get(2);
+        return Ok(database_secret_revision(&secret_id, &secret_hash, version)
+            == expected_client_secret_revision);
+    }
+
+    if crate::allows_oauth_client_secret_env_override() {
+        if let Some(secret) = std::env::var("SDKWORK_IAM_OAUTH_CLIENT_SECRET")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+        {
+            return Ok(
+                resolved_environment_secret(secret).revision == expected_client_secret_revision
+            );
+        }
+    }
+
+    Ok(false)
 }
 
 async fn request_oauth_token(
@@ -1222,6 +1416,19 @@ mod tests {
     use super::*;
 
     use serde_json::json;
+
+    #[test]
+    fn credential_revisions_change_without_exposing_plaintext_secrets() {
+        let first = database_secret_revision("secret-row", "hash-one", 1);
+        let rotated_hash = database_secret_revision("secret-row", "hash-two", 1);
+        let rotated_version = database_secret_revision("secret-row", "hash-one", 2);
+        let environment = resolved_environment_secret("plain-secret".to_string());
+
+        assert_ne!(first, rotated_hash);
+        assert_ne!(first, rotated_version);
+        assert!(!environment.revision.contains("plain-secret"));
+        assert_eq!(environment.value, "plain-secret");
+    }
 
     #[test]
     fn maps_standard_oidc_claims_to_profile() {

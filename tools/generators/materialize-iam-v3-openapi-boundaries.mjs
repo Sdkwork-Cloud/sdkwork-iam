@@ -530,6 +530,10 @@ function buildOperation(surface, route) {
     operation.parameters.push(
       queryParameter('status', { type: 'string' }),
       queryParameter('environment', { type: 'string' }),
+      queryParameter('application_type', {
+        type: 'string',
+        description: 'Exact product-semantic application type filter (api | h5 | pc | flutter | other).',
+      }),
     );
   }
 
@@ -786,6 +790,11 @@ function buildSchemas() {
         instanceKey: { type: 'string', minLength: 1, maxLength: 255 },
         displayName: { type: 'string', minLength: 1, maxLength: 255 },
         environment: { type: 'string', minLength: 1, maxLength: 64 },
+        applicationType: {
+          type: 'string',
+          description: 'Product-semantic application type (api | h5 | pc | flutter | other); defaults to a mapping of the template app_type.',
+          enum: ['api', 'h5', 'pc', 'flutter', 'other'],
+        },
         primaryDomain: { type: 'string', minLength: 1, maxLength: 255 },
         accessPermissions: {
           type: 'array',
@@ -825,6 +834,11 @@ function buildSchemas() {
         instanceKey: { type: 'string' },
         displayName: { type: 'string' },
         environment: { type: 'string' },
+        applicationType: {
+          type: 'string',
+          description: 'Product-semantic application type (api | h5 | pc | flutter | other); defaults to a mapping of the template app_type.',
+          enum: ['api', 'h5', 'pc', 'flutter', 'other'],
+        },
         primaryDomain: { type: 'string' },
         accessPermissions: {
           type: 'array',

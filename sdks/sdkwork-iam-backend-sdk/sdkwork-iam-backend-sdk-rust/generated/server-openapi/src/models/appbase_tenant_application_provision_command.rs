@@ -46,6 +46,11 @@ pub struct AppbaseTenantApplicationProvisionCommand {
 
     pub environment: String,
 
+    /// Product-semantic application type (api | h5 | pc | flutter | other); defaults to a mapping of the template app_type.
+    #[serde(rename = "applicationType")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub application_type: Option<String>,
+
     #[serde(rename = "primaryDomain")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub primary_domain: Option<String>,

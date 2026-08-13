@@ -839,6 +839,24 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
         "iam.oauth.resourceAccounts.update",
     ),
     HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/custom_menus",
+        "iam.oauth",
+        "iam.oauth.resourceAccounts.customMenus.retrieve",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Patch,
+        "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/custom_menus",
+        "iam.oauth",
+        "iam.oauth.resourceAccounts.customMenus.update",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/custom_menus/publish",
+        "iam.oauth",
+        "iam.oauth.resourceAccounts.customMenus.publish",
+    ),
+    HttpRoute::dual_token(
         HttpMethod::Post,
         "/backend/v3/api/iam/oauth/resource_accounts/{resourceAccountId}/verifications",
         "iam.oauth",

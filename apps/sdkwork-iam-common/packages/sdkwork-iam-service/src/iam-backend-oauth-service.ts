@@ -80,6 +80,8 @@ export type IamBackendOauthService = {
       };
       create(...args: unknown[]): Promise<unknown>;
       customMenus: {
+        retrieve(...args: unknown[]): Promise<unknown>;
+        update(...args: unknown[]): Promise<unknown>;
         publish(...args: unknown[]): Promise<unknown>;
       };
       delete(...args: unknown[]): Promise<unknown>;
@@ -217,6 +219,8 @@ export function createIamBackendOauthService(
         },
         create: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts, "create", "iam.oauth.resourceAccounts.create", ...args),
         customMenus: {
+          retrieve: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts?.customMenus, "retrieve", "iam.oauth.resourceAccounts.customMenus.retrieve", ...args),
+          update: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts?.customMenus, "update", "iam.oauth.resourceAccounts.customMenus.update", ...args),
           publish: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts?.customMenus, "publish", "iam.oauth.resourceAccounts.customMenus.publish", ...args),
         },
         delete: (...args: unknown[]) => callBackendOauth(backendOauth, (oauth) => oauth?.resourceAccounts, "delete", "iam.oauth.resourceAccounts.delete", ...args),

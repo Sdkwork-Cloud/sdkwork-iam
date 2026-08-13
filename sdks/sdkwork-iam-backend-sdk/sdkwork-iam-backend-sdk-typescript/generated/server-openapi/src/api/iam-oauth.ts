@@ -339,6 +339,30 @@ export class IamOauthIamOauthResourceAccountsFollowQrCodesApi {
   }
 }
 
+export class IamOauthIamOauthResourceAccountsCustomMenusApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** Iam oauth resource Accounts custom Menus retrieve. */
+  async retrieve(resourceAccountId: string, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}/custom_menus`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+  }
+
+/** Iam oauth resource Accounts custom Menus update. */
+  async update(resourceAccountId: string, body?: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}/custom_menus`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PATCH' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+  }
+
+/** Iam oauth resource Accounts custom Menus publish. */
+  async publish(resourceAccountId: string, body: AppbaseOperationCommand, requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(backendApiPath(`/iam/oauth/resource_accounts/${serializePathParameter(resourceAccountId, { name: 'resourceAccountId', style: 'simple', explode: false })}/custom_menus/publish`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+  }
+}
+
 export class IamOauthIamOauthResourceAccountsAuthorizationRefreshesApi {
   private client: HttpClient;
 
@@ -364,6 +388,7 @@ export interface IamOauthIamOauthResourceAccountsListParams {
 export class IamOauthIamOauthResourceAccountsApi {
   private client: HttpClient;
   public readonly authorizationRefreshes: IamOauthIamOauthResourceAccountsAuthorizationRefreshesApi;
+  public readonly customMenus: IamOauthIamOauthResourceAccountsCustomMenusApi;
   public readonly followQrCodes: IamOauthIamOauthResourceAccountsFollowQrCodesApi;
   public readonly miniProgramLoginChecks: IamOauthIamOauthResourceAccountsMiniProgramLoginChecksApi;
   public readonly verifications: IamOauthIamOauthResourceAccountsVerificationsApi;
@@ -371,6 +396,7 @@ export class IamOauthIamOauthResourceAccountsApi {
   constructor(client: HttpClient) {
     this.client = client;
     this.authorizationRefreshes = new IamOauthIamOauthResourceAccountsAuthorizationRefreshesApi(client);
+    this.customMenus = new IamOauthIamOauthResourceAccountsCustomMenusApi(client);
     this.followQrCodes = new IamOauthIamOauthResourceAccountsFollowQrCodesApi(client);
     this.miniProgramLoginChecks = new IamOauthIamOauthResourceAccountsMiniProgramLoginChecksApi(client);
     this.verifications = new IamOauthIamOauthResourceAccountsVerificationsApi(client);

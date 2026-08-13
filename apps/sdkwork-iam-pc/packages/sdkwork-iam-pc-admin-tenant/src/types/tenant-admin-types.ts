@@ -34,6 +34,7 @@ export interface SdkworkIamTenantMemberDraft {
 export interface SdkworkIamTenantApplication {
   accessPermissions: readonly string[];
   appId: string;
+  applicationType: string;
   createdAt?: string;
   displayName: string;
   environment: string;
@@ -51,6 +52,7 @@ export interface SdkworkIamTenantApplication {
 export interface SdkworkIamTenantApplicationDraft {
   accessPermissions: string[];
   appKey: string;
+  applicationType: string;
   displayName: string;
   environment: string;
   instanceKey: string;

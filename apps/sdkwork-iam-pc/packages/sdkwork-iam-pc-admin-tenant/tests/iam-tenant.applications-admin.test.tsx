@@ -1,21 +1,20 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { SdkworkI18nProvider } from "@sdkwork/i18n-pc-react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
   createSdkworkIamTenantController,
-  SdkworkIamTenantAdminWorkspace,
+  SdkworkIamTenantApplicationsAdminWorkspace,
 } from "../src";
 
-describe("tenant application workspace", () => {
-  it("opens a tenant application workspace with summary, list, and registration flow", async () => {
+describe("tenant applications admin workspace", () => {
+  it("targets the current tenant without a tenant picker or page header", async () => {
     const service = {
       iam: {
         tenants: {
           list: vi.fn().mockResolvedValue({
             items: [{ code: "ACME", name: "Acme", status: "active", tenantId: "tenant-1" }],
           }),
-          members: { list: vi.fn().mockResolvedValue({ items: [] }) },
         },
         tenantApplications: {
           list: vi.fn().mockResolvedValue({
@@ -48,24 +47,26 @@ describe("tenant application workspace", () => {
     };
     const controller = createSdkworkIamTenantController({
       permissionScope: ["iam.tenant_applications.*"],
+      selectedTenantId: "tenant-1",
       service: service as never,
     });
 
-    render(<SdkworkI18nProvider locale="zh-CN"><SdkworkIamTenantAdminWorkspace controller={controller} /></SdkworkI18nProvider>);
+    render(
+      <SdkworkI18nProvider locale="zh-CN">
+        <SdkworkIamTenantApplicationsAdminWorkspace controller={controller} />
+      </SdkworkI18nProvider>,
+    );
 
-    await screen.findByText("Acme");
-    fireEvent.click(screen.getByRole("button", { name: "管理" }));
-
+    // The current tenant's applications load directly; no tenant picker,
+    // no tenant search form, and no standalone page header are rendered.
     await screen.findByText("CRM");
-    expect(screen.getByText("租户应用")).toBeTruthy();
-    expect(screen.getByText("crm.example.com")).toBeTruthy();
-    expect(screen.getByText("应用总数")).toBeTruthy();
+    expect(screen.queryByRole("combobox", { name: "选择租户" })).toBeNull();
+    expect(screen.queryByRole("search")).toBeNull();
+    expect(screen.queryByText("应用列表")).toBeNull();
+    // The application type column renders from the response payload.
+    expect(screen.getAllByText("PC").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("应用类型").length).toBeGreaterThan(0);
     expect(service.iam.tenantApplications.list).toHaveBeenCalledWith("tenant-1", { page: 1, page_size: 20 });
-
-    fireEvent.click(screen.getByRole("button", { name: "注册应用" }));
-    expect(screen.getByText("注册租户应用")).toBeTruthy();
-    expect(screen.getByText("已注册应用标识")).toBeTruthy();
-
     await waitFor(() => expect(service.iam.tenantApplications.summary.retrieve).toHaveBeenCalledWith("tenant-1"));
   });
 });
