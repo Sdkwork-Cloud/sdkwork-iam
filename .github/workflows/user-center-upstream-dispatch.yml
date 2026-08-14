@@ -48,7 +48,7 @@ jobs:
       - name: Dispatch downstream user-center sync workflows
         env:
           SDKWORK_USER_CENTER_SOURCE_REF: ${{ github.ref }}
-          SDKWORK_USER_CENTER_SOURCE_REPOSITORY: Sdkwork-Cloud/sdkwork-iam
+          SDKWORK_USER_CENTER_SOURCE_REPOSITORY: sdkwork-ai/sdkwork-iam
           SDKWORK_USER_CENTER_SOURCE_SHA: ${{ github.sha }}
           SDKWORK_USER_CENTER_UPSTREAM_DISPATCH_TOKEN: ${{ secrets.SDKWORK_USER_CENTER_UPSTREAM_DISPATCH_TOKEN }}
         run: node scripts/user-center-upstream-dispatch.mjs

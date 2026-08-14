@@ -42,7 +42,7 @@ test('user-center upstream dispatch builds repository-dispatch plans for every g
       body: JSON.stringify({
         client_payload: {
           source_ref: 'refs/heads/main',
-          source_repository: 'Sdkwork-Cloud/sdkwork-iam',
+          source_repository: 'sdkwork-ai/sdkwork-iam',
           source_sha: 'abc123',
           workflow: 'user-center-upstream-sync',
         },
@@ -60,7 +60,7 @@ test('user-center upstream dispatch builds repository-dispatch plans for every g
       body: JSON.stringify({
         client_payload: {
           source_ref: 'refs/heads/main',
-          source_repository: 'Sdkwork-Cloud/sdkwork-iam',
+          source_repository: 'sdkwork-ai/sdkwork-iam',
           source_sha: 'abc123',
           workflow: 'user-center-upstream-sync',
         },
