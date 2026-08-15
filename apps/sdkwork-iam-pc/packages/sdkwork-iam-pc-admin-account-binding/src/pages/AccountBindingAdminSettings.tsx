@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Button,
+  Input,
   Label,
   SettingsSection,
   StatusNotice,
@@ -140,8 +141,7 @@ export function SdkworkIamAccountBindingSettings({
           />
           <div className="space-y-2">
             <Label htmlFor="oauth-login-providers">{messages.oauthLogin.allowedProvidersLabel}</Label>
-            <input
-              className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
+            <Input
               disabled={!draft.oauthLogin.enabled}
               id="oauth-login-providers"
               onChange={(event) => updateOauthLogin({
@@ -181,8 +181,7 @@ export function SdkworkIamAccountBindingSettings({
           />
           <div className="space-y-2">
             <Label htmlFor="allowed-providers">{messages.oauthBinding.allowedProvidersLabel}</Label>
-            <input
-              className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 text-sm"
+            <Input
               disabled={!draft.oauthBinding.enabled}
               id="allowed-providers"
               onChange={(event) => updateOauth({

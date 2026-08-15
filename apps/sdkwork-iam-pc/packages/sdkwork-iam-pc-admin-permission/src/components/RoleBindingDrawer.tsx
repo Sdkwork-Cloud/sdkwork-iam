@@ -21,6 +21,10 @@ import type {
 } from "../types/permission-admin-types";
 import { CatalogField } from "./catalog-form";
 
+/** Sentinel value representing "no role selected" (Radix Select items cannot
+ *  carry an empty string value). */
+const ROLE_SELECT_EMPTY = "__role_select_empty__";
+
 /**
  * Shared role binding creation drawer used by the roles and authorization
  * workspaces. The active role can be pre-selected through `defaultRoleId`;
@@ -58,18 +62,22 @@ export function RoleBindingDrawer({
         <DrawerBody className="space-y-4">
           <label className="block space-y-2 text-sm">
             <span>{copy.role}</span>
-            <select
-              className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2"
-              onChange={(event) => set({ roleId: event.target.value })}
-              value={draft.roleId || defaultRoleId || ""}
+            <Select
+              onValueChange={(next) => set({ roleId: next === ROLE_SELECT_EMPTY ? "" : next })}
+              value={draft.roleId || defaultRoleId || ROLE_SELECT_EMPTY}
             >
-              <option value="">{copy.role}</option>
-              {roles.map((role) => (
-                <option key={role.roleId} value={role.roleId}>
-                  {role.name} ({role.code || role.roleId})
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ROLE_SELECT_EMPTY}>{copy.role}</SelectItem>
+                {roles.map((role) => (
+                  <SelectItem key={role.roleId} value={role.roleId}>
+                    {role.name} ({role.code || role.roleId})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <EnumSelectField
             label={copy.principalKind}

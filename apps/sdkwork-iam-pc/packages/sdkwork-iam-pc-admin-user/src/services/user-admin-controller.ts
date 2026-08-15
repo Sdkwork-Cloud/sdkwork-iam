@@ -31,6 +31,23 @@ export function createSdkworkIamUserAdminController(
   };
 
   const controller: SdkworkIamUserAdminController = {
+    banUser: async (userId) => {
+      const normalizedUserId = requireId(userId, "userId");
+      setState({ status: "loading" });
+      try {
+        const user = toUser(await resolved.service.iam.users.ban(normalizedUserId));
+        if (!user) {
+          throw new Error("SDKWork IAM user ban response is missing userId");
+        }
+        const users = [...state.users.filter((item) => item.userId !== user.userId), user];
+        const selectedUser = state.selectedUser?.userId === user.userId ? user : state.selectedUser;
+        setState({ selectedUser, status: "ready", users });
+        return user;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
     createUser: async (body) => {
       requireIdentityField(body);
       setState({ status: "loading" });
@@ -153,6 +170,23 @@ export function createSdkworkIamUserAdminController(
         throw error;
       }
     },
+    unbanUser: async (userId) => {
+      const normalizedUserId = requireId(userId, "userId");
+      setState({ status: "loading" });
+      try {
+        const user = toUser(await resolved.service.iam.users.unban(normalizedUserId));
+        if (!user) {
+          throw new Error("SDKWork IAM user unban response is missing userId");
+        }
+        const users = [...state.users.filter((item) => item.userId !== user.userId), user];
+        const selectedUser = state.selectedUser?.userId === user.userId ? user : state.selectedUser;
+        setState({ selectedUser, status: "ready", users });
+        return user;
+      } catch (error) {
+        setState({ status: "error" });
+        throw error;
+      }
+    },
   };
 
   return controller;
@@ -174,9 +208,11 @@ function toUser(value: unknown): SdkworkIamAdminUser | undefined {
     return undefined;
   }
   return {
+    createdAt: optionalString(record.createdAt) || optionalString(record.created_at),
     displayName: optionalString(record.displayName) || optionalString(record.display_name),
     email: optionalString(record.email),
     id: optionalString(record.id) || userId,
+    lastLoginAt: optionalString(record.lastLoginAt) || optionalString(record.last_login_at),
     phone: optionalString(record.phone) || optionalString(record.phoneNumber) || optionalString(record.phone_number),
     status: optionalString(record.status),
     userId,

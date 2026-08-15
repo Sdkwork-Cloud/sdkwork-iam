@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Button,
+  Checkbox,
   Label,
   SettingsSection,
   StatusNotice,
@@ -225,11 +226,10 @@ export function OauthIntegrationSection({
           value={draft.surfaceKind ?? "web"}
         />
         <label className="flex items-center gap-2 text-sm" htmlFor="oauth-provider-enabled">
-          <input
+          <Checkbox
             checked={draft.enabled ?? true}
             id="oauth-provider-enabled"
-            onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.checked }))}
-            type="checkbox"
+            onCheckedChange={(checked) => setDraft((current) => ({ ...current, enabled: checked === true }))}
           />
           {messages.integrations.enabledLabel}
         </label>

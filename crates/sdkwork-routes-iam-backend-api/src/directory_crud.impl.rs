@@ -316,6 +316,16 @@ async fn update_user(
     let Ok(tenant_id) = tenant_id_from_context(&ctx) else {
         return tenant_id_from_context(&ctx).err().expect("error response");
     };
+    if let Some(status) = read_string_field(&body, &["status"]) {
+        let normalized = status.trim().to_ascii_lowercase();
+        if !matches!(normalized.as_str(), "active" | "banned" | "disabled" | "locked") {
+            return appbase_error(
+                StatusCode::BAD_REQUEST,
+                "iam_user_invalid_status",
+                "status must be one of active, banned, disabled, locked",
+            );
+        }
+    }
     let mut assignments = patch_fields(&body);
     assignments.push(("updated_at".to_owned(), PatchValue::Text(Utc::now().to_rfc3339())));
     if assignments.len() == 1 {

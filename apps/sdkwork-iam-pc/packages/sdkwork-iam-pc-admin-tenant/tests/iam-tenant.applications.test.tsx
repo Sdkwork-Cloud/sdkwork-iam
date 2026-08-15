@@ -57,7 +57,9 @@ describe("tenant application workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "管理" }));
 
     await screen.findByText("CRM");
-    expect(screen.getByText("租户应用")).toBeTruthy();
+    // The table header row was removed: the filter form sits directly above
+    // the table and the register action moved into the same row.
+    expect(screen.getAllByRole("search").length).toBeGreaterThan(0);
     expect(screen.getByText("crm.example.com")).toBeTruthy();
     expect(screen.getByText("应用总数")).toBeTruthy();
     expect(service.iam.tenantApplications.list).toHaveBeenCalledWith("tenant-1", { page: 1, page_size: 20 });

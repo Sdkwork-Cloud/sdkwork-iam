@@ -271,13 +271,10 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
 
       <ApplicationSummary messages={messages.applications.summary} summary={summary} />
 
-      <form
-        className="grid grid-cols-[minmax(0,1fr)_11rem_11rem_11rem_auto] items-end gap-3"
-        onSubmit={applyFilters}
-      >
-        <label className="min-w-0 flex-1 space-y-1.5 text-sm">
-          <span className="sr-only">{messages.applications.filters.searchLabel}</span>
-          <span className="relative block">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <form className="flex min-w-0 flex-wrap items-center gap-2" onSubmit={applyFilters} role="search">
+          <label className="relative w-64 shrink-0">
+            <span className="sr-only">{messages.applications.filters.searchLabel}</span>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sdk-color-text-muted)]" />
             <Input
               className="pl-9"
@@ -285,44 +282,55 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
               placeholder={messages.applications.filters.searchPlaceholder}
               value={filters.q}
             />
-          </span>
-        </label>
-        <FilterSelect
-          ariaLabel={messages.applications.filters.status}
-          onValueChange={(status) => setFilters((current) => ({ ...current, status }))}
-          options={[
-            ["all", messages.applications.filters.allStatuses],
-            ["enabled", messages.applications.statuses.enabled],
-            ["pending_config", messages.applications.statuses.pendingConfig],
-            ["disabled", messages.applications.statuses.disabled],
-          ]}
-          value={filters.status}
-        />
-        <FilterSelect
-          ariaLabel={messages.applications.filters.environment}
-          onValueChange={(environment) => setFilters((current) => ({ ...current, environment }))}
-          options={[
-            ["all", messages.applications.filters.allEnvironments],
-            ["development", messages.applications.environments.development],
-            ["staging", messages.applications.environments.staging],
-            ["production", messages.applications.environments.production],
-          ]}
-          value={filters.environment}
-        />
-        <FilterSelect
-          ariaLabel={messages.applications.filters.applicationType}
-          onValueChange={(applicationType) => setFilters((current) => ({ ...current, applicationType }))}
-          options={[
-            ["all", messages.applications.filters.allTypes],
-            ...APPLICATION_TYPE_VALUES.map((value) => [value, applicationTypeLabel(value, messages.applications.types)] as [string, string]),
-          ]}
-          value={filters.applicationType}
-        />
-        <Button disabled={busy || loading} type="submit" variant="outline">
-          <Search className="h-4 w-4" />
-          {messages.applications.filters.apply}
+          </label>
+          <FilterSelect
+            ariaLabel={messages.applications.filters.status}
+            onValueChange={(status) => setFilters((current) => ({ ...current, status }))}
+            options={[
+              ["all", messages.applications.filters.allStatuses],
+              ["enabled", messages.applications.statuses.enabled],
+              ["pending_config", messages.applications.statuses.pendingConfig],
+              ["disabled", messages.applications.statuses.disabled],
+            ]}
+            value={filters.status}
+          />
+          <FilterSelect
+            ariaLabel={messages.applications.filters.environment}
+            onValueChange={(environment) => setFilters((current) => ({ ...current, environment }))}
+            options={[
+              ["all", messages.applications.filters.allEnvironments],
+              ["development", messages.applications.environments.development],
+              ["staging", messages.applications.environments.staging],
+              ["production", messages.applications.environments.production],
+            ]}
+            value={filters.environment}
+          />
+          <FilterSelect
+            ariaLabel={messages.applications.filters.applicationType}
+            onValueChange={(applicationType) => setFilters((current) => ({ ...current, applicationType }))}
+            options={[
+              ["all", messages.applications.filters.allTypes],
+              ...APPLICATION_TYPE_VALUES.map((value) => [value, applicationTypeLabel(value, messages.applications.types)] as [string, string]),
+            ]}
+            value={filters.applicationType}
+          />
+          <Button disabled={busy || loading} type="submit" variant="outline">
+            <Search className="h-4 w-4" />
+            {messages.applications.filters.apply}
+          </Button>
+        </form>
+        <Button
+          disabled={!capabilities.canProvision}
+          onClick={() => {
+            setApplicationDraft(emptyApplicationDraft());
+            setRegisterOpen(true);
+          }}
+          type="button"
+        >
+          <Plus className="h-4 w-4" />
+          {messages.applications.actions.register}
         </Button>
-      </form>
+      </div>
 
       <DataTable
         className="min-h-0 flex-1"
@@ -372,20 +380,6 @@ export function TenantApplicationsPanel({ controller, tenant }: TenantApplicatio
           footer: { className: "shrink-0" },
         }}
         stickyHeader
-        title={messages.applications.title}
-        toolbar={(
-          <Button
-            disabled={!capabilities.canProvision}
-            onClick={() => {
-              setApplicationDraft(emptyApplicationDraft());
-              setRegisterOpen(true);
-            }}
-            type="button"
-          >
-            <Plus className="h-4 w-4" />
-            {messages.applications.actions.register}
-          </Button>
-        )}
       />
 
       <ApplicationRegisterDrawer
@@ -477,7 +471,7 @@ function ApplicationSummary({ messages, summary }: { messages: { disabled: strin
 function FilterSelect({ ariaLabel, onValueChange, options, value }: { ariaLabel: string; onValueChange: (value: string) => void; options: Array<[string, string]>; value: string }) {
   return (
     <Select onValueChange={onValueChange} value={value}>
-      <SelectTrigger aria-label={ariaLabel} className="w-full">
+      <SelectTrigger aria-label={ariaLabel} className="w-36 shrink-0">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

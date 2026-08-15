@@ -292,7 +292,7 @@ pub(crate) async fn authenticate_password(
 pub(crate) async fn identity_exists_global(pg: &PgPool, identity: &str) -> Result<bool, String> {
     let identity_key = canonical_identity(identity);
     let row = sqlx::query(
-        "SELECT EXISTS(SELECT 1 FROM iam_user WHERE (LOWER(username) = $1 OR LOWER(email) = $1 OR phone = $1) AND status = 'active' AND is_deleted = 0) as exists_flag",
+        "SELECT EXISTS(SELECT 1 FROM iam_user WHERE (LOWER(username) = $1 OR LOWER(email) = $1 OR phone = $1) AND status <> 'disabled' AND is_deleted = 0) as exists_flag",
     )
     .bind(&identity_key)
     .fetch_optional(pg)
@@ -309,7 +309,7 @@ pub(crate) async fn identity_exists(
 ) -> Result<bool, String> {
     let identity_key = canonical_identity(identity);
     let row = sqlx::query(
-        "SELECT EXISTS(SELECT 1 FROM iam_user WHERE tenant_id = $1 AND (LOWER(username) = $2 OR LOWER(email) = $2 OR phone = $2) AND status = 'active' AND is_deleted = 0) as exists_flag",
+        "SELECT EXISTS(SELECT 1 FROM iam_user WHERE tenant_id = $1 AND (LOWER(username) = $2 OR LOWER(email) = $2 OR phone = $2) AND status <> 'disabled' AND is_deleted = 0) as exists_flag",
     )
     .bind(tenant_id)
     .bind(&identity_key)

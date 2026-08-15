@@ -344,6 +344,22 @@ export function SdkworkIamOrganizationAdminWorkspace({
         {error ? <StatusNotice tone="danger">{error}</StatusNotice> : null}
         {notice ? <StatusNotice tone="success">{notice}</StatusNotice> : null}
 
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <form className="flex min-w-0 items-center gap-2" onSubmit={submitSearch} role="search">
+            <label className="relative w-64 shrink-0">
+              <span className="sr-only">{messages.organizations.searchLabel}</span>
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sdk-color-text-muted)]" />
+              <Input aria-label={messages.organizations.searchLabel} className="pl-9" onChange={(event) => setSearchQuery(event.target.value)} placeholder={messages.organizations.searchPlaceholder} value={searchQuery} />
+            </label>
+            <Button disabled={loading} type="submit" variant="outline"><Search className="h-4 w-4" />{messages.organizations.searchAction}</Button>
+          </form>
+          {permissions.organizations.create ? (
+            <Button onClick={() => { setOrganizationDraft(emptyOrganizationDraft()); setOrganizationDrawerMode("create"); }} type="button">
+              <Plus className="h-4 w-4" />{messages.organizations.create}
+            </Button>
+          ) : null}
+        </div>
+
         <DataTable
           className={selectedOrganization ? "max-h-[40vh]" : "min-h-0 flex-1"}
           columns={organizationColumns}
@@ -382,23 +398,6 @@ export function SdkworkIamOrganizationAdminWorkspace({
             footer: { className: "shrink-0" },
           }}
           stickyHeader
-          toolbar={(
-            <div className="flex w-full flex-wrap items-center gap-2">
-              <form className="flex min-w-[16rem] flex-1 items-center gap-2" onSubmit={submitSearch} role="search">
-                <label className="relative min-w-0 flex-1">
-                  <span className="sr-only">{messages.organizations.searchLabel}</span>
-                  <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sdk-color-text-muted)]" />
-                  <Input aria-label={messages.organizations.searchLabel} className="pl-9" onChange={(event) => setSearchQuery(event.target.value)} placeholder={messages.organizations.searchPlaceholder} value={searchQuery} />
-                </label>
-                <Button disabled={loading} type="submit" variant="secondary"><Search className="h-4 w-4" />{messages.organizations.searchAction}</Button>
-              </form>
-              {permissions.organizations.create ? (
-                <Button onClick={() => { setOrganizationDraft(emptyOrganizationDraft()); setOrganizationDrawerMode("create"); }} type="button">
-                  <Plus className="h-4 w-4" />{messages.organizations.create}
-                </Button>
-              ) : null}
-            </div>
-          )}
         />
 
         {!onOpenStructure && selectedOrganization ? (

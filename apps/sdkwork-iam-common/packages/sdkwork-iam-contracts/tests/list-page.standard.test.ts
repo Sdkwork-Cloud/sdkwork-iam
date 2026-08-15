@@ -6,6 +6,7 @@ import {
   createSdkWorkPagedListSession,
   extractSdkWorkListItems,
   extractSdkWorkListPage,
+  extractSdkWorkResourceItem,
   extractSdkWorkTreeNodes,
   mergeSdkWorkListPage,
   resolveSdkWorkListQuery,
@@ -36,6 +37,17 @@ describe("@sdkwork/iam-contracts list-page helpers", () => {
     expect(extractSdkWorkTreeNodes({ nodes })).toEqual(nodes);
     expect(extractSdkWorkTreeNodes({ item: { nodes } })).toEqual(nodes);
     expect(extractSdkWorkTreeNodes({ data: { item: { nodes } } })).toEqual(nodes);
+  });
+
+  it("extracts resource items from envelope and SDK-unwrapped shapes", () => {
+    const resource = { auditEventId: "audit-1", action: "iam.users.create" };
+    expect(extractSdkWorkResourceItem({ item: resource })).toEqual(resource);
+    expect(extractSdkWorkResourceItem({ data: { item: resource } })).toEqual(resource);
+    // SDK clients unwrap `data.item` (`sdkworkUnwrapKind: "item"`), so a bare
+    // resource object is the item itself and must not be dropped.
+    expect(extractSdkWorkResourceItem(resource)).toEqual(resource);
+    expect(extractSdkWorkResourceItem(null)).toBeUndefined();
+    expect(extractSdkWorkResourceItem("audit-1")).toBeUndefined();
   });
 
   it("builds canonical offset list query wire params", () => {

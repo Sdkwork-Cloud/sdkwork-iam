@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import {
   Button,
+  Checkbox,
   ConfirmDialog,
   DataTable,
   type DataTableColumn,
@@ -421,11 +422,10 @@ export function SdkworkIamOauthProviderConnectionsPage({
               value={editDraft.redirectUri ?? ""}
             />
             <label className="flex items-center gap-2 text-sm" htmlFor="oauth-integration-enabled-edit">
-              <input
+              <Checkbox
                 checked={editDraft.enabled ?? true}
                 id="oauth-integration-enabled-edit"
-                onChange={(event) => setEditDraft((current) => ({ ...current, enabled: event.target.checked }))}
-                type="checkbox"
+                onCheckedChange={(checked) => setEditDraft((current) => ({ ...current, enabled: checked === true }))}
               />
               {quick.enable}
             </label>

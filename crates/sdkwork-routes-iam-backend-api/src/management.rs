@@ -29,9 +29,9 @@ use crate::backend_sql::{
     LIST_TOTAL_COLUMN,
 };
 use crate::handlers::{
-    appbase_error, appbase_ok, assigner_permission_scope, ensure_platform_catalog_access,
-    ensure_target_tenant_access, organization_id_from_context, postgres_pool_or_error,
-    tenant_id_from_context, BackendIamState,
+    actor_user_id_from_context, appbase_error, appbase_ok, assigner_permission_scope,
+    ensure_platform_catalog_access, ensure_target_tenant_access, organization_id_from_context,
+    postgres_pool_or_error, tenant_id_from_context, BackendIamState,
 };
 
 pub fn apply_management_routes(router: Router<BackendIamState>) -> Router<BackendIamState> {
@@ -43,6 +43,14 @@ pub fn apply_management_routes(router: Router<BackendIamState>) -> Router<Backen
         .route(
             "/backend/v3/api/iam/users/{userId}",
             get(retrieve_user).patch(update_user).delete(delete_user),
+        )
+        .route(
+            "/backend/v3/api/iam/users/{userId}/ban",
+            post(ban_user),
+        )
+        .route(
+            "/backend/v3/api/iam/users/{userId}/unban",
+            post(unban_user),
         )
         .route(
             "/backend/v3/api/iam/roles",
@@ -232,12 +240,18 @@ async fn list_users(
             .expect("error response");
     };
     let search_pattern = list_search_pattern(&query);
+    let status_filter = query
+        .get("status")
+        .map(|value| value.trim().to_ascii_lowercase())
+        .filter(|value| !value.is_empty());
     let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "SELECT id, tenant_id, username, display_name, email, phone, status, \
+                created_at, last_login_at, \
                 COUNT(*) OVER() AS {LIST_TOTAL_COLUMN} \
          FROM iam_user \
          WHERE tenant_id = $1 AND COALESCE(is_deleted, 0) = 0 \
            AND ($4::text IS NULL OR LOWER(username) LIKE $4 OR LOWER(display_name) LIKE $4 OR LOWER(COALESCE(email, '')) LIKE $4) \
+           AND ($5::text IS NULL OR status = $5) \
          ORDER BY username, id \
          LIMIT $2 OFFSET $3"
  )   ))
@@ -245,6 +259,7 @@ async fn list_users(
     .bind(params.page_size)
     .bind(params.offset)
     .bind(&search_pattern)
+    .bind(&status_filter)
     .fetch_all(pg)
     .await;
 
@@ -276,6 +291,148 @@ async fn retrieve_user(
             "user not found",
         ),
         Err(error) => internal_handler_error("iam_user_retrieve_failed", error),
+    }
+}
+
+async fn ban_user(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(user_id): Path<String>,
+) -> Response {
+    set_user_banned_state(&state, &ctx, &user_id, true).await
+}
+
+async fn unban_user(
+    State(state): State<BackendIamState>,
+    ctx: WebRequestContext,
+    Path(user_id): Path<String>,
+) -> Response {
+    set_user_banned_state(&state, &ctx, &user_id, false).await
+}
+
+/// Applies (or clears) the banned account state for a tenant user.
+///
+/// Enforcement guarantees:
+/// - Refuses to ban/unban the calling principal itself.
+/// - The ban transaction persists `status = 'banned'`, revokes every active
+///   `iam_session` row and deactivates every active `iam_api_key` owned by the
+///   user, so existing tokens and keys stop working immediately (defense in
+///   depth; request-time checks also require `status = 'active'` on every
+///   authentication path).
+/// - The mutation is audited as `iam_user.ban` / `iam_user.unban`.
+async fn set_user_banned_state(
+    state: &BackendIamState,
+    ctx: &WebRequestContext,
+    user_id: &str,
+    banned: bool,
+) -> Response {
+    let Ok(pg) = postgres_pool_or_error(state) else {
+        return postgres_pool_or_error(state)
+            .err()
+            .expect("error response");
+    };
+    let Ok(tenant_id) = tenant_id_from_context(ctx) else {
+        return tenant_id_from_context(ctx).err().expect("error response");
+    };
+    if actor_user_id_from_context(ctx).as_deref() == Some(user_id) {
+        return appbase_error(
+            StatusCode::BAD_REQUEST,
+            "iam_user_self_operation",
+            "cannot ban or unban your own account",
+        );
+    }
+
+    let target = match fetch_user_row(pg, &tenant_id, user_id).await {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            return appbase_error(
+                StatusCode::NOT_FOUND,
+                "iam_user_not_found",
+                "user not found",
+            );
+        }
+        Err(error) => return internal_handler_error("iam_user_ban_failed", error),
+    };
+    let current_status = target.get::<String, _>(6);
+    let action = if banned { "iam_user.ban" } else { "iam_user.unban" };
+    let next_status = if banned { "banned" } else { "active" };
+    let now = Utc::now().to_rfc3339();
+    let detail = json!({
+        "status": { "from": current_status, "to": next_status },
+        "revokedSessions": banned,
+        "deactivatedApiKeys": banned,
+    });
+
+    let tenant_id = tenant_id.to_owned();
+    let user_id = user_id.to_owned();
+    let tenant_id_for_tx = tenant_id.clone();
+    let user_id_for_tx = user_id.clone();
+    let result = execute_mutation_with_audit(
+        pg,
+        ctx,
+        action,
+        "iam_user",
+        user_id_for_tx.clone(),
+        detail,
+        |tx| Box::pin(async move {
+            let now = now.clone();
+            let status = sqlx::query(
+                "UPDATE iam_user SET status = $3, updated_at = $4 \
+                 WHERE tenant_id = $1 AND id = $2 AND COALESCE(is_deleted, 0) = 0",
+            )
+            .bind(&tenant_id_for_tx)
+            .bind(&user_id_for_tx)
+            .bind(&next_status)
+            .bind(&now)
+            .execute(&mut **tx)
+            .await?;
+            if banned {
+                sqlx::query(
+                    "UPDATE iam_session SET revoked_at = $3, updated_at = $3 \
+                     WHERE tenant_id = $1 AND principal_kind = 'user' \
+                       AND COALESCE(principal_id, user_id) = $2 AND revoked_at IS NULL",
+                )
+                .bind(&tenant_id_for_tx)
+                .bind(&user_id_for_tx)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await?;
+                sqlx::query(
+                    "UPDATE iam_api_key SET status = 'inactive', updated_at = $3 \
+                     WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'",
+                )
+                .bind(&tenant_id_for_tx)
+                .bind(&user_id_for_tx)
+                .bind(&now)
+                .execute(&mut **tx)
+                .await?;
+            }
+            Ok(status.rows_affected())
+        }),
+    )
+    .await;
+
+    match result {
+        Ok(rows_affected) if rows_affected > 0 => {
+            match fetch_user_row(pg, &tenant_id, &user_id).await {
+                Ok(Some(row)) => appbase_ok(user_row_to_json(&row)),
+                _ => appbase_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "iam_user_ban_failed",
+                    "user updated but could not be loaded",
+                ),
+            }
+        }
+        Ok(_) => appbase_error(
+            StatusCode::NOT_FOUND,
+            "iam_user_not_found",
+            "user not found",
+        ),
+        Err(error) => appbase_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "iam_user_ban_failed",
+            &error,
+        ),
     }
 }
 
@@ -1236,7 +1393,8 @@ async fn fetch_user_row<'e>(
     user_id: &str,
 ) -> Result<Option<sqlx::postgres::PgRow>, sqlx::Error> {
     sqlx::query(
-        "SELECT id, tenant_id, username, display_name, email, phone, status \
+        "SELECT id, tenant_id, username, display_name, email, phone, status, \
+                created_at, last_login_at \
          FROM iam_user \
          WHERE tenant_id = $1 AND id = $2 AND COALESCE(is_deleted, 0) = 0 \
          LIMIT 1",
@@ -1274,9 +1432,11 @@ async fn resolve_role_id(pg: &PgPool, tenant_id: &str, role_ref: &str) -> Option
 
 fn user_row_to_json(row: &sqlx::postgres::PgRow) -> Value {
     json!({
+        "createdAt": row.get::<Option<String>, _>(7),
         "displayName": row.get::<String, _>(3),
         "email": row.get::<Option<String>, _>(4),
         "id": row.get::<String, _>(0),
+        "lastLoginAt": row.get::<Option<String>, _>(8),
         "phone": row.get::<Option<String>, _>(5),
         "status": row.get::<String, _>(6),
         "tenantId": row.get::<String, _>(1),

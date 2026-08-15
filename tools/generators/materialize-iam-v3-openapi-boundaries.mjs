@@ -537,6 +537,15 @@ function buildOperation(surface, route) {
     );
   }
 
+  if (route.operationId === 'users.list') {
+    operation.parameters.push(
+      queryParameter('status', {
+        type: 'string',
+        description: 'Exact user account status filter (active | banned | disabled | locked).',
+      }),
+    );
+  }
+
   if (route.operationId === 'roleBindings.list') {
     operation.parameters.push(
       queryParameter('roleId', { type: 'string', description: 'Exact role id filter.' }),

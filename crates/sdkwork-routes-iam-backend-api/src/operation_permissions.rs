@@ -133,7 +133,7 @@ fn parse_action(action: &str) -> Option<IamAction> {
     Some(match action {
         "list" | "retrieve" | "tree" => IamAction::Read,
         "create" => IamAction::Create,
-        "update" => IamAction::Update,
+        "update" | "ban" | "unban" => IamAction::Update,
         "delete" => IamAction::Delete,
         "revoke" => IamAction::Revoke,
         "deactivate" => IamAction::Deactivate,
@@ -236,6 +236,18 @@ mod tests {
         assert_eq!(
             iam_backend_permission_for_operation("roleBindings.list"),
             Some("iam.role_bindings.read")
+        );
+    }
+
+    #[test]
+    fn maps_user_ban_actions_to_update_permissions() {
+        assert_eq!(
+            iam_backend_permission_for_operation("users.ban"),
+            Some("iam.users.update")
+        );
+        assert_eq!(
+            iam_backend_permission_for_operation("users.unban"),
+            Some("iam.users.update")
         );
     }
 

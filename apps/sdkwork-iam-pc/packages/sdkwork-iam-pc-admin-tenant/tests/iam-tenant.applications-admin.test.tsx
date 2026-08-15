@@ -57,11 +57,12 @@ describe("tenant applications admin workspace", () => {
       </SdkworkI18nProvider>,
     );
 
-    // The current tenant's applications load directly; no tenant picker,
-    // no tenant search form, and no standalone page header are rendered.
+    // The current tenant's applications load directly; no tenant picker
+    // and no standalone page header are rendered. The only search surface is
+    // the application filter form above the table.
     await screen.findByText("CRM");
     expect(screen.queryByRole("combobox", { name: "选择租户" })).toBeNull();
-    expect(screen.queryByRole("search")).toBeNull();
+    expect(screen.getByRole("search")).toBeTruthy();
     expect(screen.queryByText("应用列表")).toBeNull();
     // The application type column renders from the response payload.
     expect(screen.getAllByText("PC").length).toBeGreaterThan(0);

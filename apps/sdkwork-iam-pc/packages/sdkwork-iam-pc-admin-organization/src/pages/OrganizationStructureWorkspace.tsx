@@ -304,47 +304,56 @@ export function SdkworkIamOrganizationStructureWorkspace({
 
           <main className="flex min-h-0 min-w-0 flex-1 flex-col py-4 lg:pl-5">
             {selectedDepartment ? (
-              <DataTable
-                className="min-h-0 flex-1"
-                columns={memberColumns}
-                emptyDescription={messages.structure.members.emptyDescription}
-                emptyTitle={messages.structure.members.emptyTitle}
-                footer={<CatalogPagination busy={busy} copy={{ next: messages.pagination.next, pageSize: messages.pagination.pageSize, previous: messages.pagination.previous, total: messages.pagination.total }} onPageChange={changeAssignmentPage} onPageSizeChange={changeAssignmentPageSize} pageInfo={assignmentPageInfo} />}
-                getRowId={(assignment) => assignment.assignmentId}
-                loading={loading || memberLoading}
-                rowActionsLabel={messages.structure.members.actions}
-                rowActions={permissions.assignments.update ? (assignment) => (
-                  <Button disabled={assignment.isPrimary} onClick={() => void runAction(async () => {
-                    await controller.updateDepartmentAssignment(assignment.assignmentId, { isPrimary: true });
-                    await refreshAssignments(selectedDepartment.departmentId);
-                  }, messages.structure.notices.assignmentUpdated)} size="sm" type="button" variant="outline">
-                    <Star className="h-3.5 w-3.5" />
-                    {messages.structure.members.setPrimary}
-                  </Button>
-                ) : undefined}
-                rows={[...assignments]}
-                slotProps={{
-                  surface: { className: "flex min-h-0 flex-1 flex-col" },
-                  viewport: { className: "min-h-0 flex-1" },
-                  footer: { className: "shrink-0" },
-                }}
-                stickyHeader
-                title={selectedDepartment.name}
-                toolbar={(
-                  <div className="flex w-full flex-wrap items-center gap-2">
-                    <form className="flex min-w-[15rem] flex-1 items-center gap-2" onSubmit={submitMemberSearch} role="search">
-                      <Input aria-label={messages.structure.members.searchLabel} onChange={(event) => setMemberSearchQuery(event.target.value)} placeholder={messages.structure.members.searchPlaceholder} value={memberSearchQuery} />
-                      <IconButton aria-label={messages.structure.members.searchAction} disabled={memberLoading} title={messages.structure.members.searchAction} type="submit" variant="outline"><Search className="h-4 w-4" /></IconButton>
-                    </form>
-                    {permissions.assignments.create && permissions.memberships.read ? (
-                      <Button onClick={() => { setSelectedMembershipId(""); setAssignmentIsPrimary(false); setAssignmentDrawerOpen(true); }} type="button">
-                        <UserPlus className="h-4 w-4" />
-                        {messages.structure.members.add}
-                      </Button>
-                    ) : null}
-                  </div>
-                )}
-              />
+              <>
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                  <form className="flex min-w-0 items-center gap-2" onSubmit={submitMemberSearch} role="search">
+                    <Input
+                      aria-label={messages.structure.members.searchLabel}
+                      className="w-64 shrink-0"
+                      onChange={(event) => setMemberSearchQuery(event.target.value)}
+                      placeholder={messages.structure.members.searchPlaceholder}
+                      value={memberSearchQuery}
+                    />
+                    <Button disabled={memberLoading} type="submit" variant="outline">
+                      <Search className="h-4 w-4" />
+                      {messages.structure.members.searchAction}
+                    </Button>
+                  </form>
+                  {permissions.assignments.create && permissions.memberships.read ? (
+                    <Button onClick={() => { setSelectedMembershipId(""); setAssignmentIsPrimary(false); setAssignmentDrawerOpen(true); }} type="button">
+                      <UserPlus className="h-4 w-4" />
+                      {messages.structure.members.add}
+                    </Button>
+                  ) : null}
+                </div>
+                <DataTable
+                  className="min-h-0 flex-1"
+                  columns={memberColumns}
+                  emptyDescription={messages.structure.members.emptyDescription}
+                  emptyTitle={messages.structure.members.emptyTitle}
+                  footer={<CatalogPagination busy={busy} copy={{ next: messages.pagination.next, pageSize: messages.pagination.pageSize, previous: messages.pagination.previous, total: messages.pagination.total }} onPageChange={changeAssignmentPage} onPageSizeChange={changeAssignmentPageSize} pageInfo={assignmentPageInfo} />}
+                  getRowId={(assignment) => assignment.assignmentId}
+                  loading={loading || memberLoading}
+                  rowActionsLabel={messages.structure.members.actions}
+                  rowActions={permissions.assignments.update ? (assignment) => (
+                    <Button disabled={assignment.isPrimary} onClick={() => void runAction(async () => {
+                      await controller.updateDepartmentAssignment(assignment.assignmentId, { isPrimary: true });
+                      await refreshAssignments(selectedDepartment.departmentId);
+                    }, messages.structure.notices.assignmentUpdated)} size="sm" type="button" variant="outline">
+                      <Star className="h-3.5 w-3.5" />
+                      {messages.structure.members.setPrimary}
+                    </Button>
+                  ) : undefined}
+                  rows={[...assignments]}
+                  slotProps={{
+                    surface: { className: "flex min-h-0 flex-1 flex-col" },
+                    viewport: { className: "min-h-0 flex-1" },
+                    footer: { className: "shrink-0" },
+                  }}
+                  stickyHeader
+                  title={selectedDepartment.name}
+                />
+              </>
             ) : (
               <div className="flex min-h-64 items-center justify-center text-sm text-[var(--sdk-color-text-muted)]">
                 {messages.structure.tree.emptyDescription}

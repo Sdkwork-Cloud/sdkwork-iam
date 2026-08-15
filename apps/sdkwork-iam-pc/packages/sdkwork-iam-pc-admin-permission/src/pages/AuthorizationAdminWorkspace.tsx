@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Filter, Plus, Trash2 } from "lucide-react";
+import { Filter, Plus, Search, Trash2 } from "lucide-react";
 import {
   Button,
   ConfirmDialog,
   DataTable,
   type DataTableColumn,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   StatusBadge,
   StatusNotice,
 } from "@sdkwork/ui-pc-react";
@@ -270,6 +276,62 @@ export function SdkworkIamAuthorizationAdminWorkspace({
       <div className="flex min-h-0 flex-1 flex-col gap-3">
         {error ? <StatusNotice tone="danger">{error}</StatusNotice> : null}
         {notice ? <StatusNotice tone="success">{notice}</StatusNotice> : null}
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <form className="flex min-w-0 flex-wrap items-center gap-2" onSubmit={submitFilters} role="search">
+            <Select onValueChange={(next) => setRoleQuery(next === "all" ? "" : next)} value={roleQuery || "all"}>
+              <SelectTrigger aria-label={copy.filterByRole} className="w-44 shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{copy.filterByRole}</SelectItem>
+                {roles.map((role) => (
+                  <SelectItem key={role.roleId} value={role.roleId}>
+                    {role.name} ({role.code || role.roleId})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <label className="relative w-52 shrink-0">
+              <span className="sr-only">{copy.filterByPrincipalId}</span>
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sdk-color-text-muted)]" />
+              <Input
+                aria-label={copy.filterByPrincipalId}
+                className="pl-9"
+                onChange={(event) => setPrincipalQuery(event.target.value)}
+                placeholder={copy.filterByPrincipalId}
+                type="search"
+                value={principalQuery}
+              />
+            </label>
+            <label className="relative w-52 shrink-0">
+              <span className="sr-only">{copy.filterByScopeId}</span>
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sdk-color-text-muted)]" />
+              <Input
+                aria-label={copy.filterByScopeId}
+                className="pl-9"
+                onChange={(event) => setScopeQuery(event.target.value)}
+                placeholder={copy.filterByScopeId}
+                type="search"
+                value={scopeQuery}
+              />
+            </label>
+            <Button disabled={loading} type="submit" variant="outline">
+              <Filter aria-hidden="true" className="h-4 w-4" />
+              {copy.search}
+            </Button>
+            {hasFilters ? (
+              <Button disabled={loading} onClick={resetFilters} type="button" variant="ghost">
+                {copy.filterReset}
+              </Button>
+            ) : null}
+          </form>
+          {permissions.roleBindings.create ? (
+            <Button onClick={openCreateBinding} type="button">
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              {copy.createBinding}
+            </Button>
+          ) : null}
+        </div>
         <DataTable
           columns={columns}
           emptyDescription={hasFilters ? copy.noMatchDescription : copy.emptyDescription}
@@ -303,63 +365,6 @@ export function SdkworkIamAuthorizationAdminWorkspace({
             footer: { className: "shrink-0" },
           }}
           stickyHeader
-          toolbar={(
-            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-              <form className="flex flex-1 flex-wrap items-end justify-end gap-2" onSubmit={submitFilters} role="search">
-                <label className="block space-y-2 text-sm">
-                  <span>{copy.filterByRole}</span>
-                  <select
-                    aria-label={copy.filterByRole}
-                    className="h-9 min-w-[10rem] rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-1.5 text-sm"
-                    onChange={(event) => setRoleQuery(event.target.value)}
-                    value={roleQuery}
-                  >
-                    <option value="">{copy.filterByRole}</option>
-                    {roles.map((role) => (
-                      <option key={role.roleId} value={role.roleId}>
-                        {role.name} ({role.code || role.roleId})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block space-y-2 text-sm">
-                  <span>{copy.filterByPrincipalId}</span>
-                  <input
-                    aria-label={copy.filterByPrincipalId}
-                    className="h-9 w-full min-w-[10rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-1.5 text-sm"
-                    onChange={(event) => setPrincipalQuery(event.target.value)}
-                    type="search"
-                    value={principalQuery}
-                  />
-                </label>
-                <label className="block space-y-2 text-sm">
-                  <span>{copy.filterByScopeId}</span>
-                  <input
-                    aria-label={copy.filterByScopeId}
-                    className="h-9 w-full min-w-[10rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-1.5 text-sm"
-                    onChange={(event) => setScopeQuery(event.target.value)}
-                    type="search"
-                    value={scopeQuery}
-                  />
-                </label>
-                <Button disabled={loading} size="sm" type="submit" variant="outline">
-                  <Filter aria-hidden="true" className="h-4 w-4" />
-                  {copy.search}
-                </Button>
-                {hasFilters ? (
-                  <Button disabled={loading} onClick={resetFilters} size="sm" type="button" variant="ghost">
-                    {copy.filterReset}
-                  </Button>
-                ) : null}
-              </form>
-              {permissions.roleBindings.create ? (
-                <Button onClick={openCreateBinding} type="button">
-                  <Plus aria-hidden="true" className="h-4 w-4" />
-                  {copy.createBinding}
-                </Button>
-              ) : null}
-            </div>
-          )}
         />
       </div>
 

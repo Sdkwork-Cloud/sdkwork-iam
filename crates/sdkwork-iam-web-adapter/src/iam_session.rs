@@ -510,9 +510,13 @@ async fn oauth_jwt_session_is_active(pg: &PgPool, context: &IamAppContext) -> bo
         return false;
     }
     sqlx::query_scalar::<_, i32>(
-        "SELECT 1 FROM iam_session \
-         WHERE id = $1 AND tenant_id = $2 AND revoked_at IS NULL \
-           AND expires_at::timestamptz > $3::timestamptz \
+        "SELECT 1 FROM iam_session s \
+         WHERE s.id = $1 AND s.tenant_id = $2 AND s.revoked_at IS NULL \
+           AND s.expires_at::timestamptz > $3::timestamptz \
+           AND (s.principal_kind = 'service_account' OR EXISTS ( \
+             SELECT 1 FROM iam_user u \
+             WHERE u.id = COALESCE(s.principal_id, s.user_id) AND u.tenant_id = s.tenant_id \
+               AND u.status = 'active' AND u.is_deleted = 0)) \
          LIMIT 1",
     )
     .bind(&context.session_id)

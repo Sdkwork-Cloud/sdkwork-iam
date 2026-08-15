@@ -10,6 +10,7 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
+  Input,
   StatusNotice,
 } from "@sdkwork/ui-pc-react";
 
@@ -120,8 +121,7 @@ export function SdkworkIamAuditAdminWorkspace({
 
         <label className="block max-w-md space-y-2 text-sm">
           <span>{messages.search.label}</span>
-          <input
-            className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2"
+          <Input
             disabled={busy}
             onChange={(event) => handleSearchChange(event.target.value)}
             placeholder={tab === "audit" ? messages.events.searchPlaceholderAudit : messages.events.searchPlaceholderSecurity}

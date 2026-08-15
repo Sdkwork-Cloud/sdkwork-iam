@@ -11,6 +11,11 @@ import {
   DrawerTitle,
   Input,
   Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   StatusNotice,
   Textarea,
 } from "@sdkwork/ui-pc-react";
@@ -106,17 +111,18 @@ export function OauthAdminSelectField({
   return (
     <label className="block space-y-1.5 text-sm">
       <span className="font-medium text-[var(--sdk-color-text-primary)]">{label}</span>
-      <select
-        className={OAUTH_CONTROL_CLASS_NAME}
-        onChange={(event) => onChange(event.target.value)}
-        value={value}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <Select onValueChange={onChange} value={value}>
+        <SelectTrigger aria-label={label}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </label>
   );
 }

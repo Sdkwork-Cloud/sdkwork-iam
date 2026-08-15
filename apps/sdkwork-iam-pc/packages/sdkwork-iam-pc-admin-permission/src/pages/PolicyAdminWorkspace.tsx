@@ -12,6 +12,7 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
+  Input,
   StatusBadge,
   StatusNotice,
   Select,
@@ -210,6 +211,32 @@ export function SdkworkIamPolicyAdminWorkspace({
       <div className="flex min-h-0 flex-1 flex-col gap-3">
         {error ? <StatusNotice tone="danger">{error}</StatusNotice> : null}
         {notice ? <StatusNotice tone="success">{notice}</StatusNotice> : null}
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <form className="flex min-w-0 items-center gap-2" onSubmit={submitSearch} role="search">
+            <label className="relative w-64 shrink-0">
+              <span className="sr-only">{copy.searchLabel}</span>
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sdk-color-text-muted)]" />
+              <Input
+                aria-label={copy.searchLabel}
+                className="pl-9"
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={copy.searchPlaceholder}
+                type="search"
+                value={query}
+              />
+            </label>
+            <Button disabled={loading} type="submit" variant="outline">
+              <Search aria-hidden="true" className="h-4 w-4" />
+              {copy.search}
+            </Button>
+          </form>
+          {permissions.policies.create ? (
+            <Button onClick={openCreateDrawer} type="button">
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              {copy.create}
+            </Button>
+          ) : null}
+        </div>
         <DataTable
           columns={columns}
           emptyDescription={appliedQuery ? copy.noMatchDescription : copy.emptyDescription}
@@ -253,31 +280,6 @@ export function SdkworkIamPolicyAdminWorkspace({
             footer: { className: "shrink-0" },
           }}
           stickyHeader
-          toolbar={(
-            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-              <form className="flex min-w-[16rem] flex-1 items-center gap-2" onSubmit={submitSearch} role="search">
-                <label className="relative min-w-0 flex-1">
-                  <span className="sr-only">{copy.searchLabel}</span>
-                  <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sdk-color-text-muted)]" />
-                  <input
-                    aria-label={copy.searchLabel}
-                    className="h-9 w-full border border-[var(--sdk-color-border-default)] bg-transparent pl-9 pr-3 text-sm"
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder={copy.searchPlaceholder}
-                    type="search"
-                    value={query}
-                  />
-                </label>
-                <Button disabled={loading} size="sm" type="submit" variant="outline">{copy.search}</Button>
-              </form>
-              {permissions.policies.create ? (
-                <Button onClick={openCreateDrawer} type="button">
-                  <Plus aria-hidden="true" className="h-4 w-4" />
-                  {copy.create}
-                </Button>
-              ) : null}
-            </div>
-          )}
         />
       </div>
 

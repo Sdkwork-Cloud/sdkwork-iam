@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Image as ImageIcon, ListTree, MessageCircle, Pencil, Plus, QrCode, Trash2, Upload, X } from "lucide-react";
 import {
   Button,
+  Checkbox,
   ConfirmDialog,
   DataTable,
   type DataTableColumn,
@@ -15,6 +16,11 @@ import {
   ModalFooter,
   ModalHeader,
   ModalTitle,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   StatusBadge,
   StatusNotice,
   Switch,
@@ -392,46 +398,49 @@ export function OauthAccountSetupSection({
             placeholder={paginationMessages.quickSetup.searchPlaceholder}
             value={search}
           />
-          <select
-            aria-label={paginationMessages.quickSetup.accountType.label}
-            className="h-9 rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-2.5 text-sm outline-none"
-            onChange={(event) => {
-              setAccountTypeFilter(event.target.value);
+          <Select
+            onValueChange={(next) => {
+              setAccountTypeFilter(next === "all" ? "" : next);
               applyList(1, pageSize);
             }}
-            value={accountTypeFilter}
+            value={accountTypeFilter || "all"}
           >
-            <option value="">{paginationMessages.common.all}</option>
-            {accountTypeOptions(paginationMessages, kind).map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-          <select
-            aria-label={paginationMessages.common.connectionStatus}
-            className="h-9 rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-2.5 text-sm outline-none"
-            onChange={(event) => {
-              setConnectionFilter(event.target.value);
+            <SelectTrigger aria-label={paginationMessages.quickSetup.accountType.label} className="h-9 w-36 shrink-0"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{paginationMessages.common.all}</SelectItem>
+              {accountTypeOptions(paginationMessages, kind).map((option) => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            onValueChange={(next) => {
+              setConnectionFilter(next === "all" ? "" : next);
               applyList(1, pageSize);
             }}
-            value={connectionFilter}
+            value={connectionFilter || "all"}
           >
-            <option value="">{paginationMessages.common.all}</option>
-            <option value="authorized">{paginationMessages.common.connected}</option>
-            <option value="pending">{paginationMessages.common.notConnected}</option>
-          </select>
-          <select
-            aria-label={paginationMessages.common.status}
-            className="h-9 rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-2.5 text-sm outline-none"
-            onChange={(event) => {
-              setEnabledFilter(event.target.value);
+            <SelectTrigger aria-label={paginationMessages.common.connectionStatus} className="h-9 w-36 shrink-0"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{paginationMessages.common.all}</SelectItem>
+              <SelectItem value="authorized">{paginationMessages.common.connected}</SelectItem>
+              <SelectItem value="pending">{paginationMessages.common.notConnected}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            onValueChange={(next) => {
+              setEnabledFilter(next === "all" ? "" : next);
               applyList(1, pageSize);
             }}
-            value={enabledFilter}
+            value={enabledFilter || "all"}
           >
-            <option value="">{paginationMessages.common.all}</option>
-            <option value="1">{switchMessages.enabled}</option>
-            <option value="0">{switchMessages.notEnabled}</option>
-          </select>
+            <SelectTrigger aria-label={paginationMessages.common.status} className="h-9 w-36 shrink-0"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{paginationMessages.common.all}</SelectItem>
+              <SelectItem value="1">{switchMessages.enabled}</SelectItem>
+              <SelectItem value="0">{switchMessages.notEnabled}</SelectItem>
+            </SelectContent>
+          </Select>
           <Button disabled={disabled} onClick={() => setDrawerOpen(true)} type="button">
             <Plus aria-hidden="true" className="h-4 w-4" />
             {messages.addButton}
@@ -1080,11 +1089,10 @@ function OauthAccountFormTabs({
           value={form.appSecret}
         />
         <label className="flex items-center gap-2 text-sm" htmlFor={`oauth-account-enabled-${kind}`}>
-          <input
+          <Checkbox
             checked={form.enabled}
             id={`oauth-account-enabled-${kind}`}
-            onChange={(event) => onChange({ enabled: event.target.checked })}
-            type="checkbox"
+            onCheckedChange={(checked) => onChange({ enabled: checked === true })}
           />
           {switchCopy.enable}
         </label>

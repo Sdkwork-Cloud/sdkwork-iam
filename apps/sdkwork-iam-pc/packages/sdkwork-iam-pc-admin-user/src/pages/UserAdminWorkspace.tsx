@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Ban, Eye, Pencil, Plus, Search, Trash2, Unlock } from "lucide-react";
 import { CatalogPagination } from "@sdkwork/iam-pc-admin-core";
 import {
   Button,
@@ -13,6 +13,7 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
+  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -32,6 +33,9 @@ const emptyUserDraft = (): SdkworkIamAdminUserDraft => ({ username: "" });
 const readOnlyPermissions = { create: false, delete: false, update: false } as const;
 const userAdminMessages = {
   "en-US": {
+    ban: "Ban",
+    banDescription: "Ban {name}? The user's sessions and API keys will be revoked immediately, and the account will no longer be able to sign in.",
+    banSuccess: "User banned",
     cancel: "Cancel",
     close: "Close",
     create: "Create user",
@@ -51,8 +55,9 @@ const userAdminMessages = {
     email: "Email",
     emptyDescription: "Create a user to populate the IAM directory.",
     emptyTitle: "No users found",
+    lastLoginAt: "Last login",
     loadError: "Failed to load users",
-    noMatchDescription: "Try a different name, username, email, or phone number.",
+    noMatchDescription: "Try a different name, username, email, phone number, or status.",
     noMatchTitle: "No matching users",
     operationError: "Operation failed",
     paginationNext: "Next",
@@ -60,18 +65,25 @@ const userAdminMessages = {
     paginationPrevious: "Previous",
     paginationTotal: "{total} items in total",
     phone: "Phone",
+    registeredAt: "Registered at",
     save: "Save changes",
     search: "Search",
     searchError: "Failed to search users",
     searchLabel: "Search users",
     searchPlaceholder: "Search name, username, email, or phone",
     status: "Status",
-    statuses: { active: "Active", disabled: "Disabled", locked: "Locked", unknown: "Unknown" },
+    statusAll: "All statuses",
+    statuses: { active: "Active", banned: "Banned", disabled: "Disabled", locked: "Locked", unknown: "Unknown" },
+    unban: "Unban",
+    unbanSuccess: "User unbanned",
     user: "User",
     username: "Username",
     view: "View user",
   },
   "zh-CN": {
+    ban: "封禁",
+    banDescription: "确定封禁 {name} 吗？该用户的会话与 API key 将立即撤销，账号将无法再登录。",
+    banSuccess: "用户已封禁",
     cancel: "取消",
     close: "关闭",
     create: "创建用户",
@@ -91,8 +103,9 @@ const userAdminMessages = {
     email: "邮箱",
     emptyDescription: "创建用户后，账号将显示在 IAM 目录中。",
     emptyTitle: "暂无用户",
+    lastLoginAt: "上次登录时间",
     loadError: "用户加载失败",
-    noMatchDescription: "请尝试其他姓名、用户名、邮箱或手机号。",
+    noMatchDescription: "请尝试其他姓名、用户名、邮箱、手机号或状态。",
     noMatchTitle: "未找到匹配用户",
     operationError: "操作失败",
     paginationNext: "下一页",
@@ -100,13 +113,17 @@ const userAdminMessages = {
     paginationPrevious: "上一页",
     paginationTotal: "共 {total} 条",
     phone: "手机号",
+    registeredAt: "注册时间",
     save: "保存更改",
     search: "搜索",
     searchError: "用户搜索失败",
     searchLabel: "搜索用户",
     searchPlaceholder: "搜索姓名、用户名、邮箱或手机号",
     status: "状态",
-    statuses: { active: "正常", disabled: "已禁用", locked: "已锁定", unknown: "未知" },
+    statusAll: "全部状态",
+    statuses: { active: "正常", banned: "已封禁", disabled: "已禁用", locked: "已锁定", unknown: "未知" },
+    unban: "解封",
+    unbanSuccess: "用户已解封",
     user: "用户",
     username: "用户名",
     view: "查看用户",
@@ -125,8 +142,11 @@ export function SdkworkIamUserAdminWorkspace({
   const [draft, setDraft] = useState<SdkworkIamAdminUserDraft>(emptyUserDraft);
   const [drawerMode, setDrawerMode] = useState<"create" | "edit" | "view">();
   const [deleteTarget, setDeleteTarget] = useState<SdkworkIamAdminUser>();
+  const [banTarget, setBanTarget] = useState<SdkworkIamAdminUser>();
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [appliedStatus, setAppliedStatus] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(true);
@@ -134,9 +154,10 @@ export function SdkworkIamUserAdminWorkspace({
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
 
-  const refreshUsers = async (nextQuery = appliedQuery, nextPage = page, nextPageSize = pageSize) => {
+  const refreshUsers = async (nextQuery = appliedQuery, nextPage = page, nextPageSize = pageSize, nextStatus = appliedStatus) => {
     const params: Record<string, unknown> = { page: nextPage, page_size: nextPageSize };
     if (nextQuery) params.q = nextQuery;
+    if (nextStatus && nextStatus !== "all") params.status = nextStatus;
     const items = await controller.listUsers(params);
     setUsers(items);
     setListPageInfo(controller.getState().listPageInfo);
@@ -185,11 +206,13 @@ export function SdkworkIamUserAdminWorkspace({
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const nextQuery = query.trim();
+    const nextStatus = filterStatus;
     setAppliedQuery(nextQuery);
+    setAppliedStatus(nextStatus);
     setPage(1);
     setLoading(true);
     setError(undefined);
-    void refreshUsers(nextQuery, 1, pageSize)
+    void refreshUsers(nextQuery, 1, pageSize, nextStatus)
       .catch((loadError) => setError(toErrorMessage(loadError, copy.searchError)))
       .finally(() => setLoading(false));
   };
@@ -198,7 +221,7 @@ export function SdkworkIamUserAdminWorkspace({
     setPage(nextPage);
     setLoading(true);
     setError(undefined);
-    void refreshUsers(appliedQuery, nextPage)
+    void refreshUsers(appliedQuery, nextPage, pageSize, appliedStatus)
       .catch((loadError) => setError(toErrorMessage(loadError, copy.loadError)))
       .finally(() => setLoading(false));
   };
@@ -208,7 +231,7 @@ export function SdkworkIamUserAdminWorkspace({
     setPage(1);
     setLoading(true);
     setError(undefined);
-    void refreshUsers(appliedQuery, 1, nextPageSize)
+    void refreshUsers(appliedQuery, 1, nextPageSize, appliedStatus)
       .catch((loadError) => setError(toErrorMessage(loadError, copy.loadError)))
       .finally(() => setLoading(false));
   };
@@ -218,6 +241,8 @@ export function SdkworkIamUserAdminWorkspace({
     { id: "username", header: copy.username, cell: (user) => user.username || "-" },
     { id: "email", header: copy.email, cell: (user) => user.email || "-" },
     { id: "phone", header: copy.phone, cell: (user) => user.phone || "-" },
+    { id: "registeredAt", header: copy.registeredAt, cell: (user) => user.createdAt ? formatDateTime(user.createdAt) : "-" },
+    { id: "lastLoginAt", header: copy.lastLoginAt, cell: (user) => user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "-" },
     { id: "status", header: copy.status, cell: (user) => user.status ? <StatusBadge label={statusLabel(copy.statuses, user.status)} showIcon status={user.status} /> : "-" },
   ], [copy]);
 
@@ -226,6 +251,38 @@ export function SdkworkIamUserAdminWorkspace({
       <div className="flex min-h-0 flex-1 flex-col gap-3">
         {error ? <StatusNotice tone="danger">{error}</StatusNotice> : null}
         {notice ? <StatusNotice tone="success">{notice}</StatusNotice> : null}
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <form className="flex min-w-0 items-center gap-2" onSubmit={submitSearch} role="search">
+            <label className="relative w-64 shrink-0">
+              <span className="sr-only">{copy.searchLabel}</span>
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sdk-color-text-muted)]" />
+              <Input
+                aria-label={copy.searchLabel}
+                className="pl-9"
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={copy.searchPlaceholder}
+                type="search"
+                value={query}
+              />
+            </label>
+            <FilterSelect
+              ariaLabel={copy.status}
+              onValueChange={setFilterStatus}
+              options={statusFilterOptions(copy)}
+              value={filterStatus}
+            />
+            <Button disabled={loading} type="submit" variant="outline">
+              <Search aria-hidden="true" className="h-4 w-4" />
+              {copy.search}
+            </Button>
+          </form>
+          {permissions.create ? (
+            <Button onClick={openCreateDrawer} type="button">
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              {copy.create}
+            </Button>
+          ) : null}
+        </div>
         <DataTable
           className="min-h-0 flex-1"
           columns={columns}
@@ -244,6 +301,19 @@ export function SdkworkIamUserAdminWorkspace({
                   <Pencil aria-hidden="true" className="h-4 w-4" />
                 </Button>
               ) : null}
+              {permissions.update && user.status === "active" ? (
+                <Button aria-label={`${copy.ban}: ${user.displayName || user.username || user.userId}`} onClick={() => setBanTarget(user)} size="icon" title={copy.ban} type="button" variant="ghost">
+                  <Ban aria-hidden="true" className="h-4 w-4" />
+                </Button>
+              ) : null}
+              {permissions.update && user.status === "banned" ? (
+                <Button aria-label={`${copy.unban}: ${user.displayName || user.username || user.userId}`} onClick={() => void runAction(async () => {
+                  await controller.unbanUser(user.userId);
+                  await refreshUsers();
+                }, copy.unbanSuccess)} size="icon" title={copy.unban} type="button" variant="ghost">
+                  <Unlock aria-hidden="true" className="h-4 w-4" />
+                </Button>
+              ) : null}
               {permissions.delete ? (
                 <Button aria-label={`${copy.delete}: ${user.displayName || user.username || user.userId}`} onClick={() => setDeleteTarget(user)} size="icon" title={copy.delete} type="button" variant="ghost">
                   <Trash2 aria-hidden="true" className="h-4 w-4" />
@@ -258,31 +328,6 @@ export function SdkworkIamUserAdminWorkspace({
           }}
           stickyHeader
           rows={[...users]}
-          toolbar={(
-            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-              <form className="flex min-w-[16rem] flex-1 items-center gap-2" onSubmit={submitSearch} role="search">
-                <label className="relative min-w-0 flex-1">
-                  <span className="sr-only">{copy.searchLabel}</span>
-                  <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sdk-color-text-muted)]" />
-                  <input
-                    aria-label={copy.searchLabel}
-                    className="h-9 w-full border border-[var(--sdk-color-border-default)] bg-transparent pl-9 pr-3 text-sm"
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder={copy.searchPlaceholder}
-                    type="search"
-                    value={query}
-                  />
-                </label>
-                <Button disabled={loading} size="sm" type="submit" variant="outline">{copy.search}</Button>
-              </form>
-              {permissions.create ? (
-                <Button onClick={openCreateDrawer} type="button">
-                  <Plus aria-hidden="true" className="h-4 w-4" />
-                  {copy.create}
-                </Button>
-              ) : null}
-            </div>
-          )}
           footer={(
             <CatalogPagination
               busy={busy}
@@ -340,6 +385,27 @@ export function SdkworkIamUserAdminWorkspace({
         }}
         open={Boolean(deleteTarget)}
         title={copy.delete}
+        tone="danger"
+      />
+
+      <ConfirmDialog
+        closeOnConfirm={false}
+        confirmLabel={copy.ban}
+        confirmLoading={busy}
+        description={banTarget ? formatMessage(copy.banDescription, { name: banTarget.displayName || banTarget.username || banTarget.userId }) : undefined}
+        onConfirm={() => {
+          if (!banTarget) return;
+          void runAction(async () => {
+            await controller.banUser(banTarget.userId);
+            await refreshUsers();
+            setBanTarget(undefined);
+          }, copy.banSuccess);
+        }}
+        onOpenChange={(open) => {
+          if (!open && !busy) setBanTarget(undefined);
+        }}
+        open={Boolean(banTarget)}
+        title={copy.ban}
         tone="danger"
       />
     </div>
@@ -431,12 +497,12 @@ function Field({ disabled, label, onChange, type = "text", value }: { disabled?:
   return (
     <label className="block space-y-2 text-sm">
       <span>{label}</span>
-      <input className="w-full border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2 disabled:cursor-not-allowed disabled:bg-[var(--sdk-color-surface-subtle)]" disabled={disabled} onChange={(event) => onChange(event.target.value)} type={type} value={value} />
+      <Input disabled={disabled} onChange={(event) => onChange(event.target.value)} type={type} value={value} />
     </label>
   );
 }
 
-function StatusReadonlyField({ label, statuses, value }: { label: string; statuses: { active: string; disabled: string; locked: string; unknown: string }; value: string }) {
+function StatusReadonlyField({ label, statuses, value }: { label: string; statuses: { active: string; banned: string; disabled: string; locked: string; unknown: string }; value: string }) {
   return (
     <label className="block space-y-2 text-sm">
       <span>{label}</span>
@@ -451,6 +517,7 @@ function StatusSelectField({ copy, onChange, value }: { copy: typeof userAdminMe
   const normalized = value.trim().toLowerCase();
   const options = [
     ["active", copy.statuses.active],
+    ["banned", copy.statuses.banned],
     ["disabled", copy.statuses.disabled],
     ["locked", copy.statuses.locked],
   ] as const;
@@ -469,7 +536,38 @@ function StatusSelectField({ copy, onChange, value }: { copy: typeof userAdminMe
   );
 }
 
-function statusLabel(statuses: { active: string; disabled: string; locked: string; unknown: string }, value: string) {
+function statusFilterOptions(copy: typeof userAdminMessages["en-US"] | typeof userAdminMessages["zh-CN"]): Array<[string, string]> {
+  return [
+    ["all", copy.statusAll],
+    ["active", copy.statuses.active],
+    ["banned", copy.statuses.banned],
+    ["disabled", copy.statuses.disabled],
+    ["locked", copy.statuses.locked],
+  ];
+}
+
+function FilterSelect({ ariaLabel, onValueChange, options, value }: { ariaLabel: string; onValueChange: (value: string) => void; options: Array<[string, string]>; value: string }) {
+  return (
+    <Select onValueChange={onValueChange} value={value}>
+      <SelectTrigger aria-label={ariaLabel} className="w-36 shrink-0">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map(([optionValue, label]) => <SelectItem key={optionValue} value={optionValue}>{label}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function statusLabel(statuses: { active: string; banned: string; disabled: string; locked: string; unknown: string }, value: string) {
   const normalized = value.trim().toLowerCase();
   return statuses[normalized as keyof typeof statuses] ?? statuses.unknown;
 }

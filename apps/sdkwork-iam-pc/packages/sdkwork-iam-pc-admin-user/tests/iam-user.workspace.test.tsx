@@ -14,6 +14,7 @@ const user = {
 
 function createController() {
   return {
+    banUser: async () => user,
     createUser: async () => user,
     deleteUser: async () => undefined,
     getSelectedUser: () => undefined,
@@ -22,6 +23,7 @@ function createController() {
     loadMoreUsers: async () => [user],
     retrieveUser: async () => user,
     selectUser: async () => user,
+    unbanUser: async () => user,
     updateUser: async () => user,
   };
 }
@@ -36,6 +38,7 @@ describe("IAM user administration workspace", () => {
 
     expect(screen.queryByRole("button", { name: "Create user" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Edit user: Alice Example" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Ban: Alice Example" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete user: Alice Example" })).toBeNull();
   });
 
@@ -49,6 +52,26 @@ describe("IAM user administration workspace", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Edit user: Alice Example" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Create user" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Ban: Alice Example" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Delete user: Alice Example" })).toBeNull();
+  });
+
+  it("offers unban only for banned users", async () => {
+    const bannedUser = { ...user, status: "banned" };
+    const controller = {
+      ...createController(),
+      getState: () => ({ status: "ready" as const, users: [bannedUser] }),
+      listUsers: async () => [bannedUser],
+    };
+
+    render(
+      <SdkworkIamUserAdminWorkspace
+        controller={controller}
+        permissions={{ create: false, delete: false, update: true }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Unban: Alice Example" })).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Ban: Alice Example" })).toBeNull();
   });
 });

@@ -108,33 +108,31 @@ describe("@sdkwork/iam-pc-admin-audit", () => {
     expect(list).toHaveBeenCalledTimes(3);
   });
 
-  it("retrieves audit and security event details through the standard resource envelope", async () => {
+  it("retrieves audit and security event details from the SDK-unwrapped resource", async () => {
     const service = {
       iam: {
         auditEvents: {
           list: vi.fn(),
+          // The generated SDK unwraps `data.item` (`sdkworkUnwrapKind: "item"`),
+          // so retrieve resolves with the resource object itself.
           retrieve: vi.fn().mockResolvedValue({
-            item: {
-              action: "iam.users.create",
-              auditEventId: "audit-1",
-              createdAt: "2026-07-06T00:00:00Z",
-              detailJson: '{"userId":"u1"}',
-              environment: "prod",
-              resourceType: "user",
-              tenantId: "100001",
-            },
+            action: "iam.users.create",
+            auditEventId: "audit-1",
+            createdAt: "2026-07-06T00:00:00Z",
+            detailJson: '{"userId":"u1"}',
+            environment: "prod",
+            resourceType: "user",
+            tenantId: "100001",
           }),
         },
         securityEvents: {
           list: vi.fn(),
           retrieve: vi.fn().mockResolvedValue({
-            item: {
-              category: "session.revoked",
-              detailJson: '{"sessionId":"s1"}',
-              securityEventId: "sec-1",
-              severity: "info",
-              tenantId: "100001",
-            },
+            category: "session.revoked",
+            detailJson: '{"sessionId":"s1"}',
+            securityEventId: "sec-1",
+            severity: "info",
+            tenantId: "100001",
           }),
         },
       },

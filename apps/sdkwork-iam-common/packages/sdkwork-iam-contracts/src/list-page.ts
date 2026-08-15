@@ -110,6 +110,10 @@ export function extractSdkWorkTreeNodes<T = unknown>(value: unknown): readonly T
 
 /**
  * Unwrap single resource item from SDK-unwrapped or raw HTTP `data` payloads.
+ *
+ * SDK clients already unwrap `data.item` (`sdkworkUnwrapKind: "item"`), so a
+ * bare resource object IS the item itself; raw HTTP payloads still carry the
+ * `{ item }` / `{ data: { item } }` envelope.
  */
 export function extractSdkWorkResourceItem<T = unknown>(value: unknown): T | undefined {
   if (!isRecord(value)) {
@@ -121,7 +125,7 @@ export function extractSdkWorkResourceItem<T = unknown>(value: unknown): T | und
   if (isRecord(value.data) && "item" in value.data) {
     return value.data.item as T;
   }
-  return undefined;
+  return value as T;
 }
 
 const LIST_QUERY_KEYS = new Set(["page", "page_size", "pageSize", "cursor", "sort", "q"]);

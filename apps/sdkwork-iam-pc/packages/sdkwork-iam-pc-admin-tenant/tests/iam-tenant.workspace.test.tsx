@@ -41,7 +41,8 @@ describe("tenant administration workspace", () => {
     await waitFor(() => expect(controller.listTenants).toHaveBeenLastCalledWith({ q: "Acme", page: 1, page_size: 20 }));
 
     fireEvent.click(screen.getByRole("button", { name: "管理" }));
-    await screen.findByText("租户应用");
+    // The applications panel opens; its filter form sits above the table.
+    await screen.findByRole("search");
     expect(screen.queryByRole("button", { name: "成员" })).toBeNull();
   });
 });

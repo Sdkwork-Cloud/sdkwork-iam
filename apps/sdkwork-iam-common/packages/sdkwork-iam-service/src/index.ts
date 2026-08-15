@@ -324,6 +324,8 @@ export interface SdkworkIamService {
       list(params?: Record<string, unknown>): Promise<unknown>;
       retrieve(userId: string): Promise<IamUser>;
       update(userId: string, body: Record<string, unknown>): Promise<unknown>;
+      ban(userId: string): Promise<unknown>;
+      unban(userId: string): Promise<unknown>;
     };
   };
 }
@@ -737,6 +739,8 @@ export function createSdkworkIamService(input: CreateSdkworkIamServiceInput): Sd
         list: (params) => callBackendIam(backendIam, (iam) => iam.users, "list", "iam.users.list", iamListQuery(params)),
         retrieve: async (userId) => toUser(unwrap(await callBackendIam(backendIam, (iam) => iam.users, "retrieve", "iam.users.retrieve", userId), "iam.users.retrieve")),
         update: (userId, body) => callBackendIam(backendIam, (iam) => iam.users, "update", "iam.users.update", userId, body),
+        ban: (userId) => callBackendIam(backendIam, (iam) => iam.users, "ban", "iam.users.ban", userId, {}),
+        unban: (userId) => callBackendIam(backendIam, (iam) => iam.users, "unban", "iam.users.unban", userId, {}),
       },
     },
   };

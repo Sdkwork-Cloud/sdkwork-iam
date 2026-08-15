@@ -390,6 +390,18 @@ const IAM_BACKEND_API_ROUTES: &[HttpRoute] = &[
     ),
     HttpRoute::dual_token(
         HttpMethod::Post,
+        "/backend/v3/api/iam/users/{userId}/ban",
+        "iam",
+        "users.ban",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/iam/users/{userId}/unban",
+        "iam",
+        "users.unban",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
         "/backend/v3/api/iam/roles",
         "iam",
         "roles.create",

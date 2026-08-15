@@ -5,6 +5,23 @@ import { SdkworkI18nProvider } from "@sdkwork/i18n-pc-react";
 
 import { createSdkworkIamOauthAdminController } from "../src/services/oauth-admin-controller";
 import { OauthResourceDrawer } from "../src/components/oauth-admin-ui";
+async function openSelect(label: string) {
+  const trigger = screen.getByRole("combobox", { name: label });
+  const pointerDown = new PointerEvent("pointerdown", {
+    bubbles: true,
+    button: 0,
+    cancelable: true,
+    pointerId: 1,
+    pointerType: "mouse",
+  });
+  trigger.dispatchEvent(pointerDown);
+  await screen.findByRole("listbox");
+}
+
+function checkedOption(label: string) {
+  return screen.getByRole("option", { name: label }).getAttribute("data-state") === "checked";
+}
+
 import { createOauthServiceMock } from "./fixtures/oauth-service-mock";
 import {
   SdkworkIamOauthMiniProgramAccountsPage,
@@ -235,7 +252,11 @@ describe("SDKWork IAM OAuth quick setup pages", () => {
     expect(html).toContain("gh_oa001");
     // Search input and filter selects are rendered in the header row.
     expect(html).toContain("搜索账号名称、AppID 或原始ID");
-    expect(html).toContain("全部");
+    // Radix Select renders options in a portal only when opened, so assert the
+    // filter triggers are present instead of the option text.
+    expect(html).toContain('aria-label="账号类型"');
+    expect(html).toContain('aria-label="接通状态"');
+    expect(html).toContain('aria-label="状态"');
   });
 
   it("renders the account list search box, filters, and delete actions", () => {
@@ -415,8 +436,10 @@ describe("SDKWork IAM OAuth quick setup pages", () => {
     expect(screen.getByDisplayValue("My mini program")).toBeTruthy();
     // The saved subject type is echoed back into the edit form (not the
     // default personal fallback).
+    await openSelect("主体类型");
     expect(screen.getByRole("option", { name: "个人主体" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "企业主体" }).selected).toBe(true);
+    expect(checkedOption("企业主体")).toBe(true);
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
     expect(screen.getByPlaceholderText("gh_xxxxxxxx")).toBeTruthy();
     const appIdField = screen.getByDisplayValue("wx-test-mini-001");
     expect(appIdField).not.toBeDisabled();
@@ -508,7 +531,9 @@ describe("SDKWork IAM OAuth quick setup pages", () => {
     // default).
     expect(screen.getByDisplayValue("wx-test-oa-001")).toBeTruthy();
     expect(screen.getByDisplayValue("oa-secret-1")).toBeTruthy();
-    expect(screen.getByRole("option", { name: "订阅号" }).selected).toBe(true);
+    await openSelect("账号类型");
+    expect(checkedOption("订阅号")).toBe(true);
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
     fireEvent.mouseDown(screen.getByRole("tab", { name: "服务器配置" }));
     expect(screen.getAllByText("生成令牌").length).toBeGreaterThan(0);
     expect(screen.getAllByText("生成密钥").length).toBeGreaterThan(0);
@@ -547,8 +572,10 @@ describe("SDKWork IAM OAuth quick setup pages", () => {
     expect(screen.getByRole("tab", { name: "开发配置" })).toBeTruthy();
     expect(screen.queryByRole("tab", { name: "服务器配置" })).toBeNull();
     expect(screen.getByRole("tab", { name: "状态信息" })).toBeTruthy();
+    await openSelect("主体类型");
     expect(screen.getByRole("option", { name: "个人主体" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "企业主体" })).toBeTruthy();
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
     expect(screen.getByPlaceholderText("gh_xxxxxxxx")).toBeTruthy();
 
     fireEvent.mouseDown(screen.getByRole("tab", { name: "开发配置" }));

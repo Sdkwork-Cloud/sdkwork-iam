@@ -2,9 +2,11 @@ import type { SdkWorkPageInfo } from "@sdkwork/iam-contracts";
 import type { SdkworkIamService } from "@sdkwork/iam-service";
 
 export interface SdkworkIamAdminUser {
+  createdAt?: string;
   displayName?: string;
   email?: string;
   id: string;
+  lastLoginAt?: string;
   phone?: string;
   status?: string;
   userId: string;
@@ -33,6 +35,7 @@ export interface CreateSdkworkIamUserAdminControllerInput {
 }
 
 export interface SdkworkIamUserAdminController {
+  banUser(userId: string): Promise<SdkworkIamAdminUser>;
   createUser(body: SdkworkIamAdminUserDraft): Promise<SdkworkIamAdminUser>;
   deleteUser(userId: string): Promise<void>;
   getSelectedUser(): SdkworkIamAdminUser | undefined;
@@ -41,6 +44,7 @@ export interface SdkworkIamUserAdminController {
   loadMoreUsers(): Promise<readonly SdkworkIamAdminUser[]>;
   retrieveUser(userId: string): Promise<SdkworkIamAdminUser | undefined>;
   selectUser(userId: string): Promise<SdkworkIamAdminUser | undefined>;
+  unbanUser(userId: string): Promise<SdkworkIamAdminUser>;
   updateUser(userId: string, body: Partial<SdkworkIamAdminUserDraft>): Promise<SdkworkIamAdminUser>;
 }
 

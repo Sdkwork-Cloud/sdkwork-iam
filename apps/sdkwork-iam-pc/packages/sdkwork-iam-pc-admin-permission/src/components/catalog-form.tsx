@@ -5,6 +5,19 @@
  * copy in their own workspace dictionaries; these primitives only carry the
  * value binding so every catalog drawer renders with the same field styling.
  */
+import {
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@sdkwork/ui-pc-react";
+
+/** Sentinel value representing "no selection" for CatalogSelect (Radix Select
+ *  items cannot carry an empty string value). */
+const CATALOG_SELECT_EMPTY = "__catalog_select_empty__";
+
 export function CatalogField({
   disabled,
   hint,
@@ -23,8 +36,7 @@ export function CatalogField({
   return (
     <label className="block space-y-2 text-sm">
       <span>{label}</span>
-      <input
-        className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2"
+      <Input
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
@@ -51,18 +63,22 @@ export function CatalogSelect({
   return (
     <label className="block space-y-2 text-sm">
       <span>{label}</span>
-      <select
-        className="w-full rounded-[0.75rem] border border-[var(--sdk-color-border-default)] bg-transparent px-3 py-2"
-        onChange={(event) => onChange(event.target.value)}
-        value={value}
+      <Select
+        onValueChange={(next) => onChange(next === CATALOG_SELECT_EMPTY ? "" : next)}
+        value={value || CATALOG_SELECT_EMPTY}
       >
-        {placeholder ? <option value="">{placeholder}</option> : null}
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {placeholder ? <SelectItem value={CATALOG_SELECT_EMPTY}>{placeholder}</SelectItem> : null}
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </label>
   );
 }

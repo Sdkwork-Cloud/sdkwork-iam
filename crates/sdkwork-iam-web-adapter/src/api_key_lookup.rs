@@ -33,11 +33,13 @@ impl ApiKeyLookupService for IamApiKeyLookupService {
         let now = chrono::Utc::now();
 
         let row = sqlx::query(
-            "SELECT id, tenant_id, organization_id, user_id, app_id, environment, deployment_mode, \
-             permission_scope_json, status, expires_at \
-             FROM iam_api_key \
-             WHERE key_hash = $1 AND status = 'active' \
-           AND (expires_at IS NULL OR expires_at::timestamptz > $2::timestamptz) \
+            "SELECT a.id, a.tenant_id, a.organization_id, a.user_id, a.app_id, a.environment, a.deployment_mode, \
+             a.permission_scope_json, a.status, a.expires_at \
+             FROM iam_api_key a \
+             JOIN iam_user u ON u.id = a.user_id AND u.tenant_id = a.tenant_id \
+             WHERE a.key_hash = $1 AND a.status = 'active' \
+           AND (a.expires_at IS NULL OR a.expires_at::timestamptz > $2::timestamptz) \
+             AND u.status = 'active' AND u.is_deleted = 0 \
              LIMIT 1",
         )
         .bind(&key_hash)

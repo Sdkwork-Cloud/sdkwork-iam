@@ -899,6 +899,8 @@ export const SDKWORK_IAM_API_ROUTES = {
       list: operation("GET", `${backend}/iam/users`, "iam", "users.list", "dualToken"),
       retrieve: operation("GET", `${backend}/iam/users/{userId}`, "iam", "users.retrieve", "dualToken"),
       update: operation("PATCH", `${backend}/iam/users/{userId}`, "iam", "users.update", "dualToken"),
+      ban: operation("POST", `${backend}/iam/users/{userId}/ban`, "iam", "users.ban", "dualToken"),
+      unban: operation("POST", `${backend}/iam/users/{userId}/unban`, "iam", "users.unban", "dualToken"),
     },
   },
 } as const;

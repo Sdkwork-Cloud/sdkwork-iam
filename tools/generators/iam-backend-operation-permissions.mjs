@@ -130,6 +130,8 @@ function parseAction(action) {
     case 'create':
       return 'create';
     case 'update':
+    case 'ban':
+    case 'unban':
       return 'update';
     case 'delete':
       return 'delete';
