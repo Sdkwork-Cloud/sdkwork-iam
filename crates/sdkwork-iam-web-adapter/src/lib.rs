@@ -367,6 +367,7 @@ where
     let security_policy = iam_web_security_policy(&environment);
     let authorization_policy =
         std::sync::Arc::new(IamAuthorizationPolicy::new(route_manifest.clone()));
+    let gateway_api_prefixes = gateway_api_prefixes_excluding(open_api_prefixes.as_slice());
     let builder = sdkwork_web_bootstrap::WebFramework::builder(resolver);
     let builder = if matches!(environment, WebEnvironment::Prod) {
         builder.production_defaults()
@@ -377,6 +378,7 @@ where
         .profile(WebRequestContextProfile {
             open_api_prefixes,
             public_path_prefixes: extra_public_path_prefixes,
+            gateway_api_prefixes,
             environment,
             ..WebRequestContextProfile::default()
         })
@@ -387,6 +389,26 @@ where
             sdkwork_web_core::EnforcePrincipalTenantIsolationPolicy,
         ))
         .domain_injector(std::sync::Arc::new(IamAppContextInjector))
+}
+
+fn gateway_api_prefixes_excluding(open_api_prefixes: &[String]) -> Vec<String> {
+    WebRequestContextProfile::default()
+        .gateway_api_prefixes
+        .into_iter()
+        .filter(|gateway_prefix| {
+            !open_api_prefixes
+                .iter()
+                .any(|open_prefix| open_prefix == gateway_prefix)
+        })
+        .collect()
+}
+
+#[cfg(test)]
+#[test]
+fn explicit_open_api_prefixes_override_default_gateway_prefixes() {
+    let open_api_prefixes = vec!["/v1".to_owned(), "/knowledge/v3/api".to_owned()];
+
+    assert!(gateway_api_prefixes_excluding(open_api_prefixes.as_slice()).is_empty());
 }
 
 /// Builds the IAM-configured framework host with the default IAM Open API prefixes.
