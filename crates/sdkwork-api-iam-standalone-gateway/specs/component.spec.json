@@ -66,8 +66,9 @@
     "providedPorts": [],
     "requiredPorts": [
       {
-        "name": "applicationApiAssembly",
-        "export": "sdkwork-api-assembly"
+        "name": "iamOwnerApiAssembly",
+        "export": "sdkwork_api_iam_assembly::bootstrap_iam_for_application",
+        "provider": "sdkwork-api-iam-assembly"
       }
     ],
     "runtimeEntrypoints": [
@@ -79,7 +80,12 @@
     "dependencyApiExports": [],
     "dependencyApiSurfaces": [],
     "events": [],
-    "configKeys": []
+    "configKeys": [
+      "SDKWORK_IAM_APPLICATION_PUBLIC_INGRESS_BIND",
+      "SDKWORK_IAM_ENVIRONMENT",
+      "SDKWORK_CORS_ALLOWED_ORIGINS",
+      "SDKWORK_DATABASE_URL"
+    ]
   },
   "integration": {
     "authority": "Root SDKWork specs remain authoritative. Local specs may narrow this component but must not contradict them.",

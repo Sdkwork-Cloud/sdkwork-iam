@@ -343,6 +343,14 @@ pub fn web_request_principal_from_iam(
         .data_scope(context.data_scope)
         .permission_scope(context.permission_scope)
         .subject_type(subject_type)
+        // The display-name snapshot is already resolved by the IAM session
+        // lookup (zero extra queries); downstream audit/log projections persist
+        // it so request logs stay readable after user records change.
+        .display_name(if context.display_name.is_empty() {
+            None
+        } else {
+            Some(context.display_name)
+        })
         .build()
 }
 

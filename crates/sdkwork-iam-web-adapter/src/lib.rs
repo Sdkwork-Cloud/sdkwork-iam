@@ -260,6 +260,13 @@ pub fn iam_app_context_from_web_principal(principal: &WebRequestPrincipal) -> Ia
     if principal.subject.subject_type == sdkwork_web_core::WebSubjectType::Service {
         context.as_service_account(principal.user_id().to_owned())
     } else {
+        // Round-trip the display-name snapshot already resolved on the
+        // principal so domain injectors expose the same profile the session
+        // lookup produced (request-log projections read it from extensions).
+        let mut context = context;
+        if let Some(display_name) = principal.display_name() {
+            context.apply_user_profile(display_name.to_owned(), String::new(), false);
+        }
         context
     }
 }

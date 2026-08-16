@@ -8,6 +8,8 @@ use tower::ServiceExt;
 #[tokio::test]
 async fn runtime_http_openapi_matches_bound_manifest() {
     let previous_app_root = std::env::var_os("SDKWORK_APP_ROOT");
+    let previous_environment = std::env::var_os("SDKWORK_ENVIRONMENT");
+    std::env::set_var("SDKWORK_ENVIRONMENT", "development");
     std::env::set_var(
         "SDKWORK_APP_ROOT",
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -17,6 +19,10 @@ async fn runtime_http_openapi_matches_bound_manifest() {
     match previous_app_root {
         Some(value) => std::env::set_var("SDKWORK_APP_ROOT", value),
         None => std::env::remove_var("SDKWORK_APP_ROOT"),
+    }
+    match previous_environment {
+        Some(value) => std::env::set_var("SDKWORK_ENVIRONMENT", value),
+        None => std::env::remove_var("SDKWORK_ENVIRONMENT"),
     }
     let runtime = runtime.expect("build IAM standalone runtime");
     let expected = route_inventory_from_routes(runtime.route_manifest.routes());

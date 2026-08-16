@@ -77,6 +77,13 @@ pub async fn assemble_owner_api_surfaces_with_pool(
     assemble_owner_api_surfaces_with_host(host).await
 }
 
+/// Runs the IAM-owned database lifecycle on the caller's process-shared pool
+/// without mounting routes or provisioning an application record.
+pub async fn bootstrap_database_with_pool(pool: DatabasePool) -> Result<(), String> {
+    bootstrap_iam_database(pool).await?;
+    Ok(())
+}
+
 async fn assemble_owner_api_surfaces_with_host(
     host: IamDatabaseHost,
 ) -> Result<ApiAssembly, String> {

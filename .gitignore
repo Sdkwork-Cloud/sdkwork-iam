@@ -87,3 +87,10 @@ __pycache__/
 *.log
 .DS_Store
 Thumbs.db
+
+# TypeScript/JavaScript build artifacts emitted alongside source (tsc declaration/emit)
+*.d.ts.map
+*.js.map
+**/src/**/*.js
+**/src/**/*.d.ts
+
