@@ -1,70 +1,70 @@
 {
+  "schemaVersion": 1,
   "kind": "sdkwork.iam.registry.lock",
-  "materializedAt": "2026-08-16T17:24:16.837054400+00:00",
+  "materializedAt": "2026-08-17T12:54:11.319422500+00:00",
+  "profile": "operational",
   "modules": [
     {
+      "moduleId": "iam-kernel",
       "catalogVersion": "1.0.0",
-      "manifestSha256": "e37f2a9731f0bc26551d598395b3052edc15d1504c847ed09d9cc21ede960e64",
-      "moduleId": "iam-kernel"
+      "manifestSha256": "e37f2a9731f0bc26551d598395b3052edc15d1504c847ed09d9cc21ede960e64"
     },
     {
+      "moduleId": "ai",
       "catalogVersion": "1.1.0",
-      "manifestSha256": "7cf3c5791c48b02a37465d7f77c4b2bfccc847c438dbec8c1105497177cca18e",
-      "moduleId": "ai"
+      "manifestSha256": "7cf3c5791c48b02a37465d7f77c4b2bfccc847c438dbec8c1105497177cca18e"
     },
     {
+      "moduleId": "apps",
       "catalogVersion": "1.0.0",
-      "manifestSha256": "996c852d1c5290b8448d966eec182fef9ad16d91dfe9a32e21c9e705debbac6a",
-      "moduleId": "apps"
+      "manifestSha256": "996c852d1c5290b8448d966eec182fef9ad16d91dfe9a32e21c9e705debbac6a"
     },
     {
+      "moduleId": "courses",
       "catalogVersion": "1.0.0",
-      "manifestSha256": "54af81978cd6e35c9e337f4d2b4a225214453617385be1a2fa546fd84764b8b8",
-      "moduleId": "courses"
+      "manifestSha256": "54af81978cd6e35c9e337f4d2b4a225214453617385be1a2fa546fd84764b8b8"
     },
     {
+      "moduleId": "commerce",
       "catalogVersion": "1.0.0",
-      "manifestSha256": "b6bd3c6381c85d12d8cee4d1e1b9aa8cc0cd71719929ea6b957c2b7eaae1fee6",
-      "moduleId": "commerce"
+      "manifestSha256": "b6bd3c6381c85d12d8cee4d1e1b9aa8cc0cd71719929ea6b957c2b7eaae1fee6"
     },
     {
+      "moduleId": "drive",
       "catalogVersion": "1.1.0",
-      "manifestSha256": "fa4ec70d9e700f58172fed094ab059ee18b33f19c7523ed4d10921ac7895fe9e",
-      "moduleId": "drive"
+      "manifestSha256": "fa4ec70d9e700f58172fed094ab059ee18b33f19c7523ed4d10921ac7895fe9e"
     },
     {
+      "moduleId": "messaging",
       "catalogVersion": "1.0.0",
-      "manifestSha256": "a88478a736f39f230796d7de6d7cd04b98cde021b8992d3c61076c1b61e13d59",
-      "moduleId": "messaging"
+      "manifestSha256": "a88478a736f39f230796d7de6d7cd04b98cde021b8992d3c61076c1b61e13d59"
     },
     {
+      "moduleId": "integrations",
       "catalogVersion": "1.0.0",
-      "manifestSha256": "2319b15a31d1c79559e181082ef6a3fb379cdeb17765db129124376f40e6ba01",
-      "moduleId": "integrations"
+      "manifestSha256": "2319b15a31d1c79559e181082ef6a3fb379cdeb17765db129124376f40e6ba01"
     },
     {
+      "moduleId": "ops",
       "catalogVersion": "1.0.0",
-      "manifestSha256": "9f0dd99c9fd7ae6e3084639c703f6b5a0996fe81c2e4436f1f6338f63780babc",
-      "moduleId": "ops"
+      "manifestSha256": "9f0dd99c9fd7ae6e3084639c703f6b5a0996fe81c2e4436f1f6338f63780babc"
     },
     {
+      "moduleId": "system",
       "catalogVersion": "1.0.0",
-      "manifestSha256": "cb94ef77a2531967ef42222f4c3a2009d1808a29b277da2292a7174b42cb716e",
-      "moduleId": "system"
+      "manifestSha256": "cb94ef77a2531967ef42222f4c3a2009d1808a29b277da2292a7174b42cb716e"
     },
     {
+      "moduleId": "skills",
       "catalogVersion": "1.0.0",
-      "manifestSha256": "705cee727c60b9cca7b4987c97ff5ea464e4456ccbcff268e9b1c4470d2245ac",
-      "moduleId": "skills"
+      "manifestSha256": "705cee727c60b9cca7b4987c97ff5ea464e4456ccbcff268e9b1c4470d2245ac"
     },
     {
+      "moduleId": "mcp",
       "catalogVersion": "1.0.0",
-      "manifestSha256": "28e2ce7f9c35a305d42e95e26db9fa4355a7569d2a696077ce9267105fe95410",
-      "moduleId": "mcp"
+      "manifestSha256": "28e2ce7f9c35a305d42e95e26db9fa4355a7569d2a696077ce9267105fe95410"
     }
   ],
   "permissionCount": 195,
-  "profile": "operational",
-  "roleCount": 12,
-  "schemaVersion": 1
+  "roleCount": 12
 }
