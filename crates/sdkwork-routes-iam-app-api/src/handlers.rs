@@ -4765,11 +4765,14 @@ async fn create_authenticated_session_or_challenge(
     match eligible_memberships.len() {
         0 => match create_session_record(pg, &state.config, user, None, runtime_app_id).await {
             Ok(session) => AuthenticatedSessionOutcome::Session(session),
-            Err(error) => AuthenticatedSessionOutcome::Error(appbase_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "iam_session_create_failed",
-                &error,
-            )),
+            Err(error) => {
+                tracing::error!(%error, "authenticated session creation failed");
+                AuthenticatedSessionOutcome::Error(appbase_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "iam_session_create_failed",
+                    &error,
+                ))
+            }
         },
         _ => match login_context_selection_challenge_json(
             state,

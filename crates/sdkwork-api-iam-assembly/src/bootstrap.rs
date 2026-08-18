@@ -284,6 +284,21 @@ mod tests {
     }
 
     #[test]
+    fn app_api_route_manifest_preserves_public_and_credential_entry_auth() {
+        use sdkwork_web_contract::RouteAuth;
+
+        let manifest = crate::app_api_route_manifest();
+        let runtime = manifest
+            .match_route("GET", "/app/v3/api/system/iam/runtime")
+            .expect("IAM runtime must be registered");
+        assert_eq!(RouteAuth::CredentialEntryBootstrap, runtime.auth);
+        let device_authorization = manifest
+            .match_route("POST", "/app/v3/api/oauth/device_authorizations")
+            .expect("device authorization create must be registered");
+        assert_eq!(RouteAuth::Public, device_authorization.auth);
+    }
+
+    #[test]
     fn app_api_permission_catalog_is_the_manifest_permission_union() {
         let manifest = sdkwork_routes_iam_app_api::iam_app_api_route_manifest();
         let catalog = sdkwork_web_bootstrap::permission_catalog(manifest.routes());

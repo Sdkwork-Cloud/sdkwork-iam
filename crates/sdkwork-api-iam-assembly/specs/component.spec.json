@@ -59,7 +59,8 @@
       "sdkwork_api_iam_assembly::bootstrap_iam_for_application",
       "sdkwork_api_iam_assembly::ApiAssembly",
       "sdkwork_api_iam_assembly::ApiAssemblyContribution",
-      "sdkwork_api_iam_assembly::assembly_route_count"
+      "sdkwork_api_iam_assembly::assembly_route_count",
+      "sdkwork_api_iam_assembly::app_api_route_manifest"
     ],
     "providedPorts": [
       {
