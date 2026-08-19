@@ -13,5 +13,8 @@ export {
 import { runRendererDevWithBootstrapCli } from '@sdkwork/iam-credential-entry/renderer-dev-bootstrap';
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  runRendererDevWithBootstrapCli();
+  Promise.resolve(runRendererDevWithBootstrapCli()).catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
 }

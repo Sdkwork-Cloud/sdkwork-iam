@@ -51,6 +51,7 @@
     "admin:iam-modules:reconcile": "node tools/validators/reconcile-iam-module-openapi-permissions.mjs",
     "admin:iam-modules:materialize:manifests": "node tools/generators/materialize-iam-module-manifests.mjs",
     "admin:bootstrap:app": "node scripts/bootstrap/bootstrap-app.mjs",
+    "env:token:ensure": "node scripts/dev/ensure-repo-bootstrap-access-token.mjs",
     "api:assembly:materialize": "node ../sdkwork-specs/tools/materialize-api-assembly.mjs --root .",
     "api:assembly:validate": "node ../sdkwork-specs/tools/validate-api-assembly.mjs --root .",
     "db:postgres:init": "node ../sdkwork-specs/tools/postgres/postgres-db-cli.mjs --mode init --config .env.postgres --app-root .",

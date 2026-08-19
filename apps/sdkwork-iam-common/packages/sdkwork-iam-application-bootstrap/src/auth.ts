@@ -4,27 +4,37 @@ import {
   DEFAULT_IAM_TENANT_ID,
 } from "./constants.ts";
 
-export async function loadBootstrapProfileFromHome(
-  options: {
-    profileName?: string;
-    readFile?: (path: string, encoding: "utf8") => Promise<string>;
-    usersDir?: string;
-  } = {},
-): Promise<IamApplicationBootstrapProfile | null> {
-  const { homedir } = await import("node:os");
-  const { join } = await import("node:path");
-  const readFile = options.readFile ?? (await import("node:fs/promises")).readFile;
-  const usersDir = options.usersDir ?? process.env.SDKWORK_USERS_DIR ?? join(homedir(), ".sdkwork", "users");
-  const profileName = options.profileName ?? process.env.SDKWORK_SUPER_ADMIN_PROFILE ?? "super-admin";
-  const profilePath = join(usersDir, `${profileName}.json`);
-
-  try {
-    const raw = await readFile(profilePath, "utf8");
-    return JSON.parse(raw) as IamApplicationBootstrapProfile;
-  } catch {
-    return null;
-  }
-}
+export {
+  loadBootstrapAuthProfileFromHome,
+  loadBootstrapOperatorProfileFromHome,
+  loadBootstrapProfileFromHome,
+  loadSuperAdminProfileFromHome,
+  resolveBootstrapAuthProfileCandidates,
+  resolveBootstrapAuthProfileDir,
+  resolveBootstrapAuthProfilePaths,
+  resolveBootstrapOperatorProfileCandidates,
+  resolveLegacyBootstrapUsersDir,
+  resolveLegacySuperAdminUsersDir,
+  resolveSuperAdminProfileCandidates,
+  resolveSuperAdminProfileDir,
+  resolveSuperAdminProfilePaths,
+  SDKWORK_IAM_BOOTSTRAP_DEFAULT_PROFILE,
+  SDKWORK_IAM_BOOTSTRAP_LEGACY_USERS_DIR_NAME,
+  SDKWORK_IAM_BOOTSTRAP_OPERATOR_PROFILE_ENV,
+  SDKWORK_IAM_BOOTSTRAP_PROFILE_DIR_ENV,
+  SDKWORK_IAM_BOOTSTRAP_PROFILE_DIR_NAME,
+} from "./bootstrap-auth-profile.ts";
+export { resolveSdkworkHomeDir, joinWindowsUserHome } from "./home-dir.ts";
+export type {
+  LoadBootstrapAuthProfileOptions,
+  LoadBootstrapOperatorProfileOptions,
+  LoadedBootstrapAuthProfile,
+  LoadedBootstrapOperatorProfile,
+  LoadedSuperAdminProfile,
+  ResolveBootstrapAuthProfileOptions,
+  ResolveBootstrapOperatorProfileOptions,
+  ResolveSuperAdminProfileOptions,
+} from "./bootstrap-auth-profile.ts";
 
 export function mergeBootstrapAuth(
   base: Record<string, unknown>,
@@ -84,9 +94,48 @@ export function mergeBootstrapAuth(
 export function resolveBootstrapAuthFromEnv(
   env: Record<string, string | undefined> = process.env,
 ): IamApplicationBootstrapAuth {
+  const authToken =
+    env.SDKWORK_IAM_BOOTSTRAP_OPERATOR_AUTH_TOKEN
+    ?? env.SDKWORK_IAM_BOOTSTRAP_AUTH_TOKEN
+    ?? env.SDKWORK_IAM_SUPER_ADMIN_AUTH_TOKEN;
+  const username =
+    env.SDKWORK_IAM_BOOTSTRAP_OPERATOR_USERNAME
+    ?? env.SDKWORK_IAM_BOOTSTRAP_USERNAME
+    ?? env.SDKWORK_IAM_SUPER_ADMIN_USERNAME;
+  const password =
+    env.SDKWORK_IAM_BOOTSTRAP_OPERATOR_PASSWORD
+    ?? env.SDKWORK_IAM_BOOTSTRAP_PASSWORD
+    ?? env.SDKWORK_IAM_SUPER_ADMIN_PASSWORD;
   return {
-    username: env.SDKWORK_IAM_BOOTSTRAP_USERNAME ?? env.SDKWORK_IAM_SUPER_ADMIN_USERNAME,
-    password: env.SDKWORK_IAM_SUPER_ADMIN_PASSWORD ?? env.SDKWORK_IAM_BOOTSTRAP_PASSWORD,
+    ...(authToken !== undefined ? { authToken } : {}),
+    ...(username !== undefined ? { username } : {}),
+    ...(password !== undefined ? { password } : {}),
+  };
+}
+
+/**
+ * Merge launch-environment bootstrap auth with an optional on-disk profile.
+ * Explicit environment values win over the profile file.
+ */
+export function resolveBootstrapAuth(
+  options: {
+    env?: Record<string, string | undefined>;
+    profile?: IamApplicationBootstrapProfile | null;
+  } = {},
+): IamApplicationBootstrapAuth {
+  const env = options.env ?? process.env;
+  const fromEnv = resolveBootstrapAuthFromEnv(env);
+  const profile = options.profile;
+  if (fromEnv.authToken) return fromEnv;
+  const username = fromEnv.username ?? profile?.username ?? profile?.account ?? profile?.email;
+  const password = fromEnv.password ?? profile?.password;
+  const email = fromEnv.email ?? profile?.email;
+  return {
+    ...(fromEnv.authToken !== undefined ? { authToken: fromEnv.authToken } : {}),
+    ...(username !== undefined ? { username } : {}),
+    ...(password !== undefined ? { password } : {}),
+    ...(email !== undefined ? { email } : {}),
+    ...(fromEnv.phone !== undefined ? { phone: fromEnv.phone } : {}),
   };
 }
 
@@ -94,13 +143,14 @@ export function resolveBootstrapEnvironmentFromEnv(
   env: Record<string, string | undefined> = process.env,
   overrides: Partial<import("./types.ts").IamApplicationBootstrapEnvironment> = {},
 ): import("./types.ts").IamApplicationBootstrapEnvironment {
+  const primaryDomain = overrides.primaryDomain ?? env.SDKWORK_APP_DOMAIN;
   return {
     backendApiBaseUrl: overrides.backendApiBaseUrl ?? env.SDKWORK_BACKEND_BASE_URL ?? "http://127.0.0.1:8080",
-    deploymentMode: overrides.deploymentMode,
+    ...(overrides.deploymentMode !== undefined ? { deploymentMode: overrides.deploymentMode } : {}),
     environment: overrides.environment ?? env.SDKWORK_ENV ?? "dev",
     instanceKey: overrides.instanceKey ?? env.SDKWORK_APP_INSTANCE_KEY ?? "dev",
     organizationId: overrides.organizationId ?? env.SDKWORK_ORGANIZATION_ID ?? DEFAULT_IAM_ORGANIZATION_ID,
-    primaryDomain: overrides.primaryDomain ?? env.SDKWORK_APP_DOMAIN,
+    ...(primaryDomain !== undefined ? { primaryDomain } : {}),
     tenantId: overrides.tenantId ?? env.SDKWORK_TENANT_ID ?? DEFAULT_IAM_TENANT_ID,
   };
 }

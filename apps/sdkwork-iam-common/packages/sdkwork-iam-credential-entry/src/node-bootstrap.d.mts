@@ -12,6 +12,8 @@ export function mergeBootstrapAccessTokenEnvFromManifest(options: {
   manifestPath: string;
 } & CreateDevBootstrapAccessTokenOptions): Record<string, string | undefined>;
 export function resolveRepoApplicationManifestPath(repoRoot: string, manifestPath?: string): string;
+export function resolveRepoBootstrapAccessTokenEnvPaths(repoRoot: string, environment: SdkworkEnvironment | 'dev' | 'prod'): string[];
+export function readRepoBootstrapAccessToken(repoRoot: string, environment: SdkworkEnvironment | 'dev' | 'prod'): string | undefined;
 export function mergeRepoBootstrapAccessTokenEnv(options: {
   repoRoot: string;
   env?: Record<string, string | undefined>;

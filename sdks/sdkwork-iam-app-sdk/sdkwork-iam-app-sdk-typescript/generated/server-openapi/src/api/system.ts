@@ -13,7 +13,7 @@ export class SystemIamVerificationPolicyApi {
 
 /** Iam verification Policy retrieve. */
   async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/verification_policy`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, accessTokenOnly: true, sdkworkUnwrapKind: 'item' });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/verification_policy`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, accessTokenOnly: true, sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -27,7 +27,7 @@ export class SystemIamRuntimeApi {
 
 /** Iam runtime retrieve. */
   async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/runtime`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, accessTokenOnly: true, sdkworkUnwrapKind: 'item' });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/runtime`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, accessTokenOnly: true, sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -41,18 +41,16 @@ export class SystemIamAccountBindingPolicyApi {
 
 /** Iam account Binding Policy retrieve. */
   async retrieve(requestOptions?: ApiRequestOptions): Promise<Record<string, unknown>> {
-    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/account_binding_policy`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, accessTokenOnly: true, sdkworkUnwrapKind: 'item' });
+    return this.client.request<Record<string, unknown>>(appApiPath(`/system/iam/account_binding_policy`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, accessTokenOnly: true, sdkworkUnwrapKind: 'item' });
   }
 }
 
 export class SystemIamApi {
-  private client: HttpClient;
   public readonly accountBindingPolicy: SystemIamAccountBindingPolicyApi;
   public readonly runtime: SystemIamRuntimeApi;
   public readonly verificationPolicy: SystemIamVerificationPolicyApi;
 
   constructor(client: HttpClient) {
-    this.client = client;
     this.accountBindingPolicy = new SystemIamAccountBindingPolicyApi(client);
     this.runtime = new SystemIamRuntimeApi(client);
     this.verificationPolicy = new SystemIamVerificationPolicyApi(client);
@@ -61,11 +59,9 @@ export class SystemIamApi {
 }
 
 export class SystemApi {
-  private client: HttpClient;
   public readonly iam: SystemIamApi;
 
   constructor(client: HttpClient) {
-    this.client = client;
     this.iam = new SystemIamApi(client);
   }
 
@@ -73,12 +69,4 @@ export class SystemApi {
 
 export function createSystemApi(client: HttpClient): SystemApi {
   return new SystemApi(client);
-}
-
-function appendQueryString(path: string, rawQueryString: string): string {
-  const query = rawQueryString.replace(/^\?+/, '');
-  if (!query) {
-    return path;
-  }
-  return path.includes('?') ? `${path}&${query}` : `${path}?${query}`;
 }

@@ -1,49 +1,22 @@
-# @sdkwork/iam-application-bootstrap
+## Bootstrap auth profiles
 
-Reusable IAM application bootstrap framework for SDKWork applications.
+IAM application bootstrap authenticates with any principal that holds register/provision/enable/access-credential permissions. Development often uses the platform super-admin account, but profiles are named by **environment**, not by role.
 
-This package owns the standard **register → provision → enable → access credential** flow. It can be injected into:
+Store credentials under `~/.sdkwork/iam-bootstrap/`:
 
-- Generated backend SDK clients through `createIamApplicationBootstrapClientFromAppbaseBackendSdk`
-- Port-normalized backend SDK clients through `createIamApplicationBootstrapClientFromBackend`
-- `@sdkwork/iam-service` facades through `createIamApplicationBootstrapClientFromIamService`
+| File | When used |
+| --- | --- |
+| `development.json` | `SDKWORK_ENVIRONMENT=development` |
+| `test.json` | test environment |
+| `default.json` | fallback when no lifecycle file exists |
+| `standalone.development.json` | exact `SDKWORK_PROFILE_ID` match |
 
-## Usage
+Resolution order: `SDKWORK_IAM_BOOTSTRAP_OPERATOR_PROFILE` → lifecycle → profile id → `default` → legacy `super-admin` stem.
 
-```ts
-import {
-  bootstrapApplicationFromManifest,
-  createIamApplicationBootstrapClientFromAppbaseBackendSdk,
-  createIamApplicationBootstrap,
-  resolveBootstrapAuthFromEnv,
-  resolveBootstrapEnvironmentFromEnv,
-} from "@sdkwork/iam-application-bootstrap";
+Legacy fallback: `~/.sdkwork/users/*.json` (including `super-admin.json`).
 
-const client = createIamApplicationBootstrapClientFromAppbaseBackendSdk({
-  baseUrl: "http://127.0.0.1:8080",
-});
+Canonical development identity: username `admin`, email `admin@sdkwork.com`. Store the password in the home profile, never in git.
 
-const bootstrap = createIamApplicationBootstrap({ client });
-const result = await bootstrap.bootstrapFromManifest({
-  client,
-  manifest,
-  manifestHash,
-  auth: resolveBootstrapAuthFromEnv(),
-  environment: resolveBootstrapEnvironmentFromEnv(undefined, {
-    primaryDomain: "demo.local",
-  }),
-});
-```
+Environment overrides: `SDKWORK_IAM_BOOTSTRAP_OPERATOR_USERNAME`, `SDKWORK_IAM_BOOTSTRAP_OPERATOR_PASSWORD` (legacy `SDKWORK_IAM_SUPER_ADMIN_*` aliases still work).
 
-## Runtime Environments
-
-- **CLI / Node tooling**: `createIamApplicationBootstrapClientFromAppbaseBackendSdk`
-- **SaaS / private backend SDK runtime**: `createIamApplicationBootstrapClientFromBackend`
-- **Existing IAM service runtime**: `createIamApplicationBootstrapClientFromIamService`
-
-Environment resolution is centralized through `resolveBootstrapEnvironmentFromEnv()` and `resolveBootstrapAuthFromEnv()` so the same module works across dev, test, and production hosts.
-
-## Verification
-
-- `pnpm --filter @sdkwork/iam-application-bootstrap test`
-- `pnpm --filter @sdkwork/iam-application-bootstrap typecheck`
+Directory override: `SDKWORK_IAM_BOOTSTRAP_PROFILE_DIR` (default `~/.sdkwork/iam-bootstrap`). Home resolution uses `%USERPROFILE%` on Windows (`HOMEDRIVE`+`HOMEPATH` fallback) and `$HOME` on Linux/macOS.

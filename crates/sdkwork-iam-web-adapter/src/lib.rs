@@ -205,8 +205,8 @@ pub use signing_secrets::{
 pub use super_admin_auth::{
     allows_automatic_super_admin_auth, ensure_actor_tenant_scope, ensure_bootstrap_permission,
     ensure_super_admin_sync_actor, resolve_access_token_actor, resolve_bootstrap_actor,
-    AccessTokenActor, SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV, SDKWORK_IAM_SUPER_ADMIN_PASSWORD_ENV,
-    SDKWORK_SUPER_ADMIN_PROFILE_ENV, SDKWORK_USERS_DIR_ENV,
+    AccessTokenActor, SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV, SDKWORK_IAM_BOOTSTRAP_PROFILE_DIR_ENV,
+    SDKWORK_IAM_SUPER_ADMIN_PASSWORD_ENV, SDKWORK_SUPER_ADMIN_PROFILE_ENV, SDKWORK_USERS_DIR_ENV,
 };
 #[cfg(feature = "sqlite")]
 pub use tenant_signing_key_store::SqliteTenantSigningKeyStore;

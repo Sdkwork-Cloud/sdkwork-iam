@@ -71,16 +71,28 @@ export async function bootstrapApplicationFromManifest(
     provisioned,
     enabled,
     issued,
-    templateId: registered.templateId,
-    tenantApplicationId: issued.tenantApplicationId ?? enabled.tenantApplicationId ?? provisioned.tenantApplicationId,
-    appId: issued.appId ?? enabled.appId ?? provisioned.appId,
-    version: registered.version ?? registerBase.version,
-    authToken: issued.authToken,
-    accessCredential: issued.accessCredential ?? issued.accessToken,
+    tenantApplicationId:
+      issued.tenantApplicationId ?? enabled.tenantApplicationId ?? provisioned.tenantApplicationId ?? tenantApplicationId,
+    ...( (issued.appId ?? enabled.appId ?? provisioned.appId) !== undefined
+      ? { appId: issued.appId ?? enabled.appId ?? provisioned.appId }
+      : {}),
+    ...( (registered.version ?? registerBase.version) !== undefined
+      ? { version: registered.version ?? registerBase.version }
+      : {}),
+    ...(registered.templateId !== undefined ? { templateId: registered.templateId } : {}),
+    ...(issued.authToken !== undefined ? { authToken: issued.authToken } : {}),
+    ...((issued.accessCredential ?? issued.accessToken) !== undefined
+      ? { accessCredential: issued.accessCredential ?? issued.accessToken }
+      : {}),
     env: {},
   };
 
-  result.env = buildBootstrapEnvRecord({ result, primaryDomain: input.environment.primaryDomain });
+  result.env = buildBootstrapEnvRecord({
+    result,
+    ...(input.environment.primaryDomain !== undefined
+      ? { primaryDomain: input.environment.primaryDomain }
+      : {}),
+  });
   return result;
 }
 

@@ -23,8 +23,13 @@ const BOOTSTRAP_PERMISSIONS: &[&str] = &[
 
 pub const SDKWORK_USERS_DIR_ENV: &str = "SDKWORK_USERS_DIR";
 pub const SDKWORK_SUPER_ADMIN_PROFILE_ENV: &str = "SDKWORK_SUPER_ADMIN_PROFILE";
+pub const SDKWORK_IAM_BOOTSTRAP_PROFILE_DIR_ENV: &str = "SDKWORK_IAM_BOOTSTRAP_PROFILE_DIR";
+pub const SDKWORK_IAM_BOOTSTRAP_OPERATOR_PROFILE_ENV: &str = "SDKWORK_IAM_BOOTSTRAP_OPERATOR_PROFILE";
 pub const SDKWORK_IAM_SUPER_ADMIN_PASSWORD_ENV: &str = "SDKWORK_IAM_SUPER_ADMIN_PASSWORD";
 pub const SDKWORK_IAM_BOOTSTRAP_PASSWORD_ENV: &str = "SDKWORK_IAM_BOOTSTRAP_PASSWORD";
+const IAM_BOOTSTRAP_PROFILE_DIR_NAME: &str = "iam-bootstrap";
+const IAM_BOOTSTRAP_DEFAULT_PROFILE: &str = "default";
+const IAM_BOOTSTRAP_LEGACY_USERS_DIR_NAME: &str = "users";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SuperAdminCredentials {
@@ -109,7 +114,7 @@ async fn resolve_super_admin_credentials(
 
     if let Some(stored) = load_super_admin_credentials_from_home()? {
         if stored.password.is_empty() {
-            return Err("super admin password is empty in ~/.sdkwork/users profile".to_string());
+            return Err("bootstrap auth password is empty in ~/.sdkwork/iam-bootstrap profile".to_string());
         }
         let account = if crate::is_blank(Some(stored.account.as_str())) {
             load_bootstrap_owner_account(pg).await?
@@ -133,7 +138,7 @@ async fn resolve_super_admin_credentials(
     }
 
     Err(
-        "super admin authToken or username/password is required (or configure ~/.sdkwork/users in dev/deploy)"
+        "bootstrap authToken or username/password is required (or configure ~/.sdkwork/iam-bootstrap in development)"
             .to_string(),
     )
 }
@@ -180,35 +185,75 @@ struct StoredSuperAdminProfile {
 }
 
 fn load_super_admin_credentials_from_home() -> Result<Option<StoredSuperAdminProfile>, String> {
-    let users_dir = sdkwork_users_dir()?;
-    if !users_dir.is_dir() {
-        return Ok(None);
-    }
-
-    let profile_name = read_env_value(&[SDKWORK_SUPER_ADMIN_PROFILE_ENV])
-        .unwrap_or_else(|| "super-admin".to_owned());
-    let profile_path = users_dir.join(format!("{profile_name}.json"));
-    if profile_path.is_file() {
-        return parse_super_admin_profile_file(&profile_path).map(Some);
-    }
-
-    let mut candidates = Vec::new();
-    for entry in std::fs::read_dir(&users_dir)
-        .map_err(|error| format!("read {} failed: {error}", users_dir.display()))?
-    {
-        let entry = entry.map_err(|error| format!("read users dir entry failed: {error}"))?;
-        let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) == Some("json") {
-            candidates.push(path);
-        }
-    }
-    candidates.sort();
-    for path in candidates {
-        if let Ok(profile) = parse_super_admin_profile_file(&path) {
-            return Ok(Some(profile));
+    for path in bootstrap_auth_profile_paths()? {
+        if path.is_file() {
+            return parse_super_admin_profile_file(&path).map(Some);
         }
     }
     Ok(None)
+}
+
+fn bootstrap_auth_profile_paths() -> Result<Vec<PathBuf>, String> {
+    let stems = bootstrap_auth_profile_stems();
+    let bootstrap_dir = sdkwork_iam_bootstrap_dir()?;
+    let legacy_users_dir = sdkwork_users_dir()?;
+    let mut paths = Vec::new();
+    for stem in &stems {
+        paths.push(bootstrap_dir.join(format!("{stem}.json")));
+    }
+    for stem in &stems {
+        paths.push(legacy_users_dir.join(format!("{stem}.json")));
+    }
+    Ok(paths)
+}
+
+fn bootstrap_auth_profile_stems() -> Vec<String> {
+    let mut stems = Vec::new();
+    if let Some(explicit) = read_env_value(&[
+        SDKWORK_IAM_BOOTSTRAP_OPERATOR_PROFILE_ENV,
+        SDKWORK_SUPER_ADMIN_PROFILE_ENV,
+    ]) {
+        stems.push(explicit);
+    }
+    if let Some(lifecycle) = lifecycle_profile_stem() {
+        stems.push(lifecycle);
+    }
+    if let Some(profile_id) = read_env_value(&["SDKWORK_PROFILE_ID"]) {
+        stems.push(profile_id);
+    }
+    stems.push(IAM_BOOTSTRAP_DEFAULT_PROFILE.to_owned());
+    stems.push("super-admin".to_owned());
+    dedupe_non_empty(stems)
+}
+
+fn lifecycle_profile_stem() -> Option<String> {
+    let raw = read_env_value(&[
+        "SDKWORK_ENVIRONMENT",
+        "SDKWORK_ENV",
+        "SDKWORK_IM_ENVIRONMENT",
+    ])?;
+    Some(normalize_lifecycle_stem(&raw))
+}
+
+fn normalize_lifecycle_stem(value: &str) -> String {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "dev" | "local" | "development" => "development".to_owned(),
+        "prod" | "production" => "production".to_owned(),
+        other => other.to_owned(),
+    }
+}
+
+fn dedupe_non_empty(values: Vec<String>) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut ordered = Vec::new();
+    for value in values {
+        let trimmed = value.trim();
+        if trimmed.is_empty() || !seen.insert(trimmed.to_owned()) {
+            continue;
+        }
+        ordered.push(trimmed.to_owned());
+    }
+    ordered
 }
 
 fn parse_super_admin_profile_file(path: &Path) -> Result<StoredSuperAdminProfile, String> {
@@ -231,26 +276,58 @@ fn parse_super_admin_profile_file(path: &Path) -> Result<StoredSuperAdminProfile
     Ok(StoredSuperAdminProfile { account, password })
 }
 
+fn sdkwork_iam_bootstrap_dir() -> Result<PathBuf, String> {
+    if let Some(path) = read_env_value(&[SDKWORK_IAM_BOOTSTRAP_PROFILE_DIR_ENV]) {
+        return Ok(PathBuf::from(path));
+    }
+    let home = home_directory().ok_or_else(|| {
+        "home directory is unavailable; set SDKWORK_IAM_BOOTSTRAP_PROFILE_DIR for bootstrap auth profiles"
+            .to_string()
+    })?;
+    Ok(home.join(".sdkwork").join(IAM_BOOTSTRAP_PROFILE_DIR_NAME))
+}
+
 fn sdkwork_users_dir() -> Result<PathBuf, String> {
     if let Some(path) = read_env_value(&[SDKWORK_USERS_DIR_ENV]) {
         return Ok(PathBuf::from(path));
     }
     let home = home_directory().ok_or_else(|| {
-        "home directory is unavailable; set SDKWORK_USERS_DIR for super admin profiles".to_string()
+        "home directory is unavailable; set SDKWORK_USERS_DIR for legacy bootstrap auth profiles".to_string()
     })?;
-    Ok(home.join(".sdkwork").join("users"))
+    Ok(home.join(".sdkwork").join(IAM_BOOTSTRAP_LEGACY_USERS_DIR_NAME))
+}
+
+fn join_windows_user_home(drive: &str, home_path: &str) -> PathBuf {
+    let drive_part = drive.trim().trim_end_matches(['/', '\\']);
+    let normalized = home_path.trim().replace('/', "\\");
+    if normalized.starts_with('\\') {
+        PathBuf::from(format!("{drive_part}{normalized}"))
+    } else {
+        PathBuf::from(format!("{drive_part}\\{normalized}"))
+    }
 }
 
 fn home_directory() -> Option<PathBuf> {
-    if let Ok(home) = std::env::var("HOME") {
-        if !crate::is_blank(Some(home.as_str())) {
-            return Some(PathBuf::from(home));
-        }
-    }
-    if let Ok(profile) = std::env::var("USERPROFILE") {
-        if !crate::is_blank(Some(profile.as_str())) {
+    if cfg!(windows) {
+        if let Some(profile) = read_env_value(&["USERPROFILE"]) {
             return Some(PathBuf::from(profile));
         }
+        if let (Some(drive), Some(home_path)) = (
+            read_env_value(&["HOMEDRIVE"]),
+            read_env_value(&["HOMEPATH"]),
+        ) {
+            return Some(join_windows_user_home(&drive, &home_path));
+        }
+        if let Some(home) = read_env_value(&["HOME"]) {
+            return Some(PathBuf::from(home));
+        }
+        return None;
+    }
+    if let Some(home) = read_env_value(&["HOME"]) {
+        return Some(PathBuf::from(home));
+    }
+    if let Some(profile) = read_env_value(&["USERPROFILE"]) {
+        return Some(PathBuf::from(profile));
     }
     None
 }
@@ -456,14 +533,55 @@ mod tests {
         let profile_path = dir.join("super-admin.json");
         std::fs::write(
             &profile_path,
-            r#"{"username":"admin@sdkwork.com","password":"ConfiguredPass#2026"}"#,
+            r#"{"username":"admin","email":"admin@sdkwork.com","password":"ConfiguredPass#2026"}"#,
         )
         .expect("write profile");
 
         let profile = parse_super_admin_profile_file(&profile_path).expect("parse profile");
-        assert_eq!(profile.account, "admin@sdkwork.com");
+        assert_eq!(profile.account, "admin");
         assert_eq!(profile.password, "ConfiguredPass#2026");
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn join_windows_user_home_keeps_drive_letter() {
+        assert_eq!(
+            join_windows_user_home("C:", "\\Users\\admin"),
+            PathBuf::from("C:\\Users\\admin")
+        );
+        assert_eq!(
+            join_windows_user_home("C:", "Users\\admin"),
+            PathBuf::from("C:\\Users\\admin")
+        );
+        assert_eq!(
+            join_windows_user_home("C:/", "/Users/admin"),
+            PathBuf::from("C:\\Users\\admin")
+        );
+    }
+
+    #[test]
+    fn bootstrap_auth_profile_stems_prefer_lifecycle_over_legacy_super_admin() {
+        let _env_lock = crate::test_env_lock::lock();
+        std::env::remove_var(SDKWORK_IAM_BOOTSTRAP_OPERATOR_PROFILE_ENV);
+        std::env::remove_var(SDKWORK_SUPER_ADMIN_PROFILE_ENV);
+        std::env::remove_var("SDKWORK_PROFILE_ID");
+        std::env::set_var("SDKWORK_ENV", "dev");
+        assert_eq!(
+            bootstrap_auth_profile_stems(),
+            vec![
+                "development".to_owned(),
+                IAM_BOOTSTRAP_DEFAULT_PROFILE.to_owned(),
+                "super-admin".to_owned(),
+            ]
+        );
+        std::env::remove_var("SDKWORK_ENV");
+    }
+
+    #[test]
+    fn normalize_lifecycle_stem_maps_dev_aliases() {
+        assert_eq!(normalize_lifecycle_stem("dev"), "development");
+        assert_eq!(normalize_lifecycle_stem("DEV"), "development");
+        assert_eq!(normalize_lifecycle_stem("test"), "test");
     }
 }

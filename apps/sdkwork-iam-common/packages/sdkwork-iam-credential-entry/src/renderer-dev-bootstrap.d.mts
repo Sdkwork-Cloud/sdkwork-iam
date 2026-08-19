@@ -5,4 +5,4 @@ export interface RendererDevBootstrapContext {
 
 export function resolveRendererDevBootstrapContext(startDir?: string): RendererDevBootstrapContext;
 export const resolveDevBootstrapContext: typeof resolveRendererDevBootstrapContext;
-export function runRendererDevWithBootstrapCli(argv?: string[]): void;
+export function runRendererDevWithBootstrapCli(argv?: string[]): void | Promise<void>;

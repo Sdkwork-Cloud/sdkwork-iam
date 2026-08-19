@@ -70,18 +70,19 @@ export function extractSdkWorkListPage<T = unknown>(value: unknown): SdkWorkList
   return {
     items,
     pageInfo: {
-      hasMore: typeof pageInfoSource.hasMore === "boolean" ? pageInfoSource.hasMore : undefined,
-      mode: pageInfoSource.mode === "offset" || pageInfoSource.mode === "cursor" ? pageInfoSource.mode : undefined,
-      nextCursor:
-        typeof pageInfoSource.nextCursor === "string"
-          ? pageInfoSource.nextCursor
-          : pageInfoSource.nextCursor === null
-            ? null
-            : undefined,
-      page: typeof pageInfoSource.page === "number" ? pageInfoSource.page : undefined,
-      pageSize: typeof pageInfoSource.pageSize === "number" ? pageInfoSource.pageSize : undefined,
-      totalItems: typeof pageInfoSource.totalItems === "string" ? pageInfoSource.totalItems : undefined,
-      totalPages: typeof pageInfoSource.totalPages === "number" ? pageInfoSource.totalPages : undefined,
+      ...(typeof pageInfoSource.hasMore === "boolean" ? { hasMore: pageInfoSource.hasMore } : {}),
+      ...(pageInfoSource.mode === "offset" || pageInfoSource.mode === "cursor"
+        ? { mode: pageInfoSource.mode }
+        : {}),
+      ...(typeof pageInfoSource.nextCursor === "string"
+        ? { nextCursor: pageInfoSource.nextCursor }
+        : pageInfoSource.nextCursor === null
+          ? { nextCursor: null }
+          : {}),
+      ...(typeof pageInfoSource.page === "number" ? { page: pageInfoSource.page } : {}),
+      ...(typeof pageInfoSource.pageSize === "number" ? { pageSize: pageInfoSource.pageSize } : {}),
+      ...(typeof pageInfoSource.totalItems === "string" ? { totalItems: pageInfoSource.totalItems } : {}),
+      ...(typeof pageInfoSource.totalPages === "number" ? { totalPages: pageInfoSource.totalPages } : {}),
     },
   };
 }
@@ -187,14 +188,19 @@ export function buildSdkWorkListQuery(input?: {
 export function resolveSdkWorkListQuery(
   params?: Record<string, unknown>,
 ): Record<string, string | number> {
+  const page = readOptionalNumber(params?.page);
+  const pageSize = clampListPageSize(
+    readOptionalNumber(params?.page_size ?? params?.pageSize),
+  ) ?? SDKWORK_DEFAULT_LIST_PAGE_SIZE;
+  const cursor = readOptionalString(params?.cursor);
+  const q = readOptionalString(params?.q);
+  const sort = readOptionalString(params?.sort);
   const query = buildSdkWorkListQuery({
-    page: readOptionalNumber(params?.page),
-    pageSize: clampListPageSize(
-      readOptionalNumber(params?.page_size ?? params?.pageSize),
-    ) ?? SDKWORK_DEFAULT_LIST_PAGE_SIZE,
-    cursor: readOptionalString(params?.cursor),
-    q: readOptionalString(params?.q),
-    sort: readOptionalString(params?.sort),
+    ...(page !== undefined ? { page } : {}),
+    pageSize,
+    ...(cursor !== undefined ? { cursor } : {}),
+    ...(q !== undefined ? { q } : {}),
+    ...(sort !== undefined ? { sort } : {}),
   });
 
   if (!params) {
@@ -250,7 +256,7 @@ export function mergeSdkWorkListPage<T>(
   if (mode === "append") {
     return {
       items: [...current, ...page.items],
-      pageInfo: page.pageInfo,
+      ...(page.pageInfo !== undefined ? { pageInfo: page.pageInfo } : {}),
     };
   }
   return page;

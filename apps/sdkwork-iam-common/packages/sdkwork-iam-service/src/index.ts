@@ -881,13 +881,17 @@ function toSession(value: unknown): IamSession {
     throw new Error("SDKWork IAM session is missing authToken");
   }
 
+  const expiresAt = optionalString(remote.expiresAt);
+  const refreshToken = optionalString(remote.refreshToken);
+  const sessionId = optionalString(remote.sessionId);
+
   return {
     accessToken,
     authToken,
     ...(remote.context ? { context: createIamAppContext(remote.context) } : {}),
-    ...(optionalString(remote.expiresAt) ? { expiresAt: optionalString(remote.expiresAt) } : {}),
-    ...(optionalString(remote.refreshToken) ? { refreshToken: optionalString(remote.refreshToken) } : {}),
-    ...(optionalString(remote.sessionId) ? { sessionId: optionalString(remote.sessionId) } : {}),
+    ...(expiresAt !== undefined ? { expiresAt } : {}),
+    ...(refreshToken !== undefined ? { refreshToken } : {}),
+    ...(sessionId !== undefined ? { sessionId } : {}),
     ...(remote.user ? { user: toUser(remote.user) } : {}),
   };
 }
@@ -902,12 +906,17 @@ function toUser(value: unknown): IamUser {
     || optionalString(remote.email)
     || "SDKWork User";
 
+  const avatar = readSdkworkMediaResource(remote.avatar);
+  const email = optionalString(remote.email);
+  const id = optionalString(remote.userId) || optionalString(remote.id);
+  const username = optionalString(remote.username);
+
   return {
-    avatar: readSdkworkMediaResource(remote.avatar),
     displayName,
-    ...(optionalString(remote.email) ? { email: optionalString(remote.email) } : {}),
-    ...(optionalString(remote.userId) || optionalString(remote.id) ? { id: optionalString(remote.userId) || optionalString(remote.id) } : {}),
-    ...(optionalString(remote.username) ? { username: optionalString(remote.username) } : {}),
+    ...(avatar !== undefined ? { avatar } : {}),
+    ...(email !== undefined ? { email } : {}),
+    ...(id !== undefined ? { id } : {}),
+    ...(username !== undefined ? { username } : {}),
   };
 }
 

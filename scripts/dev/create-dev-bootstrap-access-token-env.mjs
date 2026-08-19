@@ -10,6 +10,8 @@ export {
   mergeRepoDevBootstrapAccessTokenEnv,
   normalizeBootstrapEnvironment,
   readBootstrapAccessTokenEnvFile,
+  readRepoBootstrapAccessToken,
   readApplicationManifest,
   resolveRepoApplicationManifestPath,
+  resolveRepoBootstrapAccessTokenEnvPaths,
 } from '../../apps/sdkwork-iam-common/packages/sdkwork-iam-credential-entry/src/node-bootstrap.mjs';

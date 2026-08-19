@@ -6,7 +6,10 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import process from 'node:process';
 
-import { mergeRepoDevBootstrapAccessTokenEnv } from './node-bootstrap.mjs';
+import {
+  mergeRepoDevBootstrapAccessTokenEnv,
+  readRepoBootstrapAccessToken,
+} from './node-bootstrap.mjs';
 
 function printHelp() {
   console.log(`Usage: sdkwork-iam-renderer-dev-bootstrap [options] [--] [command ...]
@@ -140,7 +143,36 @@ function spawnRendererDevProcess({ command, commandArgs, cwd, env }) {
   });
 }
 
-export function runRendererDevWithBootstrapCli(argv = process.argv.slice(2)) {
+function isLoopbackBackendUrl(url) {
+  const trimmed = String(url ?? '').trim();
+  if (!trimmed) {
+    return false;
+  }
+  try {
+    const hostname = new URL(trimmed).hostname.toLowerCase();
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  } catch {
+    return false;
+  }
+}
+
+async function tryEnsureRegisteredBootstrapToken(repoRoot, env) {
+  try {
+    const module = await import('@sdkwork/iam-application-bootstrap');
+    if (typeof module.ensureRepoBootstrapAccessToken !== 'function') {
+      return undefined;
+    }
+    return await module.ensureRepoBootstrapAccessToken({
+      env,
+      repoRoot,
+      tryApplicationBootstrap: true,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+export async function runRendererDevWithBootstrapCli(argv = process.argv.slice(2)) {
   const settings = parseArgs(argv);
   if (settings.help) {
     printHelp();
@@ -150,8 +182,25 @@ export function runRendererDevWithBootstrapCli(argv = process.argv.slice(2)) {
   const bootstrapContext = settings.repoRoot && settings.manifestPath
     ? { repoRoot: settings.repoRoot, manifestPath: settings.manifestPath }
     : resolveRendererDevBootstrapContext(settings.cwd);
+  const env = { ...process.env };
+  const ensured = await tryEnsureRegisteredBootstrapToken(bootstrapContext.repoRoot, env);
+  if (ensured?.token) {
+    env.SDKWORK_ACCESS_TOKEN = ensured.token;
+  }
+
+  const backendBaseUrl = env.SDKWORK_BACKEND_BASE_URL;
+  const overlayToken = env.SDKWORK_ACCESS_TOKEN
+    || readRepoBootstrapAccessToken(bootstrapContext.repoRoot, 'development');
+  if (!overlayToken && backendBaseUrl && !isLoopbackBackendUrl(backendBaseUrl)) {
+    throw new Error(
+      'SDKWORK_ACCESS_TOKEN is required for a non-loopback backend. '
+      + 'Write ~/.sdkwork/iam-bootstrap/development.json and run pnpm run admin:bootstrap:app, '
+      + 'or set SDKWORK_IAM_BOOTSTRAP_OPERATOR_USERNAME/PASSWORD.',
+    );
+  }
+
   const mergedEnv = mergeRepoDevBootstrapAccessTokenEnv({
-    env: { ...process.env },
+    env,
     manifestPath: bootstrapContext.manifestPath,
     repoRoot: bootstrapContext.repoRoot,
   });

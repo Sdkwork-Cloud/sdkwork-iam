@@ -53,17 +53,13 @@ function normalizeLoginContextSelectionOption(
     return undefined;
   }
 
+  const displayName = optionalString(value.displayName) || optionalString(value.display_name);
+  const organizationId = optionalString(value.organizationId) || optionalString(value.organization_id);
+
   return {
     loginScope,
-    ...(optionalString(value.displayName) || optionalString(value.display_name)
-      ? { displayName: optionalString(value.displayName) || optionalString(value.display_name) }
-      : {}),
-    ...(optionalString(value.organizationId) || optionalString(value.organization_id)
-      ? {
-          organizationId:
-            optionalString(value.organizationId) || optionalString(value.organization_id),
-        }
-      : {}),
+    ...(displayName ? { displayName } : {}),
+    ...(organizationId ? { organizationId } : {}),
     ...(value.requiresOrganizationSelection === true
       || value.requires_organization_selection === true
       ? { requiresOrganizationSelection: true }
@@ -86,21 +82,17 @@ function normalizeLoginContextOrganizationChoice(
     return undefined;
   }
 
+  const displayName = optionalString(value.displayName) || optionalString(value.display_name);
+  const membershipKind = optionalString(value.membershipKind) || optionalString(value.membership_kind);
+  const name = optionalString(value.name);
+  const tenantId = optionalString(value.tenantId) || optionalString(value.tenant_id);
+
   return {
     organizationId,
-    ...(optionalString(value.displayName) || optionalString(value.display_name)
-      ? { displayName: optionalString(value.displayName) || optionalString(value.display_name) }
-      : {}),
-    ...(optionalString(value.membershipKind) || optionalString(value.membership_kind)
-      ? {
-          membershipKind:
-            optionalString(value.membershipKind) || optionalString(value.membership_kind),
-        }
-      : {}),
-    ...(optionalString(value.name) ? { name: optionalString(value.name) } : {}),
-    ...(optionalString(value.tenantId) || optionalString(value.tenant_id)
-      ? { tenantId: optionalString(value.tenantId) || optionalString(value.tenant_id) }
-      : {}),
+    ...(displayName ? { displayName } : {}),
+    ...(membershipKind ? { membershipKind } : {}),
+    ...(name ? { name } : {}),
+    ...(tenantId ? { tenantId } : {}),
   };
 }
 
@@ -134,15 +126,16 @@ export function normalizeIamLoginContextSelectionChallenge(
         .filter((option): option is IamLoginContextSelectionOption => Boolean(option))
     : undefined;
 
+  const expiresAt =
+    typeof value.expiresAt === 'number' || typeof value.expiresAt === 'string'
+      ? value.expiresAt
+      : optionalString(value.expiresAt);
+
   return {
     challengeType,
     continuationToken,
     organizations,
-    ...(typeof value.expiresAt === 'number' || typeof value.expiresAt === 'string'
-      ? { expiresAt: value.expiresAt }
-      : optionalString(value.expiresAt)
-        ? { expiresAt: optionalString(value.expiresAt) }
-        : {}),
+    ...(expiresAt !== undefined ? { expiresAt } : {}),
     ...(options && options.length > 0 ? { options } : {}),
   };
 }

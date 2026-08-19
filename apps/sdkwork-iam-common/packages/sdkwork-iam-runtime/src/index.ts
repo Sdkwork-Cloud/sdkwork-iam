@@ -152,7 +152,7 @@ export function createIamRuntime(input: CreateIamRuntimeInput): IamRuntime {
       ...(input.clients.appbaseBackend ? { backend: input.clients.appbaseBackend } : {}),
     },
     config: input.config,
-    localeProvider: input.localeProvider,
+    ...(input.localeProvider !== undefined ? { localeProvider: input.localeProvider } : {}),
     validateAppClient: assertIamAppSdkClient,
     validateBackendClient: assertIamBackendSdkClient,
   });
@@ -178,19 +178,22 @@ export function createIamRuntime(input: CreateIamRuntimeInput): IamRuntime {
   };
   const service = createSdkworkIamService({
     appbaseAppClient: bootstrap.clients.app as IamAppSdkClient,
-    appbaseBackendClient: bootstrap.clients.backend as IamBackendSdkClient | undefined,
+    ...(bootstrap.clients.backend !== undefined
+      ? { appbaseBackendClient: bootstrap.clients.backend as IamBackendSdkClient }
+      : {}),
     clearSession,
     commitSession: async (session, options) => {
       const currentSession = options?.preserveRefreshToken
         ? await readCurrentRefreshSession(input.tokenStore, tokenManager)
         : {};
+      const expiresAt = normalizeExpiresAt(session.expiresAt);
       const storedSession = mergeStoredSession(
         currentSession,
         {
           accessToken: session.accessToken,
           authToken: session.authToken,
-          expiresAt: normalizeExpiresAt(session.expiresAt),
-          refreshToken: session.refreshToken,
+          ...(expiresAt !== undefined ? { expiresAt } : {}),
+          ...(session.refreshToken !== undefined ? { refreshToken: session.refreshToken } : {}),
         },
         { preserveRefreshToken: !!options?.preserveRefreshToken },
       );

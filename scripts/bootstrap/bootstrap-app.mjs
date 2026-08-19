@@ -5,13 +5,16 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  createIamApplicationBootstrapClientFromAppbaseBackendSdk,
+  createFetchIamApplicationBootstrapClient,
   createIamApplicationBootstrap,
   formatBootstrapEnvFile,
   hashManifestContent,
-  loadBootstrapProfileFromHome,
-  resolveBootstrapAuthFromEnv,
+  loadBootstrapAuthProfileFromHome,
+  resolveBootstrapAuth,
+  resolveBootstrapAuthProfileCandidates,
+  resolveBootstrapAuthProfileDir,
   resolveBootstrapEnvironmentFromEnv,
+  writeRegisteredBootstrapEnvFiles,
 } from "@sdkwork/iam-application-bootstrap";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -30,6 +33,7 @@ function parseArgs(argv) {
     authToken: "",
     username: "",
     password: "",
+    bootstrapProfile: "",
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -56,10 +60,31 @@ function parseArgs(argv) {
       options.username = argv[++index];
     } else if (arg === "--password" && argv[index + 1]) {
       options.password = argv[++index];
+    } else if (
+      (arg === "--bootstrap-profile" || arg === "--operator-profile" || arg === "--super-admin-profile")
+      && argv[index + 1]
+    ) {
+      options.bootstrapProfile = argv[++index];
     }
   }
 
   return options;
+}
+
+function mapLifecycleForProfile(environment) {
+  const normalized = `${environment ?? ""}`.trim().toLowerCase();
+  if (normalized === "dev" || normalized === "local") return "development";
+  if (normalized === "prod") return "production";
+  if (normalized === "development" || normalized === "test" || normalized === "staging" || normalized === "production") {
+    return normalized;
+  }
+  return undefined;
+}
+
+function hasBootstrapAuthCredentials(auth) {
+  if (auth.authToken?.trim()) return true;
+  const username = auth.username ?? auth.email;
+  return Boolean(username?.trim() && auth.password?.trim());
 }
 
 async function main() {
@@ -72,9 +97,20 @@ async function main() {
   const manifestRaw = await readFile(configPath, "utf8");
   const manifest = JSON.parse(manifestRaw);
   const manifestHash = hashManifestContent(manifestRaw);
-  const profile = await loadBootstrapProfileFromHome();
+  const envRecord = {
+    ...process.env,
+    ...(options.authToken ? { SDKWORK_IAM_BOOTSTRAP_OPERATOR_AUTH_TOKEN: options.authToken } : {}),
+    ...(options.username ? { SDKWORK_IAM_BOOTSTRAP_OPERATOR_USERNAME: options.username } : {}),
+    ...(options.password ? { SDKWORK_IAM_BOOTSTRAP_OPERATOR_PASSWORD: options.password } : {}),
+  };
+  const lifecycleEnvironment = mapLifecycleForProfile(options.environment ?? envRecord.SDKWORK_ENV);
+  const loadedProfile = await loadBootstrapAuthProfileFromHome({
+    env: envRecord,
+    profileName: options.bootstrapProfile || undefined,
+    lifecycleEnvironment,
+  });
 
-  const environment = resolveBootstrapEnvironmentFromEnv(process.env, {
+  const environment = resolveBootstrapEnvironmentFromEnv(envRecord, {
     backendApiBaseUrl: options.backendBaseUrl || undefined,
     tenantId: options.tenantId || undefined,
     organizationId: options.organizationId || undefined,
@@ -83,14 +119,25 @@ async function main() {
     primaryDomain: options.primaryDomain || undefined,
   });
 
-  const auth = {
-    ...resolveBootstrapAuthFromEnv(process.env),
-    ...(options.authToken ? { authToken: options.authToken } : {}),
-    ...(options.username ? { username: options.username } : {}),
-    ...(options.password ? { password: options.password } : {}),
-  };
+  const auth = resolveBootstrapAuth({
+    env: envRecord,
+    profile: loadedProfile?.profile ?? null,
+  });
+  if (!hasBootstrapAuthCredentials(auth)) {
+    const candidates = resolveBootstrapAuthProfileCandidates({
+      env: envRecord,
+      profileName: options.bootstrapProfile || undefined,
+      lifecycleEnvironment,
+    });
+    const profileDir = resolveBootstrapAuthProfileDir(envRecord);
+    throw new Error(
+      `no IAM bootstrap auth credentials — write ${join(profileDir, `${candidates[0] ?? "development"}.json`)} `
+      + `(candidates: ${candidates.join(", ")}) or export SDKWORK_IAM_BOOTSTRAP_OPERATOR_USERNAME/`
+      + "SDKWORK_IAM_BOOTSTRAP_OPERATOR_PASSWORD",
+    );
+  }
 
-  const client = createIamApplicationBootstrapClientFromAppbaseBackendSdk({
+  const client = createFetchIamApplicationBootstrapClient({
     baseUrl: environment.backendApiBaseUrl,
   });
   const bootstrap = createIamApplicationBootstrap({ client });
@@ -99,19 +146,22 @@ async function main() {
     manifest,
     manifestHash,
     auth,
-    profile,
+    profile: loadedProfile?.profile ?? null,
     environment,
   });
 
   const envOutPath = options.envOutPath || join(dirname(configPath), ".sdkwork.local.env");
-  await writeFile(
-    envOutPath,
-    formatBootstrapEnvFile({
-      result,
-      primaryDomain: environment.primaryDomain,
-    }),
-    "utf8",
-  );
+  const envFileContents = `# SDKWork IAM application-bootstrap registration output (gitignored).\n${formatBootstrapEnvFile({
+    result,
+    primaryDomain: environment.primaryDomain,
+  })}`;
+  const overlayRoot = dirname(configPath);
+  const overlayPaths = options.envOutPath
+    ? [envOutPath]
+    : await writeRegisteredBootstrapEnvFiles(overlayRoot, envFileContents, environment.environment);
+  if (options.envOutPath) {
+    await writeFile(envOutPath, envFileContents, "utf8");
+  }
 
   console.log(
     JSON.stringify(
@@ -120,7 +170,9 @@ async function main() {
         tenantApplicationId: result.tenantApplicationId,
         appId: result.appId,
         version: result.version,
-        envOutPath,
+        envOutPath: overlayPaths[0] ?? envOutPath,
+        overlayPaths,
+        bootstrapAuthProfilePath: loadedProfile?.profilePath,
       },
       null,
       2,

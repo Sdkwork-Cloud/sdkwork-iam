@@ -76,6 +76,29 @@ export function resolveRepoApplicationManifestPath(repoRoot, manifestPath) {
   );
 }
 
+export function resolveRepoBootstrapAccessTokenEnvPaths(repoRoot, environment) {
+  const normalizedRepoRoot = normalizeText(repoRoot);
+  if (!normalizedRepoRoot) {
+    throw new Error('resolveRepoBootstrapAccessTokenEnvPaths requires repoRoot');
+  }
+  const lifecycle = normalizeBootstrapEnvironment(environment);
+  return [
+    path.join(normalizedRepoRoot, '.sdkwork.local.env'),
+    path.join(normalizedRepoRoot, `.env.standalone.${lifecycle}.bootstrap.local`),
+    path.join(normalizedRepoRoot, `.env.${lifecycle}.bootstrap.local`),
+  ];
+}
+
+export function readRepoBootstrapAccessToken(repoRoot, environment) {
+  for (const envPath of resolveRepoBootstrapAccessTokenEnvPaths(repoRoot, environment)) {
+    const token = readBootstrapAccessTokenEnvFile(envPath);
+    if (token) {
+      return token;
+    }
+  }
+  return undefined;
+}
+
 export function mergeRepoBootstrapAccessTokenEnv({
   repoRoot,
   env = {},
@@ -84,9 +107,17 @@ export function mergeRepoBootstrapAccessTokenEnv({
   ...options
 } = {}) {
   const resolvedManifestPath = resolveRepoApplicationManifestPath(repoRoot, manifestPath);
+  const lifecycle = normalizeBootstrapEnvironment(environment);
+  const merged = { ...env };
+  if (!normalizeText(merged[SDKWORK_ACCESS_TOKEN_ENV_KEY])) {
+    const fromFiles = readRepoBootstrapAccessToken(repoRoot, lifecycle);
+    if (fromFiles) {
+      merged[SDKWORK_ACCESS_TOKEN_ENV_KEY] = fromFiles;
+    }
+  }
   return mergeBootstrapAccessTokenEnvFromManifest({
-    env,
-    environment: normalizeBootstrapEnvironment(environment),
+    env: merged,
+    environment: lifecycle,
     manifestPath: resolvedManifestPath,
     ...options,
   });

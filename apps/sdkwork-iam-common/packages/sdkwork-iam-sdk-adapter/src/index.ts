@@ -8,7 +8,7 @@ import {
   assertIamBackendSdkClient,
   getIamSdkSurface,
 } from "@sdkwork/iam-sdk-ports";
-import { BACKEND_OAUTH_RESOURCE_TREE } from "./backend-oauth-resource-tree";
+import { BACKEND_OAUTH_RESOURCE_TREE } from "./backend-oauth-resource-tree.ts";
 
 export interface CreateIamSdkAdaptersInput {
   appbaseApp: unknown;
@@ -552,14 +552,6 @@ function findMissingBackendSourceMethods(
     }
     return true;
   });
-}
-
-function findMissingMethods(
-  surface: readonly string[],
-  requiredMethods: readonly string[],
-): string[] {
-  const surfaceSet = new Set(surface);
-  return requiredMethods.filter((method) => !surfaceSet.has(method));
 }
 
 function findForbiddenMethods(

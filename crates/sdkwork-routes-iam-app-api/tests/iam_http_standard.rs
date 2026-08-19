@@ -1,7 +1,7 @@
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
-use sdkwork_iam_web_adapter::{ensure_platform_tenant_application, iam_wire_result_code};
+use sdkwork_iam_web_adapter::ensure_platform_tenant_application;
 use sdkwork_routes_iam_app_api::{
     app_routes, build_sdkwork_iam_app_api_router_with_initialized_pool,
     required_dual_token_headers, HttpMethod, HttpRoute, APP_API_PREFIX,
@@ -927,14 +927,17 @@ async fn credential_entry_login_requires_only_access_token() {
     assert_eq!(
         StatusCode::UNAUTHORIZED,
         status,
-        "invalid login credentials should reach IAM business validation: {body_text}"
+        "credential-entry bootstrap login must stay on the protected auth path: {body_text}"
     );
     assert_eq!(
         payload["code"].as_i64(),
-        Some(i64::from(
-            iam_wire_result_code(StatusCode::UNAUTHORIZED, "iam_invalid_credentials").as_i32(),
-        )),
-        "login must not fail with framework missing-credentials before IAM business validation: {body_text}"
+        Some(40103),
+        "credential-entry bootstrap login must reject an invalid bootstrap access token as InvalidToken: {body_text}"
+    );
+    assert_eq!(
+        payload["authProfile"].as_str(),
+        Some("credential-entry-bootstrap"),
+        "login must remain classified as credential-entry-bootstrap: {body_text}"
     );
 }
 

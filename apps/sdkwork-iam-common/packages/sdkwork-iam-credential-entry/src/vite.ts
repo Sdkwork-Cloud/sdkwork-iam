@@ -1,9 +1,12 @@
 import { SDKWORK_CREDENTIAL_ENTRY_BOOTSTRAP_ACCESS_TOKEN_GLOBAL_KEY } from './constants.ts';
+import { readRepoBootstrapAccessToken } from './node-bootstrap.mjs';
 
 export interface CredentialEntryBootstrapVitePluginOptions {
   accessToken?: string;
   allowTestInjection?: boolean;
   environment: string;
+  /** Repository root that owns overlay env files such as `.sdkwork.local.env`. */
+  repoRoot?: string;
 }
 
 export interface CredentialEntryBootstrapVitePlugin {
@@ -38,10 +41,13 @@ export function createSdkworkCredentialEntryBootstrapVitePlugin({
   accessToken,
   allowTestInjection = false,
   environment,
+  repoRoot,
 }: CredentialEntryBootstrapVitePluginOptions): CredentialEntryBootstrapVitePlugin | undefined {
   const canInject = environment === 'development'
     || (environment === 'test' && allowTestInjection);
-  const token = normalizeToken(accessToken);
+  const token = normalizeToken(accessToken)
+    ?? normalizeToken(process.env.SDKWORK_ACCESS_TOKEN)
+    ?? (repoRoot ? readRepoBootstrapAccessToken(repoRoot, environment) : undefined);
   if (!canInject || !token) {
     return undefined;
   }
