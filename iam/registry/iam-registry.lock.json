@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "kind": "sdkwork.iam.registry.lock",
-  "materializedAt": "2026-08-19T01:44:55.415259600+00:00",
+  "materializedAt": "2026-08-20T01:35:14.343705900+00:00",
   "profile": "operational",
   "modules": [
     {
