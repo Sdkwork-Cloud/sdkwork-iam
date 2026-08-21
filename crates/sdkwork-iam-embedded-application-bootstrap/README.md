@@ -1,6 +1,6 @@
 # sdkwork-iam-embedded-application-bootstrap
 
-Embedded IAM tenant application bootstrap for unified-process, installer, and standalone gateway runtimes.
+Embedded IAM tenant application bootstrap for standalone gateway, installer, and embedded runtimes.
 
 ## Responsibility
 
